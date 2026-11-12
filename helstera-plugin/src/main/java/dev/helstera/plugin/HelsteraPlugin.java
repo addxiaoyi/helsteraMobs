@@ -2913,6 +2913,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         runImportedRandomEquipmentSelfTest(origin.clone().add(8, 0, 0));
         runImportedEnvironmentalDamageOptionsSelfTest(origin.clone().add(14, 0, 0));
         runImportedDigOutOfGroundSelfTest(origin.clone().add(20, 0, 0));
+        runImportedFireProtectionOptionsSelfTest(origin.clone().add(42, 0, 0));
         runImportedPreventMobKillDropsSelfTest(origin.clone().add(32, 0, 0));
     }
 
@@ -3530,6 +3531,167 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " controls-allowed=" + controlsAllowed + " invalid-fallback=" + invalidFallback);
         } catch (Throwable failure) {
             getLogger().warning("[自检] environmental-damage-options-imported result=false imported=false error=" + failure);
+        } finally {
+            cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
+        }
+    }
+
+    private void runImportedFireProtectionOptionsSelfTest(Location origin) {
+        Path sourceRoot = null;
+        Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+        boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+        var mobFiles = new java.util.ArrayList<Path>();
+        var instanceIds = new java.util.ArrayList<Integer>();
+        try {
+            String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+            sourceRoot = Files.createTempDirectory("helstera-fire-protection-options-import-");
+            Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
+            Path source = sourceDirectory.resolve("fire-protection-options.yml");
+            String blanketId = "PreventFireEnabled_" + suffix;
+            String selectiveId = "PreventFireCausesEnabled_" + suffix;
+            String controlId = "FireProtectionControl_" + suffix;
+            String invalidId = "FireProtectionInvalid_" + suffix;
+            Files.writeString(source, """
+                    mobs:
+                      %1$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventFire: true
+                      %2$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventFire: false
+                          PreventFireCauses: FIRE_TICK
+                      %3$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventFire: false
+                          PreventFireCauses: []
+                      %4$s:
+                        Type: ZOMBIE
+                        Options:
+                          PreventFire: maybe
+                          PreventFireCauses: FIRE_TICK,NOT_A_DAMAGE_CAUSE
+                    """.formatted(blanketId, selectiveId, controlId, invalidId));
+
+            var targetIds = new java.util.LinkedHashMap<String, String>();
+            for (var entry : new MythicMobsImporter().convert(source, sourceRoot)) {
+                if (!(entry.get("target-file") instanceof String targetFile)
+                        || !targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                        || !"mapped".equals(entry.get("status"))) continue;
+                Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                if (!destination.startsWith(outputDirectory)) {
+                    throw new IOException("Importer returned an unsafe fire-protection mob path: " + targetFile);
+                }
+                Files.createDirectories(destination.getParent());
+                if (Files.exists(destination)) {
+                    throw new IOException("Refusing to overwrite fire-protection mob config: " + destination);
+                }
+                mobFiles.add(destination);
+                var importedConfig = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                importedConfig.set("model", "example/emberling");
+                Files.writeString(destination, importedConfig.saveToString());
+                targetIds.put(String.valueOf(entry.get("source-mob-id")),
+                        String.valueOf(entry.get("target-mob-id")));
+            }
+            var sourceIds = java.util.List.of(blanketId, selectiveId, controlId, invalidId);
+            if (!targetIds.keySet().containsAll(sourceIds)) {
+                throw new IllegalStateException("Mythic fire-protection fixtures were not all imported");
+            }
+
+            var locations = java.util.List.of(origin, origin.clone().add(2, 0, 0),
+                    origin.clone().add(4, 0, 0), origin.clone().add(6, 0, 0));
+            var spawnedIds = new java.util.LinkedHashMap<String, Integer>();
+            for (int i = 0; i < sourceIds.size(); i++) {
+                int instanceId = spawnMobAt(targetIds.get(sourceIds.get(i)), locations.get(i), null);
+                spawnedIds.put(sourceIds.get(i), instanceId);
+                if (instanceId > 0) instanceIds.add(instanceId);
+            }
+
+            var blanketConfig = mobConfig(targetIds.get(blanketId));
+            var selectiveConfig = mobConfig(targetIds.get(selectiveId));
+            var controlConfig = mobConfig(targetIds.get(controlId));
+            var invalidConfig = mobConfig(targetIds.get(invalidId));
+            var invalidOptions = invalidConfig == null ? null
+                    : invalidConfig.getConfigurationSection("mob.unsupported.Options");
+            boolean configured = blanketConfig != null && blanketConfig.getBoolean("mob.prevent-fire")
+                    && selectiveConfig != null && !selectiveConfig.getBoolean("mob.prevent-fire", true)
+                    && selectiveConfig.getStringList("mob.prevent-fire-causes").equals(
+                            java.util.List.of("FIRE_TICK"));
+            boolean controls = controlConfig != null && !controlConfig.getBoolean("mob.prevent-fire", true)
+                    && controlConfig.getStringList("mob.prevent-fire-causes").isEmpty();
+            boolean invalidPreserved = invalidOptions != null
+                    && "maybe".equalsIgnoreCase(invalidOptions.getString("PreventFire"))
+                    && "FIRE_TICK,NOT_A_DAMAGE_CAUSE".equals(
+                            invalidOptions.getString("PreventFireCauses"))
+                    && !invalidConfig.contains("mob.prevent-fire")
+                    && !invalidConfig.contains("mob.prevent-fire-causes");
+
+            var blanketInstance = instances().impl(spawnedIds.get(blanketId));
+            var selectiveInstance = instances().impl(spawnedIds.get(selectiveId));
+            var controlInstance = instances().impl(spawnedIds.get(controlId));
+            var invalidInstance = instances().impl(spawnedIds.get(invalidId));
+            var blanketEntity = livingEntity(blanketInstance);
+            var selectiveEntity = livingEntity(selectiveInstance);
+            var controlEntity = livingEntity(controlInstance);
+            var invalidEntity = livingEntity(invalidInstance);
+            var blanketOptions = blanketInstance == null ? null : blanketInstance.options();
+            var selectiveOptions = selectiveInstance == null ? null : selectiveInstance.options();
+            var controlOptions = controlInstance == null ? null : controlInstance.options();
+            var invalidRuntimeOptions = invalidInstance == null ? null : invalidInstance.options();
+            boolean policies = blanketOptions != null && blanketOptions.preventFire()
+                    && selectiveOptions != null && !selectiveOptions.preventFire()
+                    && selectiveOptions.preventFireCauses().equals(java.util.Set.of("FIRE_TICK"))
+                    && controlOptions != null && !controlOptions.preventFire()
+                    && controlOptions.preventFireCauses().isEmpty()
+                    && invalidRuntimeOptions != null && !invalidRuntimeOptions.preventFire()
+                    && invalidRuntimeOptions.preventFireCauses().isEmpty();
+
+            var blanketCombust = new org.bukkit.event.entity.EntityCombustEvent(blanketEntity, 4);
+            var selectiveCombust = new org.bukkit.event.entity.EntityCombustEvent(selectiveEntity, 4);
+            var controlCombust = new org.bukkit.event.entity.EntityCombustEvent(controlEntity, 4);
+            var invalidCombust = new org.bukkit.event.entity.EntityCombustEvent(invalidEntity, 4);
+            var blanketFireTick = damageEvent(blanketEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE_TICK);
+            var blanketDrowning = damageEvent(blanketEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING);
+            var selectiveFireTick = damageEvent(selectiveEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE_TICK);
+            var selectiveFire = damageEvent(selectiveEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE);
+            var selectiveDrowning = damageEvent(selectiveEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.DROWNING);
+            var controlFireTick = damageEvent(controlEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE_TICK);
+            var invalidFireTick = damageEvent(invalidEntity,
+                    org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE_TICK);
+            for (var event : java.util.List.of(blanketCombust, selectiveCombust, controlCombust,
+                    invalidCombust, blanketFireTick, blanketDrowning, selectiveFireTick,
+                    selectiveFire, selectiveDrowning, controlFireTick, invalidFireTick)) {
+                getServer().getPluginManager().callEvent(event);
+            }
+            boolean blanketProtected = blanketCombust.isCancelled() && blanketFireTick.isCancelled();
+            boolean selectiveProtected = selectiveFireTick.isCancelled() && !selectiveCombust.isCancelled();
+            boolean unlistedFireAllowed = !selectiveFire.isCancelled();
+            boolean crossCauseAllowed = !blanketDrowning.isCancelled() && !selectiveDrowning.isCancelled();
+            boolean controlsAllowed = !controlCombust.isCancelled() && !controlFireTick.isCancelled();
+            boolean invalidFallback = !invalidCombust.isCancelled() && !invalidFireTick.isCancelled();
+            boolean imported = targetIds.keySet().containsAll(sourceIds);
+            boolean passed = imported && configured && controls && invalidPreserved && policies
+                    && blanketProtected && selectiveProtected && unlistedFireAllowed
+                    && crossCauseAllowed && controlsAllowed && invalidFallback;
+            getLogger().info("[自检] fire-protection-options-imported result=" + passed
+                    + " imported=" + imported + " configured=" + configured + " controls=" + controls
+                    + " invalid-preserved=" + invalidPreserved + " policies=" + policies
+                    + " blanket-combust-cancelled=" + blanketCombust.isCancelled()
+                    + " blanket-fire-tick-cancelled=" + blanketFireTick.isCancelled()
+                    + " selective-fire-tick-cancelled=" + selectiveFireTick.isCancelled()
+                    + " unlisted-fire-allowed=" + unlistedFireAllowed
+                    + " cross-cause-allowed=" + crossCauseAllowed
+                    + " controls-allowed=" + controlsAllowed + " invalid-fallback=" + invalidFallback);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] fire-protection-options-imported result=false imported=false error=" + failure);
         } finally {
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }

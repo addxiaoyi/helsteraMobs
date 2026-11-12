@@ -223,6 +223,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] boolean-mob-options-imported result=true imported=true configured=true controls=true invalid-preserved=true entity-states=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] prevent-random-equipment-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true random-cleared=true explicit-equipment-preserved=true control-preserved=true invalid-fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] environmental-damage-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true drowning-protected=true fall-protected=true controls-allowed=true invalid-fallback=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] fire-protection-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-combust-cancelled=true blanket-fire-tick-cancelled=true selective-fire-tick-cancelled=true unlisted-fire-allowed=true cross-cause-allowed=true controls-allowed=true invalid-fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2.00 fall-control=true disabled-allowed=true invalid-fallback=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] prevent-mob-kill-drops-imported result=true imported=true configured=true policies=true killers-resolved=true drops-suppressed=true controls-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] prevent-other-drops-imported result=true imported=true configured=true policies=true native-suppressed=true custom-retained=true controls-preserved=true invalid-preserved=true',
@@ -551,7 +552,7 @@ try {
             'importedTriggerBlockTypeCondition', 'importedOriginLocationCondition',
             'importedMaterialCooldownCondition', 'importedItemRechargingCondition',
             'importedItemSimilarityConditions',
-            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'digOutOfGroundImported', 'preventMobKillDropsImported', 'preventOtherDropsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
+            'importedPlayerKillsCondition', 'importedTimerTrigger', 'contextTargeterRelations', 'lastDamagerTargeter', 'targetOfTargetTargeter', 'beeStingerLossImported', 'foxOptionsImported', 'rabbitOptionsImported', 'frogOptionsImported', 'digOutOfGroundImported', 'fireProtectionOptionsImported', 'preventMobKillDropsImported', 'preventOtherDropsImported', 'itemMetadata', 'legacyNumericItems', 'attributesComposite', 'itemAttributesComposite', 'mythicStatsBias')) {
         Assert-True ($report.expectedProbeIds -contains $requiredProbeId) "probe catalog contains $requiredProbeId"
         Assert-True (@($report.probes | Where-Object id -eq $requiredProbeId).Count -gt 0) "report contains $requiredProbeId"
     }
@@ -663,6 +664,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'environmentalDamageOptionsImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'environmentalDamageOptionsImported').observations[0] -ceq
         'environmental-damage-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true drowning-protected=true fall-protected=true controls-allowed=true invalid-fallback=true') 'Mythic environmental damage options require imported policy readback, cause-specific cancellation, controls, and malformed-value preservation'
+    Assert-True (($report.probes | Where-Object id -eq 'fireProtectionOptionsImported').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'fireProtectionOptionsImported').observations[0] -ceq
+        'fire-protection-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-combust-cancelled=true blanket-fire-tick-cancelled=true selective-fire-tick-cancelled=true unlisted-fire-allowed=true cross-cause-allowed=true controls-allowed=true invalid-fallback=true') 'Mythic fire protection requires imported blanket and per-cause behavior, inverse/cross-cause controls, and malformed-value preservation'
     Assert-True (($report.probes | Where-Object id -eq 'digOutOfGroundImported').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'digOutOfGroundImported').observations[0] -match
         '^dig-out-of-ground-imported result=true imported=true configured=true policies=true suffocation-cancelled=true rise=2\.00 fall-control=true disabled-allowed=true invalid-fallback=true$') 'Mythic DigOutOfGround requires a two-block suffocation response, cause/disabled controls, and malformed-value fallback'
@@ -1435,6 +1439,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'environmentalDamageOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'environmentalDamageOptionsImported'; status = 'passed'; observations = @('environmental-damage-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true drowning-protected=true fall-protected=true controls-allowed=true invalid-fallback=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'fireProtectionOptionsImported'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'fireProtectionOptionsImported'; status = 'passed'; observations = @('fire-protection-options-imported result=true imported=true configured=true controls=true invalid-preserved=true policies=true blanket-combust-cancelled=true blanket-fire-tick-cancelled=true selective-fire-tick-cancelled=true unlisted-fire-allowed=true cross-cause-allowed=true controls-allowed=true invalid-fallback=true')
     }
     $fullCatalogReport.expectedProbeIds += 'digOutOfGroundImported'
     $fullCatalogReport.probes += [pscustomobject]@{
