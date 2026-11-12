@@ -4794,6 +4794,63 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic projectile and explosion guards validate booleans and preserve malformed values")
+    void mythicProjectileAndExplosionGuardsRequireBooleans(@TempDir Path root) throws Exception {
+        Path file = write(root, "Mobs/projectile-explosion-options.yml", """
+                mobs:
+                  enabled:
+                    Type: CREEPER
+                    Options:
+                      PreventProjectiles: true
+                      PreventExplosions: true
+                      PreventBlockExplosions: true
+                      PreventEntityExplosions: true
+                  disabled:
+                    Type: CREEPER
+                    Options:
+                      PreventProjectiles: false
+                      PreventExplosions: false
+                      PreventBlockExplosions: false
+                      PreventEntityExplosions: false
+                  malformed:
+                    Type: CREEPER
+                    Options:
+                      PreventProjectiles: maybe
+                      PreventExplosions: maybe
+                      PreventBlockExplosions: maybe
+                      PreventEntityExplosions: maybe
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+
+        var enabled = convertedMob(entries, "enabled");
+        assertTrue(enabled.getBoolean("mob.prevent-projectiles"));
+        assertTrue(enabled.getBoolean("mob.prevent-explosions"));
+        assertTrue(enabled.getBoolean("mob.prevent-block-explosions"));
+        assertTrue(enabled.getBoolean("mob.prevent-entity-explosions"));
+        var disabled = convertedMob(entries, "disabled");
+        assertFalse(disabled.getBoolean("mob.prevent-projectiles", true));
+        assertFalse(disabled.getBoolean("mob.prevent-explosions", true));
+        assertFalse(disabled.getBoolean("mob.prevent-block-explosions", true));
+        assertFalse(disabled.getBoolean("mob.prevent-entity-explosions", true));
+        var malformed = convertedMob(entries, "malformed");
+        for (String option : List.of("PreventProjectiles", "PreventExplosions",
+                "PreventBlockExplosions", "PreventEntityExplosions")) {
+            assertEquals("maybe", malformed.getString("mob.unsupported.Options." + option));
+            assertFalse(malformed.contains(switch (option) {
+                case "PreventProjectiles" -> "mob.prevent-projectiles";
+                case "PreventExplosions" -> "mob.prevent-explosions";
+                case "PreventBlockExplosions" -> "mob.prevent-block-explosions";
+                default -> "mob.prevent-entity-explosions";
+            }));
+        }
+        assertEquals(4, entries.stream().filter(entry -> "unsupported".equals(entry.get("status"))
+                && "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("source-key")).matches(
+                        "Options\\.Prevent(Projectiles|Explosions|BlockExplosions|EntityExplosions)"))
+                .count());
+    }
+
+    @Test
     @DisplayName("Mythic PreventTeleport imports booleans and preserves malformed values")
     void mythicPreventTeleportBooleanValues(@TempDir Path root) throws Exception {
         Path enabledFile = write(root, "Mobs/prevent-teleport-enabled.yml", """

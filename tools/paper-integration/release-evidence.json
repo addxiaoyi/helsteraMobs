@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-explosion-options-strict-20261112-r2",
+    "reportFixtureDirectory": "srv-paper-explosion-options-strict-20261112-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-explosion-options-strict-20261112-r2.json",
+    "reportSha256": "fcd85689efb80c3652dd6840e3877222acc51114b0c18ff9edd33adbbb9ac7a6",
+    "log": "tools/paper-integration/reports/paper-1.21.1-explosion-options-strict-20261112-r2.log.gz",
+    "logSha256": "26f80c03cf22b7186a11a660d4290644aeb76c16f74e622ce1f3a9f4c235a98e",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-explosion-options-strict-20261112-r2-client-logs.tar.gz",
+    "clientLogSha256": "45f1540904f6f9aaf32bd7d34ba593aac36ee6739ef95d5870a9e23559e0cce4",
+    "pluginSha256": "63652c229cb3740e05faec87141b43eb751eac30542490ae2e540e57f6dcc7b6",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-fire-protection-strict-20261112-r2",
     "reportFixtureDirectory": "srv-paper-fire-protection-strict-20261112-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-fire-protection-options-strict-20261112-r2.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-fire-protection-options-strict-20261112-r2-client-logs.tar.gz",
     "clientLogSha256": "aa028cedac5a4e9a43af7082a7c8425efcde8ddf12c089f3584e70279ef828d9",
     "pluginSha256": "e0ad5ee136b66cc45cf2b1754a962737cc5d2cdf02637cbee5fe19568ba17875",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-explosion-options-strict-20261112-r2"
   },
   {
     "fixtureId": "srv-paper-prevent-other-drops-strict-20261112-r2",
