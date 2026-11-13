@@ -11,6 +11,7 @@ softdepend:
   - CraftEngine
   - WorldGuard
   - GriefPrevention
+  - Lands
 commands:
   helstera:
     description: helsteraMobs 主命令

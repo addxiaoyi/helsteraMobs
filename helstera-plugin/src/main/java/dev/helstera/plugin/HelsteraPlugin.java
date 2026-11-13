@@ -22,6 +22,7 @@ import dev.helstera.integrations.IntegrationRegistryImpl;
 import dev.helstera.integrations.items.CraftEngineAdapter;
 import dev.helstera.integrations.items.ItemAdderAdapter;
 import dev.helstera.integrations.region.GriefPreventionAdapter;
+import dev.helstera.integrations.region.LandsAdapter;
 import dev.helstera.integrations.region.WorldGuardAdapter;
 import dev.helstera.integrations.mythicmobs.MythicMobsAdapter;
 import dev.helstera.migration.MigrationServiceImpl;
@@ -596,6 +597,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             ir.register(new WorldGuardAdapter());
             if (getConfig().getBoolean("compatibility.griefprevention", true)) {
                 ir.register(new GriefPreventionAdapter());
+            }
+            if (getConfig().getBoolean("compatibility.lands", true)) {
+                ir.register(new LandsAdapter());
             }
             int connected = ir.enableAll(this);
             dev.helstera.ai.skill.SkillExtras.currencyBalance(vaultEconomy::balance);
