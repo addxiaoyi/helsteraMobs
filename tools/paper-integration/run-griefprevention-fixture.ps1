@@ -1,6 +1,8 @@
 param(
     [ValidatePattern('^r[1-9]\d*$')]
     [string]$EvidenceRevision = 'r1',
+    [ValidateSet('16.18.4', '16.18.5')]
+    [string]$GriefPreventionVersion = '16.18.5',
     [string]$ServerDirectory = ''
 )
 
@@ -24,9 +26,22 @@ $fixtureJar = Join-Path $PSScriptRoot 'griefprevention-fixture/target/griefpreve
 $reportPath = Join-Path $PSScriptRoot "reports/$reportStem.json"
 $compressedLogPath = Join-Path $PSScriptRoot "reports/$reportStem.log.gz"
 $cache = Join-Path $PSScriptRoot '.external-cache/griefprevention'
-$gpJar = Join-Path $cache 'GriefPrevention-16.18.5.jar'
-$gpSha1 = '5fd724fe7b70ca243381cfb7cc7dfa869eef1719'
-$gpSha512 = '35e5bced4cec2ea13f2b7bdbd7ab11da04c2650e2b8b3c1aefff0d518e6605eece951bcb9fd33425cf3363bfc43683c5b224d4126515d8482847d376b0a5bca2'
+$gpArtifacts = @{
+    '16.18.4' = @{
+        versionId = 'ue7jAjJ5'
+        filename = 'GriefPrevention-16.18.4.jar'
+        sha1 = '1b6bf6bc24cdaf21d1e40cc4cfac99f0701bc4dd'
+        sha512 = '6dcd2036740f44cf7cfbe72d829601abccaa6e33c79804df183e516ee1e0fecd70c60a023b1ff7608e41de05b8af84707479dec7ae67af8aa9554f0413966459'
+    }
+    '16.18.5' = @{
+        versionId = 'iaJtn30B'
+        filename = 'GriefPrevention.jar'
+        sha1 = '5fd724fe7b70ca243381cfb7cc7dfa869eef1719'
+        sha512 = '35e5bced4cec2ea13f2b7bdbd7ab11da04c2650e2b8b3c1aefff0d518e6605eece951bcb9fd33425cf3363bfc43683c5b224d4126515d8482847d376b0a5bca2'
+    }
+}
+$gpArtifact = $gpArtifacts[$GriefPreventionVersion]
+$gpJar = Join-Path $cache "GriefPrevention-$GriefPreventionVersion.jar"
 
 foreach ($required in @($paper, $plugin, $fixtureJar)) {
     if (-not (Test-Path -LiteralPath $required -PathType Leaf)) {
@@ -43,12 +58,12 @@ if ((Test-Path -LiteralPath $reportPath) -or (Test-Path -LiteralPath $compressed
 
 if (-not (Test-Path -LiteralPath $gpJar -PathType Leaf)) {
     New-Item -ItemType Directory -Path $cache -Force | Out-Null
-    Invoke-WebRequest -Uri 'https://cdn.modrinth.com/data/O4o4mKaq/versions/iaJtn30B/GriefPrevention.jar' `
+    Invoke-WebRequest -Uri "https://cdn.modrinth.com/data/O4o4mKaq/versions/$($gpArtifact.versionId)/$($gpArtifact.filename)" `
         -OutFile $gpJar
 }
 $actualGpSha1 = (Get-FileHash -LiteralPath $gpJar -Algorithm SHA1).Hash.ToLowerInvariant()
 $actualGpSha512 = (Get-FileHash -LiteralPath $gpJar -Algorithm SHA512).Hash.ToLowerInvariant()
-if ($actualGpSha1 -cne $gpSha1 -or $actualGpSha512 -cne $gpSha512) {
+if ($actualGpSha1 -cne $gpArtifact.sha1 -or $actualGpSha512 -cne $gpArtifact.sha512) {
     throw "GriefPrevention artifact hash mismatch: SHA1=$actualGpSha1 SHA512=$actualGpSha512"
 }
 
@@ -142,7 +157,7 @@ $requiredChecks = @(
     'imported_near_claim_outside', 'imported_near_claim_explicit', 'imported_near_claims_alias',
     'malformed_near_claim_preserved'
 )
-if ($observed.result -cne 'passed' -or $observed.griefprevention -cne '16.18.5') {
+if ($observed.result -cne 'passed' -or $observed.griefprevention -cne $GriefPreventionVersion) {
     throw "GriefPrevention fixture failed or used unexpected plugin version: $payload"
 }
 foreach ($check in $requiredChecks) {
