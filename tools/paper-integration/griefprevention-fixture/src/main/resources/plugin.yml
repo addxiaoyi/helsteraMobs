@@ -1,0 +1,7 @@
+name: GriefPreventionParityFixture
+version: 1.0.0
+main: dev.helstera.test.griefprevention.GriefPreventionParityFixture
+api-version: '1.21'
+depend:
+  - GriefPrevention
+  - helsteraMobs

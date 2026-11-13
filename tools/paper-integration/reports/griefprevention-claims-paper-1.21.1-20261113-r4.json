@@ -1,0 +1,109 @@
+{
+  "schemaVersion": 1,
+  "fixture": "paper-1.21.1-griefprevention-claims-20261113-r4",
+  "generatedAtUtc": "2026-11-13T11:11:35Z",
+  "paper": {
+    "implementationVersion": "1.21.1-133-3cb8529",
+    "sha256": "020b6831758cfbaad2890d77eb05d664758319c12a1b190f6abf40323e96120e"
+  },
+  "helsteraMobsSha256": "35227dae8f173530a976475f0e3c734b81a2c63097172c3f530f6b31206cf2a2",
+  "externalPlugins": [
+    {
+      "name": "GriefPrevention",
+      "version": "16.18.5",
+      "sha1": "5fd724fe7b70ca243381cfb7cc7dfa869eef1719",
+      "sha512": "35e5bced4cec2ea13f2b7bdbd7ab11da04c2650e2b8b3c1aefff0d518e6605eece951bcb9fd33425cf3363bfc43683c5b224d4126515d8482847d376b0a5bca2"
+    }
+  ],
+  "probes": [
+    {
+      "id": "provider_connected",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "claim_query_capability",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "in_claim_inside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "in_claim_subclaim",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "in_claim_outside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "near_claim_inside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "near_claim_exact_block_boundary",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "near_claim_below_boundary",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "near_claim_outside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "near_claim_large_radius_fallback",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_in_claim_inside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_in_claim_outside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_near_claim_default",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_near_claim_outside",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_near_claim_explicit",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "imported_near_claims_alias",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "malformed_near_claim_preserved",
+      "status": "passed",
+      "observed": "true"
+    }
+  ],
+  "compressedLog": {
+    "path": "griefprevention-claims-paper-1.21.1-20261113-r4.log.gz",
+    "sha256": "b8a7b3e377700a1de612a5bb0fb24a286975a6c7136f1d952f98c0ca0253b0eb"
+  }
+}

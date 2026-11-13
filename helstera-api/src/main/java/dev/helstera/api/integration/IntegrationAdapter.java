@@ -44,4 +44,10 @@ public interface IntegrationAdapter {
 
     /** Optional region lookup used by menus and spawners. Null means unknown. */
     default Boolean containsRegion(String region, Location location) { return null; }
+
+    /** Optional land-claim lookup. Null means the adapter cannot answer safely. */
+    default Boolean inClaim(Location location) { return null; }
+
+    /** Optional horizontal distance lookup to any land claim. Radius is in blocks. */
+    default Boolean nearClaim(Location location, double radius) { return null; }
 }

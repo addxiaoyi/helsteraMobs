@@ -292,6 +292,22 @@ union, and intersection queries, missing-region handling, and imported
 Compressed server log SHA-256:
 `ecba4083af2aee50ca4b252bd1ad91fcc42647d5f7081d0f24936129a153d840`.
 
+Focused GriefPrevention evidence `paper-1.21.1-griefprevention-claims-20261113-r4`
+passes all 17 checks on Paper 1.21.1-133 with GriefPrevention 16.18.5. It
+verifies installed-plugin discovery, the active `CLAIM_QUERY` capability,
+main-claim and subclaim membership, outside rejection, exact and below-boundary
+horizontal distances, the large-radius all-claims fallback, imported
+`InClaim`/`NearClaim` inside/outside behavior, Mythic's default radius of 16,
+explicit radius 1, and malformed-radius preservation. Report:
+[griefprevention-claims-paper-1.21.1-20261113-r4.json](reports/griefprevention-claims-paper-1.21.1-20261113-r4.json)
+(SHA-256 `90401236ae580e4ab2d3a6363b3f6c3109c514ea78c845e12de583deafde037d`);
+compressed server log SHA-256:
+`b8a7b3e377700a1de612a5bb0fb24a286975a6c7136f1d952f98c0ca0253b0eb`.
+The plugin JAR hash is `35227dae8f173530a976475f0e3c734b81a2c63097172c3f530f6b31206cf2a2`.
+This focused external-plugin fixture is separate from the complete strict
+release catalog. Other listed claim plugins and GriefPrevention versions have
+not been verified here.
+
 Previous strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passed
 the full strict gate: 422 registered probes, 403 passed, 19 expected
 rejections, and zero failed or incomplete. Its API module passes all 97 tests,

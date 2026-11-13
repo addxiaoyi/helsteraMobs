@@ -215,6 +215,7 @@ compatibility:
   mythicmobs: true
   itemadder: true
   craftengine: true
+  griefprevention: true
 
 # MythicMobs stores ShowHealth radius/format globally; imported mob files carry
 # the per-mob Options.ShowHealth switch.
