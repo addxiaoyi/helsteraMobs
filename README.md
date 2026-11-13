@@ -541,7 +541,11 @@ large-radius lookup path. Reports:
 (SHA-256 `90401236ae580e4ab2d3a6363b3f6c3109c514ea78c845e12de583deafde037d`);
 compressed log SHA-256 values: 16.18.4 `8b00231892c031a096fd155159ef01f26322f6a04289dca8bf9427f53016aa96`,
 16.18.5 `b8a7b3e377700a1de612a5bb0fb24a286975a6c7136f1d952f98c0ca0253b0eb`.
-Lands, CrashClaim, PlotSquared, and Residence claim bridges remain open.
+Lands now has a reflection-only adapter for the statically inspected 7.25.14
+and 9.0.0 public API shapes (`LandsIntegration#getArea`, chunk lookup, and
+`Land#getChunks`). No installable Lands plugin artifact was available for a
+Paper fixture, so its runtime claim results remain `mapped-unverified`; other
+Lands versions, CrashClaim, PlotSquared, and Residence bridges remain open.
 
 Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
 passes all 402 release probes (383 passed, 19 expected rejections, zero failed
@@ -1378,9 +1382,9 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `32`
+This is a partial parity release. The matrix currently has `33`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-12). The full remaining work is:
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-13). The full remaining work is:
 
 Latest strict report has 455 probes, zero incomplete (436 passed, 19 expected rejections, zero failed).
 
@@ -1438,8 +1442,8 @@ Latest strict report has 455 probes, zero incomplete (436 passed, 19 expected re
     reload, prerequisites, and client display.
 12. **External integrations**: define versions and contracts for Vault,
     MythicCrucible, MMOItems, ModelEngine, ItemAdder, CraftEngine, MythicMobs,
-    and WorldGuard; require installed-plugin runtime evidence or retain the
-    `blocked-by-external-plugin` status. The current adapter lifecycle,
+    WorldGuard, and Lands; require installed-plugin runtime evidence or retain
+    the `blocked-by-external-plugin` or `mapped-unverified` status. The current adapter lifecycle,
     capability, fallback, and conformance requirements are defined in the
     [External Plugin Integration Contract](docs/EXTERNAL_PLUGIN_INTEGRATION_CONTRACT.md).
 13. **Version matrix**: declare supported Paper/Minecraft combinations and run

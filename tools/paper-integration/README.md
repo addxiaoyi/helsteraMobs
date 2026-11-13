@@ -317,6 +317,15 @@ log SHA-256 `8b00231892c031a096fd155159ef01f26322f6a04289dca8bf9427f53016aa96`);
 compressed log SHA-256
 `b8a7b3e377700a1de612a5bb0fb24a286975a6c7136f1d952f98c0ca0253b0eb`.
 
+The Lands reflection adapter is currently mapped but not runtime-verified.
+Public API signatures were inspected from Lands API 7.25.14 and 9.0.0; an
+installable Lands plugin artifact is still needed before a Paper fixture can
+verify provider discovery, area/subarea membership, and nearby-chunk distance.
+The API-only reference artifact SHA-256 values are 7.25.14
+`5d477195c727b91d7185fd0a912e2cbe3c2b45d8726068521f21a72d912c8e731a7` and
+9.0.0 `df338ecd01f9e116003c517a8254d44c793c841244b32d85f08e0cf597a8da70`;
+these are API jars, not installable Lands plugin artifacts.
+
 Previous strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all
 422 probes (403 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. The build includes atomic SkillTree snapshot replacement;
