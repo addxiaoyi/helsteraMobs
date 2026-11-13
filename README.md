@@ -532,13 +532,15 @@ Mythic `InClaim` and `NearClaim` now map to fail-closed runtime queries, with
 GriefPrevention wired through a reflection-only claim adapter. `NearClaim`
 keeps Mythic's default 16-block radius. Importer, runtime, registry, and
 geometry tests cover argument and provider boundaries. Focused Paper 1.21.1-133
-evidence with GriefPrevention 16.18.5 passes 17 checks, including imported
-inside/outside cases, subclaims, radius boundaries, and the large-radius lookup
-path. Report:
+evidence passes the same 17 checks with GriefPrevention 16.18.4 and 16.18.5,
+including imported inside/outside cases, subclaims, radius boundaries, and the
+large-radius lookup path. Reports:
+[`16.18.4`](tools/paper-integration/reports/griefprevention-claims-paper-1.21.1-20261113-r5.json)
+(SHA-256 `d9021710f0a429a6562224efc7a104da7fd10bddc007c36145b470ac53c50cb6`);
 [`griefprevention-claims-paper-1.21.1-20261113-r4.json`](tools/paper-integration/reports/griefprevention-claims-paper-1.21.1-20261113-r4.json)
 (SHA-256 `90401236ae580e4ab2d3a6363b3f6c3109c514ea78c845e12de583deafde037d`);
-compressed log SHA-256
-`b8a7b3e377700a1de612a5bb0fb24a286975a6c7136f1d952f98c0ca0253b0eb`.
+compressed log SHA-256 values: 16.18.4 `8b00231892c031a096fd155159ef01f26322f6a04289dca8bf9427f53016aa96`,
+16.18.5 `b8a7b3e377700a1de612a5bb0fb24a286975a6c7136f1d952f98c0ca0253b0eb`.
 Lands, CrashClaim, PlotSquared, and Residence claim bridges remain open.
 
 Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`

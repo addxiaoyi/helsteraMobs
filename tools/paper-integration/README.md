@@ -293,20 +293,25 @@ conditions. Report:
 compressed log SHA-256:
 `ecba4083af2aee50ca4b252bd1ad91fcc42647d5f7081d0f24936129a153d840`.
 
-Focused GriefPrevention evidence passes 17/17 checks on Paper 1.21.1-133 with
-GriefPrevention 16.18.5. It verifies reflective provider discovery, claim and
-subclaim membership, horizontal distance boundaries, the large-radius fallback,
-and imported `InClaim`/`NearClaim` conditions. Run it with:
+Focused GriefPrevention evidence passes the same 17/17 checks on Paper
+1.21.1-133 with GriefPrevention 16.18.4 and 16.18.5. It verifies reflective
+provider discovery, claim and subclaim membership, horizontal distance
+boundaries, the large-radius fallback, and imported `InClaim`/`NearClaim`
+conditions. Run fresh checks with:
 
 ```powershell
 .\mvnw.cmd -q -pl helstera-plugin -am -DskipTests package
 .\mvnw.cmd -q -f tools/paper-integration/griefprevention-fixture/pom.xml package
-pwsh -NoProfile -File tools/paper-integration/run-griefprevention-fixture.ps1 -EvidenceRevision r4
+pwsh -NoProfile -File tools/paper-integration/run-griefprevention-fixture.ps1 -EvidenceRevision r6 -GriefPreventionVersion 16.18.5
+pwsh -NoProfile -File tools/paper-integration/run-griefprevention-fixture.ps1 -EvidenceRevision r7 -GriefPreventionVersion 16.18.4
 ```
 
-The runner pins GriefPrevention 16.18.5 by SHA-1 and SHA-512, requires Paper
-1.21.1-133, and writes a fresh report and compressed log under `reports/`.
-Evidence:
+The runner pins GriefPrevention 16.18.4 and 16.18.5 by SHA-1 and SHA-512,
+requires Paper 1.21.1-133, and writes a fresh report and compressed log under
+`reports/`. Evidence:
+[`16.18.4 report`](reports/griefprevention-claims-paper-1.21.1-20261113-r5.json)
+(SHA-256 `d9021710f0a429a6562224efc7a104da7fd10bddc007c36145b470ac53c50cb6`,
+log SHA-256 `8b00231892c031a096fd155159ef01f26322f6a04289dca8bf9427f53016aa96`);
 [`griefprevention-claims-paper-1.21.1-20261113-r4.json`](reports/griefprevention-claims-paper-1.21.1-20261113-r4.json)
 (SHA-256 `90401236ae580e4ab2d3a6363b3f6c3109c514ea78c845e12de583deafde037d`);
 compressed log SHA-256
