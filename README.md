@@ -544,8 +544,11 @@ compressed log SHA-256 values: 16.18.4 `8b00231892c031a096fd155159ef01f26322f6a0
 Lands now has a reflection-only adapter for the statically inspected 7.25.14
 and 9.0.0 public API shapes (`LandsIntegration#getArea`, chunk lookup, and
 `Land#getChunks`). No installable Lands plugin artifact was available for a
-Paper fixture, so its runtime claim results remain `mapped-unverified`; other
-Lands versions, CrashClaim, PlotSquared, and Residence bridges remain open.
+Paper fixture, so its runtime claim results remain `mapped-unverified`. Eleven
+local adapter contract tests exercise area lookup, indexed and large-radius
+distance checks, both scan caps, and fail-closed provider errors; these tests
+do not replace an installed-plugin Paper fixture. Other Lands versions,
+CrashClaim, PlotSquared, and Residence bridges remain open.
 
 Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
 passes all 402 release probes (383 passed, 19 expected rejections, zero failed
