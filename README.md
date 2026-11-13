@@ -528,6 +528,19 @@ caster location. Report:
 compressed server log SHA-256
 `ecba4083af2aee50ca4b252bd1ad91fcc42647d5f7081d0f24936129a153d840`.
 
+Mythic `InClaim` and `NearClaim` now map to fail-closed runtime queries, with
+GriefPrevention wired through a reflection-only claim adapter. `NearClaim`
+keeps Mythic's default 16-block radius. Importer, runtime, registry, and
+geometry tests cover argument and provider boundaries. Focused Paper 1.21.1-133
+evidence with GriefPrevention 16.18.5 passes 17 checks, including imported
+inside/outside cases, subclaims, radius boundaries, and the large-radius lookup
+path. Report:
+[`griefprevention-claims-paper-1.21.1-20261113-r4.json`](tools/paper-integration/reports/griefprevention-claims-paper-1.21.1-20261113-r4.json)
+(SHA-256 `90401236ae580e4ab2d3a6363b3f6c3109c514ea78c845e12de583deafde037d`);
+compressed log SHA-256
+`b8a7b3e377700a1de612a5bb0fb24a286975a6c7136f1d952f98c0ca0253b0eb`.
+Lands, CrashClaim, PlotSquared, and Residence claim bridges remain open.
+
 Previous strict fixture `srv-paper-coordinate-difference-strict-20261108-r1`
 passes all 402 release probes (383 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. It verifies imported Mythic `XDiff`,

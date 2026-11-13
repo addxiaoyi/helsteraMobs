@@ -86,6 +86,8 @@ public final class SkillExtras {
     private static volatile ThreatLookup threatLookup;
     private static volatile PinRegistry pinRegistry;
     private static volatile java.util.function.BiFunction<String, Location, Boolean> regionLookup;
+    private static volatile java.util.function.Function<Location, Boolean> inClaimLookup;
+    private static volatile java.util.function.BiFunction<Location, Double, Boolean> nearClaimLookup;
     @FunctionalInterface
     public interface LocalDifficultyLookup {
         Double difficulty(Location location);
@@ -132,6 +134,14 @@ public final class SkillExtras {
     public static void regionLookup(
             java.util.function.BiFunction<String, Location, Boolean> lookup) {
         regionLookup = lookup;
+    }
+
+    /** Connects claim conditions to optional external claim providers. */
+    public static void claimLookup(
+            java.util.function.Function<Location, Boolean> inClaim,
+            java.util.function.BiFunction<Location, Double, Boolean> nearClaim) {
+        inClaimLookup = inClaim;
+        nearClaimLookup = nearClaim;
     }
 
     /** Overrides Paper's local-difficulty lookup for integrations and unit tests. */
@@ -431,6 +441,8 @@ public final class SkillExtras {
         threatLookup = null;
         pinRegistry = null;
         regionLookup = null;
+        inClaimLookup = null;
+        nearClaimLookup = null;
         localDifficultyLookup = null;
         mobTemplateLookup = null;
         damagePolicy = null;
@@ -2806,6 +2818,20 @@ public final class SkillExtras {
                         throw new IllegalArgumentException("not-in-region requires a region name");
                     }
                     return ctx -> Boolean.FALSE.equals(externalRegion(region, conditionLocation(ctx)));
+                }),
+                Map.entry("in-claim", (SkillCatalog.ConditionFactory) a -> {
+                    if (!a.isEmpty()) throw new IllegalArgumentException("in-claim takes no arguments");
+                    return ctx -> Boolean.TRUE.equals(externalInClaim(conditionLocation(ctx)));
+                }),
+                Map.entry("near-claim", (SkillCatalog.ConditionFactory) a -> {
+                    if (a.size() > 1 || (a.size() == 1 && a.get(0).isBlank())) {
+                        throw new IllegalArgumentException("near-claim expects one non-negative radius");
+                    }
+                    double radius = a.isEmpty() ? 16.0 : Double.parseDouble(a.get(0).trim());
+                    if (!Double.isFinite(radius) || radius < 0) {
+                        throw new IllegalArgumentException("near-claim radius must be finite and non-negative");
+                    }
+                    return ctx -> Boolean.TRUE.equals(externalNearClaim(conditionLocation(ctx), radius));
                 }),
 
                 // ---- 权限 / 持握 / 状态 ----
@@ -8365,6 +8391,29 @@ public final class SkillExtras {
         if (lookup == null) return null;
         try {
             return lookup.apply(region, location);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private static Boolean externalInClaim(Location location) {
+        if (location == null || location.getWorld() == null) return null;
+        var lookup = inClaimLookup;
+        if (lookup == null) return null;
+        try {
+            return lookup.apply(location);
+        } catch (RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private static Boolean externalNearClaim(Location location, double radius) {
+        if (location == null || location.getWorld() == null
+                || !Double.isFinite(radius) || radius < 0) return null;
+        var lookup = nearClaimLookup;
+        if (lookup == null) return null;
+        try {
+            return lookup.apply(location, radius);
         } catch (RuntimeException ignored) {
             return null;
         }

@@ -16,6 +16,8 @@ public enum Capability {
     RESOURCEPACK_MERGE,
     /** External region lookup such as WorldGuard. */
     REGION_QUERY,
+    /** Query whether a location is inside or near an external land claim. */
+    CLAIM_QUERY,
     /** Read a player's economy balance through a registered provider. */
     ECONOMY_BALANCE
 }

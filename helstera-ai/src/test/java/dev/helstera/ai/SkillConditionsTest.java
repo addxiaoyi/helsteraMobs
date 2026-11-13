@@ -21,6 +21,7 @@ import java.util.OptionalDouble;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -994,6 +995,65 @@ class SkillConditionsTest {
                     () -> extraFactory("not-in-region").create(List.of("arena", "other")));
         } finally {
             SkillExtras.regionLookup(null);
+        }
+    }
+
+    @Test
+    @DisplayName("InClaim/NearClaim 使用目标位置、默认半径并在未知时 fail-closed")
+    void officialClaimConditionsUseExternalLookup() {
+        World world = mock(World.class);
+        Location casterLocation = new Location(world, 1, 64, 1);
+        Location targetLocation = new Location(world, 8, 64, 8);
+        LivingEntity caster = mock(LivingEntity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(caster.getLocation()).thenReturn(casterLocation);
+        when(target.getLocation()).thenReturn(targetLocation);
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(casterLocation);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+
+        var inClaim = extraFactory("in-claim").create(List.of());
+        var nearDefault = extraFactory("near-claim").create(List.of());
+        var nearExplicit = extraFactory("near-claim").create(List.of("8.5"));
+        var targetContext = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+        java.util.concurrent.atomic.AtomicReference<Location> queriedLocation =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicReference<Double> queriedRadius =
+                new java.util.concurrent.atomic.AtomicReference<>();
+        try {
+            SkillExtras.claimLookup(location -> {
+                queriedLocation.set(location);
+                return location == targetLocation;
+            }, (location, radius) -> {
+                queriedLocation.set(location);
+                queriedRadius.set(radius);
+                return location == targetLocation && radius == 16.0;
+            });
+            assertTrue(inClaim.test(targetContext));
+            assertTrue(nearDefault.test(targetContext));
+            assertTrue(queriedLocation.get() == targetLocation);
+            assertEquals(16.0, queriedRadius.get(), 0.0);
+            assertFalse(nearExplicit.test(targetContext));
+            assertEquals(8.5, queriedRadius.get(), 0.0);
+
+            SkillExtras.claimLookup(location -> false, (location, radius) -> false);
+            assertFalse(inClaim.test(targetContext));
+            assertFalse(nearDefault.test(targetContext));
+            SkillExtras.claimLookup(location -> null, (location, radius) -> null);
+            assertFalse(inClaim.test(targetContext));
+            assertFalse(nearDefault.test(targetContext));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("in-claim").create(List.of("unexpected")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("near-claim").create(List.of("NaN")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("near-claim").create(List.of("-1")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("near-claim").create(List.of("1", "2")));
+        } finally {
+            SkillExtras.claimLookup(null, null);
         }
     }
 

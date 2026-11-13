@@ -293,6 +293,25 @@ conditions. Report:
 compressed log SHA-256:
 `ecba4083af2aee50ca4b252bd1ad91fcc42647d5f7081d0f24936129a153d840`.
 
+Focused GriefPrevention evidence passes 17/17 checks on Paper 1.21.1-133 with
+GriefPrevention 16.18.5. It verifies reflective provider discovery, claim and
+subclaim membership, horizontal distance boundaries, the large-radius fallback,
+and imported `InClaim`/`NearClaim` conditions. Run it with:
+
+```powershell
+.\mvnw.cmd -q -pl helstera-plugin -am -DskipTests package
+.\mvnw.cmd -q -f tools/paper-integration/griefprevention-fixture/pom.xml package
+pwsh -NoProfile -File tools/paper-integration/run-griefprevention-fixture.ps1 -EvidenceRevision r4
+```
+
+The runner pins GriefPrevention 16.18.5 by SHA-1 and SHA-512, requires Paper
+1.21.1-133, and writes a fresh report and compressed log under `reports/`.
+Evidence:
+[`griefprevention-claims-paper-1.21.1-20261113-r4.json`](reports/griefprevention-claims-paper-1.21.1-20261113-r4.json)
+(SHA-256 `90401236ae580e4ab2d3a6363b3f6c3109c514ea78c845e12de583deafde037d`);
+compressed log SHA-256
+`b8a7b3e377700a1de612a5bb0fb24a286975a6c7136f1d952f98c0ca0253b0eb`.
+
 Previous strict fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all
 422 probes (403 passed, 19 expected rejections, zero failed or incomplete) on
 Paper 1.21.1-133. The build includes atomic SkillTree snapshot replacement;

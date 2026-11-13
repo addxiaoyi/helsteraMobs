@@ -21,6 +21,7 @@ import dev.helstera.core.validate.ModelValidator;
 import dev.helstera.integrations.IntegrationRegistryImpl;
 import dev.helstera.integrations.items.CraftEngineAdapter;
 import dev.helstera.integrations.items.ItemAdderAdapter;
+import dev.helstera.integrations.region.GriefPreventionAdapter;
 import dev.helstera.integrations.region.WorldGuardAdapter;
 import dev.helstera.integrations.mythicmobs.MythicMobsAdapter;
 import dev.helstera.migration.MigrationServiceImpl;
@@ -593,11 +594,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             ir.register(new dev.helstera.integrations.BlockedExternalAdapter(
                     "ModelEngine", "none verified; model state API bridge not implemented"));
             ir.register(new WorldGuardAdapter());
+            if (getConfig().getBoolean("compatibility.griefprevention", true)) {
+                ir.register(new GriefPreventionAdapter());
+            }
             int connected = ir.enableAll(this);
             dev.helstera.ai.skill.SkillExtras.currencyBalance(vaultEconomy::balance);
             getLogger().info("外部插件适配器: " + connected + "/" + ir.all().size() + " 已连接");
             this.integrations = ir;
             dev.helstera.ai.skill.SkillExtras.regionLookup(ir::containsRegion);
+            dev.helstera.ai.skill.SkillExtras.claimLookup(ir::inClaim, ir::nearClaim);
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);
         }

@@ -3856,6 +3856,58 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported InClaim and NearClaim conditions bind and query the active claim provider")
+    void importedClaimConditionsReachRuntimeProvider() {
+        var world = mock(org.bukkit.World.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var location = new org.bukkit.Location(world, 12, 64, -4);
+        when(target.getLocation()).thenReturn(location);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1, -1, 0, "claim-condition", null, target,
+                List.of(target), location, null, null);
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        var queried = new java.util.concurrent.atomic.AtomicReference<org.bukkit.Location>();
+        var radius = new java.util.concurrent.atomic.AtomicReference<Double>();
+
+        try {
+            SkillExtras.claimLookup(point -> {
+                queried.set(point);
+                return point == location;
+            }, (point, distance) -> {
+                queried.set(point);
+                radius.set(distance);
+                return point == location && distance == 16.0;
+            });
+            var inClaim = dev.helstera.migration.importer.MmConditions.translate("?InClaim");
+            var nearClaim = dev.helstera.migration.importer.MmConditions.translate("?NearClaim");
+            var customRadius = dev.helstera.migration.importer.MmConditions.translate(
+                    "?NearClaim{r=8}");
+            assertTrue(inClaim.translated());
+            assertTrue(nearClaim.translated());
+            assertTrue(customRadius.translated());
+            String inClaimKey = skills.bindCondition(inClaim.condition());
+            String nearClaimKey = skills.bindCondition(nearClaim.condition());
+            String customRadiusKey = skills.bindCondition(customRadius.condition());
+            assertNotNull(inClaimKey);
+            assertNotNull(nearClaimKey);
+            assertNotNull(customRadiusKey);
+            assertTrue(registry.testCondition(inClaimKey, context));
+            assertEquals(location, queried.get());
+            assertTrue(registry.testCondition(nearClaimKey, context));
+            assertEquals(16.0, radius.get(), 0.0);
+            assertFalse(registry.testCondition(customRadiusKey, context));
+            assertEquals(8.0, radius.get(), 0.0);
+
+            SkillExtras.claimLookup(point -> null, (point, distance) -> null);
+            assertFalse(registry.testCondition(inClaimKey, context));
+            assertFalse(registry.testCondition(nearClaimKey, context));
+        } finally {
+            SkillExtras.claimLookup(null, null);
+        }
+    }
+
+    @Test
     void reorderedBiomeArgumentsReachRuntimeWithTheirOriginalMeaning() {
         var world = mock(org.bukkit.World.class);
         var block = mock(org.bukkit.block.Block.class);

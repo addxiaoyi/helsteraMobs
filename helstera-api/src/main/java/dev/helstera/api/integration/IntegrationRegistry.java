@@ -32,4 +32,45 @@ public interface IntegrationRegistry {
         }
         return null;
     }
+
+    /** Returns true if any active claim provider contains the location. */
+    default Boolean inClaim(Location location) {
+        if (location == null || location.getWorld() == null) return null;
+        boolean known = false;
+        boolean unknown = false;
+        for (IntegrationAdapter adapter : all()) {
+            if (!adapter.hasCapability(Capability.CLAIM_QUERY)) continue;
+            try {
+                Boolean answer = adapter.inClaim(location);
+                if (Boolean.TRUE.equals(answer)) return true;
+                if (Boolean.FALSE.equals(answer)) known = true;
+                else if (answer == null) unknown = true;
+            } catch (RuntimeException ignored) {
+                // A failing optional provider cannot turn an unknown answer into a match.
+                unknown = true;
+            }
+        }
+        return known && !unknown ? false : null;
+    }
+
+    /** Returns true if any active claim provider has a claim within the radius. */
+    default Boolean nearClaim(Location location, double radius) {
+        if (location == null || location.getWorld() == null
+                || !Double.isFinite(radius) || radius < 0) return null;
+        boolean known = false;
+        boolean unknown = false;
+        for (IntegrationAdapter adapter : all()) {
+            if (!adapter.hasCapability(Capability.CLAIM_QUERY)) continue;
+            try {
+                Boolean answer = adapter.nearClaim(location, radius);
+                if (Boolean.TRUE.equals(answer)) return true;
+                if (Boolean.FALSE.equals(answer)) known = true;
+                else if (answer == null) unknown = true;
+            } catch (RuntimeException ignored) {
+                // A failing optional provider cannot turn an unknown answer into a match.
+                unknown = true;
+            }
+        }
+        return known && !unknown ? false : null;
+    }
 }

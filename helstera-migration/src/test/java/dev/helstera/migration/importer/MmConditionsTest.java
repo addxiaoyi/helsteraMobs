@@ -1720,6 +1720,27 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("InClaim 与 NearClaim 严格映射并保留默认半径")
+    void claimConditionsMapStrictly() {
+        assertEquals("in-claim", t("?InClaim"));
+        assertEquals("in-claim", t("?in_claim{}"));
+        assertEquals("!in-claim", t("!InClaim"));
+        assertEquals("near-claim 16", t("?NearClaim"));
+        assertEquals("near-claim 16", t("?NearClaim{}"));
+        assertEquals("near-claim 24", t("?NearClaim{radius=24}"));
+        assertEquals("near-claim 8.5", t("?near_claim{r=8.5}"));
+        assertEquals("near-claim 20", t("?nearClaims{r=20}"));
+        assertEquals("near-claim 0", t("?NearClaim{radius=0}"));
+
+        for (String invalid : List.of(
+                "?InClaim{radius=16}", "?NearClaim{radius=}", "?NearClaim{radius=-1}",
+                "?NearClaim{radius=NaN}", "?NearClaim{radius=Infinity}",
+                "?NearClaim{radius=8;r=9}", "?NearClaim{unknown=8}", "?NearClaim{radius=8,other=1}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     @DisplayName("比较号带 = 时按同向处理，不改变方向")
     void nonStrictComparisons() {
         assertEquals("health <=50", t("?health{<=50}"));

@@ -89,6 +89,8 @@ public final class MmConditions {
             "exact", "exact", "e", "exact");
     private static final Map<String, String> REGION_ARGUMENTS = Map.of(
             "region", "region", "r", "region");
+    private static final Map<String, String> CLAIM_RADIUS_ARGUMENTS = Map.of(
+            "radius", "radius", "r", "radius");
     private static final Map<String, String> LOOKING_AT_ARGUMENTS = Map.of(
             "type", "type", "t", "type", "block", "block", "b", "block",
             "entity", "entity", "e", "entity", "distance", "distance", "d", "distance");
@@ -138,6 +140,7 @@ public final class MmConditions {
             "isleashed", "leashed", "targetisleashed", "targetleashed", "hasowner", "ownerisplayer",
             "ownerisonline", "owner", "isowner", "targethasowner", "targetownerisplayer", "targetownerisonline",
             "hasparent", "isparent", "parent", "isparentalive", "parentalive", "issibling", "sibling",
+            "inclaim",
             "targetisop", "targetisoperator", "samefaction", "differentfaction", "lineofsight", "haslineofsight",
             "targetinlineofsight", "targetnotinlineofsight", "lineofsightfromorigin", "inlineofsightfromorigin",
             "inside", "outside", "targetisundead", "targetiscreature", "targetiscollidable", "targetisblocked",
@@ -365,6 +368,17 @@ public final class MmConditions {
             String region = strictRegionArgument(body);
             if (region == null) return new Mapped(s, false);
             return new Mapped(("region".equals(name) ? "region " : "not-in-region ") + region, true);
+        }
+        if ("inclaim".equals(name)) {
+            return body == null || body.isBlank()
+                    ? new Mapped("in-claim", true) : new Mapped(s, false);
+        }
+        if ("nearclaim".equals(name) || "nearclaims".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body, CLAIM_RADIUS_ARGUMENTS, "radius");
+            if (arguments == null) return new Mapped(s, false);
+            String radius = arguments.getOrDefault("radius", "16");
+            if (!validRadius(radius)) return new Mapped(s, false);
+            return new Mapped("near-claim " + radius.trim(), true);
         }
         if (Set.of("variableequals", "variableeq", "varequals", "vareq",
                 "variableinrange", "varinrange", "varrange",

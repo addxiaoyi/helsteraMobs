@@ -10,6 +10,7 @@ softdepend:
   - ItemAdder
   - CraftEngine
   - WorldGuard
+  - GriefPrevention
 commands:
   helstera:
     description: helsteraMobs 主命令
