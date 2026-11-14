@@ -9928,6 +9928,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean targetKillMechanic = false;
             boolean damageMeleeMechanic = false;
             boolean conditionUtilityAliases = false;
+            boolean importedPluginCondition = false;
             boolean importedPopulationConditions = false;
             boolean localDifficultyCondition = false;
             boolean serverNmsVersionCondition = false;
@@ -12767,6 +12768,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("plugin helsteraMobs"), conditionContext)
                         && !behaviors.testCondition(
                         skills.bindCondition("plugin __missing_plugin__"), conditionContext);
+                importedPluginCondition = runImportedPluginConditionSelfTest(skills, behaviors, conditionContext);
                 boolean vehicleDeadCondition = !behaviors.testCondition(
                         skills.bindCondition("vehicle-is-dead"), conditionContext);
                 boolean managedInCombatPositive = false;
@@ -13032,6 +13034,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && absorptionCondition
                         && dialogueCondition
                         && pluginCondition
+                        && importedPluginCondition
                         && behaviors.testCondition(
                         skills.bindCondition("server-version " + liveMinecraftVersion), conditionContext)
                         && behaviors.testCondition(
@@ -15954,6 +15957,50 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " duplicate-rejected=" + duplicateHealthRejected
                 + " overflow-preserved=" + overflowPreserved
                 + " invalid-preserved=" + invalidPreserved);
+    }
+
+    private boolean runImportedPluginConditionSelfTest(SkillService skills, BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext context) {
+        var primary = dev.helstera.migration.importer.MmConditions.translate("?Plugin{plugin=helsteraMobs}");
+        var pluginExists = dev.helstera.migration.importer.MmConditions.translate("?PluginExists{pl=helsteraMobs}");
+        var hasPlugin = dev.helstera.migration.importer.MmConditions.translate("?HasPlugin{p=HELSTERAMOBS}");
+        var defaultPlugin = dev.helstera.migration.importer.MmConditions.translate("?PluginExists");
+        var missingPlugin = dev.helstera.migration.importer.MmConditions.translate(
+                "?PluginExists{p=__missing_plugin__}");
+        var invalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?Plugin{plugin=helsteraMobs;unknown=true}");
+        var duplicate = dev.helstera.migration.importer.MmConditions.translate(
+                "?HasPlugin{p=helsteraMobs;plugin=__missing_plugin__}");
+        boolean primaryMapped = primary.translated() && "plugin helsteraMobs".equals(primary.condition());
+        boolean pluginExistsMapped = pluginExists.translated()
+                && "plugin helsteraMobs".equals(pluginExists.condition());
+        boolean hasPluginMapped = hasPlugin.translated() && "plugin HELSTERAMOBS".equals(hasPlugin.condition());
+        boolean defaultMapped = defaultPlugin.translated() && "plugin MythicMobs".equals(defaultPlugin.condition());
+        boolean missingMapped = missingPlugin.translated()
+                && "plugin __missing_plugin__".equals(missingPlugin.condition());
+        boolean invalidPreserved = !invalid.translated()
+                && "?Plugin{plugin=helsteraMobs;unknown=true}".equals(invalid.condition());
+        boolean duplicatePreserved = !duplicate.translated()
+                && "?HasPlugin{p=helsteraMobs;plugin=__missing_plugin__}".equals(duplicate.condition());
+        boolean enabled = primaryMapped && behaviors.testCondition(skills.bindCondition(primary.condition()), context);
+        boolean pluginExistsEnabled = pluginExistsMapped
+                && behaviors.testCondition(skills.bindCondition(pluginExists.condition()), context);
+        boolean hasPluginEnabled = hasPluginMapped
+                && behaviors.testCondition(skills.bindCondition(hasPlugin.condition()), context);
+        boolean missingRejected = missingMapped
+                && !behaviors.testCondition(skills.bindCondition(missingPlugin.condition()), context);
+        boolean defaultAbsent = defaultMapped
+                && !behaviors.testCondition(skills.bindCondition(defaultPlugin.condition()), context);
+        boolean passed = enabled && pluginExistsEnabled && hasPluginEnabled && missingRejected
+                && defaultAbsent && invalidPreserved && duplicatePreserved;
+        getLogger().info("[自检] imported-plugin-condition primary-mapped=" + primaryMapped
+                + " plugin-exists-mapped=" + pluginExistsMapped + " has-plugin-mapped=" + hasPluginMapped
+                + " enabled=" + enabled + " plugin-exists-enabled=" + pluginExistsEnabled
+                + " has-plugin-enabled=" + hasPluginEnabled + " missing-rejected=" + missingRejected
+                + " default-mapped=" + defaultMapped + " default-absent=" + defaultAbsent
+                + " invalid-preserved=" + invalidPreserved + " duplicate-preserved=" + duplicatePreserved
+                + " passed=" + passed);
+        return passed;
     }
 
     private boolean runImportedPopulationConditionsSelfTest(

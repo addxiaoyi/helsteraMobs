@@ -113,6 +113,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-entity-type-traits mapped=true horse=true wrong-style-rejected=true panda=true villager=true zombie-villager=true rainbow-sheep=true rainbow-sheep-white-rejected=true shulker=true parrot=true llama=true tropical-fish=true iron-golem-crack=true inapplicable-trait-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-plugin-condition primary-mapped=true plugin-exists-mapped=true has-plugin-mapped=true enabled=true plugin-exists-enabled=true has-plugin-enabled=true missing-rejected=true default-mapped=true default-absent=true invalid-preserved=true duplicate-preserved=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] imported-free-inventory-slot primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-name-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true default-name-rejected=true fallback=true custom-name-rejected=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-server-conditions paper-primary=true paper-alias=true exact=true exact-negative=true after-inclusive=true after-exclusive-rejected=true after-higher-rejected=true before-inclusive=true before-exclusive-rejected=true invalid-preserved=true result=true',
@@ -990,6 +991,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'damageMeleeMechanic').status -eq 'passed') 'damage melee mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'inCombatCondition').status -eq 'passed') 'in-combat condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionUtilityAliases').status -eq 'passed') 'condition utility alias probe'
+    Assert-True (($report.probes | Where-Object id -eq 'importedPluginCondition').status -eq 'passed') 'imported plugin condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'invulnerableCondition').status -eq 'passed') 'imported invulnerability condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'survivalModeCondition').status -eq 'passed') 'survival mode condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'distanceFromSpawnCondition').status -eq 'passed') 'distance from spawn boundary probe'
@@ -1717,6 +1719,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'importedSurvivalModeCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'importedSurvivalModeCondition'; status = 'passed'; observations = @('imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'importedPluginCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'importedPluginCondition'; status = 'passed'; observations = @('imported-plugin-condition primary-mapped=true plugin-exists-mapped=true has-plugin-mapped=true enabled=true plugin-exists-enabled=true has-plugin-enabled=true missing-rejected=true default-mapped=true default-absent=true invalid-preserved=true duplicate-preserved=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedVariableConditions'
     $fullCatalogReport.probes += [pscustomobject]@{

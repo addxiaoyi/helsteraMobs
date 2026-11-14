@@ -805,9 +805,18 @@ class MmConditionsTest {
     @Test
     void officialPluginConditionMapsDefaultAndAliases() {
         assertEquals("plugin MythicMobs", t("?plugin"));
+        assertEquals("plugin MythicMobs", t("?plugin{}"));
         assertEquals("plugin DemoPlugin", t("?plugin{p=DemoPlugin}"));
         assertEquals("plugin DemoPlugin", t("?pluginexists{plugin=DemoPlugin}"));
-        assertTrue(translated("?hasPlugin{pl=DemoPlugin}"));
+        assertEquals("plugin DemoPlugin", t("?hasPlugin{pl=DemoPlugin}"));
+        assertEquals("plugin DemoPlugin", t("?PluginExists{DemoPlugin}"));
+        assertEquals("plugin \"Demo Plugin\"", t("?hasPlugin{plugin=\"Demo Plugin\"}"));
+        for (String malformed : List.of(
+                "?plugin{plugin=}", "?plugin{plugin=DemoPlugin;unknown=true}",
+                "?hasPlugin{p=DemoPlugin;plugin=OtherPlugin}", "?plugin{p=Demo,Plugin}",
+                "?plugin{Demo Plugin}", "?plugin{DemoPlugin;}", "?plugin{;plugin=DemoPlugin}")) {
+            assertUntranslatedPreserved(malformed);
+        }
     }
 
     @Test
