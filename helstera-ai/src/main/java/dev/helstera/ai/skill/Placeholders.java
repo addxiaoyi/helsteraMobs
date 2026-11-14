@@ -98,6 +98,9 @@ public final class Placeholders {
         if (field.equals("hp.raw") || field.equals("health")) {
             return fmt(living(ctx.instance()).map(LivingEntity::getHealth).orElse(0.0));
         }
+        if (field.equals("absorption") || field.equals("absorb")) {
+            return living(ctx.instance()).map(entity -> fmt(entity.getAbsorptionAmount())).orElse(null);
+        }
         if (field.equals("hp.max") || field.equals("maxhealth")) {
             return fmt(living(ctx.instance()).map(LivingEntity::getMaxHealth).orElse(0.0));
         }
@@ -166,6 +169,7 @@ public final class Placeholders {
                     : ctx.healthRatio() * 100.0);
         }
         if (field.equals("hp.raw") || field.equals("health")) return fmt(target.getHealth());
+        if (field.equals("absorption") || field.equals("absorb")) return fmt(target.getAbsorptionAmount());
         if (field.equals("hp.max") || field.equals("maxhealth")) return fmt(target.getMaxHealth());
         if (field.startsWith("loc.")) {
             return locationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(4));
@@ -339,6 +343,7 @@ public final class Placeholders {
                 out.add(scope + "." + f);
             }
         }
+        out.addAll(List.of("caster.absorption", "caster.absorb", "target.absorption", "target.absorb"));
         out.addAll(List.of("skill.payload", "ctx.payload", "ctx.state",
                 "caster.id", "caster.state", "caster.decisions",
                 "random.1to10", "random.1to100", "random.percent"));

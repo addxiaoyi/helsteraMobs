@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-absorption-placeholder-strict-20261114-r3",
+    "reportFixtureDirectory": "srv-paper-absorption-placeholder-strict-20261114-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-absorption-placeholder-strict-20261114-r3.json",
+    "reportSha256": "07a1b8ca464a746b584d34c1e046765d5a9499ab730a256d0eacaf5f7e8d7deb",
+    "log": "tools/paper-integration/reports/paper-1.21.1-absorption-placeholder-strict-20261114-r3.log.gz",
+    "logSha256": "f8302725111b83501018b0ff5f99cca698d3bf318701835cf25926618699b78d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-absorption-placeholder-strict-20261114-r3-client-logs.tar.gz",
+    "clientLogSha256": "29f7106f5073b27db05a6e78378410a92e40619dce9e3b4f3d33b561815b4eb2",
+    "pluginSha256": "2df7393c8f3124eb267466e543e8e951a08a7c71cdb800729aff4cc4559ba718",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-inline-condition-strict-20261112-r1",
     "reportFixtureDirectory": "srv-paper-inline-condition-strict-20261112-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1-client-logs.tar.gz",
     "clientLogSha256": "358e4b071969c72d4bf725ce1a36aed72f6ac5cbd76c53b0ac6b29ff5caf6970",
     "pluginSha256": "3cd83778bb9e926c60aa8ae7c6e0627aa703f80aa520a057c7e9b518e784357d",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-absorption-placeholder-strict-20261114-r3"
   },
   {
     "fixtureId": "srv-paper-prevent-vanilla-damage-strict-20261112-r3",

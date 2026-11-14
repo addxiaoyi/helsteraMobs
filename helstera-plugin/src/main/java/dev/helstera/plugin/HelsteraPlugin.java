@@ -14960,7 +14960,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     // Force a known in-progress attack cooldown instead of
                     // depending on incidental client input during startup.
                     permissionProbe.resetCooldown();
-                    boolean attackCooldownPlaceholder = verifyAttackCooldownPlaceholder(
+                    boolean gameplayPlaceholderValues = verifyGameplayPlaceholders(
                             permissionProbe, stateContext, rechargingTarget);
                     gameplayPlaceholders = "14".equals(dev.helstera.ai.skill.Placeholders.lookup(
                             "target.food", stateContext))
@@ -14968,7 +14968,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             "target.air", stateContext))
                             && "shield".equals(dev.helstera.ai.skill.Placeholders.lookup(
                             "target.mainhand.type", stateContext))
-                            && attackCooldownPlaceholder;
+                            && gameplayPlaceholderValues;
                     boolean scoreSet = runIntegrationAction(skills, behaviors,
                             "setscore points 2", stateContext);
                     boolean scoreAdd = runIntegrationAction(skills, behaviors,
@@ -17009,9 +17009,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         return condition != null && behaviors.testCondition(condition, context);
     }
 
-    private boolean verifyAttackCooldownPlaceholder(org.bukkit.entity.Player player,
-                                                     dev.helstera.api.behavior.BehaviorContext context,
-                                                     org.bukkit.entity.LivingEntity nonPlayer) {
+    private boolean verifyGameplayPlaceholders(org.bukkit.entity.Player player,
+                                               dev.helstera.api.behavior.BehaviorContext context,
+                                               org.bukkit.entity.LivingEntity nonPlayer) {
         float liveCooldown = player.getAttackCooldown();
         String expected = Float.toString(liveCooldown);
         String caster = dev.helstera.ai.skill.Placeholders.lookup("caster.attack_cooldown", context);
@@ -17024,11 +17024,77 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean nonPlayerUnresolved = dev.helstera.ai.skill.Placeholders.lookup(
                 "target.attack_cooldown", nonPlayerContext) == null;
         boolean recharging = liveCooldown < 1.0f;
-        boolean result = inRange && recharging && aliases && nonPlayerUnresolved;
+        double oldPlayerAbsorption = player.getAbsorptionAmount();
+        double oldNonPlayerAbsorption = nonPlayer.getAbsorptionAmount();
+        org.bukkit.attribute.Attribute maxAbsorption = org.bukkit.attribute.Attribute.GENERIC_MAX_ABSORPTION;
+        org.bukkit.attribute.AttributeInstance playerAbsorptionAttribute = player.getAttribute(maxAbsorption);
+        boolean playerHadAbsorptionAttribute = playerAbsorptionAttribute != null;
+        if (playerAbsorptionAttribute == null) {
+            player.registerAttribute(maxAbsorption);
+            playerAbsorptionAttribute = player.getAttribute(maxAbsorption);
+        }
+        double oldPlayerAbsorptionBase = playerAbsorptionAttribute == null ? 0.0
+                : playerHadAbsorptionAttribute ? playerAbsorptionAttribute.getBaseValue()
+                : playerAbsorptionAttribute.getDefaultValue();
+        org.bukkit.attribute.AttributeInstance nonPlayerAbsorptionAttribute = nonPlayer.getAttribute(maxAbsorption);
+        boolean nonPlayerHadAbsorptionAttribute = nonPlayerAbsorptionAttribute != null;
+        if (nonPlayerAbsorptionAttribute == null) {
+            nonPlayer.registerAttribute(maxAbsorption);
+            nonPlayerAbsorptionAttribute = nonPlayer.getAttribute(maxAbsorption);
+        }
+        double oldNonPlayerAbsorptionBase = nonPlayerAbsorptionAttribute == null ? 0.0
+                : nonPlayerHadAbsorptionAttribute ? nonPlayerAbsorptionAttribute.getBaseValue()
+                : nonPlayerAbsorptionAttribute.getDefaultValue();
+        boolean absorption = false;
+        boolean absorptionAliases = false;
+        boolean absorptionZero = false;
+        boolean nonPlayerAbsorption = false;
+        boolean absorptionRestored = false;
+        try {
+            if (playerAbsorptionAttribute != null && playerAbsorptionAttribute.getValue() < 3.5) {
+                playerAbsorptionAttribute.setBaseValue(Math.max(oldPlayerAbsorptionBase, 3.5));
+            }
+            if (nonPlayerAbsorptionAttribute != null && nonPlayerAbsorptionAttribute.getValue() < 2.5) {
+                nonPlayerAbsorptionAttribute.setBaseValue(Math.max(oldNonPlayerAbsorptionBase, 2.5));
+            }
+            player.setAbsorptionAmount(3.5);
+            nonPlayer.setAbsorptionAmount(2.5);
+            String casterAbsorption = dev.helstera.ai.skill.Placeholders.lookup("caster.absorption", context);
+            String targetAbsorption = dev.helstera.ai.skill.Placeholders.lookup("target.absorption", context);
+            String nonPlayerValue = dev.helstera.ai.skill.Placeholders.lookup("target.absorb", nonPlayerContext);
+            absorption = "3.5".equals(casterAbsorption) && "3.5".equals(targetAbsorption);
+            absorptionAliases = "3.5".equals(dev.helstera.ai.skill.Placeholders.lookup("target.absorb", context))
+                    && "3.5".equals(dev.helstera.ai.skill.Placeholders.lookup("caster.absorb", context));
+            nonPlayerAbsorption = "2.5".equals(nonPlayerValue);
+            player.setAbsorptionAmount(0.0);
+            absorptionZero = "0.0".equals(
+                    dev.helstera.ai.skill.Placeholders.lookup("target.absorption", context));
+        } finally {
+            if (playerAbsorptionAttribute != null) {
+                playerAbsorptionAttribute.setBaseValue(oldPlayerAbsorptionBase);
+            }
+            if (nonPlayerAbsorptionAttribute != null) {
+                nonPlayerAbsorptionAttribute.setBaseValue(oldNonPlayerAbsorptionBase);
+            }
+            player.setAbsorptionAmount(oldPlayerAbsorption);
+            nonPlayer.setAbsorptionAmount(oldNonPlayerAbsorption);
+            absorptionRestored = Math.abs(player.getAbsorptionAmount() - oldPlayerAbsorption) < 0.01
+                    && Math.abs(nonPlayer.getAbsorptionAmount() - oldNonPlayerAbsorption) < 0.01
+                    && playerAbsorptionAttribute != null
+                    && Math.abs(playerAbsorptionAttribute.getBaseValue() - oldPlayerAbsorptionBase) < 0.01
+                    && nonPlayerAbsorptionAttribute != null
+                    && Math.abs(nonPlayerAbsorptionAttribute.getBaseValue() - oldNonPlayerAbsorptionBase) < 0.01;
+        }
+        boolean result = inRange && recharging && aliases && nonPlayerUnresolved
+                && absorption && absorptionAliases && absorptionZero && nonPlayerAbsorption
+                && absorptionRestored;
         getLogger().info("[自检] attack-cooldown-placeholder result=" + result
                 + " in-range=" + inRange + " recharging=" + recharging
                 + " caster=" + String.valueOf(caster) + " target=" + String.valueOf(target)
-                + " aliases=" + aliases + " non-player-unresolved=" + nonPlayerUnresolved);
+                + " aliases=" + aliases + " non-player-unresolved=" + nonPlayerUnresolved
+                + " absorption=" + absorption + " absorption-aliases=" + absorptionAliases
+                + " absorption-zero=" + absorptionZero + " non-player-absorption=" + nonPlayerAbsorption
+                + " absorption-restored=" + absorptionRestored);
         return result;
     }
 
