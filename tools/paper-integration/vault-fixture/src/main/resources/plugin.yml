@@ -1,0 +1,5 @@
+name: Vault
+version: 1.0-contract-fixture
+main: dev.helstera.test.vault.VaultEconomyParityFixture
+api-version: '1.20'
+description: Synthetic Vault Economy service contract fixture; not a Vault distribution

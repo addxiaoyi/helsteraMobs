@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "fixture": "paper-1.21.1-vault-economy-contract-20261114-r3",
+  "evidenceBoundary": "Synthetic Vault API/service contract only; this is not an installed Vault build or economy-provider compatibility claim.",
+  "generatedAtUtc": "2026-11-14T10:32:04Z",
+  "paper": {
+    "implementationVersion": "1.21.1-133 (official Paperclip SHA-256 pinned)",
+    "sha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9"
+  },
+  "helsteraMobsSha256": "e442503a8f6b34e4d8c8e5698894c7960a45dd797b0570d1ec5aad6c2a041b9f",
+  "externalPlugins": [
+    {
+      "name": "Vault contract fixture",
+      "version": "1.0-contract-fixture",
+      "sha256": "a4d44c70d74c123b59008e4c4b79316f90d336223cdf172d0866d9514629ba93",
+      "apiShape": "net.milkbowl.vault.economy.Economy#getBalance(OfflinePlayer)",
+      "synthetic": true
+    }
+  ],
+  "probes": [
+    {
+      "id": "vault_enabled",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "host_enabled",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "softdepend_order",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "adapter_connected",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "economy_capability",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "rich_balance",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "poor_balance",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "provider_exception_empty",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "non_finite_empty",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "null_player_empty",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "condition_rich_pass",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "condition_poor_reject",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "condition_below_reject",
+      "status": "passed",
+      "observed": "true"
+    }
+  ],
+  "compressedLog": {
+    "path": "paper-1.21.1-vault-economy-contract-20261114-r3.log.gz",
+    "sha256": "b60993f0d847e347308bbc7b55b27d956bfdff310449651d37ec3ea43cf2b090"
+  }
+}
