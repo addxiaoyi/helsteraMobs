@@ -2945,12 +2945,20 @@ class SkillServiceTest {
         assertNotNull(svc.bindCondition("distanceabove 4"));
         assertNotNull(svc.bindCondition("worldis integration-world"));
         for (String alias : List.of(
+                "mythicPack{p=DemoPack}", "pack{packid=DemoPack}",
+                "mythicPackVersion{p=DemoPack;v=1.2.3}",
+                "packversion{pack=DemoPack;version=1.2.3}",
+                "mythicPackVersionGreater{p=DemoPack;v=1.2.3}",
+                "packversionisgreater{pack=DemoPack;v=1.2.3}",
                 "serverNmsVersion{v=v1_21_R1}", "servernms{sv=v1_21_R1}",
                 "nmsversion v1_21_R1", "server-nms-version",
                 "localdifficulty{d=>0}", "localdifficulty{diff=>0}",
                 "local-difficulty difficulty=>0")) {
             assertNotNull(svc.bindCondition(alias), alias);
         }
+        assertNull(svc.bindCondition("mythicPack{p=DemoPack;unknown=x}"));
+        assertNull(svc.bindCondition("mythicPackVersion{p=DemoPack}"));
+        assertNull(svc.bindCondition("mythicPackVersionGreater{p=DemoPack;v=latest}"));
         assertNull(svc.bindCondition("localdifficulty{unknown=>0}"));
         assertNull(svc.bindCondition("localdifficulty{d=>0;difficulty=>1}"));
     }

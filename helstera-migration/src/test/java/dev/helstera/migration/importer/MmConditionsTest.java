@@ -811,6 +811,29 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("official Mythic pack conditions map ids and versions with strict argument validation")
+    void officialMythicPackConditionsMapIdsAndVersions() {
+        assertEquals("mythic-pack packid=ThePackId", t("?MythicPack{p=ThePackId}"));
+        assertEquals("mythic-pack packid=ThePackId", t("?hasPack{packid=ThePackId}"));
+        assertEquals("mythic-pack packid=\"The Pack\"", t("?pack{pack=\"The Pack\"}"));
+        assertEquals("mythic-pack-version packid=ThePackId packversion=1.2.3",
+                t("?MythicPackVersion{p=ThePackId;v=1.2.3}"));
+        assertEquals("mythic-pack-version packid=ThePackId packversion=1.2.3",
+                t("?packversion{packid=ThePackId;version=1.2.3}"));
+        assertEquals("mythic-pack-version-greater packid=ThePackId packversion=1.2.3",
+                t("?MythicPackVersionGreater{p=ThePackId;packV=1.2.3}"));
+        assertEquals("mythic-pack-version-greater packid=ThePackId packversion=1.2.3",
+                t("?packversionisgreater{pack=ThePackId;v=1.2.3}"));
+        for (String malformed : List.of(
+                "?mythicpack", "?mythicpack{p=}", "?mythicpack{p=../packs}",
+                "?mythicpack{p=One;id=Two}", "?mythicpack{p=One;unknown=x}",
+                "?mythicpackversion{p=One}", "?packversion{p=One;v=1.2;version=1.3}",
+                "?packversiongreater{p=One;v=1.2;unknown=true}")) {
+            assertUntranslatedPreserved(malformed);
+        }
+    }
+
+    @Test
     void officialDirectionalVelocityConditionPreservesNamedArguments() {
         assertEquals("directional-velocity x=>0 y=<0 z=>0 relative=true",
                 t("?directionalVelocity{x=>0;y=<0;z=>0;relative=true}"));

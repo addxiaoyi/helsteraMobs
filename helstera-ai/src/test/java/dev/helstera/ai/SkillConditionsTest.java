@@ -17,6 +17,7 @@ import org.bukkit.block.data.type.Farmland;
 import org.bukkit.Location;
 
 import java.util.List;
+import java.util.Map;
 import java.util.OptionalDouble;
 import java.util.Set;
 
@@ -1487,6 +1488,48 @@ class SkillConditionsTest {
         assertFalse(extraFactory("is-in-survival-mode").create(List.of()).test(ctx()));
         assertNotNull(extraFactory("server-is-paper").create(List.of()));
         assertFalse(extraFactory("plugin").create(List.of("__missing_plugin__")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("Mythic pack conditions query pack metadata and compare semantic versions")
+    void mythicPackConditionsUseRegisteredPackMetadata() {
+        Map<String, SkillExtras.MythicPackInfo> packs = Map.of(
+                "arena", new SkillExtras.MythicPackInfo("Arena", "1.10.0"),
+                "preview", new SkillExtras.MythicPackInfo("Preview", "1.2.0-rc.1"),
+                "stable", new SkillExtras.MythicPackInfo("Stable", "1.2.0"),
+                "unversioned", new SkillExtras.MythicPackInfo("Unversioned", null),
+                "custom", new SkillExtras.MythicPackInfo("Custom", "latest"));
+        try {
+            SkillExtras.mythicPackLookup(id -> packs.get(id.toLowerCase(java.util.Locale.ROOT)));
+            assertTrue(extraFactory("mythic-pack").create(List.of("p=Arena")).test(ctx()));
+            assertFalse(extraFactory("mythic-pack").create(List.of("p=Missing")).test(ctx()));
+            assertTrue(extraFactory("mythic-pack-version")
+                    .create(List.of("packid=ARENA", "v=1.10.0")).test(ctx()));
+            assertFalse(extraFactory("mythic-pack-version")
+                    .create(List.of("pack=arena", "version=1.10")).test(ctx()));
+            assertFalse(extraFactory("mythic-pack-version")
+                    .create(List.of("pack=unversioned", "version=0.1.0")).test(ctx()));
+
+            var atOrAbove = extraFactory("mythic-pack-version-greater");
+            assertTrue(atOrAbove.create(List.of("pack=arena", "version=1.9.9")).test(ctx()));
+            assertTrue(atOrAbove.create(List.of("pack=arena", "version=1.10.0")).test(ctx()));
+            assertFalse(atOrAbove.create(List.of("pack=arena", "version=1.10.1")).test(ctx()));
+            assertFalse(atOrAbove.create(List.of("pack=preview", "version=1.2.0-rc.2")).test(ctx()));
+            assertTrue(atOrAbove.create(List.of("pack=stable", "version=1.2.0-rc.9")).test(ctx()));
+            assertFalse(atOrAbove.create(List.of("pack=custom", "version=1.0.0")).test(ctx()));
+
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("mythic-pack").create(List.of("packid=../outside")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("mythic-pack").create(List.of("packid=Arena", "unknown=x")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("mythic-pack-version").create(List.of("pack=Arena")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> atOrAbove.create(List.of("pack=Arena", "version=latest")));
+        } finally {
+            SkillExtras.resetRuntimeHooks();
+        }
+        assertFalse(extraFactory("mythic-pack").create(List.of("pack=Arena")).test(ctx()));
     }
 
     @Test
