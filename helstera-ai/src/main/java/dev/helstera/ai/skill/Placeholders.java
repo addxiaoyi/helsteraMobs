@@ -107,9 +107,17 @@ public final class Placeholders {
         if (field.startsWith("loc.")) {
             return locationField(loc(ctx), field.substring(4));
         }
+        if (field.startsWith("l.")) {
+            return mythicLocationField(loc(ctx), field.substring(2));
+        }
         if (field.equals("world")) {
             return loc(ctx).map(Location::getWorld).filter(java.util.Objects::nonNull)
                     .map(org.bukkit.World::getName).orElse(null);
+        }
+        if (field.equals("display")) return entityDisplayName(entity(ctx.instance()));
+        if (field.equals("entity-type")) {
+            return entity(ctx.instance()).map(value -> value.getType().name().toLowerCase(Locale.ROOT))
+                    .orElse(null);
         }
         String worldField = worldField(loc(ctx), field);
         if (worldField != null) return worldField;
@@ -152,6 +160,7 @@ public final class Placeholders {
         if (field.equals("distance")) {
             return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
         }
+        if (field.equals("distancesquared")) return distanceSquared(ctx, false);
         String gameplayField = gameplayField(living(ctx.instance()).orElse(null), field);
         if (gameplayField != null) return gameplayField;
         return null;
@@ -174,9 +183,14 @@ public final class Placeholders {
         if (field.startsWith("loc.")) {
             return locationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(4));
         }
+        if (field.startsWith("l.")) {
+            return mythicLocationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(2));
+        }
         if (field.equals("world")) {
             return target.getWorld() == null ? null : target.getWorld().getName();
         }
+        if (field.equals("display")) return entityDisplayName(java.util.Optional.of(target));
+        if (field.equals("entity-type")) return target.getType().name().toLowerCase(Locale.ROOT);
         String worldField = worldField(java.util.Optional.ofNullable(target.getLocation()), field);
         if (worldField != null) return worldField;
         if (field.equals("faction")) {
@@ -192,6 +206,7 @@ public final class Placeholders {
         if (field.equals("distance")) {
             return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
         }
+        if (field.equals("distancesquared")) return distanceSquared(ctx, true);
         String gameplayField = gameplayField(target, field);
         if (gameplayField != null) return gameplayField;
         return null;
@@ -319,7 +334,9 @@ public final class Placeholders {
         List<String> out = new ArrayList<>();
         for (String scope : List.of("caster", "target", "skill")) {
             for (String f : List.of("hp", "hp.percent", "hp.raw", "hp.max", "health", "maxhealth",
-                    "name", "type", "world", "loc.x", "loc.y", "loc.z", "distance",
+                    "name", "type", "world", "loc.x", "loc.y", "loc.z",
+                    "l.x", "l.x.double", "l.y", "l.y.double", "l.z", "l.z.double",
+                    "l.yaw", "l.pitch", "l.w", "distance",
                     "is-baby", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
                     "has-ai", "has-gravity", "is-silent", "is-dead", "is-valid",
                     "is-alive", "is_alive",
@@ -347,6 +364,9 @@ public final class Placeholders {
         out.addAll(List.of("skill.payload", "ctx.payload", "ctx.state",
                 "caster.id", "caster.state", "caster.decisions",
                 "random.1to10", "random.1to100", "random.percent"));
+        out.addAll(List.of("caster.display", "target.display",
+                "caster.entity_type", "target.entity_type",
+                "caster.distancesquared", "target.distancesquared"));
         return List.copyOf(out);
     }
 
@@ -367,6 +387,24 @@ public final class Placeholders {
         };
     }
 
+    /** Mythic's {@code l.*} location family; plain axes refer to block centers. */
+    private static String mythicLocationField(java.util.Optional<Location> loc, String field) {
+        Location location = loc.orElse(null);
+        if (location == null) return null;
+        return switch (field) {
+            case "x" -> fmt(Math.floor(location.getX()) + 0.5);
+            case "y" -> fmt(Math.floor(location.getY()) + 0.5);
+            case "z" -> fmt(Math.floor(location.getZ()) + 0.5);
+            case "x.double" -> Double.toString(location.getX());
+            case "y.double" -> Double.toString(location.getY());
+            case "z.double" -> Double.toString(location.getZ());
+            case "yaw" -> Float.toString(location.getYaw());
+            case "pitch" -> Float.toString(location.getPitch());
+            case "w" -> location.getWorld() == null ? null : location.getWorld().getName();
+            default -> null;
+        };
+    }
+
     private static java.util.Optional<Location> loc(BehaviorContext ctx) {
         if (!ctx.instanceValid()) return java.util.Optional.empty();
         Location l = ctx.instance().location();
@@ -374,9 +412,39 @@ public final class Placeholders {
     }
 
     private static java.util.Optional<LivingEntity> living(ModelInstance inst) {
-        if (inst == null || !inst.isValid()) return java.util.Optional.empty();
-        Entity e = inst.baseEntity().orElse(null);
+        Entity e = entity(inst).orElse(null);
         return e instanceof LivingEntity le ? java.util.Optional.of(le) : java.util.Optional.empty();
+    }
+
+    private static java.util.Optional<Entity> entity(ModelInstance inst) {
+        if (inst == null || !inst.isValid()) return java.util.Optional.empty();
+        // ModelInstance owns the managed-entity lifecycle contract. Keep the
+        // Bukkit entity itself unfiltered so mocked/adapter-backed entities
+        // remain readable and existing placeholder semantics do not change.
+        return inst.baseEntity();
+    }
+
+    private static String entityDisplayName(java.util.Optional<? extends Entity> optional) {
+        Entity entity = optional.orElse(null);
+        if (entity == null) return null;
+        String customName = entity.getCustomName();
+        if (customName != null && !customName.isBlank()) return customName;
+        String name = entity.getName();
+        return name == null || name.isBlank() ? null : name;
+    }
+
+    /** Mythic's scoped value is the squared distance from the scoped entity to its caster. */
+    private static String distanceSquared(BehaviorContext ctx, boolean targetScope) {
+        Location caster = loc(ctx).orElse(null);
+        if (caster == null || caster.getWorld() == null) return null;
+        if (!targetScope) return "0.0";
+        LivingEntity target = ctx.targetEntity().orElse(null);
+        if (target == null) return null;
+        Location targetLocation = target.getLocation();
+        if (targetLocation == null || targetLocation.getWorld() == null
+                || !caster.getWorld().equals(targetLocation.getWorld())) return null;
+        double squared = caster.distanceSquared(targetLocation);
+        return Double.isFinite(squared) ? Double.toString(squared) : null;
     }
 
     private static String entityState(Entity entity, String field) {
