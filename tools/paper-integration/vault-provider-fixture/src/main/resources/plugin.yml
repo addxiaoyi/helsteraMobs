@@ -1,0 +1,6 @@
+name: VaultEssentialsParityFixture
+version: 1.0.0
+main: dev.helstera.test.vault.VaultEssentialsProviderParityFixture
+api-version: '1.20'
+description: Verifies Helstera against installed Vault and EssentialsX using a real Paper player session
+softdepend: [Vault, Essentials]

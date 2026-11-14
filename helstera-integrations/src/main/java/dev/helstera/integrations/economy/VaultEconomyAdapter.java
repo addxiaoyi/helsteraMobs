@@ -23,7 +23,7 @@ public final class VaultEconomyAdapter implements IntegrationAdapter {
 
     @Override public String pluginName() { return "Vault"; }
     @Override public String supportedVersions() {
-        return "Vault Economy service contract; installed Vault/provider versions not CI-verified";
+        return "Verified: Vault 1.7.3-b131 with EssentialsX 2.21.0 on Paper 1.21.1-133; other providers and versions unverified";
     }
     @Override public IntegrationContract contract() {
         return new IntegrationContract(pluginName(), supportedVersions(),

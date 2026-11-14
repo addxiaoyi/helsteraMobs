@@ -10,7 +10,20 @@ Build the plugin and synthetic fixture, then run the isolated Paper contract pro
 pwsh -NoProfile -File tools/paper-integration/run-vault-economy-fixture.ps1 -EvidenceRevision rN
 ```
 
-Use a new revision such as `r4` for each run. The runner pins the official Paper 1.21.1-133 artifact and records a JSON report plus a token-redacted compressed log. The fixture registers a synthetic Vault API and Economy service; it verifies Helstera's discovery and fail-closed contract, not compatibility with a Vault release or any real economy provider. Keep the Vault parity row blocked until that installed-plugin evidence exists.
+Use a new revision such as `r4` for each run. The runner pins the official Paper 1.21.1-133 artifact and records a JSON report plus a token-redacted compressed log. The fixture registers a synthetic Vault API and Economy service; it verifies Helstera's discovery and fail-closed contract, not compatibility with a Vault release or any real economy provider. Use the installed-provider fixture below for evidence about real Vault/provider builds.
+
+## Installed Vault + EssentialsX provider fixture
+
+Build and run the real-provider probe with a fresh evidence revision:
+
+```powershell
+./mvnw -B -pl helstera-plugin -am package -DskipTests
+./mvnw -B -f tools/paper-integration/vault-provider-fixture/pom.xml package
+npm ci --prefix tools/paper-integration
+pwsh -NoProfile -File tools/paper-integration/run-vault-essentials-fixture.ps1 -EvidenceRevision rN
+```
+
+The runner pins Vault 1.7.3-b131 and EssentialsX 2.21.0 by SHA-256, installs them with Helstera on Paper 1.21.1-133, and joins a local test player. It verifies the actual EssentialsX Vault provider, active balance capability, a real account deposit/readback, and positive/negative `HasCurrency` outcomes. The report's compatibility boundary is restricted to those exact versions. Synthetic fixture coverage remains responsible for provider exceptions, non-finite balances, and null-player behavior.
 
 Latest strict fixture `srv-paper-inline-condition-strict-20261112-r1` passes all 455 probes (436 passed, 19 expected rejections, zero failed or incomplete) on Paper 1.21.1-133. `inlineConditionScopes` verifies caster scope for `?condition`, living-trigger scope for `?~condition`, and fail-closed behavior for missing/non-living triggers; runtime tests separately verify `?~!condition` negation. Plugin SHA-256: `3cd83778bb9e926c60aa8ae7c6e0627aa703f80aa520a057c7e9b518e784357d`. Report: [`paper-1.21.1-inline-condition-scopes-strict-20261112-r1.json`](reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1.json), SHA-256 `016e6a034b1860d81b377d705220b97c7322430f37d5dec1b113cc3b50763891`. Compressed redacted server log: [`paper-1.21.1-inline-condition-scopes-strict-20261112-r1.log.gz`](reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1.log.gz), SHA-256 `3cb7a9b2454459e69e4d15dd5542487650fda4f4926d16b1eac72debe32bfe21`; client log archive: [`paper-1.21.1-inline-condition-scopes-strict-20261112-r1-client-logs.tar.gz`](reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1-client-logs.tar.gz), SHA-256 `358e4b071969c72d4bf725ce1a36aed72f6ac5cbd76c53b0ac6b29ff5caf6970`. Archived logs redact token labels and web-token query values.
 
