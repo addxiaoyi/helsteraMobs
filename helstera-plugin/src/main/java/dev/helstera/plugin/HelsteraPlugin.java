@@ -17050,7 +17050,31 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean absorptionZero = false;
         boolean nonPlayerAbsorption = false;
         boolean absorptionRestored = false;
+        boolean scopedEntity = false;
+        boolean scopedDisplay = false;
+        boolean scopedCoordinates = false;
+        boolean scopedSquaredDistance = false;
+        boolean scopedDisplayRestored = false;
+        boolean scopedFoodStats = false;
+        boolean nonHumanFoodStatsUnresolved = false;
+        boolean foodStatsRestored = false;
+        float oldSaturation = player.getSaturation();
+        float oldExhaustion = player.getExhaustion();
+        String oldPlayerDisplay = player.getCustomName();
+        String oldNonPlayerDisplay = nonPlayer.getCustomName();
         try {
+            player.setSaturation(3.5f);
+            player.setExhaustion(1.3f);
+            scopedFoodStats = "14".equals(dev.helstera.ai.skill.Placeholders.lookup("caster.food", context))
+                    && "14".equals(dev.helstera.ai.skill.Placeholders.lookup("target.food-level", context))
+                    && "3.5".equals(dev.helstera.ai.skill.Placeholders.lookup("caster.saturation", context))
+                    && "3.5".equals(dev.helstera.ai.skill.Placeholders.lookup("target.saturation", context))
+                    && "1.3".equals(dev.helstera.ai.skill.Placeholders.lookup("caster.exhaustion", context))
+                    && "1.3".equals(dev.helstera.ai.skill.Placeholders.lookup("target.exhaustion", context));
+            nonHumanFoodStatsUnresolved = dev.helstera.ai.skill.Placeholders.lookup(
+                    "target.food", nonPlayerContext) == null
+                    && dev.helstera.ai.skill.Placeholders.lookup("target.saturation", nonPlayerContext) == null
+                    && dev.helstera.ai.skill.Placeholders.lookup("target.exhaustion", nonPlayerContext) == null;
             if (playerAbsorptionAttribute != null && playerAbsorptionAttribute.getValue() < 3.5) {
                 playerAbsorptionAttribute.setBaseValue(Math.max(oldPlayerAbsorptionBase, 3.5));
             }
@@ -17069,7 +17093,77 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             player.setAbsorptionAmount(0.0);
             absorptionZero = "0.0".equals(
                     dev.helstera.ai.skill.Placeholders.lookup("target.absorption", context));
+
+            var scopedContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    context.instance(), nonPlayer, 1.0,
+                    player.getLocation().distance(nonPlayer.getLocation()), 0, "integration");
+            org.bukkit.Location casterLocation = context.instance() == null
+                    ? null : context.instance().location();
+            org.bukkit.Location targetLocation = nonPlayer.getLocation();
+            player.setCustomName("Helstera Caster Display Probe");
+            nonPlayer.setCustomName("Helstera Target Display Probe");
+            scopedEntity = "player".equals(dev.helstera.ai.skill.Placeholders.lookup(
+                    "caster.entity_type", scopedContext))
+                    && nonPlayer.getType().name().toLowerCase(java.util.Locale.ROOT).equals(
+                    dev.helstera.ai.skill.Placeholders.lookup("target.entity_type", scopedContext));
+            scopedDisplay = "Helstera Caster Display Probe".equals(
+                    dev.helstera.ai.skill.Placeholders.lookup("caster.display", scopedContext))
+                    && "Helstera Target Display Probe".equals(
+                    dev.helstera.ai.skill.Placeholders.lookup("target.display", scopedContext));
+            if (casterLocation != null && casterLocation.getWorld() != null
+                    && targetLocation != null && targetLocation.getWorld() != null
+                    && casterLocation.getWorld().equals(targetLocation.getWorld())) {
+                double squaredDistance = casterLocation.distanceSquared(targetLocation);
+                scopedSquaredDistance = "0.0".equals(dev.helstera.ai.skill.Placeholders.lookup(
+                        "caster.distancesquared", scopedContext))
+                        && Double.toString(squaredDistance).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.distancesquared", scopedContext));
+                scopedCoordinates = Double.toString(casterLocation.getX()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.x.double", scopedContext))
+                        && Double.toString(casterLocation.getY()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.y.double", scopedContext))
+                        && Double.toString(casterLocation.getZ()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.z.double", scopedContext))
+                        && Double.toString(targetLocation.getX()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.x.double", scopedContext))
+                        && Double.toString(targetLocation.getY()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.y.double", scopedContext))
+                        && Double.toString(targetLocation.getZ()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.z.double", scopedContext))
+                        && Double.toString(Math.floor(casterLocation.getX()) + 0.5).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.x", scopedContext))
+                        && Double.toString(Math.floor(casterLocation.getY()) + 0.5).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.y", scopedContext))
+                        && Double.toString(Math.floor(casterLocation.getZ()) + 0.5).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.z", scopedContext))
+                        && Double.toString(Math.floor(targetLocation.getX()) + 0.5).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.x", scopedContext))
+                        && Double.toString(Math.floor(targetLocation.getY()) + 0.5).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.y", scopedContext))
+                        && Double.toString(Math.floor(targetLocation.getZ()) + 0.5).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.z", scopedContext))
+                        && Float.toString(casterLocation.getYaw()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.yaw", scopedContext))
+                        && Float.toString(casterLocation.getPitch()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.pitch", scopedContext))
+                        && Float.toString(targetLocation.getYaw()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.yaw", scopedContext))
+                        && Float.toString(targetLocation.getPitch()).equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.pitch", scopedContext))
+                        && casterLocation.getWorld().getName().equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("caster.l.w", scopedContext))
+                        && casterLocation.getWorld().getName().equals(
+                        dev.helstera.ai.skill.Placeholders.lookup("target.l.w", scopedContext));
+            }
         } finally {
+            player.setSaturation(oldSaturation);
+            player.setExhaustion(oldExhaustion);
+            foodStatsRestored = Math.abs(player.getSaturation() - oldSaturation) < 0.01f
+                    && Math.abs(player.getExhaustion() - oldExhaustion) < 0.01f;
+            player.setCustomName(oldPlayerDisplay);
+            nonPlayer.setCustomName(oldNonPlayerDisplay);
+            scopedDisplayRestored = java.util.Objects.equals(player.getCustomName(), oldPlayerDisplay)
+                    && java.util.Objects.equals(nonPlayer.getCustomName(), oldNonPlayerDisplay);
             if (playerAbsorptionAttribute != null) {
                 playerAbsorptionAttribute.setBaseValue(oldPlayerAbsorptionBase);
             }
@@ -17087,14 +17181,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         boolean result = inRange && recharging && aliases && nonPlayerUnresolved
                 && absorption && absorptionAliases && absorptionZero && nonPlayerAbsorption
-                && absorptionRestored;
+                && absorptionRestored && scopedEntity && scopedDisplay && scopedCoordinates
+                && scopedSquaredDistance && scopedDisplayRestored && scopedFoodStats
+                && nonHumanFoodStatsUnresolved && foodStatsRestored;
         getLogger().info("[自检] attack-cooldown-placeholder result=" + result
                 + " in-range=" + inRange + " recharging=" + recharging
                 + " caster=" + String.valueOf(caster) + " target=" + String.valueOf(target)
                 + " aliases=" + aliases + " non-player-unresolved=" + nonPlayerUnresolved
                 + " absorption=" + absorption + " absorption-aliases=" + absorptionAliases
                 + " absorption-zero=" + absorptionZero + " non-player-absorption=" + nonPlayerAbsorption
-                + " absorption-restored=" + absorptionRestored);
+                + " absorption-restored=" + absorptionRestored
+                + " scoped-entity-type=" + scopedEntity + " scoped-display=" + scopedDisplay
+                + " scoped-coordinates=" + scopedCoordinates
+                + " scoped-distance-squared=" + scopedSquaredDistance
+                + " scoped-display-restored=" + scopedDisplayRestored
+                + " scoped-food-stats=" + scopedFoodStats
+                + " non-human-food-stats-unresolved=" + nonHumanFoodStatsUnresolved
+                + " food-stats-restored=" + foodStatsRestored);
         return result;
     }
 

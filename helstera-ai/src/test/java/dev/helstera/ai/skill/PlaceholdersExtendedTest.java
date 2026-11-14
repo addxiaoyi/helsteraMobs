@@ -1,8 +1,12 @@
 package dev.helstera.ai.skill;
 
 import dev.helstera.api.behavior.BehaviorContext;
+import dev.helstera.api.instance.ModelInstance;
+import org.bukkit.Location;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.bukkit.World;
+import org.bukkit.entity.EntityType;
 import org.bukkit.GameMode;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
@@ -194,5 +198,70 @@ class PlaceholdersExtendedTest {
         assertNull(Placeholders.lookup("target.moonphase", c));
         assertNull(Placeholders.lookup("target.biome", c));
         assertEquals("<caster.weather>", Placeholders.resolve("<caster.weather>", c));
+    }
+
+    @Test
+    @DisplayName("Mythic scoped entity and location placeholders preserve their documented semantics")
+    void exposesScopedEntityAndMythicLocationPlaceholders() {
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("paper_world");
+        Monster caster = mock(Monster.class);
+        Monster target = mock(Monster.class);
+        Location casterLocation = new Location(world, -12.25, 64.125, 8.75, 12.5f, -5.25f);
+        Location targetLocation = new Location(world, 2.75, 68.125, 12.75, -90.0f, 30.0f);
+        when(caster.getLocation()).thenReturn(casterLocation);
+        when(target.getLocation()).thenReturn(targetLocation);
+        when(caster.getCustomName()).thenReturn("Caster display");
+        when(target.getCustomName()).thenReturn("Target display");
+        when(caster.isValid()).thenReturn(true);
+        when(target.isValid()).thenReturn(true);
+        when(caster.getType()).thenReturn(EntityType.ZOMBIE);
+        when(target.getType()).thenReturn(EntityType.SKELETON);
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(instance.location()).thenReturn(casterLocation);
+        BehaviorContext context = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+
+        assertEquals("Caster display", Placeholders.lookup("caster.display", context));
+        assertEquals("Target display", Placeholders.lookup("target.display", context));
+        assertEquals("zombie", Placeholders.lookup("caster.entity_type", context));
+        assertEquals("skeleton", Placeholders.lookup("target.entity_type", context));
+        assertEquals("0.0", Placeholders.lookup("caster.distancesquared", context));
+        assertEquals("257.0", Placeholders.lookup("target.distancesquared", context));
+        assertEquals("-12.5", Placeholders.lookup("caster.l.x", context));
+        assertEquals("64.5", Placeholders.lookup("caster.l.y", context));
+        assertEquals("8.5", Placeholders.lookup("caster.l.z", context));
+        assertEquals("-12.25", Placeholders.lookup("caster.l.x.double", context));
+        assertEquals("64.125", Placeholders.lookup("caster.l.y.double", context));
+        assertEquals("8.75", Placeholders.lookup("caster.l.z.double", context));
+        assertEquals("12.5", Placeholders.lookup("caster.l.yaw", context));
+        assertEquals("-5.25", Placeholders.lookup("caster.l.pitch", context));
+        assertEquals("paper_world", Placeholders.lookup("caster.l.w", context));
+        assertEquals("2.75", Placeholders.lookup("target.l.x.double", context));
+        assertEquals("68.125", Placeholders.lookup("target.l.y.double", context));
+        assertEquals("12.75", Placeholders.lookup("target.l.z.double", context));
+        assertTrue(Placeholders.knownKeys().contains("target.distancesquared"));
+    }
+
+    @Test
+    @DisplayName("scoped squared distance fails closed without a live same-world target")
+    void squaredDistanceRequiresSameWorldTarget() {
+        World casterWorld = mock(World.class);
+        World targetWorld = mock(World.class);
+        Monster caster = mock(Monster.class);
+        Monster target = mock(Monster.class);
+        Location casterLocation = new Location(casterWorld, 0, 64, 0);
+        when(caster.getLocation()).thenReturn(casterLocation);
+        when(target.getLocation()).thenReturn(new Location(targetWorld, 3, 64, 4));
+        ModelInstance instance = mock(ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(casterLocation);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        assertNull(Placeholders.lookup("target.distancesquared",
+                BehaviorContext.of(instance, target, 1.0, 5.0, 0, "IDLE")));
+        assertNull(Placeholders.lookup("target.distancesquared",
+                BehaviorContext.of(instance, (org.bukkit.entity.LivingEntity) null,
+                        1.0, -1, 0, "IDLE")));
     }
 }

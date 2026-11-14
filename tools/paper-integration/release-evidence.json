@@ -1,5 +1,31 @@
 [
   {
+    "fixtureId": "srv-paper-food-stats-strict-20261114-r1",
+    "reportFixtureDirectory": "srv-paper-food-stats-strict-20261114-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-player-food-placeholders-strict-20261114-r1.json",
+    "reportSha256": "af630161ebed5d7ecacef154de6465ca1f58d66c5cff171aa7c884542720b2c0",
+    "log": "tools/paper-integration/reports/paper-1.21.1-player-food-placeholders-strict-20261114-r1.log.gz",
+    "logSha256": "2bc36819f853a059ff60257c74cc7668f3320a92d445d22e47ed459a17c64f50",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-player-food-placeholders-strict-20261114-r1-client-logs.tar.gz",
+    "clientLogSha256": "7ef28016547c3aae785887c4a34f05aef9d3b912569afa2f033e4e8704ed3c75",
+    "pluginSha256": "8e2f72abd956ed46743c1fe01740b5850220d46a65f1d847991be62e1a3a593a",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-scoped-placeholders-strict-20261114-r2",
+    "reportFixtureDirectory": "srv-paper-scoped-placeholders-strict-20261114-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-scoped-placeholders-strict-20261114-r2.json",
+    "reportSha256": "4979e45869f7e9e2dd8f7aeb2fcf921d2b0f5ade81aaa26c5c33c70c094d0101",
+    "log": "tools/paper-integration/reports/paper-1.21.1-scoped-placeholders-strict-20261114-r2.log.gz",
+    "logSha256": "d4d3cbb587833367068fd220df59630fbb449c13cd1faa94431596722f682dde",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-scoped-placeholders-strict-20261114-r2-client-logs.tar.gz",
+    "clientLogSha256": "4930829391b48a1d6930c6da9dbcbb96c861177ffad1b8ce6dcfe6991c82e531",
+    "pluginSha256": "eeb63525aa5039ca9329297e426c2cac98df861f84e94c1b806b8bb84d507c43",
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-food-stats-strict-20261114-r1"
+  },
+  {
     "fixtureId": "srv-paper-absorption-placeholder-strict-20261114-r3",
     "reportFixtureDirectory": "srv-paper-absorption-placeholder-strict-20261114-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-absorption-placeholder-strict-20261114-r3.json",
@@ -9,7 +35,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-absorption-placeholder-strict-20261114-r3-client-logs.tar.gz",
     "clientLogSha256": "29f7106f5073b27db05a6e78378410a92e40619dce9e3b4f3d33b561815b4eb2",
     "pluginSha256": "2df7393c8f3124eb267466e543e8e951a08a7c71cdb800729aff4cc4559ba718",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-scoped-placeholders-strict-20261114-r2"
   },
   {
     "fixtureId": "srv-paper-inline-condition-strict-20261112-r1",

@@ -367,6 +367,18 @@ class PlaceholdersTest {
         assertEquals("14", Placeholders.lookup("target.food_level", context));
         assertEquals("3.5", Placeholders.lookup("target.saturation", context));
         assertEquals("1.3", Placeholders.lookup("target.exhaustion", context));
+        dev.helstera.api.instance.ModelInstance instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(player));
+        BehaviorContext casterContext = BehaviorContext.of(instance, player, 1.0, -1, 0, "IDLE");
+        assertEquals("14", Placeholders.lookup("caster.food", casterContext));
+        assertEquals("3.5", Placeholders.lookup("caster.saturation", casterContext));
+        assertEquals("1.3", Placeholders.lookup("caster.exhaustion", casterContext));
+        Monster nonHuman = mock(Monster.class);
+        BehaviorContext nonHumanContext = BehaviorContext.of(null, nonHuman, 1.0, -1, 0, "IDLE");
+        assertNull(Placeholders.lookup("target.food", nonHumanContext));
+        assertNull(Placeholders.lookup("target.saturation", nonHumanContext));
+        assertNull(Placeholders.lookup("target.exhaustion", nonHumanContext));
         assertEquals("120", Placeholders.lookup("target.air", context));
         assertEquals("300", Placeholders.lookup("target.air.max", context));
         assertEquals("2.0", Placeholders.lookup("target.luck", context));

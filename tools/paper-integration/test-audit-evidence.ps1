@@ -48,7 +48,7 @@ try {
     $gameplayPlaceholderProbe = @($fullReport.probes | Where-Object id -eq 'gameplayPlaceholders')
     if ($gameplayPlaceholderProbe.Count -ne 1) { throw 'Synthetic release report must contain gameplayPlaceholders.' }
     $gameplayPlaceholderProbe[0].observations = @($gameplayPlaceholderProbe[0].observations) + @(
-        'attack-cooldown-placeholder result=true in-range=true recharging=true caster=0.5 target=0.5 aliases=true non-player-unresolved=true')
+        'attack-cooldown-placeholder result=true in-range=true recharging=true caster=0.5 target=0.5 aliases=true non-player-unresolved=true absorption=true absorption-aliases=true absorption-zero=true non-player-absorption=true absorption-restored=true scoped-entity-type=true scoped-display=true scoped-coordinates=true scoped-distance-squared=true scoped-display-restored=true scoped-food-stats=true non-human-food-stats-unresolved=true food-stats-restored=true')
     $conditionMobilityProbe = @($fullReport.probes | Where-Object id -eq 'conditionMobility')
     if ($conditionMobilityProbe.Count -ne 1) { throw 'Synthetic release report must contain conditionMobility.' }
     $conditionMobilityProbe[0].observations = @($conditionMobilityProbe[0].observations | ForEach-Object {
