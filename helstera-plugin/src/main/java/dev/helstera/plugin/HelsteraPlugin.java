@@ -612,6 +612,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             this.integrations = ir;
             dev.helstera.ai.skill.SkillExtras.regionLookup(ir::containsRegion);
             dev.helstera.ai.skill.SkillExtras.claimLookup(ir::inClaim, ir::nearClaim);
+            var mythicAdapter = ir.get("MythicMobs").filter(MythicMobsAdapter.class::isInstance)
+                    .map(MythicMobsAdapter.class::cast).orElse(null);
+            dev.helstera.ai.skill.SkillExtras.mythicMobLookup(entity ->
+                    mythicAdapter != null && mythicAdapter.isMythicMob(entity));
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);
         }
@@ -1160,6 +1164,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean isCoolAlias = false;
             boolean premiumArgumentsPreserved = false;
             boolean premiumRuntimeArgumentsRejected = false;
+            boolean mythicMobApiAvailable = false;
+            boolean mythicMobOraclePositive = false;
+            boolean mythicMobOracleNegative = false;
+            boolean mythicMobRuntimePositive = false;
+            boolean mythicMobRuntimeNegative = false;
+            boolean mythicMobImportedPositive = false;
+            boolean mythicMobImportedNegative = false;
+            boolean mythicMobAliasPositive = false;
+            boolean mythicMobAliasNegative = false;
+            org.bukkit.entity.Entity mythicMobProbe = null;
+            org.bukkit.entity.Entity ordinaryMobProbe = null;
             String actualVersion = "unavailable";
             try {
                 if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
@@ -1181,6 +1196,51 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         }
                     } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
                         // The condition is specified to fail closed when the optional API is unavailable.
+                    }
+                    try {
+                        Class<?> api = Class.forName("io.lumine.mythic.bukkit.MythicBukkit", false,
+                                mythic.getClass().getClassLoader());
+                        Object mythicBukkit = api.getMethod("inst").invoke(null);
+                        Object apiHelper = api.getMethod("getAPIHelper").invoke(mythicBukkit);
+                        var world = getServer().getWorlds().stream().findFirst().orElse(null);
+                        if (world != null) {
+                            var origin = world.getSpawnLocation().clone().add(12, 2, 0);
+                            var spawnMythic = apiHelper.getClass().getMethod("spawnMythicMob",
+                                    String.class, org.bukkit.Location.class);
+                            mythicMobProbe = (org.bukkit.entity.Entity) spawnMythic.invoke(
+                                    apiHelper, "SkeletalMinion", origin);
+                            ordinaryMobProbe = world.spawn(origin.clone().add(4, 0, 0),
+                                    org.bukkit.entity.Zombie.class);
+                            var isMythicMob = apiHelper.getClass().getMethod("isMythicMob",
+                                    org.bukkit.entity.Entity.class);
+                            mythicMobApiAvailable = true;
+                            mythicMobOraclePositive = mythicMobProbe != null
+                                    && Boolean.TRUE.equals(isMythicMob.invoke(apiHelper, mythicMobProbe));
+                            mythicMobOracleNegative = ordinaryMobProbe != null
+                                    && !Boolean.TRUE.equals(isMythicMob.invoke(apiHelper, ordinaryMobProbe));
+                            if (mythicMobProbe instanceof org.bukkit.entity.LivingEntity mythicLiving
+                                    && ordinaryMobProbe instanceof org.bukkit.entity.LivingEntity ordinaryLiving) {
+                                var mythicContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                        null, mythicLiving, 1.0, -1, 0, "mythic-mob-probe");
+                                var ordinaryContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                        null, ordinaryLiving, 1.0, -1, 0, "ordinary-mob-probe");
+                                String runtimeCondition = skills.bindCondition("is-mythic-mob");
+                                mythicMobRuntimePositive = runtimeCondition != null
+                                        && behaviors.testCondition(runtimeCondition, mythicContext);
+                                mythicMobRuntimeNegative = runtimeCondition != null
+                                        && !behaviors.testCondition(runtimeCondition, ordinaryContext);
+                                mythicMobImportedPositive = testImportedConditionOnEntity(skills, behaviors,
+                                        "?IsMythicMob", mythicMobProbe, true);
+                                mythicMobImportedNegative = testImportedConditionOnEntity(skills, behaviors,
+                                        "?IsMythicMob", ordinaryMobProbe, false);
+                                mythicMobAliasPositive = testImportedConditionOnEntity(skills, behaviors,
+                                        "?isMM", mythicMobProbe, true);
+                                mythicMobAliasNegative = testImportedConditionOnEntity(skills, behaviors,
+                                        "?isMM", ordinaryMobProbe, false);
+                            }
+                        }
+                    } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+                        // Keep the probe false unless the live API and both entity paths are verified.
                     }
                 }
                 var lookup = mythic == null ? null : MythicPackDirectory.findLoadedPack(mythic,
@@ -1229,13 +1289,24 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             } catch (Throwable failure) {
                 getLogger().warning("[自检] mythic-pack-condition exception=" + failure.getClass().getSimpleName()
                         + ":" + failure.getMessage());
+            } finally {
+                if (mythicMobProbe != null) {
+                    try { mythicMobProbe.remove(); } catch (Throwable ignored) { }
+                }
+                if (ordinaryMobProbe != null) {
+                    try { ordinaryMobProbe.remove(); } catch (Throwable ignored) { }
+                }
             }
             boolean passed = packLoaded && caseSensitive && missingRejected && exactVersion
                     && wrongVersionRejected && greaterEqual && greaterLowerRejected
                     && greaterUpper && greaterMajorComponentRejected
                     && malformedPreserved && duplicatePreserved && premiumApiAvailable
                     && premiumAlias && isPremiumAlias && isCoolAlias
-                    && premiumArgumentsPreserved && premiumRuntimeArgumentsRejected;
+                    && premiumArgumentsPreserved && premiumRuntimeArgumentsRejected
+                    && mythicMobApiAvailable && mythicMobOraclePositive && mythicMobOracleNegative
+                    && mythicMobRuntimePositive && mythicMobRuntimeNegative
+                    && mythicMobImportedPositive && mythicMobImportedNegative
+                    && mythicMobAliasPositive && mythicMobAliasNegative;
             getLogger().info("[自检] mythic-pack-condition actual-version=" + actualVersion
                     + " pack-loaded=" + packLoaded + " case-sensitive=" + caseSensitive
                     + " missing-rejected=" + missingRejected + " exact-version=" + exactVersion
@@ -1249,6 +1320,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " is-premium-alias=" + isPremiumAlias + " is-cool-alias=" + isCoolAlias
                     + " premium-arguments-preserved=" + premiumArgumentsPreserved
                     + " premium-runtime-arguments-rejected=" + premiumRuntimeArgumentsRejected
+                    + " mythic-mob-api-available=" + mythicMobApiAvailable
+                    + " mythic-mob-oracle-positive=" + mythicMobOraclePositive
+                    + " mythic-mob-oracle-negative=" + mythicMobOracleNegative
+                    + " mythic-mob-runtime-positive=" + mythicMobRuntimePositive
+                    + " mythic-mob-runtime-negative=" + mythicMobRuntimeNegative
+                    + " mythic-mob-imported-positive=" + mythicMobImportedPositive
+                    + " mythic-mob-imported-negative=" + mythicMobImportedNegative
+                    + " ismm-alias-positive=" + mythicMobAliasPositive
+                    + " ismm-alias-negative=" + mythicMobAliasNegative
                     + " passed=" + passed);
         }, Math.max(1, delay));
     }
@@ -1263,6 +1343,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (!mapped.translated()) return false;
         String condition = skills.bindCondition(mapped.condition());
         return condition != null && behaviors.testCondition(condition, context) == expected;
+    }
+
+    private boolean testImportedConditionOnEntity(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            String source,
+            org.bukkit.entity.Entity entity,
+            boolean expected) {
+        if (!(entity instanceof org.bukkit.entity.LivingEntity living)) return false;
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, living, 1.0, -1, 0, "mythic-mob-import-probe");
+        return testImportedPackCondition(skills, behaviors, context, source, expected);
     }
 
     private void runEntityOptionsSelfTest() {

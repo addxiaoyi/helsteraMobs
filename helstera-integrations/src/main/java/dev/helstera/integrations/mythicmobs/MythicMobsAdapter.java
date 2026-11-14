@@ -15,6 +15,7 @@ import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Set;
 
 /**
@@ -32,6 +33,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     private boolean connected;
     private String report;
     private MythicMobsModelMechanics mechanics;
+    private Plugin mythicPlugin;
+    private Object mythicApiHelper;
+    private Method isMythicMobMethod;
     private final org.bukkit.configuration.file.FileConfiguration cfg;
 
     public MythicMobsAdapter(InstanceManagerImpl instances, dev.helstera.api.model.ModelRegistry registry,
@@ -87,6 +91,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         mechanics = null;
         connected = false;
         report = null;
+        mythicPlugin = null;
+        mythicApiHelper = null;
+        isMythicMobMethod = null;
         this.host = host;
         Plugin mm = Bukkit.getPluginManager().getPlugin("MythicMobs");
         if (mm == null || !mm.isEnabled()) {
@@ -99,6 +106,18 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
             return false;
         }
         try {
+            mythicPlugin = mm;
+            try {
+                Class<?> api = Class.forName("io.lumine.mythic.bukkit.MythicBukkit", false,
+                        mm.getClass().getClassLoader());
+                Object mythic = api.getMethod("inst").invoke(null);
+                Object apiHelper = api.getMethod("getAPIHelper").invoke(mythic);
+                bindMythicMobLookup(apiHelper);
+            } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+                // The spawn/model bridge remains useful when an older API lacks this query.
+                mythicApiHelper = null;
+                isMythicMobMethod = null;
+            }
             Class<?> eventClass = Class.forName("io.lumine.mythic.bukkit.events.MythicMobSpawnEvent");
             // 强转无法在编译期校验：MythicMobs 是软依赖，其事件类只有运行时才存在。
             // 若 MythicMobs 升级改了包名，这里会在 registerEvent 处抛 ClassCastException，
@@ -144,8 +163,34 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     public void disable() {
         HandlerList.unregisterAll(this);
         connected = false;
+        mythicPlugin = null;
+        mythicApiHelper = null;
+        isMythicMobMethod = null;
         if (mechanics != null) mechanics.disable();
         mechanics = null;
+    }
+
+    public boolean isMythicMob(Entity entity) {
+        if (entity == null || mythicApiHelper == null || isMythicMobMethod == null
+                || (mythicPlugin != null && !mythicPlugin.isEnabled())) return false;
+        try {
+            return Boolean.TRUE.equals(isMythicMobMethod.invoke(mythicApiHelper, entity));
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
+    void bindMythicMobLookup(Object apiHelper) throws NoSuchMethodException {
+        mythicApiHelper = null;
+        isMythicMobMethod = null;
+        if (apiHelper == null) throw new NoSuchMethodException("MythicMobs API helper is null");
+        Method method = apiHelper.getClass().getMethod("isMythicMob", Entity.class);
+        if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != boolean.class) {
+            throw new NoSuchMethodException("BukkitAPIHelper.isMythicMob(Entity) has an incompatible signature");
+        }
+        if (!method.canAccess(apiHelper)) method.trySetAccessible();
+        mythicApiHelper = apiHelper;
+        isMythicMobMethod = method;
     }
 
     /** 反射事件执行器：MythicMobSpawnEvent -> getMobName() -> 绑定模型。 */

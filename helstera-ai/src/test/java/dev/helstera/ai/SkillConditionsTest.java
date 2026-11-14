@@ -1652,16 +1652,31 @@ class SkillConditionsTest {
     }
 
     @Test
-    @DisplayName("is-mythic-mob recognizes the managed caster and rejects an empty context")
-    void officialMythicMobConditionUsesManagedInstance() {
+    @DisplayName("is-mythic-mob recognizes managed and external Mythic entities and fails closed")
+    void officialMythicMobConditionUsesManagedInstanceAndExternalLookup() {
+        SkillExtras.resetRuntimeHooks();
         ModelInstance instance = mock(ModelInstance.class);
         LivingEntity caster = mock(LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         BehaviorContext managed = BehaviorContext.of(instance, caster, 1.0, -1, 0, "IDLE");
+        LivingEntity externalMythic = mock(LivingEntity.class);
+        LivingEntity ordinaryMob = mock(LivingEntity.class);
+        var condition = extraFactory("is-mythic-mob").create(List.of());
 
-        assertTrue(extraFactory("is-mythic-mob").create(List.of()).test(managed));
-        assertFalse(extraFactory("is-mythic-mob").create(List.of()).test(ctx()));
+        try {
+            assertTrue(condition.test(managed));
+            assertFalse(condition.test(ctx()));
+
+            SkillExtras.mythicMobLookup(entity -> entity == externalMythic);
+            assertTrue(condition.test(BehaviorContext.of(null, externalMythic, 1.0, -1, 0, "IDLE")));
+            assertFalse(condition.test(BehaviorContext.of(null, ordinaryMob, 1.0, -1, 0, "IDLE")));
+
+            SkillExtras.mythicMobLookup(entity -> { throw new IllegalStateException("API unavailable"); });
+            assertFalse(condition.test(BehaviorContext.of(null, externalMythic, 1.0, -1, 0, "IDLE")));
+        } finally {
+            SkillExtras.resetRuntimeHooks();
+        }
     }
 
     @Test

@@ -216,6 +216,12 @@ public final class SkillExtras {
     }
 
     private static volatile ManagedEntityLookup managedEntityLookup;
+    @FunctionalInterface
+    public interface MythicMobLookup {
+        boolean isMythicMob(Entity entity);
+    }
+
+    private static volatile MythicMobLookup mythicMobLookup;
     private static volatile AuraRegistry auraRegistry;
     private static final Map<String, String> AURA_NAME_ARGUMENTS = Map.ofEntries(
             Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
@@ -379,6 +385,11 @@ public final class SkillExtras {
         managedEntityLookup = lookup;
     }
 
+    /** Connects IsMythicMob to the optional MythicMobs active-entity API. */
+    public static void mythicMobLookup(MythicMobLookup lookup) {
+        mythicMobLookup = lookup;
+    }
+
     public static void auraRegistry(AuraRegistry registry) {
         auraRegistry = registry;
     }
@@ -482,6 +493,7 @@ public final class SkillExtras {
         dialogueLookup = null;
         cinematicLookup = null;
         managedEntityLookup = null;
+        mythicMobLookup = null;
         audienceMobSelector = null;
         executionAudienceWriter = null;
         auraRegistry = null;
@@ -1091,6 +1103,19 @@ public final class SkillExtras {
         if (lookup != null) return lookup.isManaged(entity);
         return ctx != null && ctx.instanceValid()
                 && ctx.instance().baseEntity().map(base -> base == entity).orElse(false);
+    }
+
+    private static boolean isMythicMob(BehaviorContext ctx) {
+        if (isManagedEntity(ctx)) return true;
+        LivingEntity entity = conditionEntity(ctx);
+        MythicMobLookup lookup = mythicMobLookup;
+        if (entity == null || lookup == null) return false;
+        try {
+            return lookup.isMythicMob(entity);
+        } catch (Throwable ignored) {
+            SkillFaults.swallow("SkillExtras#isMythicMob");
+            return false;
+        }
     }
 
     private static boolean pluginRunning(String wanted) {
@@ -3668,7 +3693,7 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("is-mythic-mob", (SkillCatalog.ConditionFactory) a ->
-                        SkillExtras::isManagedEntity),
+                        SkillExtras::isMythicMob),
                 Map.entry("mythic-mob-type", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = keyedArg(a, "type", "types", "t");
                     if (wanted == null) wanted = str(a, 0, "");

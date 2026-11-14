@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-plugin-condition-strict-20261114-r2",
+    "reportFixtureDirectory": "srv-paper-plugin-condition-strict-20261114-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261114-r2.json",
+    "reportSha256": "05790cbc22e6154d88ef321ed69ff2320dcccaa73b9c3018c0c73b902e67ebc8",
+    "log": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261114-r2.log.gz",
+    "logSha256": "3cf18d929b58baf25eba3c6783a56b348a241bcfa295a0b5284e25eeb40584e5",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261114-r2-client-logs.tar.gz",
+    "clientLogSha256": "1ead6049bdb7f7ce63871f1bb51907937f7779c38d2af900d25c5b8330ebed5b",
+    "pluginSha256": "3aaf8ee7ab555625b0ca66e23220b79107bc9c748227ee104f430d973f0a3d6f",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-plugin-condition-strict-20261114-r1",
     "reportFixtureDirectory": "srv-paper-plugin-condition-strict-20261114-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1.json",
@@ -9,7 +21,19 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1-client-logs.tar.gz",
     "clientLogSha256": "8010ddfc62b8b468fc384345486d10dc5a763ca25d1f77bc8d01ed1faed541c7",
     "pluginSha256": "3640472adf65330bfd3754c35e50faed4ff9143929c260f055efc99e2676282a",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-plugin-condition-strict-20261114-r2"
+  },
+  {
+    "fixtureId": "srv-paper-mythic-pack-strict-20261114-r7",
+    "reportFixtureDirectory": "srv-paper-mythic-pack-strict-20261114-r7",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.json",
+    "reportSha256": "2f8726f3147f341d2ae23f972782e7919f40c90945975c2a9cc85ac929d64438",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.log.gz",
+    "logSha256": "b53b64112b976815ba563fe5a07c12c46db432877479926175094591a35f11ff",
+    "pluginSha256": "3aaf8ee7ab555625b0ca66e23220b79107bc9c748227ee104f430d973f0a3d6f",
+    "fullReleaseCatalog": false
   },
   {
     "fixtureId": "srv-paper-mythic-pack-strict-20261114-r6",
