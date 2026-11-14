@@ -79,7 +79,7 @@ class ExternalItemAdapterContractTest {
         assertTrue(adapter.contract().declares(Capability.ECONOMY_BALANCE));
         assertTrue(adapter.contract().prerequisites().contains("registered Economy service"));
         assertFalse(adapter.hasCapability(Capability.ECONOMY_BALANCE));
-        assertTrue(adapter.supportedVersions().contains("not CI-verified"));
+        assertTrue(adapter.supportedVersions().contains("Vault 1.7.3-b131 with EssentialsX 2.21.0"));
         assertTrue(adapter.balance(null).isEmpty());
     }
 

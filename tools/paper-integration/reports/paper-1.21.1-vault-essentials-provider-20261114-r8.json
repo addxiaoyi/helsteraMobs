@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "fixture": "paper-1.21.1-vault-essentials-provider-20261114-r8",
+  "evidenceBoundary": "Installed Vault 1.7.3-b131 with EssentialsX 2.21.0 provider and one real Paper player session; compatibility evidence is limited to these exact builds and this runtime path.",
+  "generatedAtUtc": "2026-11-14T11:12:54Z",
+  "paper": {
+    "implementationVersion": "1.21.1-133 (official Paperclip SHA-256 pinned)",
+    "sha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9"
+  },
+  "helsteraMobsSha256": "d3119572cb1ef9285896c356a2394af921b0248a289678e476c573c4a7fa19bb",
+  "fixtureSha256": "7582d7eed2f81276c994874422d0cc5e32601de4246e4c7ad2867629bf012b27",
+  "externalPlugins": [
+    {
+      "name": "Vault",
+      "version": "1.7.3-b131",
+      "sha256": "a6b5ed97f43a5cf5bbaf00a7c8cd23c5afc9bd003f849875af8b36e6cf77d01d",
+      "source": "https://github.com/MilkBowl/Vault/releases/download/1.7.3/Vault.jar"
+    },
+    {
+      "name": "EssentialsX",
+      "version": "2.21.0",
+      "sha256": "5704322a54836b984b110f7e2208baed1886c2efed4446b497e67e512fec90c5",
+      "providerClass": "com.earth2me.essentials.economy.vault.VaultEconomyProvider",
+      "source": "https://repo.essentialsx.net/releases/net/essentialsx/EssentialsX/2.21.0/EssentialsX-2.21.0.jar"
+    }
+  ],
+  "probes": [
+    {
+      "id": "vault_enabled",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "essentials_enabled",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "host_enabled",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "real_player_online",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "provider_registered",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "essentials_provider",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "adapter_connected",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "economy_capability",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "deposit_success",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "real_balance_updated",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "condition_positive_pass",
+      "status": "passed",
+      "observed": "true"
+    },
+    {
+      "id": "condition_negative_reject",
+      "status": "passed",
+      "observed": "true"
+    }
+  ],
+  "compressedLog": {
+    "path": "paper-1.21.1-vault-essentials-provider-20261114-r8.log.gz",
+    "sha256": "23d8df8a8a6d335918acbb9c0913568deeb7323110acb899b739f873ce785871"
+  }
+}
