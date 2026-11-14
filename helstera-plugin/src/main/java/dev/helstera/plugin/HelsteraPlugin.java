@@ -286,6 +286,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 // SkillExtras 里的 dot / despawn 等动作需要调度器与实例管理器，
                 // 同样走注入钩子而非直接依赖，保证目录类可被单元测试加载。
                 dev.helstera.ai.skill.SkillExtras.host(this);
+                org.bukkit.plugin.Plugin mythicMobs = getServer().getPluginManager().getPlugin("MythicMobs");
+                dev.helstera.ai.skill.SkillExtras.mythicPackLookup(packId ->
+                        mythicMobs == null || !mythicMobs.isEnabled() ? null
+                                : MythicPackDirectory.findLoadedPack(mythicMobs,
+                                        mythicMobs.getDataFolder().toPath().resolve("Packs"), packId));
                 this.auraRegistry = new dev.helstera.ai.skill.AuraRegistry();
                 dev.helstera.ai.skill.SkillExtras.auraRegistry(auraRegistry);
                 this.auraCleanupTask = getServer().getScheduler().runTaskTimer(

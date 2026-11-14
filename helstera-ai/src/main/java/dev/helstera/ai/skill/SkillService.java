@@ -2227,6 +2227,11 @@ public final class SkillService {
                     "server-nms-version";
             case "localdifficulty", "local-difficulty" -> "local-difficulty";
             case "plugin", "plugin-exists", "pluginexists", "hasplugin", "has-plugin" -> "plugin";
+            case "mythicpack", "mythic-pack", "pack", "haspack", "has-pack" -> "mythic-pack";
+            case "mythicpackversion", "mythic-pack-version", "packversion", "packversionis" ->
+                    "mythic-pack-version";
+            case "mythicpackversiongreater", "mythic-pack-version-greater", "packversiongreater",
+                    "packversionisgreater" -> "mythic-pack-version-greater";
             case "serverversion", "server-version", "server", "version" -> "server-version";
             case "serveraftereq", "serverafter", "versionaftereq", "server-version-after-or-equal" ->
                     "server-version-after-or-equal";

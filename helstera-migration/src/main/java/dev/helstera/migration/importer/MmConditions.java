@@ -78,6 +78,13 @@ public final class MmConditions {
             "name", "name", "n", "name", "value", "name", "v", "name");
     private static final Map<String, String> SERVER_VERSION_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version");
+    private static final Map<String, String> MYTHIC_PACK_ARGUMENTS = Map.of(
+            "packid", "pack", "pack", "pack", "id", "pack", "p", "pack");
+    private static final Map<String, String> MYTHIC_PACK_VERSION_ARGUMENTS = Map.ofEntries(
+            Map.entry("packid", "pack"), Map.entry("pack", "pack"), Map.entry("id", "pack"),
+            Map.entry("p", "pack"), Map.entry("packversion", "version"),
+            Map.entry("packv", "version"), Map.entry("version", "version"),
+            Map.entry("v", "version"));
     private static final Map<String, String> SERVER_NMS_VERSION_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version");
     private static final Map<String, String> LOCAL_DIFFICULTY_ARGUMENTS = Map.of(
@@ -999,6 +1006,27 @@ public final class MmConditions {
             if (value == null) value = normalizeScalar(body);
             if (value == null) value = "MythicMobs";
             return new Mapped("plugin " + value, true);
+        }
+        if (Set.of("mythicpack", "pack", "haspack").contains(name)) {
+            Map<String, String> arguments = strictValueArguments(body, MYTHIC_PACK_ARGUMENTS, "pack");
+            String pack = arguments == null ? null : unquoteAuraValue(arguments.get("pack"));
+            return !validMythicPackId(pack) ? new Mapped(s, false)
+                    : new Mapped("mythic-pack packid=" + conditionValue(pack), true);
+        }
+        if (Set.of("mythicpackversion", "packversion", "packversionis").contains(name)
+                || Set.of("mythicpackversiongreater", "packversiongreater", "packversionisgreater")
+                .contains(name)) {
+            Map<String, String> arguments = strictValueArguments(
+                    body, MYTHIC_PACK_VERSION_ARGUMENTS, null);
+            String pack = arguments == null ? null : unquoteAuraValue(arguments.get("pack"));
+            String version = arguments == null ? null : unquoteAuraValue(arguments.get("version"));
+            if (!validMythicPackId(pack) || !validMythicPackVersion(version)) {
+                return new Mapped(s, false);
+            }
+            String condition = Set.of("mythicpackversiongreater", "packversiongreater", "packversionisgreater")
+                    .contains(name) ? "mythic-pack-version-greater" : "mythic-pack-version";
+            return new Mapped(condition + " packid=" + conditionValue(pack)
+                    + " packversion=" + conditionValue(version), true);
         }
         if ("serverversion".equals(name) || "server".equals(name) || "version".equals(name)) {
             Map<String, String> arguments = strictValueArguments(body, SERVER_VERSION_ARGUMENTS, "version");
@@ -2494,6 +2522,17 @@ public final class MmConditions {
             return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
         }
         return value;
+    }
+
+    private static boolean validMythicPackId(String value) {
+        return value != null && !value.isBlank() && value.length() <= 128
+                && !value.equals(".") && !value.equals("..")
+                && value.chars().noneMatch(c -> Character.isISOControl(c) || c == '/' || c == '\\');
+    }
+
+    private static boolean validMythicPackVersion(String value) {
+        return value != null && !value.isBlank() && value.length() <= 128
+                && value.chars().noneMatch(Character::isISOControl);
     }
 
     private static boolean validCommaList(String value) {

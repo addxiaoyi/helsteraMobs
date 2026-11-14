@@ -102,6 +102,15 @@ public final class SkillExtras {
     }
 
     private static volatile MobTemplateLookup mobTemplateLookup;
+    @FunctionalInterface
+    public interface MythicPackLookup {
+        MythicPackInfo find(String packId);
+    }
+
+    /** A null version means the pack exists but has no readable Version field. */
+    public record MythicPackInfo(String id, String version) { }
+
+    private static volatile MythicPackLookup mythicPackLookup;
     private static final Map<String, String> KNOWN_NMS_VERSIONS = Map.ofEntries(
             Map.entry("1.20.1", "v1_20_R1"),
             Map.entry("1.20.2", "v1_20_R2"),
@@ -151,6 +160,10 @@ public final class SkillExtras {
 
     public static void mobTemplateLookup(MobTemplateLookup lookup) {
         mobTemplateLookup = lookup;
+    }
+
+    public static void mythicPackLookup(MythicPackLookup lookup) {
+        mythicPackLookup = lookup;
     }
 
     static PinRegistry pinRegistry() {
@@ -445,6 +458,7 @@ public final class SkillExtras {
         nearClaimLookup = null;
         localDifficultyLookup = null;
         mobTemplateLookup = null;
+        mythicPackLookup = null;
         damagePolicy = null;
         damageCause = null;
         itemResolver = null;
@@ -1077,6 +1091,126 @@ public final class SkillExtras {
             SkillFaults.swallow("SkillExtras#pluginRunning");
         }
         return false;
+    }
+
+    private static MythicPackInfo mythicPackInfo(String packId) {
+        MythicPackLookup lookup = mythicPackLookup;
+        if (lookup == null || !validMythicPackId(packId)) return null;
+        try {
+            return lookup.find(packId);
+        } catch (Throwable ignored) {
+            SkillFaults.swallow("SkillExtras#mythicPackInfo");
+            return null;
+        }
+    }
+
+    private static Map<String, String> mythicPackArguments(List<String> args, boolean requireVersion) {
+        if (args == null || args.isEmpty()) {
+            throw new IllegalArgumentException("pack arguments are required");
+        }
+        Map<String, String> parsed = new LinkedHashMap<>();
+        List<String> positional = new ArrayList<>();
+        for (String raw : args) {
+            if (raw == null || raw.isBlank()) {
+                throw new IllegalArgumentException("pack arguments cannot be blank");
+            }
+            int equals = raw.indexOf('=');
+            if (equals < 0) {
+                positional.add(raw.trim());
+                continue;
+            }
+            if (equals == 0 || !positional.isEmpty()) {
+                throw new IllegalArgumentException("pack arguments cannot mix positional and keyed values");
+            }
+            String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String canonical = switch (key) {
+                case "packid", "pack", "id", "p" -> "pack";
+                case "packversion", "packv", "version", "v" -> "version";
+                default -> null;
+            };
+            String value = raw.substring(equals + 1).trim();
+            if (canonical == null || value.isBlank() || parsed.putIfAbsent(canonical, value) != null) {
+                throw new IllegalArgumentException("unknown, duplicate, or empty pack argument: " + key);
+            }
+        }
+        if (!positional.isEmpty()) {
+            if (positional.size() > (requireVersion ? 2 : 1)) {
+                throw new IllegalArgumentException("too many positional pack arguments");
+            }
+            parsed.put("pack", positional.get(0));
+            if (positional.size() == 2) parsed.put("version", positional.get(1));
+        }
+        if (!parsed.containsKey("pack") || requireVersion != parsed.containsKey("version")) {
+            throw new IllegalArgumentException("missing or unexpected pack version argument");
+        }
+        return Map.copyOf(parsed);
+    }
+
+    private static boolean validMythicPackId(String value) {
+        return value != null && !value.isBlank() && value.length() <= 128
+                && !value.equals(".") && !value.equals("..")
+                && value.chars().noneMatch(c -> Character.isISOControl(c) || c == '/' || c == '\\');
+    }
+
+    private static boolean validPackVersion(String value) {
+        return value != null && !value.isBlank() && value.length() <= 128
+                && value.chars().noneMatch(Character::isISOControl);
+    }
+
+    private static PackVersion parsePackVersion(String raw) {
+        if (!validPackVersion(raw)) return null;
+        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
+                "(?i)^v?(\\d+(?:\\.\\d+)*)(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
+                        + "(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$")
+                .matcher(raw.trim());
+        if (!matcher.matches()) return null;
+        try {
+            List<java.math.BigInteger> numbers = java.util.Arrays.stream(matcher.group(1).split("\\."))
+                    .map(java.math.BigInteger::new).toList();
+            List<String> prerelease = matcher.group(2) == null
+                    ? List.of() : List.of(matcher.group(2).split("\\."));
+            return new PackVersion(numbers, prerelease);
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private record PackVersion(List<java.math.BigInteger> numbers, List<String> prerelease)
+            implements Comparable<PackVersion> {
+        @Override
+        public int compareTo(PackVersion other) {
+            int length = Math.max(numbers.size(), other.numbers.size());
+            for (int i = 0; i < length; i++) {
+                java.math.BigInteger left = i < numbers.size() ? numbers.get(i) : java.math.BigInteger.ZERO;
+                java.math.BigInteger right = i < other.numbers.size()
+                        ? other.numbers.get(i) : java.math.BigInteger.ZERO;
+                int compared = left.compareTo(right);
+                if (compared != 0) return compared;
+            }
+            if (prerelease.isEmpty() || other.prerelease.isEmpty()) {
+                return prerelease.isEmpty() == other.prerelease.isEmpty()
+                        ? 0 : prerelease.isEmpty() ? 1 : -1;
+            }
+            int lengthPrerelease = Math.max(prerelease.size(), other.prerelease.size());
+            for (int i = 0; i < lengthPrerelease; i++) {
+                if (i >= prerelease.size()) return -1;
+                if (i >= other.prerelease.size()) return 1;
+                String left = prerelease.get(i);
+                String right = other.prerelease.get(i);
+                boolean leftNumeric = left.matches("\\d+");
+                boolean rightNumeric = right.matches("\\d+");
+                int compared;
+                if (leftNumeric && rightNumeric) {
+                    compared = new java.math.BigInteger(left).compareTo(new java.math.BigInteger(right));
+                } else if (leftNumeric != rightNumeric) {
+                    compared = leftNumeric ? -1 : 1;
+                } else {
+                    compared = left.compareTo(right);
+                }
+                if (compared != 0) return compared;
+            }
+            return 0;
+        }
     }
 
     private static org.bukkit.enchantments.Enchantment resolveEnchantment(String raw) {
@@ -3448,6 +3582,41 @@ public final class SkillExtras {
                 Map.entry("plugin", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = str(a, 0, "MythicMobs");
                     return ctx -> pluginRunning(wanted);
+                }),
+                Map.entry("mythic-pack", (SkillCatalog.ConditionFactory) a -> {
+                    Map<String, String> parsed = mythicPackArguments(a, false);
+                    String packId = parsed.get("pack");
+                    if (!validMythicPackId(packId)) {
+                        throw new IllegalArgumentException("mythic-pack requires a valid pack id");
+                    }
+                    return ctx -> mythicPackInfo(packId) != null;
+                }),
+                Map.entry("mythic-pack-version", (SkillCatalog.ConditionFactory) a -> {
+                    Map<String, String> parsed = mythicPackArguments(a, true);
+                    String packId = parsed.get("pack");
+                    String expected = parsed.get("version");
+                    if (!validMythicPackId(packId) || !validPackVersion(expected)) {
+                        throw new IllegalArgumentException("mythic-pack-version requires pack id and version");
+                    }
+                    return ctx -> {
+                        MythicPackInfo info = mythicPackInfo(packId);
+                        return info != null && info.version() != null && info.version().equals(expected);
+                    };
+                }),
+                Map.entry("mythic-pack-version-greater", (SkillCatalog.ConditionFactory) a -> {
+                    Map<String, String> parsed = mythicPackArguments(a, true);
+                    String packId = parsed.get("pack");
+                    String expected = parsed.get("version");
+                    PackVersion minimum = parsePackVersion(expected);
+                    if (!validMythicPackId(packId) || minimum == null) {
+                        throw new IllegalArgumentException(
+                                "mythic-pack-version-greater requires pack id and comparable version");
+                    }
+                    return ctx -> {
+                        MythicPackInfo info = mythicPackInfo(packId);
+                        PackVersion actual = info == null ? null : parsePackVersion(info.version());
+                        return actual != null && actual.compareTo(minimum) >= 0;
+                    };
                 }),
                 Map.entry("server-version", (SkillCatalog.ConditionFactory) a -> {
                     String expected = str(a, 0, "");
