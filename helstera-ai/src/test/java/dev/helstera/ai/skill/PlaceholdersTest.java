@@ -269,6 +269,36 @@ class PlaceholdersTest {
     }
 
     @Test
+    @DisplayName("absorption placeholder supports Mythic aliases in caster and target scopes")
+    void exposesAbsorptionHealth() {
+        Player player = mock(Player.class);
+        when(player.getAbsorptionAmount()).thenReturn(2.5);
+        BehaviorContext targetContext = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertEquals("2.5", Placeholders.lookup("target.absorption", targetContext));
+        assertEquals("2.5", Placeholders.lookup("target.absorb", targetContext));
+        when(player.getAbsorptionAmount()).thenReturn(0.0);
+        assertEquals("0.0", Placeholders.lookup("target.absorption", targetContext));
+
+        dev.helstera.api.instance.ModelInstance instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(player));
+        BehaviorContext casterContext = BehaviorContext.of(instance, null, 1.0, -1, 0, "IDLE");
+        when(player.getAbsorptionAmount()).thenReturn(3.5);
+        assertEquals("3.5", Placeholders.lookup("caster.absorption", casterContext));
+        assertEquals("3.5", Placeholders.lookup("mob.absorb", casterContext));
+        assertTrue(Placeholders.knownKeys().contains("caster.absorption"));
+    }
+
+    @Test
+    @DisplayName("absorption placeholder stays unresolved without a scoped living entity")
+    void absorptionRequiresLivingEntity() {
+        assertNull(Placeholders.lookup("target.absorption", ctx(1.0, -1, "IDLE")));
+        assertEquals("<target.absorb>",
+                Placeholders.resolve("<target.absorb>", ctx(1.0, -1, "IDLE")));
+    }
+
+    @Test
     @DisplayName("entity state placeholders expose age, AI, gravity and powered flags")
     void exposesEntityStateFlags() {
         org.bukkit.entity.Zombie zombie = mock(org.bukkit.entity.Zombie.class);
