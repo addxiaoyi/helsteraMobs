@@ -6,6 +6,7 @@ description: 轻量化模型与生物引擎（MythicMobs + ModelEngine 类效果
 author: helstera
 website: https://helstera.dev
 softdepend:
+  - Vault
   - MythicMobs
   - ItemAdder
   - CraftEngine
