@@ -142,7 +142,7 @@ try {
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true time-weather=true custom-item=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true world-biome=true condition-composition=true time-weather=true custom-item=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true world-biome=true world-biome-reject=true condition-composition=true time-weather=true custom-item=true',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true food-saturation=true free-inventory-slot=true has-item=true air-level=true custom-item=true target-state-conditions=true state-blocking=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true food-saturation=true free-inventory-slot=true has-item=true has-item-loose-metadata-match=true has-item-strict-metadata-reject=true has-item-strict-positive=true has-item-range-inclusive=true has-item-range-negative=true imported-has-item-positive=true imported-target-has-item-positive=true imported-has-item-invalid-preserved=true has-item-restored=true air-level=true custom-item=true target-state-conditions=true state-blocking=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true spyglass-condition=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true name-condition=true',
         '[Server thread/INFO]: [自检] skill-trigger damage=true attack=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
@@ -1036,6 +1036,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'casterPermission').status -eq 'passed') 'caster permission probe'
     Assert-True (($report.probes | Where-Object id -eq 'foodLevelCondition').status -eq 'passed') 'food level condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'hasItemCondition').status -eq 'passed') 'has item condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'hasItemCondition').observations[0] -match 'has-item-loose-metadata-match=true .*has-item-strict-metadata-reject=true .*has-item-range-inclusive=true .*has-item-range-negative=true .*imported-has-item-positive=true .*imported-target-has-item-positive=true .*has-item-restored=true') 'has item probe requires matcher, range, importer, target, and restoration evidence'
     Assert-True (($report.probes | Where-Object id -eq 'airLevelCondition').status -eq 'passed') 'air level condition probe'
     $lookingAtProbe = $report.probes | Where-Object id -eq 'lookingAtCondition'
     Assert-True ($lookingAtProbe.status -eq 'passed') 'imported LookingAt probe'
@@ -1228,6 +1229,10 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogHasItem = @($fullCatalogReport.probes | Where-Object id -eq 'hasItemCondition')
+    Assert-True ($fullCatalogHasItem.Count -eq 1) 'synthetic full catalog contains the HasItem condition probe'
+    $fullCatalogHasItem[0].observations = @(
+        'skill-actions has-item=true has-item-loose-metadata-match=true has-item-strict-metadata-reject=true has-item-strict-positive=true has-item-range-inclusive=true has-item-range-negative=true imported-has-item-positive=true imported-target-has-item-positive=true imported-has-item-invalid-preserved=true has-item-restored=true')
     $fullCatalogVisibility = @($fullCatalogReport.probes | Where-Object id -eq 'visibilityOptions')
     Assert-True ($fullCatalogVisibility.Count -eq 1) 'synthetic full catalog contains the visibility options probe'
     $fullCatalogVisibility[0].observations = @('visibility-options-imported result=true imported=true configured=true controls=true')

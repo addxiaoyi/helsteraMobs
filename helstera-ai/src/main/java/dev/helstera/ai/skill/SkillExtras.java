@@ -724,6 +724,92 @@ public final class SkillExtras {
         }
     }
 
+    private record ItemConditionOptions(String item, NumberRange amount, String slot, boolean strict) { }
+
+    private static ItemConditionOptions itemConditionOptions(List<String> args) {
+        Map<String, String> named = new LinkedHashMap<>();
+        List<String> positional = new ArrayList<>();
+        for (String raw : args == null ? List.<String>of() : args) {
+            if (raw == null || raw.isBlank()) throw new IllegalArgumentException("blank item condition argument");
+            int equals = raw.indexOf('=');
+            if (equals <= 0 || raw.startsWith(">") || raw.startsWith("<")
+                    || raw.startsWith("!") || raw.startsWith("=")) {
+                positional.add(raw.trim());
+                continue;
+            }
+            String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String canonical = switch (key) {
+                case "item", "i", "material", "m", "type", "t", "mat", "types" -> "item";
+                case "amount", "a" -> "amount";
+                case "strict", "exact", "e" -> "strict";
+                case "vanillaonly", "vanilla" -> "vanillaonly";
+                case "slot", "s" -> "slot";
+                default -> throw new IllegalArgumentException("unknown item condition argument: " + key);
+            };
+            String value = raw.substring(equals + 1).trim();
+            if (value.isEmpty() || named.putIfAbsent(canonical, value) != null) {
+                throw new IllegalArgumentException("invalid or duplicate item condition argument: " + key);
+            }
+        }
+
+        int index = 0;
+        String item = named.get("item");
+        if (item == null && index < positional.size()) item = positional.get(index++);
+        if (item == null) item = "DIRT";
+        String amountExpression = named.get("amount");
+        if (amountExpression == null && index < positional.size()) amountExpression = positional.get(index++);
+        if (amountExpression == null) amountExpression = ">0";
+        NumberRange amount = numberRange(List.of(amountExpression), 0);
+        if (amount == null || amount.min() > amount.max()) {
+            throw new IllegalArgumentException("invalid item amount range");
+        }
+
+        String slot = named.getOrDefault("slot", "all");
+        String strictValue = named.get("strict");
+        if (index < positional.size()) {
+            String next = positional.get(index++);
+            if (isBooleanOption(next)) {
+                if (strictValue != null) throw new IllegalArgumentException("duplicate strict item matcher flag");
+                strictValue = next;
+            } else {
+                if (named.containsKey("slot")) throw new IllegalArgumentException("duplicate item slot");
+                slot = next;
+            }
+        }
+        if (index < positional.size()) {
+            if (strictValue != null || index + 1 != positional.size()) {
+                throw new IllegalArgumentException("too many item condition arguments");
+            }
+            strictValue = positional.get(index++);
+            if (!isBooleanOption(strictValue)) throw new IllegalArgumentException("invalid strict item matcher flag");
+        }
+        if (index != positional.size()) throw new IllegalArgumentException("too many item condition arguments");
+
+        boolean strict = parseBooleanOption(strictValue, false, "strict");
+        if (named.containsKey("vanillaonly")
+                && parseBooleanOption(named.get("vanillaonly"), false, "vanillaonly")) {
+            throw new IllegalArgumentException("vanilla-only item identity is not available in this runtime");
+        }
+        if (item.isBlank() || slot.isBlank()) throw new IllegalArgumentException("item and slot must not be blank");
+        return new ItemConditionOptions(item, amount, slot, strict);
+    }
+
+    private static boolean isBooleanOption(String raw) {
+        return raw != null && switch (raw.trim().toLowerCase(Locale.ROOT)) {
+            case "true", "false", "yes", "no", "on", "off", "1", "0" -> true;
+            default -> false;
+        };
+    }
+
+    private static boolean parseBooleanOption(String raw, boolean fallback, String name) {
+        if (raw == null) return fallback;
+        return switch (raw.trim().toLowerCase(Locale.ROOT)) {
+            case "true", "yes", "on", "1" -> true;
+            case "false", "no", "off", "0" -> false;
+            default -> throw new IllegalArgumentException("invalid boolean for " + name);
+        };
+    }
+
     private static NumberRange numberRange(List<String> args, int index) {
         String raw = str(args, index, "");
         if (raw.isBlank()) return null;
@@ -3065,18 +3151,17 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("has-item", (SkillCatalog.ConditionFactory) a -> {
-                    String itemName = str(a, 0, "");
-                    Comparison amount = comparison(a, 1, ">=");
-                    String slot = str(a, 2, "all");
+                    ItemConditionOptions options = itemConditionOptions(a);
                     return ctx -> {
                         // Resolve at execution time: integrations may inject their
                         // custom-item resolver after skills.yml has been bound.
-                        ItemStack expected = resolveItem(itemName, 1);
+                        ItemStack expected = resolveItem(options.item(), 1);
                         LivingEntity target = ctx == null ? null : ctx.targetEntity().orElse(null);
                         if (target == null && ctx != null) target = ctx.target().orElse(null);
                         if (target == null) target = conditionEntity(ctx);
                         if (target == null || expected == null) return false;
-                        return compare(countMatchingItems(target, expected, slot, vanillaItemName(itemName)), amount);
+                        return options.amount().contains(countMatchingItems(target, expected,
+                                options.slot(), vanillaItemName(options.item()), options.strict()));
                     };
                 }),
                 Map.entry("has-free-inventory-slot", (SkillCatalog.ConditionFactory) a ->
@@ -3102,14 +3187,13 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("target-has-item", (SkillCatalog.ConditionFactory) a -> {
-                    String itemName = str(a, 0, "");
-                    Comparison amount = comparison(a, 1, ">=");
-                    String slot = str(a, 2, "all");
+                    ItemConditionOptions options = itemConditionOptions(a);
                     return ctx -> {
                         LivingEntity target = targetOnlyEntity(ctx);
-                        ItemStack expected = resolveItem(itemName, 1);
+                        ItemStack expected = resolveItem(options.item(), 1);
                         return target != null && expected != null
-                                && compare(countMatchingItems(target, expected, slot, vanillaItemName(itemName)), amount);
+                                && options.amount().contains(countMatchingItems(target, expected,
+                                options.slot(), vanillaItemName(options.item()), options.strict()));
                     };
                 }),
                 Map.entry("wearing", (SkillCatalog.ConditionFactory) a -> {
@@ -7265,15 +7349,17 @@ public final class SkillExtras {
         return stack.isSimilar(expected) || (vanilla && stack.getType() == expected.getType());
     }
 
-    private static int countMatchingItems(LivingEntity entity, ItemStack expected, String slotName, boolean vanilla) {
+    private static int countMatchingItems(LivingEntity entity, ItemStack expected, String slotName,
+                                          boolean vanilla, boolean strict) {
         if (entity instanceof Player player && "all".equalsIgnoreCase(slotName)) {
-            return countMatching(player.getInventory().getContents(), expected, vanilla);
+            return countMatching(player.getInventory().getContents(), expected, vanilla, strict);
         }
         if (entity.getEquipment() == null) return 0;
         String slot = slotName == null ? "all" : slotName.trim().toLowerCase(Locale.ROOT);
         if (!"all".equals(slot)) {
             EquipmentSlot equipmentSlot = equipmentSlot(slot);
-            return countMatching(new ItemStack[]{entity.getEquipment().getItem(equipmentSlot)}, expected, vanilla);
+            return countMatching(new ItemStack[]{entity.getEquipment().getItem(equipmentSlot)}, expected,
+                    vanilla, strict);
         }
         int total = countMatching(new ItemStack[]{
                 entity.getEquipment().getItem(EquipmentSlot.HAND),
@@ -7282,23 +7368,29 @@ public final class SkillExtras {
                 entity.getEquipment().getItem(EquipmentSlot.CHEST),
                 entity.getEquipment().getItem(EquipmentSlot.LEGS),
                 entity.getEquipment().getItem(EquipmentSlot.FEET)
-        }, expected, vanilla);
+        }, expected, vanilla, strict);
         return total;
     }
 
-    private static int countMatching(ItemStack[] contents, ItemStack expected, boolean vanilla) {
+    private static int countMatching(ItemStack[] contents, ItemStack expected, boolean vanilla, boolean strict) {
         int total = 0;
         if (contents == null) return total;
         for (ItemStack stack : contents) {
             Material type = stack == null ? null : stack.getType();
             boolean sameItem = stack != null && type != null
                     && !"AIR".equalsIgnoreCase(type.name())
-                    && matchesItem(stack, expected, vanilla);
+                    && matchesConditionItem(stack, expected, vanilla, strict);
             if (sameItem) {
                 total += stack.getAmount();
             }
         }
         return total;
+    }
+
+    private static boolean matchesConditionItem(ItemStack stack, ItemStack expected,
+                                                boolean vanilla, boolean strict) {
+        return stack.isSimilar(expected)
+                || (!strict && vanilla && stack.getType() == expected.getType());
     }
 
     // ------------------------------------------------------------------

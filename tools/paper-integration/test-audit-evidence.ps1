@@ -39,6 +39,10 @@ try {
     $archivePath = Join-Path $temporaryRoot 'tools/paper-integration/reports/test-release.json'
     [void][System.IO.Directory]::CreateDirectory([System.IO.Path]::GetDirectoryName($archivePath))
     $fullReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-drop-inline-20261104-r2.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $hasItemProbe = @($fullReport.probes | Where-Object id -eq 'hasItemCondition')
+    if ($hasItemProbe.Count -ne 1) { throw 'Synthetic release report must contain hasItemCondition.' }
+    $hasItemProbe[0].observations = @(
+        'skill-actions has-item=true has-item-loose-metadata-match=true has-item-strict-metadata-reject=true has-item-strict-positive=true has-item-range-inclusive=true has-item-range-negative=true imported-has-item-positive=true imported-target-has-item-positive=true imported-has-item-invalid-preserved=true has-item-restored=true')
     $visibilityProbe = @($fullReport.probes | Where-Object id -eq 'visibilityOptions')
     if ($visibilityProbe.Count -ne 1) { throw 'Synthetic release report must contain visibilityOptions.' }
     $visibilityProbe[0].observations = @('visibility-options-imported result=true imported=true configured=true controls=true')

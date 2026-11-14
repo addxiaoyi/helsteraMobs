@@ -708,6 +708,43 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("has-item supports inclusive amount ranges and strict item similarity")
+    void hasItemConditionSupportsRangesAndStrictSimilarity() {
+        var svc = service();
+        var player = mock(Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        var expected = mock(org.bukkit.inventory.ItemStack.class);
+        var actual = mock(org.bukkit.inventory.ItemStack.class);
+        when(expected.getType()).thenReturn(org.bukkit.Material.DIAMOND);
+        when(actual.getType()).thenReturn(org.bukkit.Material.DIAMOND);
+        when(actual.getAmount()).thenReturn(2);
+        when(actual.isSimilar(expected)).thenReturn(false);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.getContents()).thenReturn(new org.bukkit.inventory.ItemStack[]{actual});
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.itemResolver(name -> expected);
+        try {
+            String looseRange = svc.bindCondition("has-item item=DIAMOND amount=1to2 strict=false");
+            String exactRange = svc.bindCondition("has-item item=DIAMOND amount=1to2 strict=true");
+            String outsideRange = svc.bindCondition("has-item item=DIAMOND amount=3to4 strict=false");
+            assertNotNull(looseRange, svc.warnings().toString());
+            assertNotNull(exactRange, svc.warnings().toString());
+            assertNotNull(outsideRange, svc.warnings().toString());
+            assertTrue(registry.testCondition(looseRange, context));
+            assertFalse(registry.testCondition(exactRange, context));
+            assertFalse(registry.testCondition(outsideRange, context));
+
+            when(actual.isSimilar(expected)).thenReturn(true);
+            assertTrue(registry.testCondition(exactRange, context));
+            assertNull(svc.bindCondition("has-item DIAMOND 3to1"));
+            assertNull(svc.bindCondition("has-item item=DIAMOND vanillaonly=true"));
+        } finally {
+            SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
     @DisplayName("has-item resolves custom items after the condition was bound")
     void hasItemResolvesLateInjectedCustomItem() {
         var svc = service();

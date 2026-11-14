@@ -14724,6 +14724,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean foodSaturationCondition = false;
             boolean freeInventorySlotCondition = false;
                 boolean hasItemCondition = false;
+                HasItemConditionEvidence hasItemEvidence = HasItemConditionEvidence.failed();
                 boolean airLevelCondition = false;
                 boolean itemRechargingCondition = false;
                 boolean importedItemRechargingCondition = false;
@@ -15325,14 +15326,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     itemSimilarCondition = itemSimilarPositive && itemSimilarNegative;
                     importedItemSimilarityConditions = runImportedItemSimilarityProbe(
                             skills, behaviors, triggerItemContext, stateContext, permissionProbe);
-                    boolean hasItemBefore = behaviors.testCondition(
-                            skills.bindCondition("has-item SHIELD >=1"), stateContext);
-                    permissionProbe.getInventory().setItemInMainHand(new org.bukkit.inventory.ItemStack(
-                            org.bukkit.Material.AIR));
-                    boolean hasItemAfter = !behaviors.testCondition(
-                            skills.bindCondition("has-item SHIELD >=1"), stateContext);
-                    hasItemCondition = hasItemBefore && hasItemAfter;
-                    permissionProbe.getInventory().setItemInMainHand(oldMainHand);
+                    hasItemEvidence = runHasItemConditionSelfTest(
+                            skills, behaviors, stateContext, permissionProbe, oldContents);
+                    hasItemCondition = hasItemEvidence.passed();
                     targetsCondition = behaviors.testCondition(
                             skills.bindCondition("targets{a=>=1}"), stateContext)
                             && !behaviors.testCondition(
@@ -15868,6 +15864,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " food-saturation=" + foodSaturationCondition
                         + " free-inventory-slot=" + freeInventorySlotCondition
                         + " has-item=" + hasItemCondition
+                        + " has-item-loose-metadata-match=" + hasItemEvidence.looseMetadataMatch()
+                        + " has-item-strict-metadata-reject=" + hasItemEvidence.strictMetadataReject()
+                        + " has-item-strict-positive=" + hasItemEvidence.strictPositive()
+                        + " has-item-range-inclusive=" + hasItemEvidence.rangeInclusive()
+                        + " has-item-range-negative=" + hasItemEvidence.rangeNegative()
+                        + " imported-has-item-positive=" + hasItemEvidence.importedPositive()
+                        + " imported-target-has-item-positive=" + hasItemEvidence.importedTargetPositive()
+                        + " imported-has-item-invalid-preserved=" + hasItemEvidence.invalidPreserved()
+                        + " has-item-restored=" + hasItemEvidence.restored()
                         + " collidable-condition=" + collidableCondition
                         + " offhand-condition=" + offhandCondition
                         + " looking-at-condition=" + lookingAtCondition
@@ -16031,6 +16036,96 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }
+    }
+
+    private record HasItemConditionEvidence(boolean passed, boolean looseMetadataMatch,
+                                            boolean strictMetadataReject, boolean strictPositive,
+                                            boolean rangeInclusive, boolean rangeNegative,
+                                            boolean importedPositive, boolean importedTargetPositive,
+                                            boolean invalidPreserved, boolean restored) {
+        private static HasItemConditionEvidence failed() {
+            return new HasItemConditionEvidence(false, false, false, false,
+                    false, false, false, false, false, false);
+        }
+    }
+
+    private HasItemConditionEvidence runHasItemConditionSelfTest(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext context,
+            Player player,
+            org.bukkit.inventory.ItemStack[] originalContents) {
+        boolean baselinePositive = false;
+        boolean baselineNegative = false;
+        boolean looseMetadataMatch = false;
+        boolean strictMetadataReject = false;
+        boolean strictPositive = false;
+        boolean rangeInclusive = false;
+        boolean rangeNegative = false;
+        boolean importedPositive = false;
+        boolean importedTargetPositive = false;
+        boolean invalidPreserved = false;
+        boolean restored = false;
+        try {
+            var inventory = player.getInventory();
+            inventory.clear();
+            inventory.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+            baselinePositive = behaviors.testCondition(
+                    skills.bindCondition("has-item SHIELD >=1"), context);
+            inventory.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.AIR));
+            baselineNegative = !behaviors.testCondition(
+                    skills.bindCondition("has-item SHIELD >=1"), context);
+
+            inventory.clear();
+            var namedShield = new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD);
+            var namedShieldMeta = namedShield.getItemMeta();
+            namedShieldMeta.setDisplayName("Helstera parity custom Shield");
+            namedShield.setItemMeta(namedShieldMeta);
+            inventory.setItemInMainHand(namedShield);
+            looseMetadataMatch = behaviors.testCondition(skills.bindCondition(
+                    "has-item item=SHIELD amount=>=1 strict=false"), context);
+            strictMetadataReject = !behaviors.testCondition(skills.bindCondition(
+                    "has-item item=SHIELD amount=>=1 strict=true"), context);
+
+            inventory.clear();
+            inventory.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+            strictPositive = behaviors.testCondition(skills.bindCondition(
+                    "has-item item=SHIELD amount=>=1 strict=true"), context);
+            var twoShields = new org.bukkit.inventory.ItemStack[inventory.getStorageContents().length];
+            twoShields[0] = new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD);
+            twoShields[1] = new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD);
+            inventory.setStorageContents(twoShields);
+            rangeInclusive = behaviors.testCondition(skills.bindCondition(
+                    "has-item item=SHIELD amount=2to2"), context);
+            rangeNegative = !behaviors.testCondition(skills.bindCondition(
+                    "has-item item=SHIELD amount=3to4"), context);
+
+            var importedHasItem = dev.helstera.migration.importer.MmConditions.translate(
+                    "?hasItem{item=SHIELD;amount=1to2;strict=true}");
+            var importedTargetHasItem = dev.helstera.migration.importer.MmConditions.translate(
+                    "?targetHasItem{item=SHIELD;amount=>=1;strict=true}");
+            var importedUnsupported = dev.helstera.migration.importer.MmConditions.translate(
+                    "?hasItem{item=SHIELD;vanillaonly=true}");
+            String importedHasItemKey = importedHasItem.translated()
+                    ? skills.bindCondition(importedHasItem.condition()) : null;
+            String importedTargetHasItemKey = importedTargetHasItem.translated()
+                    ? skills.bindCondition(importedTargetHasItem.condition()) : null;
+            importedPositive = importedHasItemKey != null
+                    && behaviors.testCondition(importedHasItemKey, context);
+            importedTargetPositive = importedTargetHasItemKey != null
+                    && behaviors.testCondition(importedTargetHasItemKey, context);
+            invalidPreserved = !importedUnsupported.translated()
+                    && skills.bindCondition(importedUnsupported.condition()) == null;
+        } finally {
+            player.getInventory().setContents(originalContents);
+            restored = java.util.Arrays.equals(originalContents, player.getInventory().getContents());
+        }
+        boolean passed = baselinePositive && baselineNegative && looseMetadataMatch
+                && strictMetadataReject && strictPositive && rangeInclusive && rangeNegative
+                && importedPositive && importedTargetPositive && invalidPreserved && restored;
+        return new HasItemConditionEvidence(passed, looseMetadataMatch, strictMetadataReject,
+                strictPositive, rangeInclusive, rangeNegative, importedPositive,
+                importedTargetPositive, invalidPreserved, restored);
     }
 
     private boolean runImportedInvulnerabilityConditionSelfTest(

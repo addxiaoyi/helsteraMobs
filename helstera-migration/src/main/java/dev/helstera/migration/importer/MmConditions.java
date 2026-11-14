@@ -56,6 +56,14 @@ public final class MmConditions {
             Map.entry("item", "types"), Map.entry("i", "types"),
             Map.entry("strict", "strict"), Map.entry("exact", "strict"), Map.entry("e", "strict"),
             Map.entry("vanillaonly", "vanillaonly"), Map.entry("vanilla", "vanillaonly"));
+    private static final Map<String, String> HAS_ITEM_ARGUMENTS = Map.ofEntries(
+            Map.entry("item", "item"), Map.entry("i", "item"),
+            Map.entry("material", "item"), Map.entry("m", "item"),
+            Map.entry("type", "item"), Map.entry("t", "item"),
+            Map.entry("mat", "item"), Map.entry("types", "item"),
+            Map.entry("amount", "amount"), Map.entry("a", "amount"),
+            Map.entry("strict", "strict"), Map.entry("exact", "strict"), Map.entry("e", "strict"),
+            Map.entry("vanillaonly", "vanillaonly"), Map.entry("vanilla", "vanillaonly"));
     private static final Map<String, String> ITEM_GROUP_COOLDOWN_ARGUMENTS = Map.of(
             "group", "group", "g", "group");
     private static final Map<String, String> TEMPLATE_TYPE_ARGUMENTS = Map.of(
@@ -1190,8 +1198,7 @@ public final class MmConditions {
                     : new Mapped("potion-effect-active " + effect, true);
         }
         if ("hasitem".equals(name) || "itemcount".equals(name)) {
-            return body == null || body.isBlank()
-                    ? new Mapped(s, false) : new Mapped("has-item " + normalizeItemArgs(body), true);
+            return hasItemCondition(body, s, "has-item");
         }
         if ("hascurrency".equals(name)) {
             String amount = firstArgument(body, "amount", "a", "value", "v");
@@ -1435,8 +1442,7 @@ public final class MmConditions {
             return value == null ? new Mapped(s, false) : new Mapped("target-air-level " + value, true);
         }
         if ("targethasitem".equals(name) || "targetitemcount".equals(name)) {
-            return body == null || body.isBlank() ? new Mapped(s, false)
-                    : new Mapped("target-has-item " + normalizeItemArgs(body), true);
+            return hasItemCondition(body, s, "target-has-item");
         }
         if ("targetpotioneffectactive".equals(name) || "targetpotionactive".equals(name)) {
             String effect = firstArgument(body, "effect", "potion", "type", "e");
@@ -1818,15 +1824,22 @@ public final class MmConditions {
         return String.valueOf(d);
     }
 
-    private static String normalizeItemArgs(String body) {
-        List<String> args = new ArrayList<>();
-        for (String part : body.split("[;,]")) {
-            String value = part.trim();
-            int equals = value.indexOf('=');
-            if (equals > 0) value = value.substring(equals + 1).trim();
-            if (!value.isBlank()) args.add(value);
+    private static Mapped hasItemCondition(String body, String original, String runtimeName) {
+        Map<String, String> arguments = strictValueArguments(body, HAS_ITEM_ARGUMENTS, "item");
+        if (arguments == null) return new Mapped(original, false);
+        String item = arguments.getOrDefault("item", "DIRT");
+        String amount = arguments.getOrDefault("amount", ">0");
+        String strict = normalizedBoolean(arguments.getOrDefault("strict", "false"));
+        String vanillaOnly = normalizedBoolean(arguments.getOrDefault("vanillaonly", "false"));
+        // Bukkit cannot reliably distinguish every third-party custom item from a
+        // vanilla stack of the same material. Preserve this mode until an item
+        // identity contract is available instead of silently weakening it.
+        if (item.isBlank() || !validNumberRange(amount) || strict == null
+                || vanillaOnly == null || "true".equals(vanillaOnly)) {
+            return new Mapped(original, false);
         }
-        return String.join(" ", args);
+        return new Mapped(runtimeName + " item=" + item + " amount=" + amount
+                + " strict=" + strict, true);
     }
 
     private static Mapped itemSimilarityCondition(String body, String original) {

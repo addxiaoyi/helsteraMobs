@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-has-item-strict-20261114-r1",
+    "reportFixtureDirectory": "srv-paper-has-item-strict-20261114-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-has-item-strict-20261114-r1.json",
+    "reportSha256": "4727d4db64749fc6bdc6cef31c05286a1e35811861d5dbf034e27142bd62b002",
+    "log": "tools/paper-integration/reports/paper-1.21.1-has-item-strict-20261114-r1.log.gz",
+    "logSha256": "da1b86ad298133d0e6b22d564cef778fcbffe0903049c6da80a1bbd6a9300b8b",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-has-item-strict-20261114-r1-client-logs.tar.gz",
+    "clientLogSha256": "114c3945143ea80d8526fc25889c2c8f2d02d3d5f1820acdd41879b3763d516d",
+    "pluginSha256": "c14c9f4430eb35decda63d57b9702877359e471705ae3e095ebf47c9fc5a8464",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-plugin-condition-strict-20261114-r2",
     "reportFixtureDirectory": "srv-paper-plugin-condition-strict-20261114-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261114-r2.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-full-strict-20261114-r2-client-logs.tar.gz",
     "clientLogSha256": "1ead6049bdb7f7ce63871f1bb51907937f7779c38d2af900d25c5b8330ebed5b",
     "pluginSha256": "3aaf8ee7ab555625b0ca66e23220b79107bc9c748227ee104f430d973f0a3d6f",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-has-item-strict-20261114-r1"
   },
   {
     "fixtureId": "srv-paper-plugin-condition-strict-20261114-r1",

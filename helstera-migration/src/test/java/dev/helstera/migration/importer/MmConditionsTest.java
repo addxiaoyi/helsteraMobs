@@ -633,9 +633,17 @@ class MmConditionsTest {
 
     @Test
     void hasItemConditionMapsItemAndAmountArguments() {
-        assertEquals("has-item DIAMOND >=2", t("?hasItem{item=DIAMOND;amount=>=2}"));
+        assertEquals("has-item item=DIAMOND amount=>=2 strict=false",
+                t("?hasItem{item=DIAMOND;amount=>=2}"));
+        assertEquals("has-item item=DIAMOND amount=1to10 strict=true",
+                t("?hasItem{material=DIAMOND;amount=1to10;exact=yes}"));
+        assertEquals("target-has-item item=SHIELD amount=>0 strict=false",
+                t("?targetHasItem{item=SHIELD}"));
+        assertEquals("has-item item=DIRT amount=>0 strict=false", t("?hasItem"));
         assertTrue(translated("?hasItem{item=DIAMOND;amount=>=2}"));
-        assertFalse(translated("?hasItem"));
+        assertFalse(translated("?hasItem{item=DIAMOND;amount=2;strict=maybe}"));
+        assertFalse(translated("?hasItem{item=DIAMOND;vanillaonly=true}"));
+        assertFalse(translated("?hasItem{item=DIAMOND;amount=2;unknown=true}"));
     }
 
     @Test
@@ -1695,7 +1703,8 @@ class MmConditionsTest {
         assertEquals("target-game-mode-is SURVIVAL", t("?targetGameMode{mode=SURVIVAL}"));
         assertEquals("target-food-level <=14", t("?targetFoodLevel{value=<=14}"));
         assertEquals("target-air-level <=100", t("?targetAirLevel{value=<=100}"));
-        assertEquals("target-has-item SHIELD >=1", t("?targetHasItem{item=SHIELD;amount=>=1}"));
+        assertEquals("target-has-item item=SHIELD amount=>=1 strict=false",
+                t("?targetHasItem{item=SHIELD;amount=>=1}"));
         assertEquals("target-potion-effect-active SPEED", t("?targetPotionEffectActive{effect=SPEED}"));
         assertEquals("target-potion-effect-active SPEED", t("?targetHasPotionEffect{effect=SPEED}"));
         assertFalse(translated("?targetHasAuras{effect=SPEED}"));
