@@ -378,7 +378,7 @@ public final class SkillService {
                 "target-is-monster", "target-is-animal", "target-is-villager", "target-is-tameable",
                 "target-is-raider", "has-ai", "has-gravity", "is-silent", "is-dead", "is-alive", "is-valid",
                 "target-has-ai", "target-has-gravity", "target-is-silent", "target-dead", "target-is-alive",
-                "target-is-valid", "is-in-audience", "has-free-inventory-slot")
+                "target-is-valid", "is-in-audience", "has-free-inventory-slot", "mythic-premium")
                 .contains(name)) return null;
         if ("last-signal".equals(name) && conditionSpec.indexOf('{') >= 0) {
             try {
@@ -2227,6 +2227,8 @@ public final class SkillService {
                     "server-nms-version";
             case "localdifficulty", "local-difficulty" -> "local-difficulty";
             case "plugin", "plugin-exists", "pluginexists", "hasplugin", "has-plugin" -> "plugin";
+            case "premium", "ispremium", "is-premium", "iscool", "mythic-premium" ->
+                    "mythic-premium";
             case "mythicpack", "mythic-pack", "pack", "haspack", "has-pack" -> "mythic-pack";
             case "mythicpackversion", "mythic-pack-version", "packversion", "packversionis" ->
                     "mythic-pack-version";

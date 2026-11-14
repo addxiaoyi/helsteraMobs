@@ -1416,6 +1416,15 @@ class MmConditionsTest {
     }
 
     @Test
+    void officialPremiumConditionMapsAliasesAndPreservesArguments() {
+        assertEquals("mythic-premium", t("?premium"));
+        assertEquals("mythic-premium", t("?isPremium"));
+        assertEquals("mythic-premium", t("?isCool"));
+        assertFalse(translated("?premium{unknown=true}"));
+        assertFalse(translated("?isPremium{value=true}"));
+    }
+
+    @Test
     void officialMythicMobConditionMaps() {
         assertEquals("is-mythic-mob", t("?isMythicMob"));
         assertEquals("is-mythic-mob", t("?isMM"));

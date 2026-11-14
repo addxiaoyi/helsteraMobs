@@ -126,7 +126,7 @@ try {
         throw 'Paper or MythicMobs did not finish startup; inspect the retained fixture logs.'
     }
     $probeDeadline = [DateTime]::UtcNow.AddSeconds(30)
-    $probePattern = 'mythic-pack-condition actual-version=2\.4\.1 .* passed=true'
+    $probePattern = 'mythic-pack-condition actual-version=2\.4\.1 .*premium-api-available=true .*premium-arguments-preserved=true premium-runtime-arguments-rejected=true passed=true'
     while ([DateTime]::UtcNow -lt $probeDeadline -and -not $process.HasExited -and
             -not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
         Start-Sleep -Milliseconds 250

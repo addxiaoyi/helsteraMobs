@@ -140,6 +140,7 @@ public final class MmConditions {
             "charged", "climbing", "isclimbing", "invisible", "isinvisible", "glowing", "isglowing",
             "isinsurvivalmode", "insurvivalmode",
             "isusingspyglass", "isscoping",
+            "premium", "ispremium", "iscool",
             "falling", "isfalling", "mounted", "ismounted", "isriding", "riding", "moist", "ismoist",
             "enderdragonalive", "isdragonalive", "dragonalive",
             "israiderpatrolleader", "ispatrolleader", "serverispaper", "ispaper", "ismythicmob", "ismm",
@@ -1120,6 +1121,9 @@ public final class MmConditions {
         }
         if ("isinsurvivalmode".equals(name) || "insurvivalmode".equals(name)) {
             return new Mapped("is-in-survival-mode", true);
+        }
+        if ("premium".equals(name) || "ispremium".equals(name) || "iscool".equals(name)) {
+            return new Mapped("mythic-premium", true);
         }
         if ("isusingspyglass".equals(name) || "isscoping".equals(name)) {
             return new Mapped("is-using-spyglass", true);

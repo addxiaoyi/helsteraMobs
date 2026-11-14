@@ -1514,6 +1514,28 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("Mythic Premium condition reads the optional provider and fails closed")
+    void mythicPremiumConditionUsesOptionalProvider() {
+        try {
+            SkillExtras.mythicPremiumLookup(() -> true);
+            assertTrue(extraFactory("mythic-premium").create(List.of()).test(ctx()));
+            SkillExtras.mythicPremiumLookup(() -> false);
+            assertFalse(extraFactory("mythic-premium").create(List.of()).test(ctx()));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("mythic-premium").create(List.of("unknown=true")));
+        } finally {
+            SkillExtras.mythicPremiumLookup(null);
+        }
+
+        var manager = mock(org.bukkit.plugin.PluginManager.class);
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getPluginManager).thenReturn(manager);
+            when(manager.getPlugin("MythicMobs")).thenReturn(null);
+            assertFalse(extraFactory("mythic-premium").create(List.of()).test(ctx()));
+        }
+    }
+
+    @Test
     @DisplayName("Mythic pack conditions query exact IDs and compare dotted int versions")
     void mythicPackConditionsUseRegisteredPackMetadata() {
         Map<String, SkillExtras.MythicPackInfo> packs = Map.of(

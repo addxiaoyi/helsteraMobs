@@ -9,7 +9,7 @@ Run the exact MythicMobs 5.7.2/Paper 1.21.1 condition probe after packaging the 
 pwsh -NoProfile -File tools/paper-integration/run-mythic-pack-condition-fixture.ps1 -EvidenceRevision rN
 ```
 
-The runner verifies the pinned Paper 1.21.1-133 build and the official MythicMobs 5.7.2 Modrinth artifact by SHA-256 and SHA-512, then starts an isolated server and archives a JSON report plus token-redacted compressed log. If downloading MythicMobs is unavailable, pass a locally obtained copy with `-MythicMobsJarPath`; the runner still enforces both hashes. The third-party JAR is All Rights Reserved and is not redistributed. This focused test covers only `MythicPack`, `MythicPackVersion`, and `MythicPackVersionGreater`; it is not a full-catalog release-gate run and does not establish compatibility with other plugin/server versions or MythicLib-dependent behavior.
+The runner verifies the pinned Paper 1.21.1-133 build and the official MythicMobs 5.7.2 Modrinth artifact by SHA-256 and SHA-512, then starts an isolated server and archives a JSON report plus token-redacted compressed log. If downloading MythicMobs is unavailable, pass a locally obtained copy with `-MythicMobsJarPath`; the runner still enforces both hashes. The third-party JAR is All Rights Reserved and is not redistributed. The focused probe covers `MythicPack`, `MythicPackVersion`, `MythicPackVersionGreater`, and `Premium`/`IsPremium`/`IsCool`; the downloaded build returned false from the Premium API, so a Premium-enabled positive state is not demonstrated. This is not a full-catalog release-gate run and does not establish compatibility with other plugin/server versions or MythicLib-dependent behavior.
 
 ## Focused Vault Economy contract fixture
 

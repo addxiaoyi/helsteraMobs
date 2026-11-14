@@ -1153,6 +1153,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean greaterMajorComponentRejected = false;
             boolean malformedPreserved = false;
             boolean duplicatePreserved = false;
+            boolean premiumApiAvailable = false;
+            boolean premiumState = false;
+            boolean premiumAlias = false;
+            boolean isPremiumAlias = false;
+            boolean isCoolAlias = false;
+            boolean premiumArgumentsPreserved = false;
+            boolean premiumRuntimeArgumentsRejected = false;
             String actualVersion = "unavailable";
             try {
                 if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
@@ -1162,6 +1169,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var context = dev.helstera.api.behavior.BehaviorContext.of(
                         null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "paper-pack-probe");
                 var mythic = getServer().getPluginManager().getPlugin("MythicMobs");
+                if (mythic != null && mythic.isEnabled()) {
+                    try {
+                        Class<?> api = Class.forName("io.lumine.mythic.bukkit.MythicBukkit", false,
+                                mythic.getClass().getClassLoader());
+                        var method = api.getMethod("isVolatile");
+                        if (java.lang.reflect.Modifier.isStatic(method.getModifiers())
+                                && method.getReturnType() == boolean.class) {
+                            premiumState = Boolean.TRUE.equals(method.invoke(null));
+                            premiumApiAvailable = true;
+                        }
+                    } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+                        // The condition is specified to fail closed when the optional API is unavailable.
+                    }
+                }
                 var lookup = mythic == null ? null : MythicPackDirectory.findLoadedPack(mythic,
                         mythic.getDataFolder().toPath().resolve("Packs"), "HelsteraParityProbe");
                 if (lookup != null && lookup.version() != null) actualVersion = lookup.version();
@@ -1194,6 +1215,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 duplicatePreserved = !duplicate.translated()
                         && "?MythicPack{p=HelsteraParityProbe;pack=missing}"
                         .equals(duplicate.condition());
+                premiumAlias = testImportedPackCondition(skills, behaviors, context,
+                        "?premium", premiumApiAvailable && premiumState);
+                isPremiumAlias = testImportedPackCondition(skills, behaviors, context,
+                        "?isPremium", premiumApiAvailable && premiumState);
+                isCoolAlias = testImportedPackCondition(skills, behaviors, context,
+                        "?isCool", premiumApiAvailable && premiumState);
+                var malformedPremium = dev.helstera.migration.importer.MmConditions.translate(
+                        "?premium{unknown=true}");
+                premiumArgumentsPreserved = !malformedPremium.translated()
+                        && "?premium{unknown=true}".equals(malformedPremium.condition());
+                premiumRuntimeArgumentsRejected = skills.bindCondition("mythic-premium{unknown=true}") == null;
             } catch (Throwable failure) {
                 getLogger().warning("[自检] mythic-pack-condition exception=" + failure.getClass().getSimpleName()
                         + ":" + failure.getMessage());
@@ -1201,7 +1233,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean passed = packLoaded && caseSensitive && missingRejected && exactVersion
                     && wrongVersionRejected && greaterEqual && greaterLowerRejected
                     && greaterUpper && greaterMajorComponentRejected
-                    && malformedPreserved && duplicatePreserved;
+                    && malformedPreserved && duplicatePreserved && premiumApiAvailable
+                    && premiumAlias && isPremiumAlias && isCoolAlias
+                    && premiumArgumentsPreserved && premiumRuntimeArgumentsRejected;
             getLogger().info("[自检] mythic-pack-condition actual-version=" + actualVersion
                     + " pack-loaded=" + packLoaded + " case-sensitive=" + caseSensitive
                     + " missing-rejected=" + missingRejected + " exact-version=" + exactVersion
@@ -1209,7 +1243,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " greater-lower-rejected=" + greaterLowerRejected + " greater-upper="
                     + greaterUpper + " greater-major-component-rejected="
                     + greaterMajorComponentRejected + " malformed-preserved=" + malformedPreserved
-                    + " duplicate-preserved=" + duplicatePreserved + " passed=" + passed);
+                    + " duplicate-preserved=" + duplicatePreserved
+                    + " premium-api-available=" + premiumApiAvailable
+                    + " premium-state=" + premiumState + " premium-alias=" + premiumAlias
+                    + " is-premium-alias=" + isPremiumAlias + " is-cool-alias=" + isCoolAlias
+                    + " premium-arguments-preserved=" + premiumArgumentsPreserved
+                    + " premium-runtime-arguments-rejected=" + premiumRuntimeArgumentsRejected
+                    + " passed=" + passed);
         }, Math.max(1, delay));
     }
 

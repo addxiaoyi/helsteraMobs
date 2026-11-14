@@ -111,6 +111,12 @@ public final class SkillExtras {
     public record MythicPackInfo(String id, String version) { }
 
     private static volatile MythicPackLookup mythicPackLookup;
+    @FunctionalInterface
+    public interface MythicPremiumLookup {
+        boolean isPremium();
+    }
+
+    private static volatile MythicPremiumLookup mythicPremiumLookup;
     private static final Map<String, String> KNOWN_NMS_VERSIONS = Map.ofEntries(
             Map.entry("1.20.1", "v1_20_R1"),
             Map.entry("1.20.2", "v1_20_R2"),
@@ -164,6 +170,11 @@ public final class SkillExtras {
 
     public static void mythicPackLookup(MythicPackLookup lookup) {
         mythicPackLookup = lookup;
+    }
+
+    /** Overrides the optional MythicMobs Premium lookup for tests and integrations. */
+    public static void mythicPremiumLookup(MythicPremiumLookup lookup) {
+        mythicPremiumLookup = lookup;
     }
 
     static PinRegistry pinRegistry() {
@@ -459,6 +470,7 @@ public final class SkillExtras {
         localDifficultyLookup = null;
         mobTemplateLookup = null;
         mythicPackLookup = null;
+        mythicPremiumLookup = null;
         damagePolicy = null;
         damageCause = null;
         itemResolver = null;
@@ -1106,6 +1118,32 @@ public final class SkillExtras {
         } catch (Throwable ignored) {
             SkillFaults.swallow("SkillExtras#mythicPackInfo");
             return null;
+        }
+    }
+
+    private static boolean mythicPremiumEnabled() {
+        MythicPremiumLookup lookup = mythicPremiumLookup;
+        if (lookup != null) {
+            try {
+                return lookup.isPremium();
+            } catch (Throwable ignored) {
+                SkillFaults.swallow("SkillExtras#mythicPremiumEnabled");
+                return false;
+            }
+        }
+        try {
+            org.bukkit.plugin.Plugin mythic = org.bukkit.Bukkit.getPluginManager()
+                    .getPlugin("MythicMobs");
+            if (mythic == null || !mythic.isEnabled()) return false;
+            Class<?> api = Class.forName("io.lumine.mythic.bukkit.MythicBukkit", false,
+                    mythic.getClass().getClassLoader());
+            java.lang.reflect.Method method = api.getMethod("isVolatile");
+            if (!java.lang.reflect.Modifier.isStatic(method.getModifiers())
+                    || method.getReturnType() != boolean.class) return false;
+            return Boolean.TRUE.equals(method.invoke(null));
+        } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+            SkillFaults.swallow("SkillExtras#mythicPremiumEnabled");
+            return false;
         }
     }
 
@@ -3549,6 +3587,12 @@ public final class SkillExtras {
                 }),
                 Map.entry("server-is-paper", (SkillCatalog.ConditionFactory) a ->
                         ctx -> isPaperServer()),
+                Map.entry("mythic-premium", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && !a.isEmpty()) {
+                        throw new IllegalArgumentException("mythic-premium takes no arguments");
+                    }
+                    return ctx -> mythicPremiumEnabled();
+                }),
                 Map.entry("server-nms-version", (SkillCatalog.ConditionFactory) a -> {
                     String expected = keyedArg(a, "version", "sv", "v");
                     if (expected == null) expected = str(a, 0, "v1_19_R1_2");

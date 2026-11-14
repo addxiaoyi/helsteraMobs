@@ -12,6 +12,16 @@
     "fullReleaseCatalog": true
   },
   {
+    "fixtureId": "srv-paper-mythic-pack-strict-20261114-r6",
+    "reportFixtureDirectory": "srv-paper-mythic-pack-strict-20261114-r6",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r6.json",
+    "reportSha256": "29925077856575a105fc16c61b28a3ba4d1a589eae94cdbbc7dbe48c4b893766",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r6.log.gz",
+    "logSha256": "1c3d694909b0f1e4fd7828b745d8f8d19b727ba1da34ec3b4434ac466208b76d",
+    "pluginSha256": "0937c9e70632d40c0db1e3460bcf151278ca8c4d336f73e65e5dbbbf5d269e71",
+    "fullReleaseCatalog": false
+  },
+  {
     "fixtureId": "srv-paper-mythic-pack-strict-20261114-r5",
     "reportFixtureDirectory": "srv-paper-mythic-pack-strict-20261114-r5",
     "report": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r5.json",

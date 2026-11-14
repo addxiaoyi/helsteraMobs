@@ -33,6 +33,33 @@ import static org.mockito.Mockito.*;
 class MigrationRuntimeConditionContractTest {
 
     @Test
+    @DisplayName("imported Mythic Premium aliases use the optional runtime provider")
+    void importedMythicPremiumAliasesReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+        try {
+            dev.helstera.ai.skill.SkillExtras.mythicPremiumLookup(() -> true);
+            for (String source : List.of("?premium", "?isPremium", "?isCool")) {
+                var translated = dev.helstera.migration.importer.MmConditions.translate(source);
+                assertTrue(translated.translated(), source);
+                assertEquals("mythic-premium", translated.condition());
+                String key = service.bindCondition(translated.condition());
+                assertNotNull(key, source);
+                assertTrue(registry.testCondition(key, context), source);
+            }
+            dev.helstera.ai.skill.SkillExtras.mythicPremiumLookup(() -> false);
+            String negative = service.bindCondition("mythic-premium");
+            assertNotNull(negative);
+            assertFalse(registry.testCondition(negative, context));
+            assertNull(service.bindCondition("mythic-premium{unknown=true}"));
+        } finally {
+            dev.helstera.ai.skill.SkillExtras.mythicPremiumLookup(null);
+        }
+    }
+
+    @Test
     @DisplayName("LastDamager targeter follows direct and projectile damage sources")
     void lastDamagerTargeterUsesBukkitLastDamageCause() {
         var caster = mock(org.bukkit.entity.LivingEntity.class);
