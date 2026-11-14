@@ -1514,38 +1514,48 @@ class SkillConditionsTest {
     }
 
     @Test
-    @DisplayName("Mythic pack conditions query pack metadata and compare semantic versions")
+    @DisplayName("Mythic pack conditions query exact IDs and compare dotted int versions")
     void mythicPackConditionsUseRegisteredPackMetadata() {
         Map<String, SkillExtras.MythicPackInfo> packs = Map.of(
-                "arena", new SkillExtras.MythicPackInfo("Arena", "1.10.0"),
-                "preview", new SkillExtras.MythicPackInfo("Preview", "1.2.0-rc.1"),
-                "numeric-preview", new SkillExtras.MythicPackInfo("NumericPreview", "1.2.0-rc.10"),
-                "invalid-preview", new SkillExtras.MythicPackInfo("InvalidPreview", "1.2.0-rc.01"),
-                "stable", new SkillExtras.MythicPackInfo("Stable", "1.2.0"),
-                "unversioned", new SkillExtras.MythicPackInfo("Unversioned", null),
-                "custom", new SkillExtras.MythicPackInfo("Custom", "latest"));
+                "Arena", new SkillExtras.MythicPackInfo("Arena", "1.10.0"),
+                "Preview", new SkillExtras.MythicPackInfo("Preview", "1.2.0-rc.1"),
+                "NumericPreview", new SkillExtras.MythicPackInfo("NumericPreview", "1.2.0-rc.10"),
+                "InvalidPreview", new SkillExtras.MythicPackInfo("InvalidPreview", "1.2.0-rc.01"),
+                "Stable", new SkillExtras.MythicPackInfo("Stable", "1.2.0"),
+                "Unversioned", new SkillExtras.MythicPackInfo("Unversioned", null),
+                "Custom", new SkillExtras.MythicPackInfo("Custom", "latest"),
+                "Overflow", new SkillExtras.MythicPackInfo("Overflow", "2147483648"),
+                "Malformed", new SkillExtras.MythicPackInfo("Malformed", "1..2"));
         try {
-            SkillExtras.mythicPackLookup(id -> packs.get(id.toLowerCase(java.util.Locale.ROOT)));
+            SkillExtras.mythicPackLookup(packs::get);
             assertTrue(extraFactory("mythic-pack").create(List.of("p=Arena")).test(ctx()));
             assertFalse(extraFactory("mythic-pack").create(List.of("p=Missing")).test(ctx()));
+            assertFalse(extraFactory("mythic-pack").create(List.of("p=arena")).test(ctx()));
             assertTrue(extraFactory("mythic-pack-version")
+                    .create(List.of("packid=Arena", "v=1.10.0")).test(ctx()));
+            assertFalse(extraFactory("mythic-pack-version")
                     .create(List.of("packid=ARENA", "v=1.10.0")).test(ctx()));
             assertFalse(extraFactory("mythic-pack-version")
-                    .create(List.of("pack=arena", "version=1.10")).test(ctx()));
+                    .create(List.of("pack=Arena", "version=1.10")).test(ctx()));
             assertFalse(extraFactory("mythic-pack-version")
-                    .create(List.of("pack=unversioned", "version=0.1.0")).test(ctx()));
+                    .create(List.of("pack=Unversioned", "version=0.1.0")).test(ctx()));
 
-            var atOrAbove = extraFactory("mythic-pack-version-greater");
-            assertTrue(atOrAbove.create(List.of("pack=arena", "version=1.9.9")).test(ctx()));
-            assertTrue(atOrAbove.create(List.of("pack=arena", "version=1.10.0")).test(ctx()));
-            assertFalse(atOrAbove.create(List.of("pack=arena", "version=1.10.1")).test(ctx()));
-            assertFalse(atOrAbove.create(List.of("pack=preview", "version=1.2.0-rc.2")).test(ctx()));
-            assertTrue(atOrAbove.create(List.of("pack=numeric-preview", "version=1.2.0-rc.2")).test(ctx()));
-            assertFalse(atOrAbove.create(List.of("pack=numeric-preview", "version=1.2.0-rc.11")).test(ctx()));
-            assertTrue(atOrAbove.create(List.of("pack=stable", "version=1.2.0-rc.9")).test(ctx()));
-            assertTrue(atOrAbove.create(List.of("pack=stable", "version=1.2.0+build.9")).test(ctx()));
-            assertFalse(atOrAbove.create(List.of("pack=invalid-preview", "version=1.2.0-rc.1")).test(ctx()));
-            assertFalse(atOrAbove.create(List.of("pack=custom", "version=1.0.0")).test(ctx()));
+            var versionGreater = extraFactory("mythic-pack-version-greater");
+            assertFalse(versionGreater.create(List.of("pack=Arena", "version=1.9.9")).test(ctx()));
+            assertTrue(versionGreater.create(List.of("pack=Arena", "version=1.10.0")).test(ctx()));
+            assertTrue(versionGreater.create(List.of("pack=Arena", "version=1.10")).test(ctx()));
+            assertTrue(versionGreater.create(List.of("pack=Arena", "version=1.10.0.0")).test(ctx()));
+            assertTrue(versionGreater.create(List.of("pack=Arena", "version=1.10.0.1")).test(ctx()));
+            assertFalse(versionGreater.create(List.of("pack=Arena", "version=2.9.9")).test(ctx()));
+            assertTrue(versionGreater.create(List.of("pack=Arena", "version=2.11.1")).test(ctx()));
+            assertFalse(versionGreater.create(List.of("pack=Preview", "version=1.2.0")).test(ctx()));
+            assertFalse(versionGreater.create(List.of("pack=NumericPreview", "version=1.2.0")).test(ctx()));
+            assertFalse(versionGreater.create(List.of("pack=InvalidPreview", "version=1.2.0")).test(ctx()));
+            assertTrue(versionGreater.create(List.of("pack=Stable", "version=1.02.000")).test(ctx()));
+            assertTrue(versionGreater.create(List.of("pack=Stable", "version=1.2.0.0.0")).test(ctx()));
+            assertFalse(versionGreater.create(List.of("pack=Custom", "version=1.0.0")).test(ctx()));
+            assertFalse(versionGreater.create(List.of("pack=Overflow", "version=1.0.0")).test(ctx()));
+            assertFalse(versionGreater.create(List.of("pack=Malformed", "version=1.0.0")).test(ctx()));
 
             assertThrows(IllegalArgumentException.class,
                     () -> extraFactory("mythic-pack").create(List.of("packid=../outside")));
@@ -1554,9 +1564,13 @@ class SkillConditionsTest {
             assertThrows(IllegalArgumentException.class,
                     () -> extraFactory("mythic-pack-version").create(List.of("pack=Arena")));
             assertThrows(IllegalArgumentException.class,
-                    () -> atOrAbove.create(List.of("pack=Arena", "version=latest")));
+                    () -> versionGreater.create(List.of("pack=Arena", "version=latest")));
             assertThrows(IllegalArgumentException.class,
-                    () -> atOrAbove.create(List.of("pack=Arena", "version=1.2.0-rc.01")));
+                    () -> versionGreater.create(List.of("pack=Arena", "version=1.2.0-rc.01")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> versionGreater.create(List.of("pack=Arena", "version=1.2.0+build.9")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> versionGreater.create(List.of("pack=Arena", "version=2147483648")));
         } finally {
             SkillExtras.resetRuntimeHooks();
         }

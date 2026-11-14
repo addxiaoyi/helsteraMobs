@@ -2,6 +2,7 @@ debug:
   self-test: true
   self-test-model: example/emberling
   self-test-delay-ticks: 40
+  self-test-mythic-pack-condition: false
   self-test-entity-options: true
   self-test-item-effects: true
   self-test-item-group-cooldown: false

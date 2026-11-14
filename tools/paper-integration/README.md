@@ -1,5 +1,16 @@
 # Isolated Paper Integration Server
 
+## Focused MythicMobs pack-condition fixture
+
+Run the exact MythicMobs 5.7.2/Paper 1.21.1 condition probe after packaging the plugin:
+
+```powershell
+./mvnw -B -pl helstera-plugin -am package -DskipTests
+pwsh -NoProfile -File tools/paper-integration/run-mythic-pack-condition-fixture.ps1 -EvidenceRevision rN
+```
+
+The runner verifies the pinned Paper 1.21.1-133 build and the official MythicMobs 5.7.2 Modrinth artifact by SHA-256 and SHA-512, then starts an isolated server and archives a JSON report plus token-redacted compressed log. If downloading MythicMobs is unavailable, pass a locally obtained copy with `-MythicMobsJarPath`; the runner still enforces both hashes. The third-party JAR is All Rights Reserved and is not redistributed. This focused test covers only `MythicPack`, `MythicPackVersion`, and `MythicPackVersionGreater`; it is not a full-catalog release-gate run and does not establish compatibility with other plugin/server versions or MythicLib-dependent behavior.
+
 ## Focused Vault Economy contract fixture
 
 Build the plugin and synthetic fixture, then run the isolated Paper contract probe:

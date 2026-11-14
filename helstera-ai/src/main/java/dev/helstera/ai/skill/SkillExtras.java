@@ -1163,62 +1163,33 @@ public final class SkillExtras {
     }
 
     private static PackVersion parsePackVersion(String raw) {
+        // MythicMobs 5.7.2 compares dot-separated Integer components and pads
+        // the shorter side with zeroes. Reject malformed/overflowing components
+        // safely instead of allowing upstream's Integer.parseInt path to throw.
         if (!validPackVersion(raw)) return null;
-        java.util.regex.Matcher matcher = java.util.regex.Pattern.compile(
-                "(?i)^v?(\\d+(?:\\.\\d+)*)(?:-([0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*))?"
-                        + "(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$")
-                .matcher(raw.trim());
-        if (!matcher.matches()) return null;
+        String[] components = raw.split("\\.");
+        if (components.length == 0) return null;
         try {
-            List<java.math.BigInteger> numbers = java.util.Arrays.stream(matcher.group(1).split("\\."))
-                    .map(java.math.BigInteger::new).toList();
-            List<String> prerelease = matcher.group(2) == null
-                    ? List.of() : List.of(matcher.group(2).split("\\."));
-            if (prerelease.stream().anyMatch(identifier -> identifier.matches("\\d{2,}")
-                    && identifier.startsWith("0"))) {
-                return null;
+            int[] numbers = new int[components.length];
+            for (int index = 0; index < components.length; index++) {
+                if (!components[index].matches("[+-]?\\d+")) return null;
+                numbers[index] = Integer.parseInt(components[index]);
             }
-            return new PackVersion(numbers, prerelease);
+            return new PackVersion(numbers);
         } catch (NumberFormatException ignored) {
             return null;
         }
     }
 
-    private record PackVersion(List<java.math.BigInteger> numbers, List<String> prerelease)
-            implements Comparable<PackVersion> {
-        @Override
-        public int compareTo(PackVersion other) {
-            int length = Math.max(numbers.size(), other.numbers.size());
+    private record PackVersion(int[] numbers) {
+        private boolean matchesMythicGreater(PackVersion configured) {
+            int length = Math.max(numbers.length, configured.numbers.length);
             for (int i = 0; i < length; i++) {
-                java.math.BigInteger left = i < numbers.size() ? numbers.get(i) : java.math.BigInteger.ZERO;
-                java.math.BigInteger right = i < other.numbers.size()
-                        ? other.numbers.get(i) : java.math.BigInteger.ZERO;
-                int compared = left.compareTo(right);
-                if (compared != 0) return compared;
+                int loaded = i < numbers.length ? numbers[i] : 0;
+                int expected = i < configured.numbers.length ? configured.numbers[i] : 0;
+                if (expected < loaded) return false;
             }
-            if (prerelease.isEmpty() || other.prerelease.isEmpty()) {
-                return prerelease.isEmpty() == other.prerelease.isEmpty()
-                        ? 0 : prerelease.isEmpty() ? 1 : -1;
-            }
-            int lengthPrerelease = Math.max(prerelease.size(), other.prerelease.size());
-            for (int i = 0; i < lengthPrerelease; i++) {
-                if (i >= prerelease.size()) return -1;
-                if (i >= other.prerelease.size()) return 1;
-                String left = prerelease.get(i);
-                String right = other.prerelease.get(i);
-                boolean leftNumeric = left.matches("\\d+");
-                boolean rightNumeric = right.matches("\\d+");
-                int compared;
-                if (leftNumeric && rightNumeric) {
-                    compared = new java.math.BigInteger(left).compareTo(new java.math.BigInteger(right));
-                } else if (leftNumeric != rightNumeric) {
-                    compared = leftNumeric ? -1 : 1;
-                } else {
-                    compared = left.compareTo(right);
-                }
-                if (compared != 0) return compared;
-            }
-            return 0;
+            return true;
         }
     }
 
@@ -3630,7 +3601,7 @@ public final class SkillExtras {
                     return ctx -> {
                         MythicPackInfo info = mythicPackInfo(packId);
                         PackVersion actual = info == null ? null : parsePackVersion(info.version());
-                        return actual != null && actual.compareTo(minimum) >= 0;
+                        return actual != null && actual.matchesMythicGreater(minimum);
                     };
                 }),
                 Map.entry("server-version", (SkillCatalog.ConditionFactory) a -> {

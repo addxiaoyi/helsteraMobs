@@ -25,6 +25,12 @@
     "paperApiVersion": { "type": ["string", "null"] },
     "pluginEnabled": { "type": "boolean" },
     "pluginSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "paperJarSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "externalPlugin": { "type": "string", "minLength": 1 },
+    "externalPluginSource": { "type": "string", "format": "uri" },
+    "externalPluginLicense": { "type": "string", "minLength": 1 },
+    "externalPluginSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "externalPluginSha512": { "type": "string", "pattern": "^[0-9a-f]{128}$" },
     "log": { "type": "string", "minLength": 1 },
     "expectedProbeIds": {
       "type": "array",

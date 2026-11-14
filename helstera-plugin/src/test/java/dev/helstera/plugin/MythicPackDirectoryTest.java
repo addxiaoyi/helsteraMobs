@@ -53,17 +53,23 @@ class MythicPackDirectoryTest {
         assertImportedCondition(skills, registry, context,
                 "?MythicPackVersion{p=ArenaPack;v=1.10.0}", true);
         assertImportedCondition(skills, registry, context,
-                "?MythicPackVersionGreater{p=ArenaPack;v=1.9.0}", true);
+                "?MythicPackVersionGreater{p=ArenaPack;v=1.9.0}", false);
+        assertImportedCondition(skills, registry, context,
+                "?MythicPackVersionGreater{p=ArenaPack;v=1.10}", true);
+        assertImportedCondition(skills, registry, context,
+                "?MythicPackVersionGreater{p=ArenaPack;v=1.10.0.1}", true);
+        assertImportedCondition(skills, registry, context,
+                "?MythicPackVersionGreater{p=ArenaPack;v=2.9.9}", false);
+        assertImportedCondition(skills, registry, context,
+                "?MythicPackVersionGreater{p=ArenaPack;v=2.11.1}", true);
         assertImportedCondition(skills, registry, context,
                 "?MythicPack{p=\"The Pack\"}", true);
         assertImportedCondition(skills, registry, context,
                 "?MythicPackVersion{p=\"The Pack\";v=2.4.1-rc.2}", true);
         assertImportedCondition(skills, registry, context,
-                "?MythicPackVersionGreater{p=\"The Pack\";packV=2.4.1-rc.1}", true);
+                "?MythicPackVersionGreater{p=\"The Pack\";v=2.4.2}", false);
         assertImportedCondition(skills, registry, context,
-                "?MythicPackVersionGreater{p=\"The Pack\";v=2.4.1}", false);
-        assertImportedCondition(skills, registry, context,
-                "?MythicPack{p=arenapack}", true);
+                "?MythicPack{p=arenapack}", false);
         assertImportedCondition(skills, registry, context,
                 "?MythicPack{p=Missing}", false);
         assertImportedCondition(skills, registry, context,
@@ -75,7 +81,7 @@ class MythicPackDirectoryTest {
         assertImportedCondition(skills, registry, context,
                 "?MythicPack{p=NotAFolder}", false);
         assertImportedCondition(skills, registry, context,
-                "?MythicPackVersionGreater{p=ArenaPack;v=1.10.1}", false);
+                "?MythicPackVersionGreater{p=ArenaPack;v=1.10.1}", true);
     }
 
     @Test

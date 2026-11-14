@@ -725,6 +725,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             runSelfTest();
             runMythicTeleportSelfTest();
         }
+        if (getConfig().getBoolean("debug.self-test-mythic-pack-condition", false)) {
+            runMythicPackConditionSelfTest();
+        }
         if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
             runEntityOptionsSelfTest();
         }
@@ -1133,6 +1136,93 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("[自检] 生成异常: " + t);
             }
         }, Math.max(1, delay));
+    }
+
+    /** Verifies imported Mythic pack conditions against the active MythicMobs PackManager. */
+    private void runMythicPackConditionSelfTest() {
+        int delay = getConfig().getInt("debug.self-test-delay-ticks", 40);
+        getServer().getScheduler().runTaskLater(this, () -> {
+            boolean packLoaded = false;
+            boolean caseSensitive = false;
+            boolean missingRejected = false;
+            boolean exactVersion = false;
+            boolean wrongVersionRejected = false;
+            boolean greaterEqual = false;
+            boolean greaterLowerRejected = false;
+            boolean greaterUpper = false;
+            boolean greaterMajorComponentRejected = false;
+            boolean malformedPreserved = false;
+            boolean duplicatePreserved = false;
+            String actualVersion = "unavailable";
+            try {
+                if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                        || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
+                    throw new IllegalStateException("production skill/behavior services are unavailable");
+                }
+                var context = dev.helstera.api.behavior.BehaviorContext.of(
+                        null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "paper-pack-probe");
+                var mythic = getServer().getPluginManager().getPlugin("MythicMobs");
+                var lookup = mythic == null ? null : MythicPackDirectory.findLoadedPack(mythic,
+                        mythic.getDataFolder().toPath().resolve("Packs"), "HelsteraParityProbe");
+                if (lookup != null && lookup.version() != null) actualVersion = lookup.version();
+
+                packLoaded = testImportedPackCondition(skills, behaviors, context,
+                        "?MythicPack{p=HelsteraParityProbe}", true);
+                caseSensitive = testImportedPackCondition(skills, behaviors, context,
+                        "?Pack{pack=helsteraparityprobe}", false);
+                missingRejected = testImportedPackCondition(skills, behaviors, context,
+                        "?HasPack{p=HelsteraPackThatDoesNotExist}", false);
+                exactVersion = testImportedPackCondition(skills, behaviors, context,
+                        "?MythicPackVersion{p=HelsteraParityProbe;v=2.4.1}", true);
+                wrongVersionRejected = testImportedPackCondition(skills, behaviors, context,
+                        "?PackVersion{p=HelsteraParityProbe;packV=2.4.0}", false);
+                greaterEqual = testImportedPackCondition(skills, behaviors, context,
+                        "?MythicPackVersionGreater{p=HelsteraParityProbe;v=2.4.1}", true);
+                greaterLowerRejected = testImportedPackCondition(skills, behaviors, context,
+                        "?PackVersionGreater{p=HelsteraParityProbe;v=2.4.0}", false);
+                greaterUpper = testImportedPackCondition(skills, behaviors, context,
+                        "?PackVersionGreater{p=HelsteraParityProbe;v=2.4.2}", true);
+                greaterMajorComponentRejected = testImportedPackCondition(skills, behaviors, context,
+                        "?PackVersionGreater{p=HelsteraParityProbe;v=3.0.0}", false);
+                var malformed = dev.helstera.migration.importer.MmConditions.translate(
+                        "?MythicPackVersion{p=HelsteraParityProbe;v=broken;unknown=true}");
+                var duplicate = dev.helstera.migration.importer.MmConditions.translate(
+                        "?MythicPack{p=HelsteraParityProbe;pack=missing}");
+                malformedPreserved = !malformed.translated()
+                        && "?MythicPackVersion{p=HelsteraParityProbe;v=broken;unknown=true}"
+                        .equals(malformed.condition());
+                duplicatePreserved = !duplicate.translated()
+                        && "?MythicPack{p=HelsteraParityProbe;pack=missing}"
+                        .equals(duplicate.condition());
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] mythic-pack-condition exception=" + failure.getClass().getSimpleName()
+                        + ":" + failure.getMessage());
+            }
+            boolean passed = packLoaded && caseSensitive && missingRejected && exactVersion
+                    && wrongVersionRejected && greaterEqual && greaterLowerRejected
+                    && greaterUpper && greaterMajorComponentRejected
+                    && malformedPreserved && duplicatePreserved;
+            getLogger().info("[自检] mythic-pack-condition actual-version=" + actualVersion
+                    + " pack-loaded=" + packLoaded + " case-sensitive=" + caseSensitive
+                    + " missing-rejected=" + missingRejected + " exact-version=" + exactVersion
+                    + " wrong-version-rejected=" + wrongVersionRejected + " greater-equal=" + greaterEqual
+                    + " greater-lower-rejected=" + greaterLowerRejected + " greater-upper="
+                    + greaterUpper + " greater-major-component-rejected="
+                    + greaterMajorComponentRejected + " malformed-preserved=" + malformedPreserved
+                    + " duplicate-preserved=" + duplicatePreserved + " passed=" + passed);
+        }, Math.max(1, delay));
+    }
+
+    private boolean testImportedPackCondition(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext context,
+            String source,
+            boolean expected) {
+        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+        if (!mapped.translated()) return false;
+        String condition = skills.bindCondition(mapped.condition());
+        return condition != null && behaviors.testCondition(condition, context) == expected;
     }
 
     private void runEntityOptionsSelfTest() {

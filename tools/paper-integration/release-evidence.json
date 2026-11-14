@@ -12,6 +12,16 @@
     "fullReleaseCatalog": true
   },
   {
+    "fixtureId": "srv-paper-mythic-pack-strict-20261114-r5",
+    "reportFixtureDirectory": "srv-paper-mythic-pack-strict-20261114-r5",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r5.json",
+    "reportSha256": "d574262eea778979a35f1f56e3714bb9b3cfa3ec19ea22e9154546462e0425d3",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r5.log.gz",
+    "logSha256": "7d8a74b2851f260953cff2f04dfc87a4a2dd5f24dde3dfd2414b68b74fbe2b62",
+    "pluginSha256": "764c2999f0cd939cbf55386eec972024173967e59ef3920c56d7f01f86ac9038",
+    "fullReleaseCatalog": false
+  },
+  {
     "fixtureId": "srv-paper-food-stats-strict-20261114-r1",
     "reportFixtureDirectory": "srv-paper-food-stats-strict-20261114-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-player-food-placeholders-strict-20261114-r1.json",

@@ -26,8 +26,7 @@ final class MythicPackDirectory {
             for (Object pack : packs) {
                 if (pack == null) continue;
                 Object folderValue = invoke(pack, "getFolder");
-                if (!(folderValue instanceof File folder)
-                        || !folder.getName().equalsIgnoreCase(packId)) continue;
+                if (!(folderValue instanceof File folder) || !folder.getName().equals(packId)) continue;
 
                 Path realFolder = folder.toPath().toRealPath();
                 if (!realFolder.startsWith(realRoot) || !realFolder.getParent().equals(realRoot)) return null;
