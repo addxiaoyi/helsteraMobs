@@ -1093,6 +1093,11 @@ public final class SkillExtras {
         return false;
     }
 
+    private static boolean validPluginConditionName(String wanted) {
+        return wanted != null && !wanted.isBlank() && wanted.equals(wanted.trim())
+                && wanted.chars().noneMatch(c -> Character.isISOControl(c) || c == ';' || c == ',');
+    }
+
     private static MythicPackInfo mythicPackInfo(String packId) {
         MythicPackLookup lookup = mythicPackLookup;
         if (lookup == null || !validMythicPackId(packId)) return null;
@@ -3584,7 +3589,13 @@ public final class SkillExtras {
                     return ctx -> serverNmsVersionMatches(normalized);
                 }),
                 Map.entry("plugin", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && a.size() > 1) {
+                        throw new IllegalArgumentException("plugin accepts one plugin name");
+                    }
                     String wanted = str(a, 0, "MythicMobs");
+                    if (!validPluginConditionName(wanted)) {
+                        throw new IllegalArgumentException("plugin requires one valid plugin name");
+                    }
                     return ctx -> pluginRunning(wanted);
                 }),
                 Map.entry("mythic-pack", (SkillCatalog.ConditionFactory) a -> {

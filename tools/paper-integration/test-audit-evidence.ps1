@@ -471,6 +471,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'importedSurvivalModeCondition'; status = 'passed'; observations = @('imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true')
     }
+    $fullReport.expectedProbeIds += 'importedPluginCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'importedPluginCondition'; status = 'passed'; observations = @('imported-plugin-condition primary-mapped=true plugin-exists-mapped=true has-plugin-mapped=true enabled=true plugin-exists-enabled=true has-plugin-enabled=true missing-rejected=true default-mapped=true default-absent=true invalid-preserved=true duplicate-preserved=true passed=true')
+    }
     $fullReport.expectedProbeIds += 'importedVariableConditions'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedVariableConditions'; status = 'passed'; observations = @('imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true')

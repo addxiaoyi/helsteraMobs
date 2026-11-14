@@ -1491,6 +1491,29 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("plugin condition checks enabled plugins case-insensitively and rejects malformed arguments")
+    void pluginConditionUsesEnabledPluginManagerState() {
+        var manager = mock(org.bukkit.plugin.PluginManager.class);
+        var enabled = mock(org.bukkit.plugin.Plugin.class);
+        var disabled = mock(org.bukkit.plugin.Plugin.class);
+        when(manager.getPlugins()).thenReturn(new org.bukkit.plugin.Plugin[]{enabled, disabled});
+        when(enabled.getName()).thenReturn("DemoPlugin");
+        when(enabled.isEnabled()).thenReturn(true);
+        when(disabled.getName()).thenReturn("DisabledPlugin");
+        when(disabled.isEnabled()).thenReturn(false);
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getPluginManager).thenReturn(manager);
+            assertTrue(extraFactory("plugin").create(List.of("demoplugin")).test(ctx()));
+            assertFalse(extraFactory("plugin").create(List.of("DisabledPlugin")).test(ctx()));
+            assertFalse(extraFactory("plugin").create(List.of("MissingPlugin")).test(ctx()));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("plugin").create(List.of("DemoPlugin", "unknown=true")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory("plugin").create(List.of("Demo,Plugin")));
+        }
+    }
+
+    @Test
     @DisplayName("Mythic pack conditions query pack metadata and compare semantic versions")
     void mythicPackConditionsUseRegisteredPackMetadata() {
         Map<String, SkillExtras.MythicPackInfo> packs = Map.of(

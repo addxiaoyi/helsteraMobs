@@ -89,6 +89,8 @@ public final class MmConditions {
             "version", "version", "sv", "version", "v", "version");
     private static final Map<String, String> LOCAL_DIFFICULTY_ARGUMENTS = Map.of(
             "difficulty", "difficulty", "diff", "difficulty", "d", "difficulty");
+    private static final Map<String, String> PLUGIN_ARGUMENTS = Map.of(
+            "plugin", "plugin", "pl", "plugin", "p", "plugin");
     private static final Map<String, String> SERVER_VERSION_BOUND_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version",
             "inclusive", "inclusive", "i", "inclusive");
@@ -1002,10 +1004,13 @@ public final class MmConditions {
                     : new Mapped("local-difficulty " + value, true);
         }
         if ("plugin".equals(name) || "pluginexists".equals(name) || "hasplugin".equals(name)) {
-            String value = firstArgument(body, "plugin", "pl", "p");
-            if (value == null) value = normalizeScalar(body);
-            if (value == null) value = "MythicMobs";
-            return new Mapped("plugin " + value, true);
+            Map<String, String> arguments = strictValueArguments(body, PLUGIN_ARGUMENTS, "plugin");
+            if (arguments == null) return new Mapped(s, false);
+            String rawPlugin = arguments.get("plugin");
+            if (rawPlugin == null) rawPlugin = "MythicMobs";
+            String plugin = unquoteAuraValue(rawPlugin);
+            if (!validPluginConditionName(rawPlugin, plugin)) return new Mapped(s, false);
+            return new Mapped("plugin " + conditionValue(plugin), true);
         }
         if (Set.of("mythicpack", "pack", "haspack").contains(name)) {
             Map<String, String> arguments = strictValueArguments(body, MYTHIC_PACK_ARGUMENTS, "pack");
@@ -2528,6 +2533,14 @@ public final class MmConditions {
         return value != null && !value.isBlank() && value.length() <= 128
                 && !value.equals(".") && !value.equals("..")
                 && value.chars().noneMatch(c -> Character.isISOControl(c) || c == '/' || c == '\\');
+    }
+
+    private static boolean validPluginConditionName(String raw, String plugin) {
+        if (raw == null || plugin == null || plugin.isBlank() || !plugin.equals(plugin.trim())) return false;
+        String trimmed = raw.trim();
+        boolean quoted = trimmed.length() >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\"");
+        if (!quoted && plugin.chars().anyMatch(Character::isWhitespace)) return false;
+        return plugin.chars().noneMatch(c -> Character.isISOControl(c) || c == ';' || c == ',');
     }
 
     private static boolean validMythicPackVersion(String value) {

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-plugin-condition-strict-20261114-r1",
+    "reportFixtureDirectory": "srv-paper-plugin-condition-strict-20261114-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1.json",
+    "reportSha256": "20c5db39fbe13a7ba12b8e273ceb3d2a7213c83b21dcbc3ebcfb3b3102e849ab",
+    "log": "tools/paper-integration/reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1.log.gz",
+    "logSha256": "a3b85864c1243f4b0e06b6516e0ede4a71bf39ffb38b7f6a0b488e7b38d0cfb1",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1-client-logs.tar.gz",
+    "clientLogSha256": "8010ddfc62b8b468fc384345486d10dc5a763ca25d1f77bc8d01ed1faed541c7",
+    "pluginSha256": "3640472adf65330bfd3754c35e50faed4ff9143929c260f055efc99e2676282a",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-food-stats-strict-20261114-r1",
     "reportFixtureDirectory": "srv-paper-food-stats-strict-20261114-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-player-food-placeholders-strict-20261114-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-player-food-placeholders-strict-20261114-r1-client-logs.tar.gz",
     "clientLogSha256": "7ef28016547c3aae785887c4a34f05aef9d3b912569afa2f033e4e8704ed3c75",
     "pluginSha256": "8e2f72abd956ed46743c1fe01740b5850220d46a65f1d847991be62e1a3a593a",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-plugin-condition-strict-20261114-r1"
   },
   {
     "fixtureId": "srv-paper-scoped-placeholders-strict-20261114-r2",
