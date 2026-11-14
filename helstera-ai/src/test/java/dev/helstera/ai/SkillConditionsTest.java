@@ -1496,6 +1496,8 @@ class SkillConditionsTest {
         Map<String, SkillExtras.MythicPackInfo> packs = Map.of(
                 "arena", new SkillExtras.MythicPackInfo("Arena", "1.10.0"),
                 "preview", new SkillExtras.MythicPackInfo("Preview", "1.2.0-rc.1"),
+                "numeric-preview", new SkillExtras.MythicPackInfo("NumericPreview", "1.2.0-rc.10"),
+                "invalid-preview", new SkillExtras.MythicPackInfo("InvalidPreview", "1.2.0-rc.01"),
                 "stable", new SkillExtras.MythicPackInfo("Stable", "1.2.0"),
                 "unversioned", new SkillExtras.MythicPackInfo("Unversioned", null),
                 "custom", new SkillExtras.MythicPackInfo("Custom", "latest"));
@@ -1515,7 +1517,11 @@ class SkillConditionsTest {
             assertTrue(atOrAbove.create(List.of("pack=arena", "version=1.10.0")).test(ctx()));
             assertFalse(atOrAbove.create(List.of("pack=arena", "version=1.10.1")).test(ctx()));
             assertFalse(atOrAbove.create(List.of("pack=preview", "version=1.2.0-rc.2")).test(ctx()));
+            assertTrue(atOrAbove.create(List.of("pack=numeric-preview", "version=1.2.0-rc.2")).test(ctx()));
+            assertFalse(atOrAbove.create(List.of("pack=numeric-preview", "version=1.2.0-rc.11")).test(ctx()));
             assertTrue(atOrAbove.create(List.of("pack=stable", "version=1.2.0-rc.9")).test(ctx()));
+            assertTrue(atOrAbove.create(List.of("pack=stable", "version=1.2.0+build.9")).test(ctx()));
+            assertFalse(atOrAbove.create(List.of("pack=invalid-preview", "version=1.2.0-rc.1")).test(ctx()));
             assertFalse(atOrAbove.create(List.of("pack=custom", "version=1.0.0")).test(ctx()));
 
             assertThrows(IllegalArgumentException.class,
@@ -1526,6 +1532,8 @@ class SkillConditionsTest {
                     () -> extraFactory("mythic-pack-version").create(List.of("pack=Arena")));
             assertThrows(IllegalArgumentException.class,
                     () -> atOrAbove.create(List.of("pack=Arena", "version=latest")));
+            assertThrows(IllegalArgumentException.class,
+                    () -> atOrAbove.create(List.of("pack=Arena", "version=1.2.0-rc.01")));
         } finally {
             SkillExtras.resetRuntimeHooks();
         }

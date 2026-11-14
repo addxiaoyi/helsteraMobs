@@ -1169,6 +1169,10 @@ public final class SkillExtras {
                     .map(java.math.BigInteger::new).toList();
             List<String> prerelease = matcher.group(2) == null
                     ? List.of() : List.of(matcher.group(2).split("\\."));
+            if (prerelease.stream().anyMatch(identifier -> identifier.matches("\\d{2,}")
+                    && identifier.startsWith("0"))) {
+                return null;
+            }
             return new PackVersion(numbers, prerelease);
         } catch (NumberFormatException ignored) {
             return null;
