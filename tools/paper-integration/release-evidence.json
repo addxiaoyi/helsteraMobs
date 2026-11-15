@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-mobs-in-radius-strict-20261115-r1",
+    "reportFixtureDirectory": "srv-paper-mobs-in-radius-strict-20261115-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mobs-in-radius-strict-20261115-r1.json",
+    "reportSha256": "a6c8f24f257d839d43973443310ff256f81d31088d11e8369d8e6e73aa3ba416",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mobs-in-radius-strict-20261115-r1.log.gz",
+    "logSha256": "4b3398de850c96620a94ec954ac58f68ca881bc910a274ab8144c8c98282815e",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-mobs-in-radius-strict-20261115-r1-client-logs.tar.gz",
+    "clientLogSha256": "7c565f7e19c50e38c74d8a7458cf0234fadf79dacfb90e1b1e15d0cfd92d596a",
+    "pluginSha256": "cb305e1c80089498fc9070359e7a9c91a911091b0c00e716cea8c32e1443354d",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-mobs-in-chunk-range-strict-20261115-r3",
     "reportFixtureDirectory": "srv-paper-mobs-in-chunk-range-strict-20261115-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-mobs-in-chunk-range-strict-20261115-r3.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-mobs-in-chunk-range-strict-20261115-r3-client-logs.tar.gz",
     "clientLogSha256": "70c6ae9f31780f5cbfd727868f7f46e9a9cf9886901d69efd0a657eb66556364",
     "pluginSha256": "70f7b62a59345bbe5bf19f02003ed627844fae64487abfe7ca4d737c711dbb45",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-mobs-in-radius-strict-20261115-r1"
   },
   {
     "fixtureId": "srv-paper-parent-derived-import-strict-20261115-r2",

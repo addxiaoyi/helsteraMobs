@@ -1845,26 +1845,31 @@ class SkillConditionsTest {
         SkillExtras.resetRuntimeHooks();
         var world = mock(World.class);
         var origin = new Location(world, 0, 64, 0);
-        LivingEntity zombie = mock(LivingEntity.class);
-        LivingEntity skeleton = mock(LivingEntity.class);
-        LivingEntity custom = mock(LivingEntity.class);
+        org.bukkit.entity.Mob zombie = mock(org.bukkit.entity.Mob.class);
+        org.bukkit.entity.Mob skeleton = mock(org.bukkit.entity.Mob.class);
+        org.bukkit.entity.Mob custom = mock(org.bukkit.entity.Mob.class);
+        LivingEntity armorStand = mock(org.bukkit.entity.ArmorStand.class);
         when(zombie.isValid()).thenReturn(true);
         when(skeleton.isValid()).thenReturn(true);
         when(custom.isValid()).thenReturn(true);
+        when(armorStand.isValid()).thenReturn(true);
         when(zombie.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
         when(skeleton.getType()).thenReturn(org.bukkit.entity.EntityType.SKELETON);
         when(custom.getType()).thenReturn(org.bukkit.entity.EntityType.COW);
+        when(armorStand.getType()).thenReturn(org.bukkit.entity.EntityType.ARMOR_STAND);
         when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
                 org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
-                .thenReturn(List.of(zombie, skeleton, custom));
+                .thenReturn(List.of(zombie, skeleton, custom, armorStand));
         var context = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
                 null, List.of(), origin);
 
         assertTrue(zombie instanceof LivingEntity);
         assertTrue(zombie.isValid());
-        assertEquals(3, world.getNearbyEntities(origin, 5, 5, 5).size());
+        assertEquals(4, world.getNearbyEntities(origin, 5, 5, 5).size());
         var defaults = extraFactory("mobs-in-radius").create(List.of());
         assertTrue(defaults.test(context));
+        assertFalse(extraFactory("mobs-in-radius").create(List.of("4", "5")).test(context),
+                "ArmorStands are living entities but are not Bukkit Mobs");
         org.mockito.Mockito.verify(world, org.mockito.Mockito.atLeastOnce())
                 .getNearbyEntities(origin, 5, 5, 5);
         assertTrue(extraFactory("mobs-in-radius").create(List.of("2", "5", "ZOMBIE,SKELETON"))
@@ -1889,6 +1894,73 @@ class SkillConditionsTest {
                 () -> extraFactory("mobs-in-radius").create(List.of("1", "5", "ZOMBIE,,SKELETON")));
         assertThrows(IllegalArgumentException.class,
                 () -> extraFactory("mobs-in-radius").create(List.of("1", "5", "ZOMBIE SKELETON")));
+        SkillExtras.resetRuntimeHooks();
+    }
+
+    @Test
+    @DisplayName("MobsInRadius excludes its caster and fails closed when its count is unavailable")
+    void mobsInRadiusExcludesCasterAndFailsClosed() {
+        SkillExtras.resetRuntimeHooks();
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        var instance = mock(ModelInstance.class);
+        org.bukkit.entity.Mob caster = mock(org.bukkit.entity.Mob.class);
+        org.bukkit.entity.Mob nearby = mock(org.bukkit.entity.Mob.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.isValid()).thenReturn(true);
+        when(nearby.isValid()).thenReturn(true);
+        when(caster.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
+        when(nearby.getType()).thenReturn(org.bukkit.entity.EntityType.SKELETON);
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenReturn(List.of(caster, nearby));
+        var context = BehaviorContext.execution(instance, null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), origin);
+
+        assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5")).test(context));
+        assertFalse(extraFactory("mobs-in-radius").create(List.of("2", "5")).test(context),
+                "the caster must not count as a nearby Mob");
+        assertFalse(extraFactory("mobs-in-radius").create(List.of("<=0", "5")).test(ctx()),
+                "missing context must not satisfy an upper-bound comparison");
+
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenThrow(new IllegalStateException("nearby entity query unavailable"));
+        assertFalse(extraFactory("mobs-in-radius").create(List.of("<=0", "5")).test(context),
+                "query failures must not be interpreted as a valid zero count");
+        SkillExtras.resetRuntimeHooks();
+    }
+
+    @Test
+    @DisplayName("MobsInRadius counts every matching Mob beyond the former 512 entity cap")
+    void mobsInRadiusCountsMoreThan512Entities() {
+        SkillExtras.resetRuntimeHooks();
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        var entities = new java.util.ArrayList<Entity>();
+        for (int index = 0; index < 513; index++) {
+            org.bukkit.entity.Mob mob = (org.bukkit.entity.Mob) java.lang.reflect.Proxy.newProxyInstance(
+                    org.bukkit.entity.Mob.class.getClassLoader(),
+                    new Class<?>[]{org.bukkit.entity.Mob.class},
+                    (proxy, method, arguments) -> switch (method.getName()) {
+                        case "isValid" -> true;
+                        case "getType" -> org.bukkit.entity.EntityType.ZOMBIE;
+                        case "hashCode" -> System.identityHashCode(proxy);
+                        case "equals" -> proxy == arguments[0];
+                        case "toString" -> "mob-" + System.identityHashCode(proxy);
+                        default -> throw new UnsupportedOperationException(method.getName());
+                    });
+            entities.add(mob);
+        }
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenReturn(entities);
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), origin);
+
+        assertTrue(extraFactory("mobs-in-radius").create(List.of("513", "5")).test(context));
+        assertFalse(extraFactory("mobs-in-radius").create(List.of(">513", "5")).test(context));
         SkillExtras.resetRuntimeHooks();
     }
 

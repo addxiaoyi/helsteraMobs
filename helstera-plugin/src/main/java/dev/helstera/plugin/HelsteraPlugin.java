@@ -17267,6 +17267,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean entitiesNegative = false;
         boolean mobsPositive = false;
         boolean mobsNegative = false;
+        boolean mobsArmorStandExcluded = false;
         boolean mobsTypePositive = false;
         boolean mobsTypeNegative = false;
         boolean mobsDefaultRadiusNegative = false;
@@ -17296,12 +17297,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     org.bukkit.entity.Zombie.class);
             org.bukkit.entity.Cow cow = world.spawn(radiusOrigin.clone().add(3.0, 0, 0),
                     org.bukkit.entity.Cow.class);
+            org.bukkit.entity.ArmorStand armorStand = world.spawn(radiusOrigin.clone().add(3.5, 0, 0),
+                    org.bukkit.entity.ArmorStand.class);
             conditionCategoryEntities.add(zombie);
             conditionCategoryEntities.add(cow);
+            conditionCategoryEntities.add(armorStand);
             zombie.setAI(false);
             zombie.setInvulnerable(true);
             cow.setAI(false);
             cow.setInvulnerable(true);
+            armorStand.setInvulnerable(true);
             var radiusContext = dev.helstera.api.behavior.BehaviorContext.execution(
                     stateInstance, permissionProbe, 1.0, -1, 0, "integration", null,
                     permissionProbe, java.util.List.of(permissionProbe), radiusOrigin);
@@ -17355,6 +17360,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             playersPositive = playersKey != null && behaviors.testCondition(playersKey, radiusContext);
             entitiesPositive = entitiesKey != null && behaviors.testCondition(entitiesKey, radiusContext);
             mobsPositive = mobsKey != null && behaviors.testCondition(mobsKey, radiusContext);
+            String mobsArmorStandKey = skills.bindCondition("mobs-in-radius 3 4");
+            mobsArmorStandExcluded = mobsArmorStandKey != null
+                    && !behaviors.testCondition(mobsArmorStandKey, radiusContext);
             if (playersDefaultsKey != null) {
                 permissionProbe.teleport(radiusOrigin.clone().add(20.0, 0, 0));
                 if (peer != null) peer.teleport(radiusOrigin.clone().add(22.0, 0, 0));
@@ -17425,6 +17433,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean passed = imported && playersPositive && playersNegative
                 && playersDefaultRadiusPositive && playersDefaultRadiusNegative && entitiesPositive
                 && entitiesNegative && mobsPositive && mobsNegative && mobsDefaultRadiusNegative
+                && mobsArmorStandExcluded
                 && mobsTypePositive && mobsTypeNegative
                 && invalidRadiusArgumentsPreserved && livingPositive && livingNegative
                 && playerWithinPositive && playerWithinNegative && playerNotWithinPositive
@@ -17435,6 +17444,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " players-default-radius-negative=" + playersDefaultRadiusNegative
                 + " entities-positive=" + entitiesPositive + " entities-negative=" + entitiesNegative
                 + " mobs-positive=" + mobsPositive + " mobs-negative=" + mobsNegative
+                + " mobs-armor-stand-excluded=" + mobsArmorStandExcluded
                 + " mobs-default-radius-negative=" + mobsDefaultRadiusNegative
                 + " mobs-type-positive=" + mobsTypePositive + " mobs-type-negative=" + mobsTypeNegative
                 + " invalid-radius-arguments-preserved=" + invalidRadiusArgumentsPreserved

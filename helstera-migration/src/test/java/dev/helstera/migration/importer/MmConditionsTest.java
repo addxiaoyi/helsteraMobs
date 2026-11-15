@@ -470,6 +470,8 @@ class MmConditionsTest {
         assertEquals("mobs-in-radius 1 5", t("?mobsInRadius"));
         assertEquals("mobs-in-radius 2to4 9 ZOMBIE,SKELETON", t(
                 "?mobsInRadius{types=ZOMBIE,SKELETON;amount=2to4;r=9}"));
+        assertEquals("mobs-in-radius 1to2 7 ZOMBIE", t(
+                "?mobsInRadius{t=ZOMBIE;a=1to2;radius=7}"));
         assertEquals("mobs-in-radius 1 5 ForestGuardian", t(
                 "?mobsInRadius{t=ForestGuardian}"));
 

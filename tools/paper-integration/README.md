@@ -1,6 +1,6 @@
 # Isolated Paper Integration Server
 
-Latest full-catalog strict fixture `srv-paper-mobs-in-chunk-range-strict-20261115-r3` passes all 458 probes on Paper 1.21.1-133 (439 passed, 19 expected rejections, zero failed or incomplete). The new `mobsInChunkImportedCondition` probe verifies imported Mythic `?mobsInChunk` default amount `0`, `1to2` range matching, zero-count negative, and invalid-input preservation; direct `mobs-in-chunk >=1` behavior also passes. Plugin SHA-256: `70f7b62a59345bbe5bf19f02003ed627844fae64487abfe7ca4d737c711dbb45`. Report: [strict JSON](tools/paper-integration/reports/paper-1.21.1-mobs-in-chunk-range-strict-20261115-r3.json); archived redacted server/client logs and hashes are indexed in [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md) and `release-evidence.json`. The complete Conditions catalog remains incomplete.
+Latest full-catalog strict fixture `srv-paper-mobs-in-radius-strict-20261115-r1` passes all 458 probes on Paper 1.21.1-133 (439 passed, 19 expected rejections, zero failed or incomplete). Its `radiusConditions` observation verifies imported/direct radius behavior, valid Bukkit `Mob` counting, and ArmorStand exclusion. AI runtime tests cover caster exclusion, unavailable-query failure, and counts above 512. Plugin SHA-256: `cb305e1c80089498fc9070359e7a9c91a911091b0c00e716cea8c32e1443354d`. Report: [strict JSON](tools/paper-integration/reports/paper-1.21.1-mobs-in-radius-strict-20261115-r1.json); archived redacted server/client logs and hashes are indexed in [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md) and `release-evidence.json`. The complete Conditions catalog remains incomplete.
 
 ## Focused MetaskillCondition / DetermineCondition fixture
 
@@ -808,7 +808,7 @@ imported radius conditions for Players, Entities, Mobs, Living entities,
 PlayerWithin, and PlayerNotWithin, plus the native-AI Bee stinger probe.
 Report: `reports/paper-1.21.1-radius-conditions-strict-20261108-r2.json`.
 
-The updated strict fixture `srv-paper-radius-conditions-strict-20261115-r1`
+The previous strict fixture `srv-paper-radius-conditions-strict-20261115-r1`
 passes all 456 release probes (437 passed, 19 expected rejections, zero failed
 or incomplete) on Paper 1.21.1-133. It checks the official `PlayersInRadius`
 defaults and 32-block boundary, the `MobsInRadius` 5-block default, Bukkit mob

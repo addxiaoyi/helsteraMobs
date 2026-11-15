@@ -4245,7 +4245,10 @@ public final class SkillExtras {
                     NumberRange amount = minimumCountRange(a, 0, "1");
                     double radius = nonNegativeRadius(a, 1, 5);
                     Set<String> types = mobTypeFilter(a, 2);
-                    return ctx -> amount.contains(countMobsNear(ctx, radius, types));
+                    return ctx -> {
+                        java.util.OptionalInt count = countMobsNear(ctx, radius, types);
+                        return count.isPresent() && amount.contains(count.getAsInt());
+                    };
                 }),
                 Map.entry("mobs-near-origin", (SkillCatalog.ConditionFactory) a -> {
                     Comparison amount = comparison(a, 0, ">=");
@@ -8842,25 +8845,27 @@ public final class SkillExtras {
         return count;
     }
 
-    private static int countMobsNear(BehaviorContext ctx, double radius, Set<String> types) {
-        Location me = selfLoc(ctx);
-        if (me == null || !Double.isFinite(radius) || radius < 0) return 0;
-        Entity source = ctx != null && ctx.instanceValid()
-                ? ctx.instance().baseEntity().orElse(null) : null;
+    private static java.util.OptionalInt countMobsNear(
+            BehaviorContext ctx, double radius, Set<String> types) {
         int n = 0;
         try {
-            for (var entity : me.getWorld().getNearbyEntities(me, radius, radius, radius)) {
-                if (entity != source && entity instanceof LivingEntity living
-                        && !(living instanceof Player) && living.isValid()
+            Location me = selfLoc(ctx);
+            if (me == null || !Double.isFinite(radius) || radius < 0) {
+                return java.util.OptionalInt.empty();
+            }
+            Entity source = ctx != null && ctx.instanceValid()
+                    ? ctx.instance().baseEntity().orElse(null) : null;
+            for (Entity entity : me.getWorld().getNearbyEntities(me, radius, radius, radius)) {
+                if (entity != source && entity instanceof org.bukkit.entity.Mob mob && mob.isValid()
                         && (types.isEmpty() || matchesMobType(entity, types))) {
                     n++;
                 }
-                if (n > 512) break;
             }
         } catch (Throwable ignored) {
             SkillFaults.swallow("SkillExtras#countMobsNear");
+            return java.util.OptionalInt.empty();
         }
-        return n;
+        return java.util.OptionalInt.of(n);
     }
 
     private static boolean matchesMobType(Entity entity, Set<String> wanted) {
