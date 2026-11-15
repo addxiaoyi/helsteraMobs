@@ -37,6 +37,13 @@ argument aliases, and fail-closed private-argument validation with two real
 players. This does not replace the full strict catalog, so the Context targeters
 row remains `mapped-unverified`.
 
+The shared API now also rejects inactive direct context entities for `@target`,
+`@targets`, `@trigger`, and `@attacker`, including projectile shooters. API and
+cross-module tests cover scalar fallback, inherited target lists, multi-target
+filtering, direct/projectile triggers, and dead or removed entities. A real Paper
+fixture for entity removal and trigger cleanup is still required before this
+boundary can be promoted beyond `mapped-unverified`.
+
 ## Completion contract
 
 A capability can leave `mapped-unverified` only when all applicable checks below

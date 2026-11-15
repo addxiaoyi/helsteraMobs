@@ -50,6 +50,8 @@ class AudienceFilterTest {
     @Test
     void audienceTargetersUseTheSharedTargeterParser() {
         Player target = org.mockito.Mockito.mock(Player.class);
+        org.mockito.Mockito.when(target.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(target.isDead()).thenReturn(false);
         var context = dev.helstera.api.behavior.BehaviorContext.of(
                 null, target, 1.0, 4.0, 0, "AUDIENCE");
 

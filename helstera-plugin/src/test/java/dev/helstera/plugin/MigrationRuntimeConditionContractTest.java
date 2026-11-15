@@ -32,6 +32,17 @@ import static org.mockito.Mockito.*;
 /** Cross-module contract for translated conditions and mechanics used by migration tests. */
 class MigrationRuntimeConditionContractTest {
 
+    /** Context targeters now require test entities to model an active Bukkit entity. */
+    private static <T> T mock(Class<T> type) {
+        T value = org.mockito.Mockito.mock(type);
+        if (org.bukkit.entity.LivingEntity.class.isAssignableFrom(type)) {
+            org.bukkit.entity.LivingEntity entity = (org.bukkit.entity.LivingEntity) value;
+            when(entity.isValid()).thenReturn(true);
+            when(entity.isDead()).thenReturn(false);
+        }
+        return value;
+    }
+
     @Test
     @DisplayName("imported Mythic DamageCause defaults to ENTITY_ATTACK and fails closed without event context")
     void importedDamageCauseDefaultReachesRuntime() {

@@ -23,6 +23,13 @@ Version-gated behavior:
 
 Evidence baseline: 2026-11-15, Paper API 1.21.1-R0.1-SNAPSHOT.
 
+Context targeter lifecycle update (2026-11-15): direct `@target`, `@targets`,
+`@trigger`, and `@attacker` paths now filter dead or invalid living entities,
+including projectile shooters, and fail closed when Bukkit state access throws.
+API and cross-module runtime tests cover scalar, inherited, multi-target, direct,
+projectile, and inactive-entity paths. No new Paper fixture claims this boundary
+yet, so the broader Context targeters row remains `mapped-unverified`.
+
 Latest strict release evidence: `srv-paper-distance-strict-20261115-r1` completes 460 probes on Paper 1.21.1-133 (441 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `c502db1e811572debaa0fb78d31f466b62a1ae3b542cf159e0a5a4e6653a5929`). It adds production imported `Distance` condition evidence for `d`/`distance` aliases, strict and inclusive boundaries, and fail-closed missing, NaN, and percentage inputs; the same run retains the existing Audience `@Targeter` dispatch and client workflows. See the [strict report](tools/paper-integration/reports/paper-1.21.1-distance-strict-20261115-r1.json). The complete Conditions catalog remains `mapped-unverified`; full parity remains incomplete.
 
 Previous strict release evidence: `srv-paper-scoped-placeholders-strict-20261114-r2` verifies scoped display names, entity types, squared distance, and Mythic `l.*` centered/precise coordinates, yaw, pitch, and world, with temporary display names restored. Its archived report and logs remain indexed in `tools/paper-integration/release-evidence.json`.

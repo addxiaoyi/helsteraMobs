@@ -892,8 +892,12 @@ class TargeterOrderingTest {
         var target = (org.bukkit.entity.LivingEntity) Proxy.newProxyInstance(
                 org.bukkit.entity.LivingEntity.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.entity.LivingEntity.class},
-                (proxy, method, args) -> method.getName().equals("getLocation")
-                        ? new org.bukkit.Location(null, 2, 3, 4) : defaultValue(method.getReturnType()));
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> true;
+                    case "isDead" -> false;
+                    case "getLocation" -> new org.bukkit.Location(null, 2, 3, 4);
+                    default -> defaultValue(method.getReturnType());
+                });
         var context = BehaviorContext.continueExecution(null, target, 1, 2, 0, "skill",
                 null, null, List.of(target), null, null);
         assertSame(target, Targeters.select("@target", context, List.of(), List.of()).get(0));
@@ -947,7 +951,7 @@ class TargeterOrderingTest {
     @Test
     @DisplayName("targets targeter falls back to the active single target")
     void targetsTargeterUsesActiveTargetWhenListIsEmpty() {
-        var target = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var target = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
         var context = BehaviorContext.continueExecution(null, target, 1, 2, 0,
                 "skill", null, null, List.of(), null, null);
         assertEquals(List.of(target), Targeters.select("@targets", context, List.of(), List.of()));
@@ -980,12 +984,9 @@ class TargeterOrderingTest {
         var origin = new org.bukkit.Location(world, 0, 0, 0);
         var source = proxy(dev.helstera.api.instance.ModelInstance.class,
                 (method, args) -> method.equals("location") ? origin : null);
-        LivingEntity near = proxy(LivingEntity.class, (method, args) ->
-                method.equals("getLocation") ? new org.bukkit.Location(world, 3, 0, 0) : null);
-        LivingEntity far = proxy(LivingEntity.class, (method, args) ->
-                method.equals("getLocation") ? new org.bukkit.Location(world, 6, 0, 0) : null);
-        LivingEntity elsewhere = proxy(LivingEntity.class, (method, args) ->
-                method.equals("getLocation") ? new org.bukkit.Location(other, 1, 0, 0) : null);
+        LivingEntity near = locatedLiving(LivingEntity.class, new org.bukkit.Location(world, 3, 0, 0));
+        LivingEntity far = locatedLiving(LivingEntity.class, new org.bukkit.Location(world, 6, 0, 0));
+        LivingEntity elsewhere = locatedLiving(LivingEntity.class, new org.bukkit.Location(other, 1, 0, 0));
         var context = BehaviorContext.continueExecution(source, (LivingEntity) null, 1, 0, 0,
                 "skill", null, null, List.of(near, far, elsewhere), origin, null);
         assertEquals(List.of(near), Targeters.select("@targets{r=3}", context, List.of(), List.of()));
@@ -994,7 +995,7 @@ class TargeterOrderingTest {
     @Test
     @DisplayName("context targeter chains apply subsequent filters")
     void contextTargeterChainAppliesFilters() {
-        var player = livingProxy(org.bukkit.entity.Player.class);
+        var player = activeLivingProxy(org.bukkit.entity.Player.class);
         var context = BehaviorContext.continueExecution(null, player, 1, 2, 0,
                 "skill", null, null, List.of(player), null, null);
         assertEquals(List.of(player), Targeters.select("@Target{} > @living{filter=players}",
@@ -1037,7 +1038,7 @@ class TargeterOrderingTest {
     @Test
     @DisplayName("target targeter falls back to the first inherited target")
     void targetTargeterUsesInheritedTargetWhenScalarIsEmpty() {
-        var target = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var target = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
         var context = BehaviorContext.continueExecution(null, null, 1, 2, 0,
                 "skill", null, null, List.of(target), null, null);
         assertEquals(List.of(target), Targeters.select("@target", context, List.of(), List.of()));
@@ -1046,7 +1047,7 @@ class TargeterOrderingTest {
     @Test
     @DisplayName("attacker targeter resolves a non-player trigger entity")
     void attackerTargeterUsesTriggerEntity() {
-        var attacker = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var attacker = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
         var context = BehaviorContext.continueExecution(null, null, 1, 2, 0,
                 "skill", null, attacker, List.of(attacker), null, null);
         assertSame(attacker, Targeters.select("@attacker", context, List.of(), List.of()).get(0));
@@ -1055,7 +1056,7 @@ class TargeterOrderingTest {
     @Test
     @DisplayName("attacker targeter unwraps a projectile shooter")
     void attackerTargeterUnwrapsProjectileShooter() {
-        var attacker = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var attacker = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
         var projectile = (org.bukkit.entity.Projectile) Proxy.newProxyInstance(
                 org.bukkit.entity.Projectile.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.entity.Projectile.class},
@@ -1069,7 +1070,7 @@ class TargeterOrderingTest {
     @Test
     @DisplayName("trigger targeter unwraps a projectile shooter")
     void triggerTargeterUnwrapsProjectileShooter() {
-        var shooter = livingProxy(org.bukkit.entity.LivingEntity.class);
+        var shooter = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
         var projectile = (org.bukkit.entity.Projectile) Proxy.newProxyInstance(
                 org.bukkit.entity.Projectile.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.entity.Projectile.class},
@@ -1078,6 +1079,50 @@ class TargeterOrderingTest {
         var context = BehaviorContext.continueExecution(null, null, 1, 2, 0,
                 "skill", null, projectile, List.of(), null, null);
         assertSame(shooter, Targeters.select("@trigger", context, List.of(), List.of()).get(0));
+    }
+
+    @Test
+    @DisplayName("direct context targeters reject dead or invalid entities")
+    void directContextTargetersFailClosedForInactiveEntities() {
+        var deadTarget = inactiveLivingProxy(org.bukkit.entity.LivingEntity.class, true);
+        var invalidTarget = inactiveLivingProxy(org.bukkit.entity.LivingEntity.class, false);
+        var activeTarget = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
+
+        var scalarContext = BehaviorContext.continueExecution(null, deadTarget, 1, 2, 0,
+                "skill", null, deadTarget, List.of(), null, null);
+        assertEquals(List.of(), Targeters.select("@self", scalarContext, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@target", scalarContext, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@trigger", scalarContext, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@attacker", scalarContext, List.of(), List.of()));
+
+        var listContext = BehaviorContext.continueExecution(null, invalidTarget, 1, 2, 0,
+                "skill", null, null, List.of(invalidTarget, deadTarget, activeTarget), null, null);
+        assertEquals(List.of(activeTarget), Targeters.select("@targets", listContext, List.of(), List.of()));
+        assertEquals(List.of(activeTarget), Targeters.select("@target", listContext, List.of(), List.of()));
+
+        var deadProjectile = (org.bukkit.entity.Projectile) Proxy.newProxyInstance(
+                org.bukkit.entity.Projectile.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Projectile.class},
+                (proxy, method, args) -> method.getName().equals("getShooter")
+                        ? deadTarget : defaultValue(method.getReturnType()));
+        var projectileContext = BehaviorContext.continueExecution(null, null, 1, 2, 0,
+                "skill", null, deadProjectile, List.of(), null, null);
+        assertEquals(List.of(), Targeters.select("@trigger", projectileContext, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@attacker", projectileContext, List.of(), List.of()));
+
+        var throwingProjectile = (org.bukkit.entity.Projectile) Proxy.newProxyInstance(
+                org.bukkit.entity.Projectile.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Projectile.class},
+                (proxy, method, args) -> {
+                    if (method.getName().equals("getShooter")) {
+                        throw new IllegalStateException("entity removed");
+                    }
+                    return defaultValue(method.getReturnType());
+                });
+        var throwingContext = BehaviorContext.continueExecution(null, null, 1, 2, 0,
+                "skill", null, throwingProjectile, List.of(), null, null);
+        assertEquals(List.of(), Targeters.select("@trigger", throwingContext, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@attacker", throwingContext, List.of(), List.of()));
     }
 
     @Test
@@ -1303,6 +1348,8 @@ class TargeterOrderingTest {
                 new Class<?>[]{type}, (proxy, method, args) -> {
                     if (method.getName().equals("getType")) return org.bukkit.entity.EntityType.ZOMBIE;
                     if (method.getName().equals("getLocation")) return location;
+                    if (method.getName().equals("isValid")) return true;
+                    if (method.getName().equals("isDead")) return false;
                     return defaultValue(method.getReturnType());
                 }));
     }
@@ -1312,6 +1359,21 @@ class TargeterOrderingTest {
                 new Class<?>[]{type}, (proxy, method, args) -> switch (method.getName()) {
                     case "isValid" -> true;
                     case "isDead" -> false;
+                    case "getType" -> org.bukkit.entity.Player.class.isAssignableFrom(type)
+                            ? org.bukkit.entity.EntityType.PLAYER : org.bukkit.entity.EntityType.ZOMBIE;
+                    case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "equals" -> proxy == args[0];
+                    case "hashCode" -> System.identityHashCode(proxy);
+                    default -> defaultValue(method.getReturnType());
+                }));
+    }
+
+    private static <T extends org.bukkit.entity.LivingEntity> T inactiveLivingProxy(
+            Class<T> type, boolean dead) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(),
+                new Class<?>[]{type}, (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> false;
+                    case "isDead" -> dead;
                     case "getType" -> org.bukkit.entity.Player.class.isAssignableFrom(type)
                             ? org.bukkit.entity.EntityType.PLAYER : org.bukkit.entity.EntityType.ZOMBIE;
                     case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);

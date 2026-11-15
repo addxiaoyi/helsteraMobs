@@ -2564,6 +2564,8 @@ class SkillServiceTest {
     void targetedActionRetainsCancellableEvent() {
         var svc = service();
         var target = mock(LivingEntity.class);
+        when(target.isValid()).thenReturn(true);
+        when(target.isDead()).thenReturn(false);
         var event = mock(org.bukkit.event.Cancellable.class);
         var context = BehaviorContext.continueExecution(null, target, 1.0, 2.0, 0,
                 "damage", null, target, List.of(target), null,

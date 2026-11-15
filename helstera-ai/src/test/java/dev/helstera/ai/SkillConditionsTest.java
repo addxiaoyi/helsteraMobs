@@ -204,6 +204,10 @@ class SkillConditionsTest {
     void officialTargetsConditionCountsInheritedTargets() {
         LivingEntity first = mock(LivingEntity.class);
         LivingEntity second = mock(LivingEntity.class);
+        when(first.isValid()).thenReturn(true);
+        when(first.isDead()).thenReturn(false);
+        when(second.isValid()).thenReturn(true);
+        when(second.isDead()).thenReturn(false);
         var context = BehaviorContext.execution(null, null, 1.0, -1, 0,
                 "IDLE", null, null, List.of(first, second), null);
 

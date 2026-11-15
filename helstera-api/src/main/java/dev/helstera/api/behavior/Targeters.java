@@ -318,12 +318,17 @@ public final class Targeters {
         if (brace >= 0) name = name.substring(0, brace);
         name = name.replace("_", "").replace("-", "");
         if (name.equals("self") || name.equals("caster")) {
-            return context.instanceValid() && context.instance().baseEntity().orElse(null) instanceof LivingEntity living
+            if (!context.instanceValid()) return List.of();
+            var base = context.instance().baseEntity().orElse(null);
+            return base instanceof LivingEntity living && isActiveLiving(living)
                     ? List.of(living) : List.of();
         }
         if (name.equals("target")) {
-            return context.targetEntity().map(target -> List.<LivingEntity>of(target))
-                    .orElseGet(() -> context.targets().stream().findFirst()
+            return context.targetEntity().filter(Targeters::isActiveLiving)
+                    .map(target -> List.<LivingEntity>of(target))
+                    .orElseGet(() -> context.targets().stream()
+                            .filter(Targeters::isActiveLiving)
+                            .findFirst()
                             .map(target -> List.<LivingEntity>of(target)).orElseGet(List::of));
         }
         if (name.equals("targetoftarget")) {
@@ -341,9 +346,13 @@ public final class Targeters {
             return isActiveLiving(targetOfTarget) ? List.of(targetOfTarget) : List.of();
         }
         if (name.equals("targets")) {
-            return context.targets().isEmpty()
-                    ? context.targetEntity().map(target -> List.<LivingEntity>of(target)).orElseGet(List::of)
-                    : context.targets();
+            List<LivingEntity> activeTargets = context.targets().stream()
+                    .filter(Targeters::isActiveLiving)
+                    .toList();
+            return activeTargets.isEmpty()
+                    ? context.targetEntity().filter(Targeters::isActiveLiving)
+                    .map(target -> List.<LivingEntity>of(target)).orElseGet(List::of)
+                    : activeTargets;
         }
         if (isLocationName(name)) {
             Location location = resolveLocation(spec, context).orElse(null);
@@ -357,19 +366,19 @@ public final class Targeters {
         }
         if (name.equals("trigger")) {
             var trigger = context.trigger().orElse(null);
-            if (trigger instanceof LivingEntity living) return List.of(living);
-            if (trigger instanceof org.bukkit.entity.Projectile projectile
-                    && projectile.getShooter() instanceof LivingEntity shooter) {
-                return List.of(shooter);
+            if (trigger instanceof LivingEntity living && isActiveLiving(living)) return List.of(living);
+            LivingEntity shooter = projectileShooter(trigger);
+            if (shooter != null) {
+                return isActiveLiving(shooter) ? List.of(shooter) : List.of();
             }
             return List.of();
         }
         if (name.equals("attacker")) {
             var trigger = context.trigger().orElse(null);
-            if (trigger instanceof LivingEntity living) return List.of(living);
-            if (trigger instanceof org.bukkit.entity.Projectile projectile
-                    && projectile.getShooter() instanceof LivingEntity shooter) {
-                return List.of(shooter);
+            if (trigger instanceof LivingEntity living && isActiveLiving(living)) return List.of(living);
+            LivingEntity shooter = projectileShooter(trigger);
+            if (shooter != null) {
+                return isActiveLiving(shooter) ? List.of(shooter) : List.of();
             }
             return List.of();
         }
@@ -471,6 +480,15 @@ public final class Targeters {
             return entity.isValid() && !entity.isDead();
         } catch (RuntimeException ignored) {
             return false;
+        }
+    }
+
+    private static LivingEntity projectileShooter(org.bukkit.entity.Entity trigger) {
+        if (!(trigger instanceof org.bukkit.entity.Projectile projectile)) return null;
+        try {
+            return projectile.getShooter() instanceof LivingEntity living ? living : null;
+        } catch (RuntimeException ignored) {
+            return null;
         }
     }
 

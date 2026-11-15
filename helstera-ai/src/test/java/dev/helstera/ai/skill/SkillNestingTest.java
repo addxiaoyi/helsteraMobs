@@ -42,6 +42,13 @@ class SkillNestingTest {
         return BehaviorContext.of(null, null, 1.0, -1, 0, "IDLE");
     }
 
+    private static <T extends org.bukkit.entity.LivingEntity> T activeMock(Class<T> type) {
+        T entity = mock(type);
+        when(entity.isValid()).thenReturn(true);
+        when(entity.isDead()).thenReturn(false);
+        return entity;
+    }
+
     private static YamlConfiguration yaml(String text) {
         return YamlConfiguration.loadConfiguration(new StringReader(text));
     }
@@ -986,8 +993,8 @@ class SkillNestingTest {
     void targetedHealUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         when(caster.getMaxHealth()).thenReturn(20.0);
@@ -1062,8 +1069,8 @@ class SkillNestingTest {
         var svc = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
         var caster = mock(org.bukkit.entity.Entity.class);
-        var first = mock(org.bukkit.entity.LivingEntity.class);
-        var second = mock(org.bukkit.entity.LivingEntity.class);
+        var first = activeMock(org.bukkit.entity.LivingEntity.class);
+        var second = activeMock(org.bukkit.entity.LivingEntity.class);
         var world = mock(org.bukkit.World.class);
         var origin = new org.bukkit.Location(world, 0, 64, 0);
         when(instance.isValid()).thenReturn(true);
@@ -1092,8 +1099,8 @@ class SkillNestingTest {
         var svc = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
         var caster = mock(org.bukkit.entity.Entity.class);
-        var first = mock(org.bukkit.entity.LivingEntity.class);
-        var second = mock(org.bukkit.entity.LivingEntity.class);
+        var first = activeMock(org.bukkit.entity.LivingEntity.class);
+        var second = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         when(first.getMaxHealth()).thenReturn(20.0);
@@ -1116,8 +1123,8 @@ class SkillNestingTest {
     void targetedExplosionExecutesForAllSelectedEntities() {
         var svc = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var first = mock(org.bukkit.entity.LivingEntity.class);
-        var second = mock(org.bukkit.entity.LivingEntity.class);
+        var first = activeMock(org.bukkit.entity.LivingEntity.class);
+        var second = activeMock(org.bukkit.entity.LivingEntity.class);
         var world = mock(org.bukkit.World.class);
         var origin = new org.bukkit.Location(world, 0, 64, 0);
         var firstLocation = new org.bukkit.Location(world, 1, 64, 0);
@@ -1143,8 +1150,8 @@ class SkillNestingTest {
     void targetedMessageExecutesForAllSelectedPlayers() {
         var svc = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var first = mock(org.bukkit.entity.Player.class);
-        var second = mock(org.bukkit.entity.Player.class);
+        var first = activeMock(org.bukkit.entity.Player.class);
+        var second = activeMock(org.bukkit.entity.Player.class);
         when(instance.isValid()).thenReturn(true);
         var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                 instance, first, 1.0, 2.0, 0, "skill", null, first,
@@ -1163,8 +1170,8 @@ class SkillNestingTest {
     void targetedHealPercentUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         when(target.getMaxHealth()).thenReturn(20.0);
@@ -1186,8 +1193,8 @@ class SkillNestingTest {
     void targetedSetHealthUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         when(target.getMaxHealth()).thenReturn(20.0);
@@ -1208,8 +1215,8 @@ class SkillNestingTest {
     void targetedSetNameUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
@@ -1229,8 +1236,8 @@ class SkillNestingTest {
     void targetedScoreboardTagUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
@@ -1257,8 +1264,8 @@ class SkillNestingTest {
     void targetedSetFireUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
@@ -1278,8 +1285,8 @@ class SkillNestingTest {
     void targetedEquipUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         var equipment = mock(org.bukkit.inventory.EntityEquipment.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
@@ -1308,8 +1315,8 @@ class SkillNestingTest {
     void targetedDropItemUsesTargetLocation() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         var world = mock(org.bukkit.World.class);
         var location = mock(org.bukkit.Location.class);
         var item = mock(ItemStack.class);
@@ -1337,8 +1344,8 @@ class SkillNestingTest {
     void targetedInvulnerabilityUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
@@ -1367,8 +1374,8 @@ class SkillNestingTest {
     void targetedModifySpeedUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         var attribute = mock(org.bukkit.attribute.AttributeInstance.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
@@ -1392,8 +1399,8 @@ class SkillNestingTest {
     void targetedLeapUsesTargetMechanic() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
         when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(0, 0, 0));
@@ -1415,8 +1422,8 @@ class SkillNestingTest {
     void movementMechanicsResolveNumericPlaceholders() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var caster = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var caster = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         var attribute = mock(org.bukkit.attribute.AttributeInstance.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
@@ -1446,8 +1453,8 @@ class SkillNestingTest {
     void pullExcludesCasterFromNearbyTargets() {
         var service = service();
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
-        var casterEntity = mock(org.bukkit.entity.LivingEntity.class);
-        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var casterEntity = activeMock(org.bukkit.entity.LivingEntity.class);
+        var target = activeMock(org.bukkit.entity.LivingEntity.class);
         var world = mock(org.bukkit.World.class);
         var origin = new org.bukkit.Location(world, 0, 64, 0);
         when(instance.isValid()).thenReturn(true);
