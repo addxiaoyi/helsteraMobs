@@ -100,6 +100,8 @@ public final class MmConditions {
             Map.entry("p", "pack"), Map.entry("packversion", "version"),
             Map.entry("packv", "version"), Map.entry("version", "version"),
             Map.entry("v", "version"));
+    private static final Map<String, String> MYTHIC_KEY_ID_ARGUMENTS = Map.of(
+            "mythickey", "key", "key", "key", "keyid", "key", "id", "key", "arikey", "key");
     private static final Map<String, String> SERVER_NMS_VERSION_ARGUMENTS = Map.of(
             "version", "version", "sv", "version", "v", "version");
     private static final Map<String, String> LOCAL_DIFFICULTY_ARGUMENTS = Map.of(
@@ -1079,6 +1081,13 @@ public final class MmConditions {
                     .contains(name) ? "mythic-pack-version-greater" : "mythic-pack-version";
             return new Mapped(condition + " packid=" + conditionValue(pack)
                     + " packversion=" + conditionValue(version), true);
+        }
+        if (Set.of("mythickeyid", "keyid", "arikeyid").contains(name)) {
+            Map<String, String> arguments = strictValueArguments(body, MYTHIC_KEY_ID_ARGUMENTS, "key");
+            String key = arguments == null ? null : arguments.getOrDefault("key", "minecraft:attack");
+            return validMythicKeyId(key)
+                    ? new Mapped("mythic-key-id " + conditionValue(key), true)
+                    : new Mapped(s, false);
         }
         if ("serverversion".equals(name) || "server".equals(name) || "version".equals(name)) {
             Map<String, String> arguments = strictValueArguments(body, SERVER_VERSION_ARGUMENTS, "version");
@@ -2816,6 +2825,11 @@ public final class MmConditions {
         return value != null && !value.isBlank() && value.length() <= 128
                 && !value.equals(".") && !value.equals("..")
                 && value.chars().noneMatch(c -> Character.isISOControl(c) || c == '/' || c == '\\');
+    }
+
+    private static boolean validMythicKeyId(String value) {
+        return value != null && !value.isBlank() && value.equals(value.trim())
+                && value.length() <= 256 && value.chars().noneMatch(Character::isISOControl);
     }
 
     private static boolean validUuidConditionValue(String value) {

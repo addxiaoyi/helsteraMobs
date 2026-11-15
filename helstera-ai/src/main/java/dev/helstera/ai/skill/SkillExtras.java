@@ -1496,6 +1496,53 @@ public final class SkillExtras {
         return Map.copyOf(parsed);
     }
 
+    private static String mythicKeyIdArgument(List<String> args) {
+        if (args == null || args.isEmpty()) return "minecraft:attack";
+        String positional = null;
+        String keyed = null;
+        for (String raw : args) {
+            if (raw == null || raw.isBlank()) {
+                throw new IllegalArgumentException("MythicKeyId arguments cannot be blank");
+            }
+            int equals = raw.indexOf('=');
+            if (equals < 0) {
+                if (keyed != null || positional != null) {
+                    throw new IllegalArgumentException("MythicKeyId accepts one value");
+                }
+                positional = raw.trim();
+                continue;
+            }
+            if (equals == 0 || positional != null || keyed != null) {
+                throw new IllegalArgumentException("MythicKeyId arguments cannot be mixed or duplicated");
+            }
+            String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (!Set.of("mythickey", "key", "keyid", "id", "arikey").contains(key)) {
+                throw new IllegalArgumentException("unknown MythicKeyId argument: " + key);
+            }
+            String value = raw.substring(equals + 1).trim();
+            if (value.isBlank()) throw new IllegalArgumentException("MythicKeyId value cannot be blank");
+            keyed = value;
+        }
+        String value = positional != null ? positional : keyed;
+        if (!validMythicKeyId(value)) throw new IllegalArgumentException("invalid MythicKeyId value");
+        return value;
+    }
+
+    private static boolean mythicKeyIdMatches(String expected, BehaviorContext ctx) {
+        if (ctx == null || expected == null) return false;
+        String resolved = Placeholders.resolve(expected, ctx);
+        if (resolved == null || resolved.isBlank()
+                || expected.indexOf('<') >= 0 && expected.equals(resolved)) return false;
+        Object actual = ctx.skillTree().flatMap(tree -> tree.variable(
+                SkillTreeContext.MYTHIC_KEY_ID_VARIABLE)).orElse(null);
+        return actual != null && String.valueOf(actual).equalsIgnoreCase(resolved.trim());
+    }
+
+    private static boolean validMythicKeyId(String value) {
+        return value != null && !value.isBlank() && value.equals(value.trim())
+                && value.length() <= 256 && value.chars().noneMatch(Character::isISOControl);
+    }
+
     private static boolean validMythicPackId(String value) {
         return value != null && !value.isBlank() && value.length() <= 128
                 && !value.equals(".") && !value.equals("..")
@@ -4152,6 +4199,10 @@ public final class SkillExtras {
                         PackVersion actual = info == null ? null : parsePackVersion(info.version());
                         return actual != null && actual.matchesMythicGreater(minimum);
                     };
+                }),
+                Map.entry("mythic-key-id", (SkillCatalog.ConditionFactory) a -> {
+                    String expected = mythicKeyIdArgument(a);
+                    return ctx -> mythicKeyIdMatches(expected, ctx);
                 }),
                 Map.entry("server-version", (SkillCatalog.ConditionFactory) a -> {
                     String expected = str(a, 0, "");

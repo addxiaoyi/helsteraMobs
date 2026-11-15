@@ -961,6 +961,24 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("official MythicKeyId condition maps the default, aliases, and strict arguments")
+    void officialMythicKeyIdConditionMapsDefaultAndAliases() {
+        assertEquals("mythic-key-id minecraft:attack", t("?MythicKeyId"));
+        assertEquals("mythic-key-id minecraft:attack", t("?keyid{}"));
+        assertEquals("mythic-key-id minecraft:skill", t("?MythicKeyId{mythickey=minecraft:skill}"));
+        assertEquals("mythic-key-id minecraft:skill", t("?keyid{key=minecraft:skill}"));
+        assertEquals("mythic-key-id minecraft:skill", t("?ariKeyId{id=minecraft:skill}"));
+        for (String malformed : List.of(
+                "?MythicKeyId{unknown=minecraft:skill}",
+                "?MythicKeyId{key=}",
+                "?MythicKeyId{key=one;id=two}",
+                "?MythicKeyId{minecraft:one;other}",
+                "?MythicKeyId{key=<unknown.value>")) {
+            assertUntranslatedPreserved(malformed);
+        }
+    }
+
+    @Test
     void officialDirectionalVelocityConditionPreservesNamedArguments() {
         assertEquals("directional-velocity x=>0 y=<0 z=>0 relative=true",
                 t("?directionalVelocity{x=>0;y=<0;z=>0;relative=true}"));

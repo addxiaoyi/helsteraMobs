@@ -2415,7 +2415,7 @@ public final class SkillService {
                     "has-aura-stacks", "mythic-has-aura", "mythic-has-aura-stacks",
                     "mythic-has-aura-type", "mythic-target-has-aura", "health", "health-percent",
                     "compare-values", "score", "targets",
-                    "cuboid", "in-bounds", "global-score", "local-difficulty" -> true;
+                    "cuboid", "in-bounds", "global-score", "local-difficulty", "mythic-key-id" -> true;
             default -> false;
         };
     }
@@ -2638,6 +2638,8 @@ public final class SkillService {
                     "mythic-pack-version";
             case "mythicpackversiongreater", "mythic-pack-version-greater", "packversiongreater",
                     "packversionisgreater" -> "mythic-pack-version-greater";
+            case "mythickeyid", "mythic-key-id", "keyid", "key-id", "arikeyid", "ari-key-id" ->
+                    "mythic-key-id";
             case "serverversion", "server-version", "server", "version" -> "server-version";
             case "serveraftereq", "serverafter", "versionaftereq", "server-version-after-or-equal" ->
                     "server-version-after-or-equal";

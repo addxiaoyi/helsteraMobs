@@ -47,6 +47,8 @@ Latest strict release evidence: `srv-paper-context-targeter-inactive-strict-2026
 
 Conditions slice update (2026-11-15): official MythicMobs 5.7.2 `HasInventorySpace` now maps to `has-inventory-space` and uses the selected Player target's `PlayerInventory#firstEmpty()` result, matching the upstream condition scope. `hasFreeInventorySlot` and `hasFreeSlot` remain project aliases with their existing canonical name. Importer, AI, and plugin cross-module tests cover positive/full/non-Player cases and malformed arguments. No new Paper evidence is claimed for this parser/runtime slice; the complete Conditions catalog remains `mapped-unverified`.
 
+Conditions slice update (2026-11-15): official MythicMobs 5.7.2 `MythicKeyId`, `keyid`, and `ariKeyId` now map to `mythic-key-id`. The runtime reads the exact skill-tree variable `key-id`, supports Mythic's default `minecraft:attack`, configured argument aliases, case-insensitive comparison, and skill placeholders, while missing metadata and malformed arguments fail closed. Importer, AI, and plugin cross-module tests cover variable-mechanic propagation, aliases, defaults, mismatch, missing metadata, placeholder resolution, and preservation. No new Paper evidence is claimed for this context-variable slice; the complete Conditions catalog remains `mapped-unverified`.
+
 Previous strict release evidence: `srv-paper-scoped-placeholders-strict-20261114-r2` verifies scoped display names, entity types, squared distance, and Mythic `l.*` centered/precise coordinates, yaw, pitch, and world, with temporary display names restored. Its archived report and logs remain indexed in `tools/paper-integration/release-evidence.json`.
 
 Previous strict release evidence: `srv-paper-fire-protection-strict-20261112-r2`

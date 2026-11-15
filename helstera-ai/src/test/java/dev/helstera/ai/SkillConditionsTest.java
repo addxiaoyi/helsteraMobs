@@ -1815,6 +1815,31 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("MythicKeyId compares the skill-tree key-id variable and fails closed")
+    void mythicKeyIdConditionUsesSkillTreeMetadata() {
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        tree.setVariable("key-id", "Minecraft:Skill");
+        tree.setVariable("expected-key", "minecraft:skill");
+        var context = BehaviorContext.continueExecution(
+                null, (LivingEntity) null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), null, tree);
+
+        var factory = extraFactory("mythic-key-id");
+        assertTrue(factory.create(List.of("minecraft:skill")).test(context));
+        assertTrue(factory.create(List.of("key=<skill.var.expected-key>")).test(context));
+        assertFalse(factory.create(List.of()).test(context), "default must remain minecraft:attack");
+
+        tree.unsetVariable("key-id");
+        assertFalse(factory.create(List.of("minecraft:skill")).test(context));
+        assertFalse(factory.create(List.of("<unknown.value>")).test(context));
+        assertFalse(factory.create(List.of("minecraft:skill")).test(ctx()));
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.create(List.of("unknown=minecraft:skill")));
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.create(List.of("key=one", "id=two")));
+    }
+
+    @Test
     @DisplayName("survival-mode condition accepts Survival and rejects other player modes")
     void survivalModeConditionMatchesExplicitPlayerMode() {
         Player player = mock(Player.class);

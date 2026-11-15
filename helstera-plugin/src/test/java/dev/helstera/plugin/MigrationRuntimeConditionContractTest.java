@@ -127,6 +127,45 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported MythicKeyId aliases read the shared skill-tree key-id variable")
+    void importedMythicKeyIdAliasesReachRuntime() {
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), null, tree);
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        String setKeyId = service.bindAction(
+                "setvariable{var=skill.key-id;type=STRING;value=minecraft:skill}");
+        assertNotNull(setKeyId, service.warnings().toString());
+        assertTrue(registry.runAction(setKeyId, context));
+
+        for (String source : List.of(
+                "?MythicKeyId{mythickey=minecraft:skill}",
+                "?keyid{key=minecraft:skill}",
+                "?ariKeyId{id=minecraft:skill}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(mapped.translated(), source);
+            assertEquals("mythic-key-id minecraft:skill", mapped.condition(), source);
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key, service.warnings().toString());
+            assertTrue(registry.testCondition(key, context), source);
+        }
+
+        tree.setVariable("key-id", "minecraft:attack");
+        String defaultKey = service.bindCondition(
+                dev.helstera.migration.importer.MmConditions.translate("?MythicKeyId").condition());
+        assertNotNull(defaultKey);
+        assertTrue(registry.testCondition(defaultKey, context));
+
+        tree.unsetVariable("key-id");
+        assertFalse(registry.testCondition(defaultKey, context));
+        assertNull(service.bindCondition("mythic-key-id{unknown=value}"));
+        assertFalse(dev.helstera.migration.importer.MmConditions
+                .translate("?MythicKeyId{unknown=value}").translated());
+    }
+
+    @Test
     @DisplayName("imported Mythic UUID compares the selected entity and evaluates trigger UUID placeholders")
     void importedUuidConditionReachesRuntime() {
         var registry = new BehaviorRegistryImpl();

@@ -15,6 +15,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class SkillTreeContext {
     /** Internal location key used by MythicMobs' TrackLocation mechanic and TrackedLocation targeter. */
     public static final String MYTHIC_TRACKED_LOCATION = "mythic.tracked-location";
+    /** Internal variable key used by MythicMobs' MythicKeyId skill condition. */
+    public static final String MYTHIC_KEY_ID_VARIABLE = "key-id";
 
     /** Immutable persistence form for skill-tree-local state. Entity references are restored by the caller. */
     public record Snapshot(Map<String, Object> variables,

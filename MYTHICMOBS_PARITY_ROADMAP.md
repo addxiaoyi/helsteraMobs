@@ -127,6 +127,14 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   `hasFreeInventorySlot`/`hasFreeSlot` project aliases stable. Importer, AI, and
   plugin cross-module tests cover full, available, non-Player, missing-target,
   and malformed-input cases; no new Paper evidence is claimed yet.
+- Official MythicMobs 5.7.2 `MythicKeyId`, `keyid`, and `ariKeyId` now map to
+  `mythic-key-id`. The runtime reads the exact skill-tree `key-id` variable,
+  applies the `minecraft:attack` default, resolves skill placeholders, and
+  compares case-insensitively. The existing imported `setvariable` mechanic can
+  populate this variable. Missing metadata, unresolved placeholders, duplicate
+  or unknown arguments, and invalid values fail closed; importer, AI, and
+  cross-module tests cover the contract. No new Paper evidence is claimed for
+  this context-variable slice.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,
