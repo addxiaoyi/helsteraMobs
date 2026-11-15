@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-15T13:32:50.2922200Z",
+  "fixtureDirectory": "srv-paper-metaskill-condition-strict-20261115-r2",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "94653168d595a247c66bc55a8d1e5ba32fa37fa6f0edbd27d99fcd366baa313c",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "metaskillConditionRuntime"
+  ],
+  "probes": [
+    {
+      "id": "metaskillConditionRuntime",
+      "status": "passed",
+      "observations": [
+        "metaskill-condition direct-positive=true direct-negative=true alias-positive=true imported-positive=true imported-negative=true parameter-scoped=true nested-mode=true and-mode=true not-mode=true undetermined-rejected=true malformed-preserved=true passed=true"
+      ]
+    }
+  ]
+}

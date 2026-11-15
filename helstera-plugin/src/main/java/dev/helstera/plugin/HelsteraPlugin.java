@@ -737,6 +737,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test-mythic-pack-condition", false)) {
             runMythicPackConditionSelfTest();
         }
+        if (getConfig().getBoolean("debug.self-test-metaskill-condition", false)) {
+            runMetaskillConditionSelfTest();
+        }
         if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
             runEntityOptionsSelfTest();
         }
@@ -1448,6 +1451,84 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " mythic-mob-type-imported-contains-negative=" + mythicMobTypeImportedContainsNegative
                     + " passed=" + passed);
         }, Math.max(1, delay));
+    }
+
+    /** Verifies imported Mythic metaskill conditions against the production skill runtime. */
+    private void runMetaskillConditionSelfTest() {
+        int delay = getConfig().getInt("debug.self-test-delay-ticks", 40);
+        getServer().getScheduler().runTaskLater(this, () -> {
+            boolean directPositive = false;
+            boolean directNegative = false;
+            boolean aliasPositive = false;
+            boolean importedPositive = false;
+            boolean importedNegative = false;
+            boolean parameterScoped = false;
+            boolean nestedMode = false;
+            boolean andMode = false;
+            boolean notMode = false;
+            boolean undeterminedRejected = false;
+            boolean malformedPreserved = false;
+            try {
+                if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                        || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
+                    throw new IllegalStateException("production skill/behavior services are unavailable");
+                }
+                var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                        null, null, 1.0, -1, 0, "paper-metaskill-probe", null,
+                        null, java.util.List.of(), null);
+                directPositive = testRuntimeCondition(skills, behaviors, context,
+                        "metaskill-condition{skill=parity_metaskill_true}", true);
+                directNegative = testRuntimeCondition(skills, behaviors, context,
+                        "metaskill-condition{skill=parity_metaskill_false}", false);
+                aliasPositive = testRuntimeCondition(skills, behaviors, context,
+                        "skillcondition{s=parity_metaskill_true}", true);
+                importedPositive = testImportedPackCondition(skills, behaviors, context,
+                        "?MetaskillCondition{skill=parity_metaskill_true}", true);
+                importedNegative = testImportedPackCondition(skills, behaviors, context,
+                        "?skillcondition{s=parity_metaskill_false}", false);
+                parameterScoped = testImportedPackCondition(skills, behaviors, context,
+                        "?MetaskillCondition{skill=parity_metaskill_parameter;expected=paper}", true)
+                        && !testImportedPackCondition(skills, behaviors, context,
+                        "?MetaskillCondition{skill=parity_metaskill_parameter;expected=wrong}", true);
+                nestedMode = testRuntimeCondition(skills, behaviors, context,
+                        "metaskill-condition{skill=parity_metaskill_nested}", true);
+                andMode = testRuntimeCondition(skills, behaviors, context,
+                        "metaskill-condition{skill=parity_metaskill_and}", false);
+                notMode = testRuntimeCondition(skills, behaviors, context,
+                        "metaskill-condition{skill=parity_metaskill_not}", false);
+                undeterminedRejected = testRuntimeCondition(skills, behaviors, context,
+                        "metaskill-condition{skill=parity_metaskill_empty}", false);
+                var malformed = dev.helstera.migration.importer.MmConditions.translate(
+                        "?MetaskillCondition{skill=parity_metaskill_true;skill=duplicate}");
+                malformedPreserved = !malformed.translated()
+                        && "?MetaskillCondition{skill=parity_metaskill_true;skill=duplicate}"
+                        .equals(malformed.condition());
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] metaskill-condition exception="
+                        + failure.getClass().getSimpleName() + ":" + failure.getMessage());
+            }
+            boolean passed = directPositive && directNegative && aliasPositive
+                    && importedPositive && importedNegative && parameterScoped
+                    && nestedMode && andMode && notMode && undeterminedRejected
+                    && malformedPreserved;
+            getLogger().info("[自检] metaskill-condition direct-positive=" + directPositive
+                    + " direct-negative=" + directNegative + " alias-positive=" + aliasPositive
+                    + " imported-positive=" + importedPositive + " imported-negative=" + importedNegative
+                    + " parameter-scoped=" + parameterScoped + " nested-mode=" + nestedMode
+                    + " and-mode=" + andMode + " not-mode=" + notMode
+                    + " undetermined-rejected=" + undeterminedRejected
+                    + " malformed-preserved=" + malformedPreserved + " passed=" + passed);
+        }, Math.max(1, delay));
+    }
+
+    private boolean testRuntimeCondition(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext context,
+            String source,
+            boolean expected) {
+        String condition = skills.bindCondition(source);
+        return condition != null && behaviors.testCondition(condition, context) == expected;
     }
 
     private boolean testImportedPackCondition(

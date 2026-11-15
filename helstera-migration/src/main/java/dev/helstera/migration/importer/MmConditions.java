@@ -1545,6 +1545,18 @@ public final class MmConditions {
             if (value == null) value = normalizeScalar(body);
             return new Mapped(value == null ? "string-not-empty" : "string-not-empty " + value, true);
         }
+        if ("metaskillcondition".equals(name) || "skillcondition".equals(name)) {
+            Map<String, String> arguments = metaskillConditionArguments(body);
+            if (arguments == null) return new Mapped(s, false);
+            String skill = arguments.get("skill");
+            if (skill == null || skill.isBlank()) return new Mapped(s, false);
+            List<String> mapped = new ArrayList<>();
+            mapped.add("skill=" + conditionValue(skill));
+            arguments.forEach((key, value) -> {
+                if (!key.equals("skill")) mapped.add(key + "=" + conditionValue(value));
+            });
+            return new Mapped("metaskill-condition{" + String.join(";", mapped) + "}", true);
+        }
         if ("isskill".equals(name) || "skillexists".equals(name)) {
             String skill = firstArgument(body, "name", "n", "skill", "s");
             if (skill == null) skill = normalizeScalar(body);
@@ -2433,6 +2445,92 @@ public final class MmConditions {
             }
         }
         return Map.copyOf(parsed);
+    }
+
+    /** Parses MetaskillCondition's skill reference and arbitrary skill-scoped parameters. */
+    private static Map<String, String> metaskillConditionArguments(String body) {
+        if (body == null || body.isBlank()) return null;
+        List<String> parts = splitNamedArguments(body);
+        if (parts == null || parts.isEmpty()) return null;
+        Map<String, String> parsed = new LinkedHashMap<>();
+        for (String part : parts) {
+            int equals = part.indexOf('=');
+            if (equals <= 0) return null;
+            String key = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = decodeConditionArgument(part.substring(equals + 1).trim());
+            if (!key.matches("[a-z_][a-z0-9_-]*") || value == null || value.isBlank()
+                    || Set.of("delay", "repeat", "repeatinterval", "repeat-interval", "cooldown").contains(key)
+                    || parsed.putIfAbsent(key, value) != null) return null;
+        }
+        String skill = parsed.remove("skill");
+        String alias = parsed.remove("s");
+        if ((skill == null) == (alias == null)) return null;
+        String reference = skill == null ? alias : skill;
+        if (reference.isBlank() || reference.chars().anyMatch(Character::isISOControl)) return null;
+        Map<String, String> result = new LinkedHashMap<>();
+        result.put("skill", reference);
+        parsed.forEach(result::put);
+        return result;
+    }
+
+    private static List<String> splitNamedArguments(String source) {
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean quoted = false;
+        int depth = 0;
+        for (int index = 0; index < source.length(); index++) {
+            char value = source.charAt(index);
+            if (quoted && value == '\\' && index + 1 < source.length()) {
+                current.append(value).append(source.charAt(++index));
+                continue;
+            }
+            if (value == '"') quoted = !quoted;
+            if (!quoted && (value == '[' || value == '(' || value == '{')) depth++;
+            else if (!quoted && (value == ']' || value == ')' || value == '}')) {
+                if (--depth < 0) return null;
+            }
+            boolean commaSeparator = !quoted && depth == 0 && value == ','
+                    && namedArgumentFollows(source, index + 1);
+            if (!quoted && depth == 0 && (value == ';' || commaSeparator)) {
+                if (current.toString().isBlank()) return null;
+                parts.add(current.toString().trim());
+                current.setLength(0);
+            } else current.append(value);
+        }
+        if (quoted || depth != 0 || current.toString().isBlank()) return null;
+        parts.add(current.toString().trim());
+        return parts;
+    }
+
+    private static boolean namedArgumentFollows(String source, int start) {
+        int index = start;
+        while (index < source.length() && Character.isWhitespace(source.charAt(index))) index++;
+        int keyStart = index;
+        while (index < source.length() && (Character.isLetterOrDigit(source.charAt(index))
+                || source.charAt(index) == '_' || source.charAt(index) == '-')) index++;
+        if (index == keyStart) return false;
+        while (index < source.length() && Character.isWhitespace(source.charAt(index))) index++;
+        return index < source.length() && source.charAt(index) == '=';
+    }
+
+    private static String decodeConditionArgument(String raw) {
+        if (raw == null || raw.isEmpty()) return null;
+        boolean startsQuoted = raw.startsWith("\"");
+        boolean endsQuoted = raw.endsWith("\"");
+        if (startsQuoted != endsQuoted) return null;
+        if (!startsQuoted) return raw.indexOf('"') >= 0 ? null : raw;
+        StringBuilder decoded = new StringBuilder();
+        for (int index = 1; index < raw.length() - 1; index++) {
+            char value = raw.charAt(index);
+            if (value == '\\') {
+                if (index + 1 >= raw.length() - 1) return null;
+                char escaped = raw.charAt(++index);
+                if (escaped != '"' && escaped != '\\') return null;
+                decoded.append(escaped);
+            } else if (value == '"') return null;
+            else decoded.append(value);
+        }
+        return decoded.toString();
     }
 
     private static Mapped variableCondition(String name, String body, String original) {

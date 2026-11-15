@@ -196,6 +196,7 @@ debug:
   self-test: false
   self-test-entity-options: false
   self-test-mythic-pack-condition: false
+  self-test-metaskill-condition: false
   self-test-show-health: false
   self-test-item-effects: false
   self-test-loot: false

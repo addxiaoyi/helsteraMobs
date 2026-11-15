@@ -196,6 +196,27 @@ class MmConditionsTest {
     }
 
     @Test
+    void metaskillConditionMapsSkillReferenceAndArbitraryParametersStrictly() {
+        assertEquals("metaskill-condition{skill=check;hello=ciao;world=mondo}",
+                t("?metaskillcondition{skill=check;hello=ciao;world=mondo}"));
+        assertEquals("metaskill-condition{skill=check;hello=ciao}",
+                t("?skillcondition{s=check,hello=ciao}"));
+        assertEquals("metaskill-condition{skill=\"guard check\";message=\"hello world\"}",
+                t("?MetaskillCondition{skill=\"guard check\";message=\"hello world\"}"));
+        for (String invalid : List.of(
+                "?metaskillcondition", "?metaskillcondition{}",
+                "?metaskillcondition{hello=ciao}",
+                "?metaskillcondition{skill=one;s=two}",
+                "?metaskillcondition{skill=check;skill=other}",
+                "?metaskillcondition{skill=check;delay=2}",
+                "?metaskillcondition{skill=check;hello=}",
+                "?metaskillcondition{skill=\"unterminated}",
+                "?skillcondition{s=check;world=mondo;world=earth}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     @DisplayName("InLiquid maps to the runtime liquid condition and rejects arguments")
     void inLiquidIsParameterless() {
         for (String source : List.of("?inLiquid", "?inLiquid{}", "?in-liquid")) {

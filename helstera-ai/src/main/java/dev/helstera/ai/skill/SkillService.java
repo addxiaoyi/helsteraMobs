@@ -39,6 +39,7 @@ public final class SkillService {
 
     /** 运行期递归深度上限。超过即中止并告警。 */
     private static final int MAX_DEPTH = 32;
+    private static final String METASKILL_FRAME_VARIABLE = "__helstera_metaskill_condition_frame";
 
     private final BehaviorRegistry registry;
     private final Logger log;
@@ -50,6 +51,8 @@ public final class SkillService {
     /** 命名技能 -> 解析结果。reloadSkills 会重建，故每次 loadSkills 先清空。 */
     private final Map<String, SkillDef> defs = new LinkedHashMap<>();
     private final ThreadLocal<Set<String>> evaluatingSkillConditions = ThreadLocal.withInitial(LinkedHashSet::new);
+    private final ThreadLocal<Set<String>> evaluatingMetaskillConditions = new ThreadLocal<>();
+    private final ThreadLocal<Deque<MetaskillConditionFrame>> metaskillConditionFrames = new ThreadLocal<>();
     /** 冷却记录："实例id|技能名" -> 上次放行时间（epoch 毫秒）。 */
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
     /** Runtime SetSkillCooldown overrides: "实例id|技能名" -> duration in milliseconds. */
@@ -96,6 +99,8 @@ public final class SkillService {
         public final List<String> targetRequire = new ArrayList<>();
         public final List<String> triggerRequire = new ArrayList<>();
         public boolean invalidCondition;
+        /** A condition metaskill must finish synchronously to produce a result. */
+        public boolean deferredActions;
         /** 按序执行的已绑定动作键。 */
         public final List<String> actions = new ArrayList<>();
         /** 本技能直接调用的其它技能名。 */
@@ -143,6 +148,26 @@ public final class SkillService {
         }
     }
 
+    private static final class MetaskillConditionFrame {
+        final String token = java.util.UUID.randomUUID().toString();
+        boolean determined;
+        boolean value;
+
+        void apply(boolean next, DetermineMode mode) {
+            switch (mode) {
+                case SET -> value = next;
+                case OR -> value = (determined ? value : false) || next;
+                case AND -> value = (determined ? value : true) && next;
+                case NOT -> value = !(determined ? value : next);
+            }
+            determined = true;
+        }
+    }
+
+    private enum DetermineMode { SET, OR, AND, NOT }
+
+    private record DetermineCondition(boolean value, DetermineMode mode) { }
+
     /**
      * 技能队列条目：一个待执行的技能请求。
      */
@@ -181,6 +206,7 @@ public final class SkillService {
         conds.putAll(SkillExtras.conditions());
         Map<String, SkillCatalog.ActionFactory> acts = new LinkedHashMap<>(actionFactories);
         acts.putAll(SkillExtras.actions());
+        acts.put("determine-condition", args -> determineConditionAction(args));
         acts.put("branch-unlock", args -> SkillExtras.branchUnlockAction(args, (context, specs) -> {
             for (String spec : specs) {
                 String key = bindCondition(spec);
@@ -313,6 +339,9 @@ public final class SkillService {
         if (composite != null) return composite;
         String rawConditionName = conditionNameBeforeArguments(conditionSpec);
         String rawCanonicalName = canonicalConditionName(rawConditionName.toLowerCase(Locale.ROOT));
+        if ("metaskill-condition".equals(rawCanonicalName)) {
+            return bindMetaskillCondition(conditionSpec, spec);
+        }
         if ("moving".equals(rawCanonicalName) && !validMovingSyntax(conditionSpec)) {
             warn("移动条件参数无效 \"" + spec + "\"");
             return null;
@@ -424,6 +453,270 @@ public final class SkillService {
             }
         }
         return key;
+    }
+
+    private String bindMetaskillCondition(String spec, String original) {
+        MetaskillConditionSpec parsed = parseMetaskillCondition(spec);
+        if (parsed == null) {
+            warn("MetaskillCondition 参数无效，已保留原始条件 \"" + original + "\"");
+            return null;
+        }
+        String skillName = parsed.skill().toLowerCase(Locale.ROOT);
+        if (!defs.containsKey(skillName)) {
+            warn("MetaskillCondition 引用了不存在的技能 \"" + parsed.skill() + "\"");
+            return null;
+        }
+        StringBuilder identity = new StringBuilder(skillName);
+        parsed.parameters().forEach((name, value) -> identity.append('\u0000').append(name)
+                .append('\u0001').append(value));
+        String encoded = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(
+                identity.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        String key = "metaskill-condition:" + encoded;
+        if (bound.add("c:" + key)) {
+            Map<String, String> parameters = Map.copyOf(parsed.parameters());
+            registry.registerCondition(key, ctx -> evaluateMetaskillCondition(skillName, parameters, ctx));
+        }
+        return key;
+    }
+
+    private boolean evaluateMetaskillCondition(String skillName, Map<String, String> parameters,
+                                               dev.helstera.api.behavior.BehaviorContext context) {
+        if (context == null) return false;
+        Set<String> evaluating = evaluatingMetaskillConditions.get();
+        if (evaluating == null) {
+            evaluating = new LinkedHashSet<>();
+            evaluatingMetaskillConditions.set(evaluating);
+        }
+        if (!evaluating.add(skillName)) return false;
+
+        MetaskillConditionFrame frame = new MetaskillConditionFrame();
+        dev.helstera.api.behavior.SkillTreeContext parent = context.skillTree().orElse(null);
+        dev.helstera.api.behavior.SkillTreeContext scopedTree = new dev.helstera.api.behavior.SkillTreeContext(
+                context.trigger().orElse(null), context.targets(), context.origin().orElse(null), parent);
+        scopedTree.setVariable(METASKILL_FRAME_VARIABLE, frame.token);
+        for (var parameter : parameters.entrySet()) {
+            String value = Placeholders.resolve(parameter.getValue(), context);
+            scopedTree.setVariable(parameter.getKey(), value);
+        }
+        var scopedContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                context.instance(), context.targetEntity().orElse(null), context.healthRatio(),
+                context.distanceToTarget(), context.decisionCount(), context.state(),
+                context.payload().orElse(null), context.trigger().orElse(null), context.targets(),
+                context.origin().orElse(null), scopedTree, context.cancellableEvent().orElse(null),
+                context.damageCause().orElse(null)).withExecutionAudienceFrom(context);
+
+        Deque<MetaskillConditionFrame> frames = metaskillConditionFrames.get();
+        if (frames == null) {
+            frames = new ArrayDeque<>();
+            metaskillConditionFrames.set(frames);
+        }
+        frames.push(frame);
+        try {
+            boolean cast = castSkill(skillName, scopedContext);
+            return cast && frame.determined && frame.value;
+        } finally {
+            frames.pop();
+            if (frames.isEmpty()) metaskillConditionFrames.remove();
+            evaluating.remove(skillName);
+            if (evaluating.isEmpty()) evaluatingMetaskillConditions.remove();
+        }
+    }
+
+    private Consumer<dev.helstera.api.behavior.BehaviorContext> determineConditionAction(List<String> args) {
+        DetermineCondition determine = parseDetermineCondition(args);
+        return context -> {
+            if (context == null) return;
+            Deque<MetaskillConditionFrame> frames = metaskillConditionFrames.get();
+            if (frames == null) return;
+            MetaskillConditionFrame frame = frames.peek();
+            if (frame == null) return;
+            String token = context.skillTree().flatMap(tree -> tree.variable(METASKILL_FRAME_VARIABLE))
+                    .map(String::valueOf).orElse(null);
+            if (frame.token.equals(token)) frame.apply(determine.value(), determine.mode());
+        };
+    }
+
+    private static DetermineCondition parseDetermineCondition(List<String> args) {
+        Boolean value = null;
+        DetermineMode mode = DetermineMode.SET;
+        boolean modeSeen = false;
+        boolean valueSeen = false;
+        int positional = 0;
+        for (String raw : args == null ? List.<String>of() : args) {
+            if (raw == null || raw.isBlank()) throw new IllegalArgumentException("empty DetermineCondition argument");
+            int equals = raw.indexOf('=');
+            String key;
+            String argument;
+            if (equals > 0) {
+                key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                argument = raw.substring(equals + 1).trim();
+            } else {
+                key = positional++ == 0 ? "determination" : "mode";
+                argument = raw.trim();
+            }
+            if (argument.isBlank()) throw new IllegalArgumentException("empty DetermineCondition value");
+            if (Set.of("determination", "det").contains(key)) {
+                if (valueSeen) throw new IllegalArgumentException("duplicate determination value");
+                value = parseStrictBoolean(argument);
+                valueSeen = true;
+            } else if (key.equals("mode")) {
+                if (modeSeen) throw new IllegalArgumentException("duplicate mode");
+                try {
+                    mode = DetermineMode.valueOf(argument.toUpperCase(Locale.ROOT));
+                } catch (IllegalArgumentException ex) {
+                    throw new IllegalArgumentException("mode must be SET, OR, AND, or NOT");
+                }
+                modeSeen = true;
+            } else throw new IllegalArgumentException("unknown argument " + key);
+        }
+        return new DetermineCondition(value == null || value, mode);
+    }
+
+    private static boolean parseStrictBoolean(String raw) {
+        return switch (raw.trim().toLowerCase(Locale.ROOT)) {
+            case "true", "yes", "on", "1" -> true;
+            case "false", "no", "off", "0" -> false;
+            default -> throw new IllegalArgumentException("determination must be a boolean");
+        };
+    }
+
+    private record MetaskillConditionSpec(String skill, Map<String, String> parameters) { }
+
+    private static String metaskillConditionReference(String spec) {
+        String candidate = spec == null ? null : spec.trim();
+        while (candidate != null && (candidate.startsWith("?") || candidate.startsWith("~"))) {
+            candidate = candidate.substring(1).trim();
+        }
+        if (candidate != null && candidate.startsWith("!")) candidate = candidate.substring(1).trim();
+        MetaskillConditionSpec parsed = parseMetaskillCondition(candidate);
+        return parsed == null ? null : parsed.skill().toLowerCase(Locale.ROOT);
+    }
+
+    private static MetaskillConditionSpec parseMetaskillCondition(String spec) {
+        if (spec == null || spec.isBlank()) return null;
+        MythicSkillSpec outer;
+        try {
+            outer = MythicSkillSpec.parse(spec);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+        String mechanic = outer.mechanic().replace("_", "").replace("-", "");
+        if (!Set.of("metaskillcondition", "skillcondition").contains(mechanic)
+                || outer.targeter() != null || outer.trigger() != null || outer.chance() != null
+                || !outer.inlineConditions().isEmpty() || !outer.targetConditions().isEmpty()
+                || !outer.positional().isEmpty()) return null;
+
+        int open = spec.indexOf('{');
+        if (open < 0) return null;
+        int close = matchingBrace(spec, open);
+        if (close != spec.trim().length() - 1) return null;
+        List<String> parts = splitSkillArguments(spec.substring(open + 1, close));
+        if (parts == null || parts.isEmpty()) return null;
+        Map<String, String> arguments = new LinkedHashMap<>();
+        for (String part : parts) {
+            int equals = part.indexOf('=');
+            if (equals <= 0) return null;
+            String key = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = decodeSkillArgument(part.substring(equals + 1).trim());
+            if (!key.matches("[a-z_][a-z0-9_-]*") || value == null || value.isBlank()
+                    || value.chars().anyMatch(Character::isISOControl)
+                    || Set.of("delay", "repeat", "repeatinterval", "repeat-interval", "cooldown").contains(key)
+                    || arguments.putIfAbsent(key, value) != null) return null;
+        }
+        String skill = arguments.remove("skill");
+        String alias = arguments.remove("s");
+        if ((skill == null) == (alias == null)) return null;
+        skill = skill == null ? alias : skill;
+        if (arguments.containsKey(METASKILL_FRAME_VARIABLE)) return null;
+        return new MetaskillConditionSpec(skill, Map.copyOf(arguments));
+    }
+
+    private static List<String> splitSkillArguments(String source) {
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean quoted = false;
+        int depth = 0;
+        for (int index = 0; index < source.length(); index++) {
+            char value = source.charAt(index);
+            if (quoted && value == '\\' && index + 1 < source.length()) {
+                current.append(value).append(source.charAt(++index));
+                continue;
+            }
+            if (value == '"') quoted = !quoted;
+            if (!quoted && (value == '[' || value == '(' || value == '{')) depth++;
+            else if (!quoted && (value == ']' || value == ')' || value == '}')) {
+                if (--depth < 0) return null;
+            }
+            boolean comma = !quoted && depth == 0 && value == ','
+                    && skillArgumentFollows(source, index + 1);
+            if (!quoted && depth == 0 && (value == ';' || comma)) {
+                if (current.toString().isBlank()) return null;
+                parts.add(current.toString().trim());
+                current.setLength(0);
+            } else current.append(value);
+        }
+        if (quoted || depth != 0 || current.toString().isBlank()) return null;
+        parts.add(current.toString().trim());
+        return parts;
+    }
+
+    private static boolean skillArgumentFollows(String source, int start) {
+        int index = start;
+        while (index < source.length() && Character.isWhitespace(source.charAt(index))) index++;
+        int keyStart = index;
+        while (index < source.length() && (Character.isLetterOrDigit(source.charAt(index))
+                || source.charAt(index) == '_' || source.charAt(index) == '-')) index++;
+        if (index == keyStart) return false;
+        while (index < source.length() && Character.isWhitespace(source.charAt(index))) index++;
+        return index < source.length() && source.charAt(index) == '=';
+    }
+
+    private static int matchingBrace(String source, int open) {
+        boolean quoted = false;
+        int depth = 0;
+        for (int index = open; index < source.length(); index++) {
+            char value = source.charAt(index);
+            if (quoted && value == '\\' && index + 1 < source.length()) { index++; continue; }
+            if (value == '"') quoted = !quoted;
+            if (quoted) continue;
+            if (value == '{') depth++;
+            else if (value == '}' && --depth == 0) return index;
+        }
+        return -1;
+    }
+
+    private static String decodeSkillArgument(String raw) {
+        if (raw == null || raw.isEmpty()) return null;
+        boolean startsQuoted = raw.startsWith("\"");
+        boolean endsQuoted = raw.endsWith("\"");
+        if (startsQuoted != endsQuoted) return null;
+        if (!startsQuoted) return raw.indexOf('"') >= 0 ? null : raw;
+        StringBuilder decoded = new StringBuilder();
+        for (int index = 1; index < raw.length() - 1; index++) {
+            char value = raw.charAt(index);
+            if (value == '\\') {
+                if (index + 1 >= raw.length() - 1) return null;
+                char escaped = raw.charAt(++index);
+                if (escaped != '"' && escaped != '\\') return null;
+                decoded.append(escaped);
+            } else if (value == '"') return null;
+            else decoded.append(value);
+        }
+        return decoded.toString();
+    }
+
+    private static boolean hasDeferredExecution(String spec) {
+        if (spec == null || spec.isBlank()) return false;
+        try {
+            MythicSkillSpec parsed = MythicSkillSpec.parse(spec);
+            long delay = parseExecutionTicks(parsed.arguments().get("delay"));
+            int repeat = parseExecutionCount(parsed.arguments().get("repeat"));
+            long interval = parseExecutionTicks(parsed.arguments().getOrDefault(
+                    "repeatinterval", parsed.arguments().get("repeat-interval")));
+            return delay > 0 || repeat > 1 || repeat > 0 && interval > 0;
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
 
     private static String skillOnCooldownName(String raw) {
@@ -707,7 +1000,8 @@ public final class SkillService {
                 return null;
             }
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
-            if (isVariableMechanic(name) || "mythic-aura".equals(name)) {
+            if (isVariableMechanic(name) || "mythic-aura".equals(name)
+                    || "determine-condition".equals(name)) {
                 parsed.arguments().forEach((key, value) -> {
                     if (!isExecutionAttribute(key)) mechanicArgs.add(key + "=" + value);
                 });
@@ -1158,14 +1452,16 @@ public final class SkillService {
             for (String spec : stringOrList(s, "require")) {
                 if (spec == null || spec.isBlank()) continue;
                 String dep = parseSkillRef(spec);
+                if (dep == null) dep = metaskillConditionReference(spec);
                 if (dep != null) def.deps.add(dep);
             }
             for (String field : List.of("on-decision", "target-conditions", "trigger-conditions")) {
                 for (String spec : stringOrList(s, field)) {
                     if (spec == null || spec.isBlank()) continue;
                     String dep = parseSkillRef(spec);
+                    if (dep == null) dep = metaskillConditionReference(spec);
                     if (dep != null) def.deps.add(dep);
-                def.deps.addAll(randomSkillRefs(spec));
+                    def.deps.addAll(randomSkillRefs(spec));
                 }
             }
             defs.put(key, def);
@@ -1200,6 +1496,7 @@ public final class SkillService {
                 if (k != null) def.triggerRequire.add(k); else def.invalidCondition = true;
             }
             for (String spec : stringOrList(s, "on-decision")) {
+                def.deferredActions |= hasDeferredExecution(spec);
                 String k = bindAction(spec);
                 if (k != null) def.actions.add(k);
             }
@@ -1406,10 +1703,15 @@ public final class SkillService {
                 return false;
             }
         }
+        int instId = ctx.instance() != null ? ctx.instance().instanceId() : -1;
+        if (metaskillConditionEvaluationActive()
+                && (def.castMillis > 0 || def.deferredActions
+                || instId >= 0 && isInstanceBusy(instId))) {
+            return false;
+        }
         if (cooldownOverrides.getOrDefault(cdKey, def.cooldownMillis) > 0) cooldowns.put(cdKey, now);
 
         // 队列门控：同一实例有技能正在执行时入队
-        int instId = ctx.instance() != null ? ctx.instance().instanceId() : -1;
         if (instId >= 0 && isInstanceBusy(instId)) {
             enqueueSkill(instId, def, ctx, restoreQueuedTree);
             return true;
@@ -1605,12 +1907,18 @@ public final class SkillService {
     }
 
     private void rememberSkillTree(dev.helstera.api.behavior.BehaviorContext ctx) {
+        if (metaskillConditionEvaluationActive()) return;
         if (ctx == null || ctx.instance() == null || ctx.skillTree().isEmpty()) return;
         try {
             persistedTrees.put(ctx.instance().instanceId(), ctx.skillTree().orElseThrow().snapshot());
         } catch (IllegalStateException ex) {
             warn("SkillTree state was not persisted: " + ex.getMessage());
         }
+    }
+
+    private boolean metaskillConditionEvaluationActive() {
+        Deque<MetaskillConditionFrame> frames = metaskillConditionFrames.get();
+        return frames != null && !frames.isEmpty();
     }
 
     /** Clears persisted skill-tree state when an instance is permanently removed. */
@@ -2020,6 +2328,7 @@ public final class SkillService {
 
     private static String canonicalConditionName(String name) {
         return switch (name) {
+            case "metaskillcondition", "skillcondition", "metaskill-condition" -> "metaskill-condition";
             case "isinaudience", "inaudience", "audiencecontains", "is-in-audience" -> "is-in-audience";
             case "iscancelled", "iscanceled", "cancelled", "canceled", "is-cancelled", "is-canceled" -> "is-cancelled";
             case "permission", "permission-is", "haspermission" -> "has-permission";
@@ -2373,6 +2682,7 @@ public final class SkillService {
 
     private static String canonicalActionName(String name) {
         return switch (name) {
+            case "detcond", "determinecondition", "determine-condition" -> "determine-condition";
             case "addtoaudience", "addaudience", "audienceadd", "add-to-audience" -> "add-to-audience";
             case "removefromaudience", "removeaudience", "audienceremove", "remove-from-audience" -> "remove-from-audience";
             case "unsetaudience", "clearaudience", "audienceclear", "unset-audience" -> "unset-audience";

@@ -2,6 +2,17 @@
 
 Latest full-catalog strict fixture `srv-paper-sprinting-strict-20261115-r2` passes all 457 probes on Paper 1.21.1-133 (438 passed, 19 expected rejections, zero failed or incomplete). `damageCauseCondition` verifies imported Mythic `?damageCause` defaults to `ENTITY_ATTACK` when omitted, matches an `ENTITY_ATTACK` damage event, rejects the `FIRE` control, and records the observation in the strict probe. `stateConditions` continues to cover imported sprinting aliases and state restoration. Plugin SHA-256: `a3391c1d9c26ee53ceecdce633b4ed1c345db3be9c5238f147eab2ee36de4857`. Report: [strict JSON](tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r2.json); archived redacted server/client logs and hashes are indexed in [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md) and `release-evidence.json`. The full Conditions catalog remains incomplete.
 
+## Focused MetaskillCondition / DetermineCondition fixture
+
+Run the isolated Paper 1.21.1 production-runtime probe after packaging the plugin:
+
+```powershell
+./mvnw -B -pl helstera-plugin -am package
+pwsh -NoProfile -File tools/paper-integration/run-metaskill-condition-fixture.ps1 -EvidenceRevision rN
+```
+
+The runner pins the Paper 1.21.1-133 jar by SHA-256, adds isolated test skills to a fresh server data directory, enables the production skill self-test, and archives a JSON report plus a token-redacted compressed log. The focused probe covers direct and imported `MetaskillCondition`/`skillcondition`, scoped parameters, nested determinations and `OR`/`AND`/`NOT` modes, missing determination rejection, and malformed-input preservation. Latest run `srv-paper-metaskill-condition-strict-20261115-r2` passed all assertions. This is exploratory feature evidence, not a full-catalog release-gate run; other Paper versions and the full MythicMobs Skills catalog remain unverified.
+
 ## Focused MythicMobs pack-condition fixture
 
 Run the exact MythicMobs 5.7.2/Paper 1.21.1 condition probe after packaging the plugin:

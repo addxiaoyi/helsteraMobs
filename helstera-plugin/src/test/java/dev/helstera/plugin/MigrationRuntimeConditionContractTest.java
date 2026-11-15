@@ -128,6 +128,38 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported MetaskillCondition invokes a synchronous skill and returns DetermineCondition")
+    void importedMetaskillConditionReachesRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var observedParameter = new java.util.concurrent.atomic.AtomicReference<String>();
+        registry.registerAction("capture-metaskill-parameter", context -> observedParameter.set(
+                dev.helstera.ai.skill.Placeholders.resolve("<skill.hello>", context)));
+        var configuration = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                new java.io.StringReader("""
+                        skills:
+                          check:
+                            on-decision:
+                              - capture-metaskill-parameter
+                              - determine-condition{det=true}
+                        """));
+        service.loadSkills(configuration.getConfigurationSection("skills"));
+
+        var imported = dev.helstera.migration.importer.MmConditions.translate(
+                "?skillcondition{s=check;hello=ciao}");
+        assertTrue(imported.translated());
+        assertEquals("metaskill-condition{skill=check;hello=ciao}", imported.condition());
+        String key = service.bindCondition(imported.condition());
+        assertNotNull(key, service.warnings().toString());
+        var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                null, null, 1.0, -1, 0, "integration", null, null, List.of(), null);
+
+        assertTrue(registry.testCondition(key, context), service.warnings().toString());
+        assertEquals("ciao", observedParameter.get());
+        assertTrue(context.skillTree().orElseThrow().variable("hello").isEmpty());
+    }
+
+    @Test
     @DisplayName("LastDamager targeter follows direct and projectile damage sources")
     void lastDamagerTargeterUsesBukkitLastDamageCause() {
         var caster = mock(org.bukkit.entity.LivingEntity.class);
@@ -4062,6 +4094,10 @@ class MigrationRuntimeConditionContractTest {
 
         var registry = new BehaviorRegistryImpl();
         var service = new SkillService(registry, null);
+        YamlConfiguration skillDefinitions = new YamlConfiguration();
+        skillDefinitions.createSection("skills.check").set("on-decision",
+                List.of("determine-condition{det=true}"));
+        service.loadSkills(skillDefinitions.getConfigurationSection("skills"));
         List<String> failures = new ArrayList<>();
         for (String condition : conditions) {
             String key = service.bindCondition(condition);

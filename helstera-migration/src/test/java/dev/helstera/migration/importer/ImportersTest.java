@@ -3163,6 +3163,33 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("MetaskillCondition and DetermineCondition are translated together")
+    void importsMetaskillConditionAndDeterminationMechanic(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/Metaskill.yml", """
+                check:
+                  Skills:
+                    - determineCondition{det=true} @self
+                caller:
+                  TargetConditions:
+                    - '?metaskillcondition{skill=check;hello=ciao;world=mondo}'
+                  Skills:
+                    - message{m=passed} @self
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var plan = entries.stream().filter(entry -> entry.containsKey("target-file"))
+                .findFirst().orElseThrow();
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(plan.get("content"))));
+
+        assertEquals(List.of("determine-condition{det=true} @self"),
+                target.getStringList("skills.check.on-decision"));
+        assertEquals(List.of("metaskill-condition{skill=check;hello=ciao;world=mondo}"),
+                target.getStringList("skills.caller.target-conditions"));
+        assertEquals(List.of("message-target \"passed\" @self"),
+                target.getStringList("skills.caller.on-decision"));
+    }
+
+    @Test
     @DisplayName("unmapped metaskill conditions stay visible and produce a warning")
     void mythicPreservesUnmappedMetaskillConditions(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/UnknownCondition.yml", """

@@ -5076,3 +5076,19 @@ the compressed server and client logs and their SHA-256 values are listed in
 `tools/paper-integration/release-evidence.json`. The plugin SHA-256 is
 `94b1bfb7f5700e0fe0f69f505ade71fabc533599279c2961522ddad5c28ec1c8`.
 
+Focused Paper 1.21.1-133 fixture `srv-paper-metaskill-condition-strict-20261115-r2`
+passed the production runtime probe for Mythic `MetaskillCondition` and
+`DetermineCondition`. It verifies direct and imported condition aliases,
+positive/negative outcomes, scoped parameters without caller leakage, nested
+evaluation, `OR`/`AND`/`NOT` determination modes, missing-determination
+fail-closed behavior, and duplicate-argument preservation. This is exploratory
+feature evidence and does not complete the full Conditions or Skills catalog.
+Report: `tools/paper-integration/reports/paper-1.21.1-metaskill-condition-strict-20261115-r2.json`,
+SHA-256 `cea7c00e2cab97b8a6858077354cad0371b371b9cde4df73b0671dec67dca10b`.
+Token-redacted compressed log:
+`tools/paper-integration/reports/paper-1.21.1-metaskill-condition-strict-20261115-r2.log.gz`,
+SHA-256 `c7da5b761295a570578c2ff58a3bb90f8f7047a4bdbd1a18c08f80b043b53d15`.
+The plugin SHA-256 is
+`94653168d595a247c66bc55a8d1e5ba32fa37fa6f0edbd27d99fcd366baa313c` and the
+Paper jar SHA-256 is `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+

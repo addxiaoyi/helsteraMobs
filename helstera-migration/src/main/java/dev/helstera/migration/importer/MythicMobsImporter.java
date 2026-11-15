@@ -2369,6 +2369,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "message-all", "message-self", "random-message",
                     "set-global-cooldown", "gcd", "set-skill-cooldown",
                     "set-invulnerable", "start-cast", "cancel-cast", "start-dialogue", "dismount",
+                    "determine-condition",
                     "suicide", "kill-targets", "set-nameplate", "broadcast",
                     "set-variable", "var-set", "var-add", "var-math", "variable-unset",
                     "variable-location-set", "location-unset", "remove-self", "equip", "set-item", "drop-item", "drop-items",
@@ -2414,6 +2415,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
             case "aura", "buff", "debuff", "mythicaura" -> auraMechanic(trimmed);
+            case "determinecondition", "detcond" -> preserveNamedMechanic("determine-condition", trimmed, brace);
             case "auraremove", "aura-remove", "mythicauraremove", "removeaura", "remove-aura",
                     "removebuff", "remove-buff", "removedebuff", "remove-debuff" -> auraRemoveMechanic(trimmed);
             case "damage" -> "damage-target " + (amount == null ? "0" : amount);
@@ -2790,7 +2792,11 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "unsetaudience", "unset-audience" -> "unset-audience";
             default -> null;
         };
-        return mapped == null ? null : withExecutionOptions(mapped + executionSuffix(trimmed), trimmed);
+        if (mapped == null) return null;
+        if (Set.of("determinecondition", "detcond").contains(head)) {
+            return mapped + executionSuffix(trimmed);
+        }
+        return withExecutionOptions(mapped + executionSuffix(trimmed), trimmed);
     }
 
     /**

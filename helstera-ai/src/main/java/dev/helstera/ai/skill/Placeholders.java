@@ -226,6 +226,11 @@ public final class Placeholders {
                     .filter(value -> value instanceof Number || value instanceof CharSequence || value instanceof Boolean)
                     .map(Object::toString).orElse(null);
         }
+        String parameterName = field;
+        String parameter = ctx.skillTree().flatMap(tree -> tree.variable(parameterName))
+                .filter(value -> value instanceof Number || value instanceof CharSequence || value instanceof Boolean)
+                .map(Object::toString).orElse(null);
+        if (parameter != null) return parameter;
         field = normalizeField(field);
         if (field.equals("trigger") || field.equals("name")) return ctx.state();
         if (field.equals("payload")) return ctx.payload().orElse(null);
