@@ -1956,6 +1956,11 @@
       "status": "passed"
     },
     {
+      "id": "coneTargeterFamilies",
+      "status": "passed",
+      "requiredObservationPattern": "spatial-targeter-details .*cone-family-players=true .*cone-family-mobs=true .*cone-family-monsters=true .*cone-family-animals=true .*cone-family-villagers=true .*cone-family-tamed=true .*cone-family-boundaries=true .*cone-family-invalid-rejected=true"
+    },
+    {
       "id": "targeterControlsNegative",
       "status": "passed"
     },

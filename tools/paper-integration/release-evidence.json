@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-cone-targeter-families-strict-20261115-r2",
+    "reportFixtureDirectory": "srv-paper-cone-targeter-families-strict-20261115-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-cone-targeter-families-strict-20261115-r2.json",
+    "reportSha256": "1901080a2d85dff4fd590c9dd6023e24e0ab794502e4e32a8090b3e756318fea",
+    "log": "tools/paper-integration/reports/paper-1.21.1-cone-targeter-families-strict-20261115-r2.log.gz",
+    "logSha256": "5bd234ba04b408118b523fdd95b74f01d9222940bc1dab6a89fa7b802fe75d0e",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-cone-targeter-families-strict-20261115-r2-client-logs.tar.gz",
+    "clientLogSha256": "daa63d9075d281169b9af73fa2a875a2041d34b4ee82243f2371679c4c79b919",
+    "pluginSha256": "69de84ecfd7c94d1f64684a52dc9aa72d77ffbc2b82bd7d0c10be7836b999b08",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-distance-strict-20261115-r1",
     "reportFixtureDirectory": "srv-paper-distance-strict-20261115-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-distance-strict-20261115-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-distance-strict-20261115-r1-client-logs.tar.gz",
     "clientLogSha256": "119a31ae500c68ae0e7d1a3e9ae4f5ae2d058491cc0e91715c707bb80e783686",
     "pluginSha256": "c502db1e811572debaa0fb78d31f466b62a1ae3b542cf159e0a5a4e6653a5929",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-cone-targeter-families-strict-20261115-r2"
   },
   {
     "fixtureId": "srv-paper-audience-targeter-strict-20261115-r1",

@@ -95,6 +95,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private record PlayerStateConditionProbe(boolean flying, boolean sneaking, boolean gliding,
             boolean sprinting, boolean importedSprinting) { }
 
+    private record ConeTargeterEvidence(boolean players, boolean mobs, boolean monsters,
+            boolean animals, boolean villagers, boolean tamed, boolean boundaries,
+            boolean invalidRejected) { }
+
     private HelsteraEventBus bus;
     private ModelValidator validator;
     private ModelRegistryImpl registry;          // 核心模块，始终存在
@@ -14408,6 +14412,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && dev.helstera.api.behavior.Targeters.select(
                         "@nearestplayer", modelInstance,
                         java.util.List.of(ownerProbe), java.util.List.of()).size() == 1;
+                ConeTargeterEvidence coneFamilyEvidence = runConeTargeterSelfTest(
+                        world, zombie, modelInstance, facing, behindTarget, conditionCategoryEntities, ownerProbe);
                 boolean sphereTargeter = !dev.helstera.api.behavior.Targeters.select(
                         "@sphere{radius=4}", modelInstance, java.util.List.of(spatialTarget), java.util.List.of()).isEmpty();
                 boolean ringTargeter = !dev.helstera.api.behavior.Targeters.select(
@@ -15066,6 +15072,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " nearest-villager=" + nearestVillagerTargeter
                         + " nearest-tamed=" + nearestTamedTargeter
                         + " nearest-player=" + nearestPlayerTargeter
+                        + " cone-family-players=" + coneFamilyEvidence.players()
+                        + " cone-family-mobs=" + coneFamilyEvidence.mobs()
+                        + " cone-family-monsters=" + coneFamilyEvidence.monsters()
+                        + " cone-family-animals=" + coneFamilyEvidence.animals()
+                        + " cone-family-villagers=" + coneFamilyEvidence.villagers()
+                        + " cone-family-tamed=" + coneFamilyEvidence.tamed()
+                        + " cone-family-boundaries=" + coneFamilyEvidence.boundaries()
+                        + " cone-family-invalid-rejected=" + coneFamilyEvidence.invalidRejected()
                         + " targeter-controls=" + targeterControls
                         + " targeter-sorts=" + targeterSorts
                         + " targeter-skip-index=" + targeterSkipIndex
@@ -16716,6 +16730,80 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }, getConfig().getLong("debug.self-test-delay-ticks", 40L) + 30L);
+    }
+
+    private ConeTargeterEvidence runConeTargeterSelfTest(
+            org.bukkit.World world,
+            org.bukkit.entity.Zombie source,
+            dev.helstera.api.instance.ModelInstance modelInstance,
+            org.bukkit.util.Vector facing,
+            org.bukkit.entity.LivingEntity behindTarget,
+            java.util.List<org.bukkit.entity.LivingEntity> cleanup,
+            org.bukkit.entity.Player player) {
+        org.bukkit.Location originalPlayerLocation = null;
+        try {
+            if (player != null && player.isOnline() && player.getWorld().equals(source.getWorld())) {
+                originalPlayerLocation = player.getLocation().clone();
+            }
+            var monster = world.spawn(source.getLocation().clone().add(facing.clone().multiply(2)),
+                    org.bukkit.entity.Pillager.class);
+            var animal = world.spawn(source.getLocation().clone().add(facing.clone().multiply(3)),
+                    org.bukkit.entity.Sheep.class);
+            var villager = world.spawn(source.getLocation().clone().add(facing.clone().multiply(4)),
+                    org.bukkit.entity.Villager.class);
+            var tamed = world.spawn(source.getLocation().clone().add(facing.clone().multiply(5)),
+                    org.bukkit.entity.Wolf.class);
+            tamed.setTamed(true);
+            var entities = java.util.List.of(monster, animal, villager, tamed);
+            for (org.bukkit.entity.LivingEntity entity : entities) {
+                if (entity instanceof org.bukkit.entity.Mob mob) mob.setAI(false);
+                entity.setGravity(false);
+                entity.setInvulnerable(true);
+                entity.setSilent(true);
+            }
+            cleanup.addAll(entities);
+            if (player != null && originalPlayerLocation != null) {
+                org.bukkit.Location probeLocation = source.getLocation().clone()
+                        .add(facing.clone().multiply(1));
+                probeLocation.setDirection(facing);
+                player.teleport(probeLocation);
+            }
+            var candidates = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+            if (player != null) candidates.add(player);
+            candidates.addAll(entities);
+            boolean players = player != null && dev.helstera.api.behavior.Targeters.select(
+                    "@PlayersInCone{angle=90;length=6}", modelInstance,
+                    candidates, java.util.List.of()).equals(java.util.List.of(player));
+            boolean mobs = dev.helstera.api.behavior.Targeters.select("@MobsInCone{90;6}", modelInstance,
+                    candidates, java.util.List.of()).equals(entities);
+            boolean monsters = dev.helstera.api.behavior.Targeters.select("@MonstersInCone{angle=90;length=6}", modelInstance,
+                    candidates, java.util.List.of()).equals(java.util.List.of(monster));
+            boolean animals = dev.helstera.api.behavior.Targeters.select("@AnimalsInCone{angle=90;length=6}", modelInstance,
+                    candidates, java.util.List.of()).equals(java.util.List.of(animal, tamed));
+            boolean villagers = dev.helstera.api.behavior.Targeters.select("@VillagersInCone{angle=90;length=6}", modelInstance,
+                    candidates, java.util.List.of()).equals(java.util.List.of(villager));
+            boolean tamedFamily = dev.helstera.api.behavior.Targeters.select("@TamedInCone{angle=90;length=6}", modelInstance,
+                    candidates, java.util.List.of()).equals(java.util.List.of(tamed));
+            boolean boundaries = dev.helstera.api.behavior.Targeters.select("@MonstersInCone{angle=90;length=6}", modelInstance,
+                    java.util.List.of(behindTarget), java.util.List.of()).isEmpty()
+                    && dev.helstera.api.behavior.Targeters.select("@MonstersInCone{angle=90;length=1}", modelInstance,
+                    java.util.List.of(monster), java.util.List.of()).isEmpty();
+            boolean invalidRejected = dev.helstera.api.behavior.Targeters.select("@PlayersInCone{angle=bad;length=6}", modelInstance,
+                    candidates, java.util.List.of()).isEmpty()
+                    && dev.helstera.api.behavior.Targeters.select("@MobsInCone{angle=90;angle=45}", modelInstance,
+                    candidates, java.util.List.of()).isEmpty()
+                    && dev.helstera.api.behavior.Targeters.select("@VillagersInCone{angle=90;unknown=true}", modelInstance,
+                    candidates, java.util.List.of()).isEmpty();
+            return new ConeTargeterEvidence(players, mobs, monsters, animals, villagers,
+                    tamedFamily, boundaries, invalidRejected);
+        } catch (RuntimeException failure) {
+            getLogger().warning("[自检] cone-targeter-families failed: " + failure);
+            return new ConeTargeterEvidence(false, false, false, false, false, false, false, false);
+        } finally {
+            if (player != null && originalPlayerLocation != null && player.isOnline()) {
+                player.teleport(originalPlayerLocation);
+            }
+        }
     }
 
     private static void prepareTargeterWaterProbe(org.bukkit.World world,

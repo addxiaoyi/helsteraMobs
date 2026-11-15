@@ -337,6 +337,7 @@ $probeSpecs = [ordered]@{
     spatialTargetersBoundaries = 'spatial-targeter-details .*sphere-boundary=true .*ring-boundary=true .*cone-boundary=true'
     lineTargeterParameters = 'spatial-targeter-details .*line-named=true .*line-width-boundary=true .*line-length-boundary=true'
     targeterControls = 'spatial-targeter-details .*targeter-controls=true'
+    coneTargeterFamilies = 'spatial-targeter-details .*cone-family-players=true .*cone-family-mobs=true .*cone-family-monsters=true .*cone-family-animals=true .*cone-family-villagers=true .*cone-family-tamed=true .*cone-family-boundaries=true .*cone-family-invalid-rejected=true'
     targeterSorts = 'spatial-targeter-details .*targeter-sorts=true'
     targeterControlsNegative = 'spatial-targeter-details .*targeter-skip-index=true .*targeter-limit-zero=true .*targeter-negative-filter=true .*targeter-invalid-limits=true'
     contextTargeterControls = 'context-targeter-controls order=true radius=true invalid-rejected=true'

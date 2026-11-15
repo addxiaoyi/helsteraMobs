@@ -16,16 +16,17 @@ Audited against the matrix on 2026-11-15:
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-distance-strict-20261115-r1` on Paper 1.21.1-133, with 460
-probes: 441 passed, 19 expected rejections, and zero failed or incomplete. It
-adds production imported `Distance` condition evidence for `d`/`distance` aliases,
-strict and inclusive boundaries, and fail-closed preservation of missing, NaN,
-and percentage inputs. The existing Audience `@Targeter` dispatch and client
-workflow coverage remains in the same full catalog. MythicMobs 5.7.2 has separate focused
-evidence; the full release fixture does not load MythicMobs. See the
-[release evidence index](tools/paper-integration/release-evidence.json),
-[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
-[version matrix](tools/paper-integration/version-matrix.json).
+The latest full release fixture is `srv-paper-cone-targeter-families-strict-20261115-r2` on Paper 1.21.1-133, with 461
+probes: 442 passed, 19 expected rejections, and zero failed or incomplete. It
+adds production cone-family targeter evidence for `@PlayersInCone`,
+`@MobsInCone`, `@MonstersInCone`, `@AnimalsInCone`, `@VillagersInCone`, and
+`@TamedInCone`, including family filtering, geometry boundaries, and malformed
+argument rejection. The same catalog retains the imported `Distance` condition,
+Audience `@Targeter` dispatch, and client workflow coverage. MythicMobs 5.7.2
+has separate focused evidence; the full release fixture does not load MythicMobs.
+See the [release evidence index](tools/paper-integration/release-evidence.json),
+[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version
+matrix](tools/paper-integration/version-matrix.json).
 
 The next targeter contract slice is now implemented in the shared API: spatial
 targeters reject malformed, negative, non-finite, duplicate, and unknown private
@@ -44,13 +45,15 @@ filtering, direct/projectile triggers, and dead or removed entities. A real Pape
 fixture for entity removal and trigger cleanup is still required before this
 boundary can be promoted beyond `mapped-unverified`.
 
-The cone targeter family is expanded in the shared API with
+The cone targeter family is expanded in the shared API and verified in the
+strict release fixture `srv-paper-cone-targeter-families-strict-20261115-r2` with
 `@PlayersInCone`, `@MobsInCone`, `@MonstersInCone`, `@AnimalsInCone`,
-`@VillagersInCone`, and `@TamedInCone`. These aliases apply the existing
-angle/length grammar and geometry after the requested entity-family filter, with
-API coverage for positional, named, mixed-family, and malformed inputs. Paper
-runtime evidence for these aliases remains a follow-up before the Context
-targeters row can move beyond `mapped-unverified`.
+`@VillagersInCone`, and `@TamedInCone`. The aliases apply the existing
+angle/length grammar and geometry after the requested entity-family filter. API
+and Paper coverage include positional, named, mixed-family, boundary, and
+malformed-input paths. This closes the cone-family slice only; the broader
+Context targeters row remains `mapped-unverified` until the complete targeter
+catalog and its parameters have been verified.
 
 ## Completion contract
 

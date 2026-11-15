@@ -78,6 +78,8 @@ class MetaskillConditionTest {
                 """);
 
         var caster = mock(org.bukkit.entity.LivingEntity.class);
+        when(caster.isValid()).thenReturn(true);
+        when(caster.isDead()).thenReturn(false);
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(Optional.of(caster));
