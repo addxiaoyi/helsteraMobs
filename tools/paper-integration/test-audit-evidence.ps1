@@ -104,7 +104,7 @@ try {
     $targetFluidProbe = @($fullReport.probes | Where-Object id -eq 'targetFluidConditions')
     if ($targetFluidProbe.Count -ne 1) { throw 'Synthetic release report must contain targetFluidConditions.' }
     $targetFluidProbe[0].observations = @(
-        'target-fluids-delayed imported=true water=true lava=true invalid-preserved=true restored=true passed=true')
+        'target-fluids-delayed imported=true water=true lava=true in-liquid-water=true in-liquid-lava=true in-liquid-waterlogged=true in-liquid-dry=true invalid-preserved=true restored=true passed=true')
     $fullReport.expectedProbeIds += 'boatOptionsImported'
     $fullReport.probes += [pscustomobject]@{
         id = 'boatOptionsImported'; status = 'passed'; observations = @('boat-options-imported result=true imported=true boat-type=SPRUCE control-type=OAK chest-type=BAMBOO wrong-type-preserved=true invalid-preserved=true conflict-preserved=true')

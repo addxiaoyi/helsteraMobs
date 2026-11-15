@@ -654,27 +654,27 @@ public final class SkillExtras {
         String value = raw.trim();
         for (String operator : List.of(">=", "<=", ">", "<")) {
             if (value.startsWith(operator)) {
-                if (!finiteNonNegative(value.substring(operator.length()))) {
-                    throw new IllegalArgumentException("count range bound must be finite and non-negative: " + raw);
+                if (!finiteNonNegativeInteger(value.substring(operator.length()))) {
+                    throw new IllegalArgumentException("count range bound must be a finite non-negative integer: " + raw);
                 }
                 return range;
             }
         }
         int to = value.toLowerCase(Locale.ROOT).indexOf("to");
         if (to > 0) {
-            if (!finiteNonNegative(value.substring(0, to))
-                    || !finiteNonNegative(value.substring(to + 2))) {
-                throw new IllegalArgumentException("count range bounds must be finite and non-negative: " + raw);
+            if (!finiteNonNegativeInteger(value.substring(0, to))
+                    || !finiteNonNegativeInteger(value.substring(to + 2))) {
+                throw new IllegalArgumentException("count range bounds must be finite non-negative integers: " + raw);
             }
         } else {
             int separator = value.indexOf('-', 1);
             if (separator > 0) {
-                if (!finiteNonNegative(value.substring(0, separator))
-                        || !finiteNonNegative(value.substring(separator + 1))) {
-                    throw new IllegalArgumentException("count range bounds must be finite and non-negative: " + raw);
+                if (!finiteNonNegativeInteger(value.substring(0, separator))
+                        || !finiteNonNegativeInteger(value.substring(separator + 1))) {
+                    throw new IllegalArgumentException("count range bounds must be finite non-negative integers: " + raw);
                 }
-            } else if (!finiteNonNegative(value)) {
-                throw new IllegalArgumentException("count must be finite and non-negative: " + raw);
+            } else if (!finiteNonNegativeInteger(value)) {
+                throw new IllegalArgumentException("count must be a finite non-negative integer: " + raw);
             }
         }
         return range;
@@ -694,6 +694,16 @@ public final class SkillExtras {
         try {
             double value = Double.parseDouble(raw.trim());
             return Double.isFinite(value) && value >= 0;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean finiteNonNegativeInteger(String raw) {
+        try {
+            double value = Double.parseDouble(raw.trim());
+            return Double.isFinite(value) && value >= 0 && value <= Integer.MAX_VALUE
+                    && value == Math.rint(value);
         } catch (NumberFormatException ignored) {
             return false;
         }
@@ -1864,6 +1874,100 @@ public final class SkillExtras {
         return matchesBlockType(location.getBlock().getType(), wanted);
     }
 
+    private static boolean entityOrLocationInLiquid(BehaviorContext ctx) {
+        Entity entity = ctx == null ? null : ctx.targetEntity().orElse(null);
+        if (entity == null && ctx != null && ctx.instanceValid()) {
+            entity = ctx.instance().baseEntity().orElse(null);
+        }
+        if (entity != null) {
+            try {
+                if (entity.isInWater() || entity.isInLava()) return true;
+            } catch (Throwable ignored) {
+                SkillFaults.swallow("SkillExtras#entityOrLocationInLiquid");
+            }
+            try {
+                org.bukkit.util.BoundingBox box = entity.getBoundingBox();
+                org.bukkit.World world = entity.getWorld();
+                if (box != null && world != null
+                        && liquidIntersects(world, box.getMinX(), box.getMinY(), box.getMinZ(),
+                        box.getMaxX(), box.getMaxY(), box.getMaxZ())) return true;
+            } catch (Throwable ignored) {
+                SkillFaults.swallow("SkillExtras#entityOrLocationInLiquid");
+            }
+        }
+        Location location = conditionLocation(ctx);
+        if (location == null || location.getWorld() == null) return false;
+        try {
+            return isLiquidBlock(location.getBlock());
+        } catch (Throwable ignored) {
+            SkillFaults.swallow("SkillExtras#entityOrLocationInLiquid");
+            return false;
+        }
+    }
+
+    private static boolean liquidIntersects(org.bukkit.World world,
+                                           double minX, double minY, double minZ,
+                                           double maxX, double maxY, double maxZ) {
+        if (!Double.isFinite(minX) || !Double.isFinite(minY) || !Double.isFinite(minZ)
+                || !Double.isFinite(maxX) || !Double.isFinite(maxY) || !Double.isFinite(maxZ)
+                || maxX <= minX || maxY <= minY || maxZ <= minZ) return false;
+        double floorX0 = Math.floor(minX);
+        double floorY0 = Math.floor(minY);
+        double floorZ0 = Math.floor(minZ);
+        double floorX1 = Math.floor(Math.nextDown(maxX));
+        double floorY1 = Math.floor(Math.nextDown(maxY));
+        double floorZ1 = Math.floor(Math.nextDown(maxZ));
+        if (floorX0 < Integer.MIN_VALUE || floorX0 > Integer.MAX_VALUE
+                || floorY0 < Integer.MIN_VALUE || floorY0 > Integer.MAX_VALUE
+                || floorZ0 < Integer.MIN_VALUE || floorZ0 > Integer.MAX_VALUE
+                || floorX1 < Integer.MIN_VALUE || floorX1 > Integer.MAX_VALUE
+                || floorY1 < Integer.MIN_VALUE || floorY1 > Integer.MAX_VALUE
+                || floorZ1 < Integer.MIN_VALUE || floorZ1 > Integer.MAX_VALUE) {
+            return false;
+        }
+        long x0 = (long) floorX0;
+        long y0 = (long) floorY0;
+        long z0 = (long) floorZ0;
+        long x1 = (long) floorX1;
+        long y1 = (long) floorY1;
+        long z1 = (long) floorZ1;
+        int minHeight = world.getMinHeight();
+        int maxHeight = world.getMaxHeight();
+        y0 = Math.max(y0, minHeight);
+        y1 = Math.min(y1, (long) maxHeight - 1L);
+        if (y1 < y0) return false;
+
+        long spanX = x1 - x0 + 1L;
+        long spanY = y1 - y0 + 1L;
+        long spanZ = z1 - z0 + 1L;
+        long blockCount = 1L;
+        for (long span : new long[]{spanX, spanY, spanZ}) {
+            if (span <= 0 || span > 4096 / blockCount) return false;
+            blockCount *= span;
+        }
+        for (long x = x0; x <= x1; x++) {
+            for (long y = y0; y <= y1; y++) {
+                for (long z = z0; z <= z1; z++) {
+                    try {
+                        if (isLiquidBlock(world.getBlockAt((int) x, (int) y, (int) z))) return true;
+                    } catch (Throwable ignored) {
+                        SkillFaults.swallow("SkillExtras#liquidIntersects");
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    private static boolean isLiquidBlock(org.bukkit.block.Block block) {
+        if (block == null) return false;
+        Material material = block.getType();
+        if (material == Material.BUBBLE_COLUMN || block.isLiquid()) return true;
+        org.bukkit.block.data.BlockData data = block.getBlockData();
+        return data instanceof org.bukkit.block.data.Waterlogged waterlogged
+                && waterlogged.isWaterlogged();
+    }
+
     private static boolean matchesBlockType(Material actual, String wanted) {
         Set<Material> materials = resolveBlockTypes(wanted);
         return actual != null && materials != null && materials.contains(actual);
@@ -2344,6 +2448,12 @@ public final class SkillExtras {
                     } catch (Throwable t) {
                         return false;
                     }
+                }),
+                Map.entry("in-liquid", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && !a.isEmpty()) {
+                        throw new IllegalArgumentException("in-liquid takes no arguments");
+                    }
+                    return SkillExtras::entityOrLocationInLiquid;
                 }),
                 Map.entry("standing", (SkillCatalog.ConditionFactory) a -> {
                     double tol = num(a, 0, 0.1);

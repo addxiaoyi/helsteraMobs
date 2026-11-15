@@ -178,7 +178,7 @@ public final class MmConditions {
             "targetissaddled", "targetispowered", "targetischarged",
             "issneaking", "crouching", "issprinting", "sprinting", "isflying", "flying",
             "isblocking", "blocking", "isgliding", "gliding", "isswimming", "swimming",
-            "inwater", "inlava", "onfire", "isburning", "burning", "inair", "airborne",
+            "inwater", "inlava", "inliquid", "onfire", "isburning", "burning", "inair", "airborne",
             "targetissneaking", "targetissprinting", "targetisflying", "targetisblocking",
             "targetisgliding", "targetisswimming", "targetinwater", "targetinlava",
             "targetonfire", "targetburning", "targetinair", "targetairborne",
@@ -900,6 +900,7 @@ public final class MmConditions {
         if ("isalive".equals(name)) return new Mapped("is-alive", true);
         if ("isvalid".equals(name)) return new Mapped("is-valid", true);
         if ("onground".equals(name) || "grounded".equals(name)) return new Mapped("on-ground", true);
+        if ("inliquid".equals(name)) return new Mapped("in-liquid", true);
         if ("inwater".equals(name)) return new Mapped("in-water", true);
         if ("inlava".equals(name)) return new Mapped("in-lava", true);
         if ("onfire".equals(name) || "isburning".equals(name)) {

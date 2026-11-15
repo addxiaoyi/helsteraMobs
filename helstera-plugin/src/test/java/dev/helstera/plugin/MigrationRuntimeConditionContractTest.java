@@ -408,6 +408,37 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported InLiquid reaches the shared liquid evaluator")
+    void importedInLiquidReachesRuntime() {
+        var target = mock(org.bukkit.entity.Zombie.class);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, target, 1.0, -1, 0, "IDLE");
+        var missingTarget = dev.helstera.api.behavior.BehaviorContext.of(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE");
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+
+        var mapped = dev.helstera.migration.importer.MmConditions.translate("?inLiquid{}");
+        assertTrue(mapped.translated());
+        assertEquals("in-liquid", mapped.condition());
+        String key = service.bindCondition(mapped.condition());
+        assertNotNull(key);
+        when(target.isInWater()).thenReturn(true);
+        assertTrue(registry.testCondition(key, context));
+        when(target.isInWater()).thenReturn(false);
+        when(target.isInLava()).thenReturn(true);
+        assertTrue(registry.testCondition(key, context));
+        when(target.isInLava()).thenReturn(false);
+        assertFalse(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(key, missingTarget));
+
+        var invalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?inLiquid{unknown=true}");
+        assertFalse(invalid.translated());
+        assertEquals("?inLiquid{unknown=true}", invalid.condition());
+    }
+
+    @Test
     @DisplayName("imported execution-audience aliases and per-target inline filters reach runtime")
     void importedExecutionAudienceConditionsReachRuntime() {
         var member = mock(org.bukkit.entity.Player.class);

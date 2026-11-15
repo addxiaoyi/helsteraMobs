@@ -196,6 +196,18 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("InLiquid maps to the runtime liquid condition and rejects arguments")
+    void inLiquidIsParameterless() {
+        for (String source : List.of("?inLiquid", "?inLiquid{}", "?in-liquid")) {
+            assertTrue(translated(source), source);
+            assertEquals("in-liquid", t(source), source);
+        }
+        for (String source : List.of("?inLiquid{unknown=true}", "?inLiquid{value=true}")) {
+            assertUntranslatedPreserved(source);
+        }
+    }
+
+    @Test
     @DisplayName("无参条件别名拒绝会被静默忽略的参数")
     void parameterlessConditionAliasesRejectUnknownArguments() {
         for (String name : List.of(

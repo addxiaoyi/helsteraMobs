@@ -371,7 +371,7 @@ public final class SkillService {
                 "target-is-saddled", "target-is-powered", "is-sneaking", "is-sprinting", "is-flying",
                 "is-climbing", "is-invisible", "is-glowing", "falling", "target-is-climbing",
                 "target-is-invisible", "target-is-glowing", "target-is-frozen",
-                "is-blocking", "is-gliding", "is-swimming", "in-water", "in-lava", "on-fire", "in-air",
+                "is-blocking", "is-gliding", "is-swimming", "in-water", "in-lava", "in-liquid", "on-fire", "in-air",
                 "target-is-sneaking", "target-is-sprinting", "target-is-flying", "target-is-blocking",
                 "target-is-gliding", "target-is-swimming", "target-in-water", "target-in-lava",
                 "target-on-fire", "target-in-air", "target-is-player", "target-is-living", "target-is-mob",
@@ -2156,6 +2156,7 @@ public final class SkillService {
             case "blocking", "isblocking", "blockingis" -> "is-blocking";
             case "facingtarget", "facing-target" -> "facing-target";
             case "onground", "isonground", "is-on-ground" -> "on-ground";
+            case "inliquid", "in-liquid", "is-in-liquid" -> "in-liquid";
             case "inwater", "isinwater", "is-in-water" -> "in-water";
             case "inlava", "isinlava", "is-in-lava" -> "in-lava";
             case "onfire", "isonfire", "is-on-fire", "isburning" -> "on-fire";

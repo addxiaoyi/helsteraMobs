@@ -4357,7 +4357,7 @@ class SkillServiceTest {
     void parameterlessMovementAndEnvironmentConditionsRejectArguments() {
         SkillService service = service();
         for (String name : List.of("is-sneaking", "is-sprinting", "is-flying", "is-blocking",
-                "is-gliding", "is-swimming", "in-water", "in-lava", "on-fire", "in-air",
+                "is-gliding", "is-swimming", "in-water", "in-lava", "in-liquid", "on-fire", "in-air",
                 "target-is-sneaking", "target-is-sprinting", "target-is-flying", "target-is-blocking",
                 "target-is-gliding", "target-is-swimming", "target-in-water", "target-in-lava",
                 "target-on-fire", "target-in-air")) {

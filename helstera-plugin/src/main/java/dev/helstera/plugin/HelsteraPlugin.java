@@ -24261,48 +24261,119 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var headState = head.getState();
         var importedWater = dev.helstera.migration.importer.MmConditions.translate("?targetInWater");
         var importedLava = dev.helstera.migration.importer.MmConditions.translate("?targetInLava");
+        var importedInLiquid = dev.helstera.migration.importer.MmConditions.translate("?inLiquid");
         var invalidWater = dev.helstera.migration.importer.MmConditions.translate(
                 "?targetInWater{unknown=true}");
         var invalidLava = dev.helstera.migration.importer.MmConditions.translate(
                 "?targetInLava{unknown=true}");
+        var invalidInLiquid = dev.helstera.migration.importer.MmConditions.translate(
+                "?inLiquid{unknown=true}");
         boolean imported = importedWater.translated()
                 && "target-in-water".equals(importedWater.condition())
                 && importedLava.translated()
-                && "target-in-lava".equals(importedLava.condition());
+                && "target-in-lava".equals(importedLava.condition())
+                && importedInLiquid.translated()
+                && "in-liquid".equals(importedInLiquid.condition());
         boolean invalidPreserved = !invalidWater.translated()
                 && "?targetInWater{unknown=true}".equals(invalidWater.condition())
                 && !invalidLava.translated()
-                && "?targetInLava{unknown=true}".equals(invalidLava.condition());
+                && "?targetInLava{unknown=true}".equals(invalidLava.condition())
+                && !invalidInLiquid.translated()
+                && "?inLiquid{unknown=true}".equals(invalidInLiquid.condition());
         String waterKey = imported ? skills.bindCondition(importedWater.condition()) : null;
         String lavaKey = imported ? skills.bindCondition(importedLava.condition()) : null;
+        String inLiquidKey = imported ? skills.bindCondition(importedInLiquid.condition()) : null;
         feet.setType(org.bukkit.Material.WATER, false);
         head.setType(org.bukkit.Material.WATER, false);
         getServer().getScheduler().runTaskLater(this, () -> {
             boolean water = false;
+            boolean inLiquidWater = false;
             try {
                 water = waterKey != null && behaviors.testCondition(waterKey, context);
+                inLiquidWater = inLiquidKey != null && behaviors.testCondition(inLiquidKey, context);
                 feet.setType(org.bukkit.Material.LAVA, false);
                 head.setType(org.bukkit.Material.LAVA, false);
                 boolean waterObserved = water;
+                boolean inLiquidWaterObserved = inLiquidWater;
                 getServer().getScheduler().runTaskLater(this, () -> {
                     boolean lava = false;
+                    boolean inLiquidLava = false;
+                    boolean inLiquidWaterlogged = false;
+                    boolean[] fluidObservations = {false, false, false};
                     try {
                         lava = lavaKey != null && behaviors.testCondition(lavaKey, context);
+                        inLiquidLava = inLiquidKey != null && behaviors.testCondition(inLiquidKey, context);
+
+                        var waterloggedData = org.bukkit.Bukkit.createBlockData(
+                                "minecraft:oak_trapdoor[waterlogged=true]");
+                        feet.setBlockData(waterloggedData, false);
+                        head.setBlockData(waterloggedData.clone(), false);
+                        inLiquidWaterlogged = inLiquidKey != null
+                                && behaviors.testCondition(inLiquidKey, context);
+                        fluidObservations[0] = lava;
+                        fluidObservations[1] = inLiquidLava;
+                        fluidObservations[2] = inLiquidWaterlogged;
                     } finally {
                         boolean feetRestored = feetState.update(true, false);
                         boolean headRestored = headState.update(true, false);
-                        boolean restored = feetRestored && headRestored
-                                && feet.getType() == feetState.getType()
-                                && head.getType() == headState.getType();
-                        if (instance != null && instances() != null) {
-                            instances().despawn(instance.instanceId());
+                        var dryAreaStates = new ArrayList<org.bukkit.block.BlockState>();
+                        Location dryLocation = origin.clone().add(72, 0, 0);
+                        dryLocation.setY(world.getMaxHeight() - 8.0);
+                        boolean teleported = false;
+                        try {
+                            int centerX = dryLocation.getBlockX();
+                            int centerY = dryLocation.getBlockY();
+                            int centerZ = dryLocation.getBlockZ();
+                            for (int x = centerX - 1; x <= centerX + 1; x++) {
+                                for (int y = centerY; y <= centerY + 3; y++) {
+                                    for (int z = centerZ - 1; z <= centerZ + 1; z++) {
+                                        var block = world.getBlockAt(x, y, z);
+                                        dryAreaStates.add(block.getState());
+                                        block.setType(org.bukkit.Material.AIR, false);
+                                    }
+                                }
+                            }
+                            teleported = target.teleport(dryLocation);
+                        } catch (Throwable ignored) {
+                            // The delayed observation below will fail closed if teleport failed.
                         }
-                        if (target.isValid()) target.remove();
-                        getLogger().info("target-fluids-delayed imported=" + imported
-                                + " water=" + waterObserved + " lava=" + lava
-                                + " invalid-preserved=" + invalidPreserved
-                                + " restored=" + restored + " passed="
-                                + (imported && waterObserved && lava && invalidPreserved && restored));
+                        final boolean teleportedObserved = teleported;
+                        getServer().getScheduler().runTaskLater(this, () -> {
+                            boolean inLiquidDry = false;
+                            try {
+                                inLiquidDry = teleportedObserved && inLiquidKey != null
+                                        && !behaviors.testCondition(inLiquidKey, context);
+                            } catch (Throwable ignored) {
+                                inLiquidDry = false;
+                            }
+                            boolean dryAreaRestored = true;
+                            for (var state : dryAreaStates) {
+                                if (!state.update(true, false)) dryAreaRestored = false;
+                            }
+                            boolean restored = feetRestored && headRestored
+                                    && feet.getType() == feetState.getType()
+                                    && head.getType() == headState.getType()
+                                    && dryAreaRestored;
+                            if (instance != null && instances() != null) {
+                                instances().despawn(instance.instanceId());
+                            }
+                            if (target.isValid()) target.remove();
+                            boolean passed = imported && waterObserved && fluidObservations[0]
+                                    && inLiquidWaterObserved && fluidObservations[1]
+                                    && fluidObservations[2] && inLiquidDry
+                                    && invalidPreserved && restored;
+                            getLogger().info("target-fluids-delayed imported=" + imported
+                                    + " water=" + waterObserved + " lava=" + fluidObservations[0]
+                                    + " in-liquid-water=" + inLiquidWaterObserved
+                                    + " in-liquid-lava=" + fluidObservations[1]
+                                    + " in-liquid-waterlogged=" + fluidObservations[2]
+                                    + " in-liquid-dry=" + inLiquidDry
+                                    + " invalid-preserved=" + invalidPreserved
+                                    + " restored=" + restored + " passed=" + passed
+                                    + " dry-teleported=" + teleportedObserved
+                                    + " dry-location=" + dryLocation.getBlockX() + ","
+                                    + dryLocation.getBlockY() + "," + dryLocation.getBlockZ());
+                        }, 1L);
                     }
                 }, 1L);
             } catch (Throwable failure) {
@@ -24316,7 +24387,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
                 if (target.isValid()) target.remove();
                 getLogger().warning("target-fluids-delayed imported=" + imported
-                        + " water=false lava=false invalid-preserved=" + invalidPreserved
+                        + " water=false lava=false in-liquid-water=false in-liquid-lava=false"
+                        + " in-liquid-waterlogged=false in-liquid-dry=false"
+                        + " invalid-preserved=" + invalidPreserved
                         + " restored=" + restored + " error="
                         + failure.getClass().getSimpleName() + " passed=false");
             }

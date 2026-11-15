@@ -1934,6 +1934,39 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("InLiquid reads water, lava, waterlogged blocks, and fails closed")
+    void officialInLiquidConditionReadsLiquidState() {
+        var condition = extraFactory("in-liquid").create(List.of());
+        assertFalse(condition.test(ctx()), "missing entity and location must fail closed");
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("in-liquid").create(List.of("unknown=true")));
+
+        var entity = mock(LivingEntity.class);
+        var entityContext = BehaviorContext.of(null, entity, 1.0, -1, 0, "IDLE");
+        when(entity.isInWater()).thenReturn(true);
+        assertTrue(condition.test(entityContext));
+        when(entity.isInWater()).thenReturn(false);
+        when(entity.isInLava()).thenReturn(true);
+        assertTrue(condition.test(entityContext));
+        when(entity.isInLava()).thenReturn(false);
+        assertFalse(condition.test(entityContext));
+
+        World world = mock(World.class);
+        Block block = mock(Block.class);
+        var waterlogged = mock(org.bukkit.block.data.Waterlogged.class);
+        when(block.getType()).thenReturn(org.bukkit.Material.OAK_TRAPDOOR);
+        when(block.getBlockData()).thenReturn(waterlogged);
+        when(waterlogged.isWaterlogged()).thenReturn(true);
+        when(world.getBlockAt(any(Location.class))).thenReturn(block);
+        var locationContext = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "IDLE", null, null, List.of(), new Location(world, 0.5, 64, 0.5));
+        assertTrue(condition.test(locationContext));
+
+        when(waterlogged.isWaterlogged()).thenReturn(false);
+        assertFalse(condition.test(locationContext));
+    }
+
+    @Test
     @DisplayName("creeper primed condition matches the live Bukkit state and fails closed without a creeper")
     void officialCreeperPrimedConditionIsRegistered() {
         var condition = extraFactory("is-creeper-primed").create(List.of());

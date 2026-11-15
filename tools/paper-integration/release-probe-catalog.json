@@ -1912,7 +1912,7 @@
     {
       "id": "targetFluidConditions",
       "status": "passed",
-      "requiredObservationPattern": "target-fluids-delayed imported=true water=true lava=true invalid-preserved=true restored=true passed=true"
+      "requiredObservationPattern": "target-fluids-delayed imported=true water=true lava=true in-liquid-water=true in-liquid-lava=true in-liquid-waterlogged=true in-liquid-dry=true invalid-preserved=true restored=true passed=true"
     },
     {
       "id": "targetHasTagCondition",
