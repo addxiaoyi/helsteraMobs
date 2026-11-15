@@ -224,7 +224,7 @@ public final class SkillExtras {
     private static volatile MythicMobLookup mythicMobLookup;
     @FunctionalInterface
     public interface MythicMobTypeMatcher {
-        boolean matches(Entity entity, String mobType);
+        boolean matches(Entity entity, String mobType, boolean exactMatch);
     }
 
     private static volatile MythicMobTypeMatcher mythicMobTypeMatcher;
@@ -3883,14 +3883,33 @@ public final class SkillExtras {
                     final String expected = wanted;
                     final boolean exactMatch = exact;
                     return ctx -> {
-                        if (ctx == null || !ctx.instanceValid() || expected.isBlank()) return false;
-                        String modelId = ctx.instance().model().id();
+                        LivingEntity entity = conditionEntity(ctx);
+                        if (entity == null || expected.isBlank()) return false;
+                        String modelId = null;
+                        if (ctx.instanceValid()
+                                && ctx.instance().baseEntity().map(base -> base == entity).orElse(false)) {
+                            try {
+                                modelId = ctx.instance().model().id();
+                            } catch (RuntimeException ignored) {
+                                modelId = null;
+                            }
+                        } else {
+                            modelId = dev.helstera.api.behavior.ManagedMobIdentity.mobId(entity);
+                        }
                         for (String raw : expected.split(",")) {
                             String value = raw.trim();
                             if (value.isBlank()) continue;
-                            if (exactMatch ? modelId.equalsIgnoreCase(value)
-                                    : modelId.toLowerCase(Locale.ROOT).contains(value.toLowerCase(Locale.ROOT))) {
+                            if (modelId != null && (exactMatch ? modelId.equalsIgnoreCase(value)
+                                    : modelId.toLowerCase(Locale.ROOT).contains(value.toLowerCase(Locale.ROOT)))) {
                                 return true;
+                            }
+                            MythicMobTypeMatcher matcher = mythicMobTypeMatcher;
+                            if (matcher != null) {
+                                try {
+                                    if (matcher.matches(entity, value, exactMatch)) return true;
+                                } catch (Throwable ignored) {
+                                    SkillFaults.swallow("SkillExtras#mythicMobType");
+                                }
                             }
                         }
                         return false;
@@ -8698,7 +8717,7 @@ public final class SkillExtras {
             MythicMobTypeMatcher matcher = mythicMobTypeMatcher;
             if (matcher != null) {
                 try {
-                    if (matcher.matches(entity, type)) return true;
+                    if (matcher.matches(entity, type, true)) return true;
                 } catch (Throwable ignored) {
                     // An unavailable optional integration must never broaden a type filter.
                 }

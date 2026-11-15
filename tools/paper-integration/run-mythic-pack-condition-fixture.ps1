@@ -1,6 +1,6 @@
 param(
     [ValidatePattern('^r[1-9][0-9]*$')]
-    [string]$EvidenceRevision = 'r7',
+    [string]$EvidenceRevision = 'r11',
     [string]$PaperJarPath = '',
     [string]$MythicMobsJarPath = ''
 )
@@ -126,13 +126,13 @@ try {
         throw 'Paper or MythicMobs did not finish startup; inspect the retained fixture logs.'
     }
     $probeDeadline = [DateTime]::UtcNow.AddSeconds(30)
-    $probePattern = 'mythic-pack-condition actual-version=2\.4\.1 .*premium-api-available=true .*premium-arguments-preserved=true premium-runtime-arguments-rejected=true mythic-mob-api-available=true mythic-mob-oracle-positive=true mythic-mob-oracle-negative=true mythic-mob-runtime-positive=true mythic-mob-runtime-negative=true mythic-mob-imported-positive=true mythic-mob-imported-negative=true ismm-alias-positive=true ismm-alias-negative=true mythic-mob-radius-type-positive=true mythic-mob-radius-type-negative=true mythic-mob-imported-radius-type-positive=true mythic-mob-imported-radius-type-negative=true mythic-mob-radius-type-list-positive=true mythic-mob-imported-radius-type-list-positive=true mythic-mob-radius-type-case-positive=true mythic-mob-imported-radius-type-case-positive=true passed=true'
+    $probePattern = 'mythic-pack-condition actual-version=2\.4\.1 .*premium-api-available=true .*premium-arguments-preserved=true premium-runtime-arguments-rejected=true mythic-mob-api-available=true mythic-mob-oracle-positive=true mythic-mob-oracle-negative=true mythic-mob-runtime-positive=true mythic-mob-runtime-negative=true mythic-mob-imported-positive=true mythic-mob-imported-negative=true ismm-alias-positive=true ismm-alias-negative=true mythic-mob-radius-type-positive=true mythic-mob-radius-type-negative=true mythic-mob-imported-radius-type-positive=true mythic-mob-imported-radius-type-negative=true mythic-mob-radius-type-list-positive=true mythic-mob-imported-radius-type-list-positive=true mythic-mob-radius-type-case-positive=true mythic-mob-imported-radius-type-case-positive=true mythic-mob-type-exact-positive=true mythic-mob-type-exact-substring-rejected=true mythic-mob-type-contains-positive=true mythic-mob-type-contains-negative=true mythic-mob-type-imported-exact-positive=true mythic-mob-type-imported-exact-substring-rejected=true mythic-mob-type-imported-contains-positive=true mythic-mob-type-imported-contains-negative=true passed=true'
     while ([DateTime]::UtcNow -lt $probeDeadline -and -not $process.HasExited -and
             -not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
         Start-Sleep -Milliseconds 250
     }
     if (-not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
-        throw 'The imported Mythic pack condition Paper probe did not pass; inspect the retained fixture logs.'
+        throw 'The Mythic pack/type condition Paper probe did not pass; inspect the retained fixture logs.'
     }
     $process.StandardInput.WriteLine('stop')
     $process.StandardInput.Flush()
@@ -190,9 +190,9 @@ $report = [ordered]@{
     externalPluginSha256 = $actualMythicSha256
     externalPluginSha512 = $actualMythicSha512
     log = 'logs/latest.log'
-    expectedProbeIds = @('importedMythicPackCondition')
+    expectedProbeIds = @('mythicMobTypeAndPackConditions')
     probes = @([ordered]@{
-        id = 'importedMythicPackCondition'
+        id = 'mythicMobTypeAndPackConditions'
         status = 'passed'
         observations = @($observationMatch.Groups[1].Value)
     })

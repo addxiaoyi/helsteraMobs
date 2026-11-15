@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-condition-release-strict-20261115-r1",
+    "reportFixtureDirectory": "srv-paper-condition-release-strict-20261115-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-condition-release-strict-20261115-r1.json",
+    "reportSha256": "9ea7a53819bfca4a6f8a3cd87c2c0d72ccbd9822ef6ada724afbd862312534b9",
+    "log": "tools/paper-integration/reports/paper-1.21.1-condition-release-strict-20261115-r1.log.gz",
+    "logSha256": "83d1aaecf337636db5b5d94f9b0c7105be6aed1c058d32e6f6062125735226e7",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-condition-release-strict-20261115-r1-client-logs.tar.gz",
+    "clientLogSha256": "362184aa9b7fb32f4dabe98ccb212d2c92f77911c57408927e898d3d0f12e9e5",
+    "pluginSha256": "f594868ee12593c131f60a55ca2c1ea5ff58fe5431859124dcd68e3616efa0e0",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-radius-conditions-strict-20261115-r1",
     "reportFixtureDirectory": "srv-paper-radius-conditions-strict-20261115-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261115-r1.json",
@@ -9,7 +21,19 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261115-r1-client-logs.tar.gz",
     "clientLogSha256": "41937f00db6c27ae3e6ebabcda94a8d30c993fdd5cea175e88614adc2b8ac9cb",
     "pluginSha256": "06cbae140d11c16795b53ecb15d3730538e73a1e247433b3b90834ede0485444",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-condition-release-strict-20261115-r1"
+  },
+  {
+    "fixtureId": "srv-paper-mythic-pack-strict-20261115-r10",
+    "reportFixtureDirectory": "srv-paper-mythic-pack-strict-20261115-r10",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r10.json",
+    "reportSha256": "4196bdf98989810ae09345718fd697bceebfb5552a0474656eaaf4e302f558bb",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r10.log.gz",
+    "logSha256": "40a3d7c430aa0e30384a4a5f9b2fe29c6125bcef4dadb86a2f324a4924f67084",
+    "pluginSha256": "f594868ee12593c131f60a55ca2c1ea5ff58fe5431859124dcd68e3616efa0e0",
+    "fullReleaseCatalog": false
   },
   {
     "fixtureId": "srv-paper-has-item-matcher-strict-20261115-r1",

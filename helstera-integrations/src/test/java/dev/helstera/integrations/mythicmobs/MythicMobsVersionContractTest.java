@@ -52,6 +52,11 @@ class MythicMobsVersionContractTest {
 
         assertTrue(adapter.isMythicMobType(mythicMob, "ForestGuardian"));
         assertTrue(adapter.isMythicMobType(mythicMob, "forestguardian"));
+        assertFalse(adapter.isMythicMobType(mythicMob, "Guardian"),
+                "exact matching remains the default");
+        assertTrue(adapter.isMythicMobType(mythicMob, "Guardian", false));
+        assertTrue(adapter.isMythicMobType(mythicMob, "guardian", false));
+        assertFalse(adapter.isMythicMobType(mythicMob, "Cave", false));
         assertFalse(adapter.isMythicMobType(mythicMob, "CaveWraith"));
         assertFalse(adapter.isMythicMobType(entityProxy(), "ForestGuardian"));
         assertFalse(adapter.isMythicMobType(null, "ForestGuardian"));

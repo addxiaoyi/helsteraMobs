@@ -184,8 +184,13 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         }
     }
 
-    /** Matches the exact Mythic internal name; unavailable APIs and lookup failures fail closed. */
+    /** Matches an exact Mythic internal name; unavailable APIs and lookup failures fail closed. */
     public boolean isMythicMobType(Entity entity, String expectedInternalName) {
+        return isMythicMobType(entity, expectedInternalName, true);
+    }
+
+    /** Applies MythicMobType's exactmatch flag to a live Mythic internal name. */
+    public boolean isMythicMobType(Entity entity, String expectedInternalName, boolean exactMatch) {
         if (entity == null || expectedInternalName == null || expectedInternalName.isBlank()
                 || mythicApiHelper == null || getMythicMobInstanceMethod == null
                 || (mythicPlugin != null && !mythicPlugin.isEnabled())) return false;
@@ -196,7 +201,10 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
             Object mythicType = activeMob.getClass().getMethod("getType").invoke(activeMob);
             if (mythicType == null) return false;
             Object internalName = mythicType.getClass().getMethod("getInternalName").invoke(mythicType);
-            return internalName instanceof String value && value.equalsIgnoreCase(expectedInternalName);
+            if (!(internalName instanceof String value)) return false;
+            return exactMatch ? value.equalsIgnoreCase(expectedInternalName)
+                    : value.toLowerCase(java.util.Locale.ROOT)
+                            .contains(expectedInternalName.toLowerCase(java.util.Locale.ROOT));
         } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
             return false;
         }

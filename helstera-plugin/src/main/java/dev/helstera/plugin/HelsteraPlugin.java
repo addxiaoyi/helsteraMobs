@@ -616,8 +616,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     .map(MythicMobsAdapter.class::cast).orElse(null);
             dev.helstera.ai.skill.SkillExtras.mythicMobLookup(entity ->
                     mythicAdapter != null && mythicAdapter.isMythicMob(entity));
-            dev.helstera.ai.skill.SkillExtras.mythicMobTypeMatcher((entity, type) ->
-                    mythicAdapter != null && mythicAdapter.isMythicMobType(entity, type));
+            dev.helstera.ai.skill.SkillExtras.mythicMobTypeMatcher((entity, type, exactMatch) ->
+                    mythicAdapter != null && mythicAdapter.isMythicMobType(entity, type, exactMatch));
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);
         }
@@ -1183,6 +1183,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean mythicMobImportedRadiusTypeListPositive = false;
             boolean mythicMobRadiusTypeCasePositive = false;
             boolean mythicMobImportedRadiusTypeCasePositive = false;
+            boolean mythicMobTypeExactPositive = false;
+            boolean mythicMobTypeExactSubstringRejected = false;
+            boolean mythicMobTypeContainsPositive = false;
+            boolean mythicMobTypeContainsNegative = false;
+            boolean mythicMobTypeImportedExactPositive = false;
+            boolean mythicMobTypeImportedExactSubstringRejected = false;
+            boolean mythicMobTypeImportedContainsPositive = false;
+            boolean mythicMobTypeImportedContainsNegative = false;
             org.bukkit.entity.Entity mythicMobProbe = null;
             org.bukkit.entity.Entity ordinaryMobProbe = null;
             String actualVersion = "unavailable";
@@ -1290,6 +1298,33 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                         ? skills.bindCondition(importedLowerCaseType.condition()) : null;
                                 mythicMobImportedRadiusTypeCasePositive = importedLowerCaseTypeCondition != null
                                         && behaviors.testCondition(importedLowerCaseTypeCondition, radiusContext);
+                                var mythicMobTypeContext = dev.helstera.api.behavior.BehaviorContext.of(
+                                        null, mythicLiving, 1.0, -1, 0, "mythic-mob-type-probe");
+                                String exactMythicType = skills.bindCondition(
+                                        "mythic-mob-type SkeletalMinion");
+                                String exactSubstringType = skills.bindCondition(
+                                        "mythic-mob-type Minion");
+                                String containsMythicType = skills.bindCondition(
+                                        "mythic-mob-type Minion exactmatch=false");
+                                String containsUnrelatedType = skills.bindCondition(
+                                        "mythic-mob-type CaveWraith exactmatch=false");
+                                mythicMobTypeExactPositive = exactMythicType != null
+                                        && behaviors.testCondition(exactMythicType, mythicMobTypeContext);
+                                mythicMobTypeExactSubstringRejected = exactSubstringType != null
+                                        && !behaviors.testCondition(exactSubstringType, mythicMobTypeContext);
+                                mythicMobTypeContainsPositive = containsMythicType != null
+                                        && behaviors.testCondition(containsMythicType, mythicMobTypeContext);
+                                mythicMobTypeContainsNegative = containsUnrelatedType != null
+                                        && !behaviors.testCondition(containsUnrelatedType, mythicMobTypeContext);
+                                mythicMobTypeImportedExactPositive = testImportedConditionOnEntity(skills,
+                                        behaviors, "?MythicMobType{type=SkeletalMinion}", mythicMobProbe, true);
+                                mythicMobTypeImportedExactSubstringRejected = testImportedConditionOnEntity(skills,
+                                        behaviors, "?MythicMobType{type=Minion}", mythicMobProbe, false);
+                                mythicMobTypeImportedContainsPositive = testImportedConditionOnEntity(skills,
+                                        behaviors, "?MythicMobType{type=Minion;exactmatch=false}", mythicMobProbe, true);
+                                mythicMobTypeImportedContainsNegative = testImportedConditionOnEntity(skills,
+                                        behaviors, "?MythicMobType{type=CaveWraith;exactmatch=false}", mythicMobProbe,
+                                        false);
                             }
                         }
                     } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
@@ -1363,7 +1398,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && mythicMobRadiusTypePositive && mythicMobRadiusTypeNegative
                     && mythicMobImportedRadiusTypePositive && mythicMobImportedRadiusTypeNegative
                     && mythicMobRadiusTypeListPositive && mythicMobImportedRadiusTypeListPositive
-                    && mythicMobRadiusTypeCasePositive && mythicMobImportedRadiusTypeCasePositive;
+                    && mythicMobRadiusTypeCasePositive && mythicMobImportedRadiusTypeCasePositive
+                    && mythicMobTypeExactPositive && mythicMobTypeExactSubstringRejected
+                    && mythicMobTypeContainsPositive && mythicMobTypeContainsNegative
+                    && mythicMobTypeImportedExactPositive && mythicMobTypeImportedExactSubstringRejected
+                    && mythicMobTypeImportedContainsPositive && mythicMobTypeImportedContainsNegative;
             getLogger().info("[自检] mythic-pack-condition actual-version=" + actualVersion
                     + " pack-loaded=" + packLoaded + " case-sensitive=" + caseSensitive
                     + " missing-rejected=" + missingRejected + " exact-version=" + exactVersion
@@ -1394,6 +1433,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " mythic-mob-imported-radius-type-list-positive=" + mythicMobImportedRadiusTypeListPositive
                     + " mythic-mob-radius-type-case-positive=" + mythicMobRadiusTypeCasePositive
                     + " mythic-mob-imported-radius-type-case-positive=" + mythicMobImportedRadiusTypeCasePositive
+                    + " mythic-mob-type-exact-positive=" + mythicMobTypeExactPositive
+                    + " mythic-mob-type-exact-substring-rejected=" + mythicMobTypeExactSubstringRejected
+                    + " mythic-mob-type-contains-positive=" + mythicMobTypeContainsPositive
+                    + " mythic-mob-type-contains-negative=" + mythicMobTypeContainsNegative
+                    + " mythic-mob-type-imported-exact-positive=" + mythicMobTypeImportedExactPositive
+                    + " mythic-mob-type-imported-exact-substring-rejected="
+                    + mythicMobTypeImportedExactSubstringRejected
+                    + " mythic-mob-type-imported-contains-positive=" + mythicMobTypeImportedContainsPositive
+                    + " mythic-mob-type-imported-contains-negative=" + mythicMobTypeImportedContainsNegative
                     + " passed=" + passed);
         }, Math.max(1, delay));
     }

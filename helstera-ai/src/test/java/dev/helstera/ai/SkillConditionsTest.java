@@ -908,6 +908,61 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("MythicMobType 使用目标实体的 Mythic 类型并遵循 exactmatch")
+    void mythicMobTypeMatchesTargetEntityAndExactFlag() {
+        LivingEntity target = mock(LivingEntity.class);
+        SkillExtras.mythicMobTypeMatcher((entity, type, exact) -> entity == target
+                && (exact ? "SkeletalMinion".equalsIgnoreCase(type)
+                : "SkeletalMinion".toLowerCase(java.util.Locale.ROOT)
+                        .contains(type.toLowerCase(java.util.Locale.ROOT))));
+        try {
+            var context = entityConditionContext(target);
+            assertTrue(extraFactory("mythic-mob-type")
+                    .create(List.of("SkeletalMinion")).test(context));
+            assertFalse(extraFactory("mythic-mob-type")
+                    .create(List.of("Minion")).test(context), "exactmatch defaults to true");
+            assertTrue(extraFactory("mythic-mob-type")
+                    .create(List.of("Minion", "exactmatch=false")).test(context));
+            assertFalse(extraFactory("mythic-mob-type")
+                    .create(List.of("CaveWraith", "exactmatch=false")).test(context));
+            assertTrue(extraFactory("mythic-mob-type")
+                    .create(List.of("type=Minion", "em=false")).test(context));
+        } finally {
+            SkillExtras.resetRuntimeHooks();
+        }
+    }
+
+    @Test
+    @DisplayName("MythicMobType 不会用施法者模型 ID 错判独立目标")
+    void mythicMobTypeDoesNotUseCasterModelForDifferentTarget() {
+        var instance = mock(ModelInstance.class);
+        var model = mock(dev.helstera.api.model.ModelDefinition.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(instance.model()).thenReturn(model);
+        when(model.id()).thenReturn("example/emberling");
+        SkillExtras.mythicMobTypeMatcher((entity, type, exact) -> entity == target
+                && "SkeletalMinion".equalsIgnoreCase(type));
+        try {
+            var targetContext = BehaviorContext.of(instance, target, 1.0, -1, 0, "IDLE");
+            assertFalse(extraFactory("mythic-mob-type")
+                    .create(List.of("example/emberling")).test(targetContext));
+            assertTrue(extraFactory("mythic-mob-type")
+                    .create(List.of("SkeletalMinion")).test(targetContext));
+
+            var casterContext = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+            assertTrue(extraFactory("mythic-mob-type")
+                    .create(List.of("example/emberling")).test(casterContext));
+            assertTrue(extraFactory("mythic-mob-type")
+                    .create(List.of("emberling", "exactmatch=false")).test(casterContext));
+        } finally {
+            SkillExtras.resetRuntimeHooks();
+        }
+    }
+
+    @Test
     @DisplayName("LunarPhase 使用世界 fullTime 的八日周期")
     void officialLunarPhaseConditionUsesWorldFullTime() {
         World world = mock(World.class);
@@ -1749,14 +1804,17 @@ class SkillConditionsTest {
         assertFalse(extraFactory("mobs-in-radius").create(List.of("1", "5", "UNKNOWN_MOB"))
                 .test(context));
 
-        SkillExtras.mythicMobTypeMatcher((entity, type) -> entity == custom && type.equalsIgnoreCase("ForestGuardian"));
+        SkillExtras.mythicMobTypeMatcher((entity, type, exact) ->
+                entity == custom && exact && type.equalsIgnoreCase("ForestGuardian"));
         assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "ForestGuardian"))
                 .test(context));
         assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "UNKNOWN_MOB,ForestGuardian"))
                 .test(context), "multiple type filters should match any configured type");
         assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "forestguardian"))
                 .test(context), "Mythic internal-name matching should be case-insensitive");
-        SkillExtras.mythicMobTypeMatcher((entity, type) -> { throw new IllegalStateException("API unavailable"); });
+        SkillExtras.mythicMobTypeMatcher((entity, type, exact) -> {
+            throw new IllegalStateException("API unavailable");
+        });
         assertFalse(extraFactory("mobs-in-radius").create(List.of("1", "5", "ForestGuardian"))
                 .test(context));
         assertThrows(IllegalArgumentException.class,
