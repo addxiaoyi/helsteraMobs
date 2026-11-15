@@ -230,6 +230,20 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("entity relation conditions reject arguments instead of ignoring them")
+    void entityRelationConditionsRejectArguments() {
+        for (String name : List.of(
+                "mounted", "vehicle-is-dead", "is-vehicle", "has-passenger",
+                "target-is-vehicle", "target-has-passenger", "is-leashed", "target-is-leashed",
+                "has-owner", "target-has-owner", "owner-is-player", "owner-is-online",
+                "target-owner-is-player", "target-owner-is-online", "is-owner", "has-parent",
+                "is-parent", "is-child", "is-parent-alive", "is-sibling")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory(name).create(List.of("unknown=true")), name);
+        }
+    }
+
+    @Test
     @DisplayName("name-is：优先匹配自定义名，无目标或空参数时失败关闭")
     void nameConditionMatchesCustomAndEntityNames() {
         LivingEntity named = mock(LivingEntity.class);

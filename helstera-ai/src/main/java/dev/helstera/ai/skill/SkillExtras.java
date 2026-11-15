@@ -1019,6 +1019,12 @@ public final class SkillExtras {
         return entity instanceof LivingEntity living ? living : null;
     }
 
+    private static void requireNoConditionArguments(List<String> args, String name) {
+        if (args != null && !args.isEmpty()) {
+            throw new IllegalArgumentException(name + " takes no arguments");
+        }
+    }
+
     private static boolean uuidMatches(BehaviorContext ctx, String rawExpected) {
         LivingEntity entity = conditionEntity(ctx);
         if (entity == null || rawExpected == null) return false;
@@ -3008,53 +3014,68 @@ public final class SkillExtras {
                     String wanted = str(a, 0, "");
                     return ctx -> hasOffhand(targetOnlyEntity(ctx), wanted);
                 }),
-                Map.entry("has-owner", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> {
+                Map.entry("has-owner", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "has-owner");
+                    return ctx -> {
                             LivingEntity entity = conditionEntity(ctx);
                             return entity != null && (dev.helstera.api.behavior.MobRelations.hasOwner(entity)
                                     || entity instanceof org.bukkit.entity.Tameable tameable
                                     && tameable.getOwner() != null);
-                        }),
-                Map.entry("target-has-owner", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> {
+                    };
+                }),
+                Map.entry("target-has-owner", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "target-has-owner");
+                    return ctx -> {
                             Entity entity = targetOnlyEntity(ctx);
                             return entity != null && (dev.helstera.api.behavior.MobRelations.hasOwner(entity)
                                     || entity instanceof org.bukkit.entity.Tameable tameable
                                     && tameable.getOwner() != null);
-                        }),
-                Map.entry("owner-is-player", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> {
+                    };
+                }),
+                Map.entry("owner-is-player", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "owner-is-player");
+                    return ctx -> {
                             LivingEntity entity = conditionEntity(ctx);
                             if (entity == null) return false;
                             Entity owner = resolvedOwner(entity);
                             return owner instanceof Player;
-                        }),
-                Map.entry("owner-is-online", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> {
+                    };
+                }),
+                Map.entry("owner-is-online", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "owner-is-online");
+                    return ctx -> {
                             LivingEntity entity = conditionEntity(ctx);
                             if (entity == null) return false;
                             java.util.UUID id = ownerId(entity);
                             return id != null && org.bukkit.Bukkit.getPlayer(id) != null;
-                        }),
-                Map.entry("target-owner-is-player", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> {
+                    };
+                }),
+                Map.entry("target-owner-is-player", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "target-owner-is-player");
+                    return ctx -> {
                             Entity entity = targetOnlyEntity(ctx);
                             return entity != null && resolvedOwner(entity) instanceof Player;
-                        }),
-                Map.entry("target-owner-is-online", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> {
+                    };
+                }),
+                Map.entry("target-owner-is-online", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "target-owner-is-online");
+                    return ctx -> {
                             Entity entity = targetOnlyEntity(ctx);
                             if (entity == null) return false;
                             java.util.UUID id = ownerId(entity);
                             return id != null && org.bukkit.Bukkit.getPlayer(id) != null;
-                        }),
-                Map.entry("is-owner", (SkillCatalog.ConditionFactory) a -> ctx -> {
-                    if (ctx == null || !ctx.instanceValid()) return false;
-                    Entity caster = ctx.instance().baseEntity().orElse(null);
-                    Entity target = targetOnlyEntity(ctx);
-                    java.util.UUID owner = ownerId(caster);
-                    return owner != null && target != null
-                            && owner.equals(target.getUniqueId());
+                    };
+                }),
+                Map.entry("is-owner", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "is-owner");
+                    return ctx -> {
+                        if (ctx == null || !ctx.instanceValid()) return false;
+                        Entity caster = ctx.instance().baseEntity().orElse(null);
+                        Entity target = targetOnlyEntity(ctx);
+                        java.util.UUID owner = ownerId(caster);
+                        return owner != null && target != null
+                                && owner.equals(target.getUniqueId());
+                    };
                 }),
                 Map.entry("has-tag", (SkillCatalog.ConditionFactory) a -> {
                     String tag = str(a, 0, "");
@@ -3069,17 +3090,23 @@ public final class SkillExtras {
                     return ctx -> !expected.isBlank() && targetOnlyEntity(ctx) != null
                             && targetOnlyEntity(ctx).getScoreboardTags().contains(expected);
                 }),
-                Map.entry("has-parent", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> dev.helstera.api.behavior.MobRelations.hasParentRelation(conditionEntity(ctx))),
-                Map.entry("is-parent", (SkillCatalog.ConditionFactory) a -> ctx -> {
-                    if (ctx == null || !ctx.instanceValid()) return false;
-                    Entity parent = ctx.targetEntity().orElse(null);
-                    Entity caster = ctx.instance().baseEntity().orElse(null);
-                    return parent != null && caster != null
-                            && parent.getUniqueId().equals(dev.helstera.api.behavior.MobRelations.parentId(caster))
-                            && parent.isValid() && !parent.isDead();
+                Map.entry("has-parent", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "has-parent");
+                    return ctx -> dev.helstera.api.behavior.MobRelations.hasParentRelation(conditionEntity(ctx));
+                }),
+                Map.entry("is-parent", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "is-parent");
+                    return ctx -> {
+                        if (ctx == null || !ctx.instanceValid()) return false;
+                        Entity parent = ctx.targetEntity().orElse(null);
+                        Entity caster = ctx.instance().baseEntity().orElse(null);
+                        return parent != null && caster != null
+                                && parent.getUniqueId().equals(dev.helstera.api.behavior.MobRelations.parentId(caster))
+                                && parent.isValid() && !parent.isDead();
+                    };
                 }),
                 Map.entry("is-child", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "is-child");
                     return ctx -> {
                         if (ctx == null || !ctx.instanceValid()) return false;
                         Entity parent = ctx.instance().baseEntity().orElse(null);
@@ -3087,19 +3114,24 @@ public final class SkillExtras {
                         return dev.helstera.api.behavior.MobRelations.isChild(parent, child);
                     };
                 }),
-                Map.entry("is-parent-alive", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> dev.helstera.api.behavior.MobRelations.isParentAlive(conditionEntity(ctx))),
+                Map.entry("is-parent-alive", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "is-parent-alive");
+                    return ctx -> dev.helstera.api.behavior.MobRelations.isParentAlive(conditionEntity(ctx));
+                }),
                 Map.entry("children", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange range = a == null || a.isEmpty()
                             ? new NumberRange(1, 1, true, true)
                             : numberRange(a, 0);
                     return ctx -> range != null && range.contains(countChildren(ctx));
                 }),
-                Map.entry("is-sibling", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                Map.entry("is-sibling", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "is-sibling");
+                    return ctx -> {
                     if (ctx == null || !ctx.instanceValid()) return false;
                     Entity caster = ctx.instance().baseEntity().orElse(null);
                     Entity target = ctx.targetEntity().orElse(null);
                     return dev.helstera.api.behavior.MobRelations.areSiblings(caster, target);
+                    };
                 }),
                 Map.entry("target-is-sneaking", (SkillCatalog.ConditionFactory) a ->
                         ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isSneaking()),
@@ -3116,17 +3148,22 @@ public final class SkillExtras {
                 Map.entry("target-is-alive", (SkillCatalog.ConditionFactory) a ->
                         ctx -> ctx != null && ctx.targetEntity()
                                 .map(entity -> entity.isValid() && !entity.isDead()).orElse(false)),
-                Map.entry("mounted", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isInsideVehicle()),
+                Map.entry("mounted", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "mounted");
+                    return ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isInsideVehicle();
+                }),
                 Map.entry("vehicle-is-dead", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "vehicle-is-dead");
                     return ctx -> {
                         Entity caster = casterEntity(ctx);
                         return caster != null && caster.getVehicle() != null && caster.getVehicle().isDead();
                     };
                 }),
-                Map.entry("is-vehicle", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof LivingEntity living
-                                && !living.getPassengers().isEmpty()),
+                Map.entry("is-vehicle", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "is-vehicle");
+                    return ctx -> conditionEntity(ctx) instanceof LivingEntity living
+                            && !living.getPassengers().isEmpty();
+                }),
                 Map.entry("target-within", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, "<=");
                     return ctx -> {
@@ -3149,19 +3186,29 @@ public final class SkillExtras {
                     boolean exact = movingExact(a);
                     return ctx -> moving(ctx, exact);
                 }),
-                Map.entry("has-passenger", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof LivingEntity living
-                                && !living.getPassengers().isEmpty()),
-                Map.entry("target-is-vehicle", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null
-                                && !targetOnlyEntity(ctx).getPassengers().isEmpty()),
-                Map.entry("target-has-passenger", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null
-                                && !targetOnlyEntity(ctx).getPassengers().isEmpty()),
-                Map.entry("is-leashed", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isLeashed()),
-                Map.entry("target-is-leashed", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isLeashed()),
+                Map.entry("has-passenger", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "has-passenger");
+                    return ctx -> conditionEntity(ctx) instanceof LivingEntity living
+                            && !living.getPassengers().isEmpty();
+                }),
+                Map.entry("target-is-vehicle", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "target-is-vehicle");
+                    return ctx -> targetOnlyEntity(ctx) != null
+                            && !targetOnlyEntity(ctx).getPassengers().isEmpty();
+                }),
+                Map.entry("target-has-passenger", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "target-has-passenger");
+                    return ctx -> targetOnlyEntity(ctx) != null
+                            && !targetOnlyEntity(ctx).getPassengers().isEmpty();
+                }),
+                Map.entry("is-leashed", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "is-leashed");
+                    return ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isLeashed();
+                }),
+                Map.entry("target-is-leashed", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "target-is-leashed");
+                    return ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isLeashed();
+                }),
                 Map.entry("target-is-sprinting", (SkillCatalog.ConditionFactory) a ->
                         ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isSprinting()),
                 Map.entry("target-is-flying", (SkillCatalog.ConditionFactory) a ->

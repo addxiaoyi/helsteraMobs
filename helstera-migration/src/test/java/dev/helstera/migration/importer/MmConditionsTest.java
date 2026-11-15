@@ -184,7 +184,12 @@ class MmConditionsTest {
                 "targetIsLiving", "targetIsMob", "targetIsMonster", "targetIsAnimal", "targetIsVillager",
                 "targetIsTameable", "targetIsRaider", "hasAI", "hasGravity", "isSilent", "isDead", "isAlive",
                 "isValid", "targetHasAI", "targetHasGravity", "targetIsSilent", "targetIsDead", "targetIsAlive",
-                "targetIsValid")) {
+                "targetIsValid", "mounted", "isMounted", "vehicleIsDead", "isVehicle", "vehicle",
+                "hasPassenger", "hasPassengers", "targetIsVehicle", "targetHasPassenger", "targetHasPassengers",
+                "isLeashed", "leashed", "targetIsLeashed", "targetLeashed", "hasOwner", "targetHasOwner",
+                "ownerIsPlayer", "ownerIsOnline", "targetOwnerIsPlayer", "targetOwnerIsOnline", "owner",
+                "isOwner", "hasParent", "isParent", "parent", "isChild", "child", "isParentAlive",
+                "parentAlive", "isSibling", "sibling")) {
             String invalid = "?" + name + "{unknown=true}";
             assertFalse(translated(invalid), invalid);
             assertEquals(invalid, t(invalid));

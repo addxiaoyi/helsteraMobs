@@ -1513,6 +1513,15 @@ range rejection, and caster-only scope. Exploratory Paper 1.21.4 fixture r8
 and strict Paper 1.21.1-133 fixture `srv-paper-integration-final-r8` record
 `potionEffectCondition=passed`.
 
+Entity relation conditions now enforce their parameterless contract across the
+importer, direct `SkillExtras` factories, and `SkillService`: leash,
+owner, vehicle/passenger, and parent/sibling conditions reject supplied,
+unknown, or duplicate arguments and preserve the original Mythic condition
+with a warning. Runtime evaluation remains fail-closed for missing entities or
+relations. AI, migration, and plugin contract tests cover this boundary; no
+new Paper evidence is claimed, so the aggregate Conditions catalog remains
+`mapped-unverified`.
+
 Incremental Mythic Aura update: Mythic `Aura`/`Buff`/`Debuff` now tracks named
 per-entity Aura state with tick expiry, stack caps, duration refresh, same-caster
 or global merging, overwrite modes, and type metadata. `HasAura` (`hasBuff`,

@@ -4693,6 +4693,21 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("entity relation conditions reject unknown arguments at bind time")
+    void entityRelationConditionsRejectUnknownArguments() {
+        SkillService service = service();
+        for (String name : List.of(
+                "mounted", "vehicle-is-dead", "is-vehicle", "has-passenger",
+                "target-is-vehicle", "target-has-passenger", "is-leashed", "target-is-leashed",
+                "has-owner", "target-has-owner", "owner-is-player", "owner-is-online",
+                "target-owner-is-player", "target-owner-is-online", "is-owner", "has-parent",
+                "is-parent", "is-child", "is-parent-alive", "is-sibling")) {
+            assertNull(service.bindCondition(name + " unknown=true"), name);
+            assertNull(service.bindCondition(name + "{unknown=true}"), name);
+        }
+    }
+
+    @Test
     @DisplayName("target climbing and blocked conditions read target state")
     void targetClimbingAndBlockedConditionsReadTarget() {
         SkillService service = service();

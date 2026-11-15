@@ -3950,6 +3950,33 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("parameterless entity relation conditions stay rejected across migration and runtime")
+    void entityRelationConditionArgumentsRemainFailClosed() {
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        for (String source : List.of(
+                "?isLeashed{unknown=true}", "?targetIsLeashed{unknown=true}",
+                "?hasOwner{unknown=true}", "?targetHasOwner{unknown=true}",
+                "?ownerIsPlayer{unknown=true}", "?ownerIsOnline{unknown=true}",
+                "?targetOwnerIsPlayer{unknown=true}", "?targetOwnerIsOnline{unknown=true}",
+                "?isVehicle{unknown=true}", "?hasPassenger{unknown=true}",
+                "?targetIsVehicle{unknown=true}", "?targetHasPassenger{unknown=true}",
+                "?isParent{unknown=true}", "?isChild{unknown=true}",
+                "?isParentAlive{unknown=true}", "?isSibling{unknown=true}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertFalse(mapped.translated(), source);
+            assertEquals(source, mapped.condition(), source);
+        }
+        for (String canonical : List.of(
+                "is-leashed", "target-is-leashed", "has-owner", "target-has-owner",
+                "owner-is-player", "owner-is-online", "target-owner-is-player",
+                "target-owner-is-online", "is-vehicle", "has-passenger", "target-is-vehicle",
+                "target-has-passenger", "is-parent", "is-child", "is-parent-alive", "is-sibling")) {
+            assertNull(skills.bindCondition(canonical + " unknown=true"), canonical);
+        }
+    }
+
+    @Test
     @DisplayName("imported TargetHasPotionEffect preserves level and duration ranges on the explicit target")
     void importedTargetHasPotionEffectReachesTargetOnlyRuntime() {
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
