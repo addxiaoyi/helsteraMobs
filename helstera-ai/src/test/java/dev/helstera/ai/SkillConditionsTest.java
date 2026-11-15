@@ -244,6 +244,33 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("实体类别与状态条件拒绝被静默忽略的参数")
+    void entityCategoryAndStateConditionsRejectArguments() {
+        for (String name : List.of(
+                "on-ground", "in-water", "in-lava", "night", "raining", "thundering",
+                "day", "morning", "clear", "rain", "falling", "is-cancelled",
+                "is-living", "is-player", "is-mob", "is-monster", "is-animal", "is-villager",
+                "is-tameable", "is-water-mob", "is-zombie", "aerial", "is-enderman", "is-raider",
+                "is-raider-patrol-leader", "is-undead", "is-creature", "is-baby", "is-adult",
+                "is-tamed", "is-sheared", "is-saddled", "is-powered", "is-collidable", "is-op",
+                "target-is-player", "target-is-op", "target-is-living", "target-is-mob",
+                "target-is-monster", "target-is-animal", "target-is-villager", "target-is-tameable",
+                "target-is-raider", "target-is-undead", "target-is-creature", "target-is-baby",
+                "target-is-adult", "target-is-tamed", "target-is-sheared", "target-is-saddled",
+                "target-is-powered", "target-is-collidable", "target-is-sneaking", "target-has-ai",
+                "target-has-gravity", "target-is-silent", "target-is-valid", "target-is-alive",
+                "target-dead", "target-on-ground", "target-airborne", "target-invulnerable",
+                "target-has-line-of-sight", "target-not-in-line-of-sight", "target-is-sprinting",
+                "target-is-flying", "target-is-blocking", "target-is-gliding", "target-is-swimming",
+                "target-on-fire", "target-in-air", "target-in-water", "target-in-lava",
+                "target-is-glowing", "target-is-invisible", "target-is-climbing", "target-is-frozen",
+                "has-dialog-open", "is-in-cinematic", "item-recharging")) {
+            assertThrows(IllegalArgumentException.class,
+                    () -> extraFactory(name).create(List.of("unknown=true")), name);
+        }
+    }
+
+    @Test
     @DisplayName("name-is：优先匹配自定义名，无目标或空参数时失败关闭")
     void nameConditionMatchesCustomAndEntityNames() {
         LivingEntity named = mock(LivingEntity.class);

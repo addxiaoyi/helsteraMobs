@@ -1025,6 +1025,14 @@ public final class SkillExtras {
         }
     }
 
+    private static SkillCatalog.ConditionFactory noArgumentCondition(
+            String name, java.util.function.Predicate<BehaviorContext> predicate) {
+        return args -> {
+            requireNoConditionArguments(args, name);
+            return predicate;
+        };
+    }
+
     private static boolean uuidMatches(BehaviorContext ctx, String rawExpected) {
         LivingEntity entity = conditionEntity(ctx);
         if (entity == null || rawExpected == null) return false;
@@ -2497,7 +2505,7 @@ public final class SkillExtras {
                             && compare(ctx.distanceToTarget(), comparison);
                 }),
 
-                Map.entry("on-ground", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                Map.entry("on-ground", noArgumentCondition("on-ground", ctx -> {
                     LivingEntity living = selfLiving(ctx).orElse(null);
                     if (living != null) return living.isOnGround();
                     Location l = selfLoc(ctx);
@@ -2507,8 +2515,8 @@ public final class SkillExtras {
                     } catch (Throwable t) {
                         return false;
                     }
-                }),
-                Map.entry("in-water", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                })),
+                Map.entry("in-water", noArgumentCondition("in-water", ctx -> {
                     if (ctx != null && ctx.instanceValid()) {
                         Entity base = ctx.instance().baseEntity().orElse(null);
                         if (base != null) return base.isInWater();
@@ -2521,8 +2529,8 @@ public final class SkillExtras {
                     } catch (Throwable t) {
                         return false;
                     }
-                }),
-                Map.entry("in-lava", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                })),
+                Map.entry("in-lava", noArgumentCondition("in-lava", ctx -> {
                     if (ctx != null && ctx.instanceValid()) {
                         Entity base = ctx.instance().baseEntity().orElse(null);
                         if (base != null) return base.isInLava();
@@ -2534,7 +2542,7 @@ public final class SkillExtras {
                     } catch (Throwable t) {
                         return false;
                     }
-                }),
+                })),
                 Map.entry("in-liquid", (SkillCatalog.ConditionFactory) a -> {
                     if (a != null && !a.isEmpty()) {
                         throw new IllegalArgumentException("in-liquid takes no arguments");
@@ -2658,21 +2666,21 @@ public final class SkillExtras {
                 // Common Mythic aliases with direct Bukkit semantics.  Keep
                 // thunder separate from ordinary rain so a `raining` gate does
                 // not unexpectedly reject a storm.
-                Map.entry("night", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                Map.entry("night", noArgumentCondition("night", ctx -> {
                     Location location = selfLoc(ctx);
                     if (location == null || location.getWorld() == null) return false;
                     return matchesTime("night", location.getWorld().getTime());
-                }),
-                Map.entry("raining", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                })),
+                Map.entry("raining", noArgumentCondition("raining", ctx -> {
                     Location location = selfLoc(ctx);
                     return location != null && location.getWorld() != null
                             && location.getWorld().hasStorm();
-                }),
-                Map.entry("thundering", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                })),
+                Map.entry("thundering", noArgumentCondition("thundering", ctx -> {
                     Location location = selfLoc(ctx);
                     return location != null && location.getWorld() != null
                             && location.getWorld().isThundering();
-                }),
+                })),
                 Map.entry("snowing", snowingCondition()),
                 Map.entry("is-snowing", snowingCondition()),
                 Map.entry("day", timeAlias("day")),
@@ -2691,9 +2699,9 @@ public final class SkillExtras {
                 Map.entry("storm", weatherAlias("storm")),
                 Map.entry("thunder", weatherAlias("thunder")),
                 Map.entry("thunderstorm", weatherAlias("thunderstorm")),
-                Map.entry("falling", (SkillCatalog.ConditionFactory) a -> ctx ->
+                Map.entry("falling", noArgumentCondition("falling", ctx ->
                         selfLiving(ctx).map(entity -> !entity.isOnGround()
-                                && entity.getVelocity().getY() < -0.05).orElse(false)),
+                                && entity.getVelocity().getY() < -0.05).orElse(false))),
                 Map.entry("drowning", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = a == null || a.isEmpty()
                             ? new Comparison("<=", 0)
@@ -2718,18 +2726,18 @@ public final class SkillExtras {
 
                 // ---- 目标状态 ----
 
-                Map.entry("is-cancelled", (SkillCatalog.ConditionFactory) a -> ctx ->
+                Map.entry("is-cancelled", noArgumentCondition("is-cancelled", ctx ->
                         ctx != null && ctx.cancellableEvent()
                                 .map(org.bukkit.event.Cancellable::isCancelled)
-                                .orElse(false)),
-                Map.entry("target-dead", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.targetEntity().map(LivingEntity::isDead).orElse(false)),
-                Map.entry("target-on-ground", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.targetEntity().map(LivingEntity::isOnGround).orElse(false)),
-                Map.entry("target-airborne", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.targetEntity().map(e -> !e.isOnGround()).orElse(false)),
-                Map.entry("target-invulnerable", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx.targetEntity().map(Entity::isInvulnerable).orElse(false)),
+                                .orElse(false))),
+                Map.entry("target-dead", noArgumentCondition("target-dead",
+                        ctx -> ctx.targetEntity().map(LivingEntity::isDead).orElse(false))),
+                Map.entry("target-on-ground", noArgumentCondition("target-on-ground",
+                        ctx -> ctx.targetEntity().map(LivingEntity::isOnGround).orElse(false))),
+                Map.entry("target-airborne", noArgumentCondition("target-airborne",
+                        ctx -> ctx.targetEntity().map(e -> !e.isOnGround()).orElse(false))),
+                Map.entry("target-invulnerable", noArgumentCondition("target-invulnerable",
+                        ctx -> ctx.targetEntity().map(Entity::isInvulnerable).orElse(false))),
                 Map.entry("target-health-below", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, "<=");
                     return ctx -> ctx.targetEntity()
@@ -2891,46 +2899,46 @@ public final class SkillExtras {
                         }
                     };
                 }),
-                Map.entry("is-living", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) != null),
-                Map.entry("is-player", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof Player),
-                Map.entry("is-mob", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Mob),
-                Map.entry("is-monster", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Monster),
-                Map.entry("is-animal", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Animals),
-                Map.entry("is-villager", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Villager),
-                Map.entry("is-tameable", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Tameable),
-                Map.entry("is-water-mob", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.WaterMob),
-                Map.entry("is-zombie", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Zombie),
-                Map.entry("aerial", (SkillCatalog.ConditionFactory) a ->
+                Map.entry("is-living", noArgumentCondition("is-living",
+                        ctx -> conditionEntity(ctx) != null)),
+                Map.entry("is-player", noArgumentCondition("is-player",
+                        ctx -> conditionEntity(ctx) instanceof Player)),
+                Map.entry("is-mob", noArgumentCondition("is-mob",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Mob)),
+                Map.entry("is-monster", noArgumentCondition("is-monster",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Monster)),
+                Map.entry("is-animal", noArgumentCondition("is-animal",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Animals)),
+                Map.entry("is-villager", noArgumentCondition("is-villager",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Villager)),
+                Map.entry("is-tameable", noArgumentCondition("is-tameable",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Tameable)),
+                Map.entry("is-water-mob", noArgumentCondition("is-water-mob",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.WaterMob)),
+                Map.entry("is-zombie", noArgumentCondition("is-zombie",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Zombie)),
+                Map.entry("aerial", noArgumentCondition("aerial",
                         ctx -> {
                             LivingEntity entity = conditionEntity(ctx);
                             return entity != null && !entity.isOnGround();
-                        }),
-                Map.entry("is-enderman", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Enderman),
-                Map.entry("is-raider", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Raider),
-                Map.entry("is-raider-patrol-leader", (SkillCatalog.ConditionFactory) a ->
+                        })),
+                Map.entry("is-enderman", noArgumentCondition("is-enderman",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Enderman)),
+                Map.entry("is-raider", noArgumentCondition("is-raider",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Raider)),
+                Map.entry("is-raider-patrol-leader", noArgumentCondition("is-raider-patrol-leader",
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Raider raider
-                                && raider.isPatrolLeader()),
-                Map.entry("is-undead", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> isUndeadEntity(conditionEntity(ctx))),
-                Map.entry("is-creature", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Creature),
-                Map.entry("is-baby", (SkillCatalog.ConditionFactory) a ->
+                                && raider.isPatrolLeader())),
+                Map.entry("is-undead", noArgumentCondition("is-undead",
+                        ctx -> isUndeadEntity(conditionEntity(ctx)))),
+                Map.entry("is-creature", noArgumentCondition("is-creature",
+                        ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Creature)),
+                Map.entry("is-baby", noArgumentCondition("is-baby",
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Ageable age
-                                && !age.isAdult()),
-                Map.entry("is-adult", (SkillCatalog.ConditionFactory) a ->
+                                && !age.isAdult())),
+                Map.entry("is-adult", noArgumentCondition("is-adult",
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Ageable age
-                                && age.isAdult()),
+                                && age.isAdult())),
                 Map.entry("angry", (SkillCatalog.ConditionFactory) a -> {
                     if (a != null && !a.isEmpty()) throw new IllegalArgumentException("angry takes no arguments");
                     return ctx -> {
@@ -2948,68 +2956,68 @@ public final class SkillExtras {
                     NumberRange range = numberRange(a, 0);
                     return ctx -> range != null && range.contains(mobSize(conditionEntity(ctx)));
                 }),
-                Map.entry("is-tamed", (SkillCatalog.ConditionFactory) a ->
+                Map.entry("is-tamed", noArgumentCondition("is-tamed",
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Tameable tameable
-                                && tameable.isTamed()),
-                Map.entry("is-sheared", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> isShearedEntity(conditionEntity(ctx))),
-                Map.entry("is-saddled", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> isSaddledEntity(conditionEntity(ctx))),
-                Map.entry("is-powered", (SkillCatalog.ConditionFactory) a ->
+                                && tameable.isTamed())),
+                Map.entry("is-sheared", noArgumentCondition("is-sheared",
+                        ctx -> isShearedEntity(conditionEntity(ctx)))),
+                Map.entry("is-saddled", noArgumentCondition("is-saddled",
+                        ctx -> isSaddledEntity(conditionEntity(ctx)))),
+                Map.entry("is-powered", noArgumentCondition("is-powered",
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Creeper creeper
-                                && creeper.isPowered()),
-                Map.entry("is-collidable", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) != null && conditionEntity(ctx).isCollidable()),
+                                && creeper.isPowered())),
+                Map.entry("is-collidable", noArgumentCondition("is-collidable",
+                        ctx -> conditionEntity(ctx) != null && conditionEntity(ctx).isCollidable())),
                 Map.entry("has-offhand", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = str(a, 0, "");
                     return ctx -> hasOffhand(conditionEntity(ctx), wanted);
                 }),
-                Map.entry("is-op", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> conditionEntity(ctx) instanceof Player player && player.isOp()),
-                Map.entry("target-is-player", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof Player),
+                Map.entry("is-op", noArgumentCondition("is-op",
+                        ctx -> conditionEntity(ctx) instanceof Player player && player.isOp())),
+                Map.entry("target-is-player", noArgumentCondition("target-is-player",
+                        ctx -> targetOnlyEntity(ctx) instanceof Player)),
                 Map.entry("is-caster", (SkillCatalog.ConditionFactory) a -> ctx -> {
                     if (ctx == null || !ctx.instanceValid()) return false;
                     Entity caster = ctx.instance().baseEntity().orElse(null);
                     Entity target = targetOnlyEntity(ctx);
                     return caster != null && target != null && caster.getUniqueId().equals(target.getUniqueId());
                 }),
-                Map.entry("target-is-op", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isOp()),
-                Map.entry("target-is-living", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null),
-                Map.entry("target-is-mob", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Mob),
-                Map.entry("target-is-monster", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Monster),
-                Map.entry("target-is-animal", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Animals),
-                Map.entry("target-is-villager", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Villager),
-                Map.entry("target-is-tameable", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Tameable),
-                Map.entry("target-is-raider", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Raider),
-                Map.entry("target-is-undead", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> isUndeadEntity(targetOnlyEntity(ctx))),
-                Map.entry("target-is-creature", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Creature),
-                Map.entry("target-is-baby", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Ageable age && !age.isAdult()),
-                Map.entry("target-is-adult", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Ageable age && age.isAdult()),
-                Map.entry("target-is-tamed", (SkillCatalog.ConditionFactory) a ->
+                Map.entry("target-is-op", noArgumentCondition("target-is-op",
+                        ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isOp())),
+                Map.entry("target-is-living", noArgumentCondition("target-is-living",
+                        ctx -> targetOnlyEntity(ctx) != null)),
+                Map.entry("target-is-mob", noArgumentCondition("target-is-mob",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Mob)),
+                Map.entry("target-is-monster", noArgumentCondition("target-is-monster",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Monster)),
+                Map.entry("target-is-animal", noArgumentCondition("target-is-animal",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Animals)),
+                Map.entry("target-is-villager", noArgumentCondition("target-is-villager",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Villager)),
+                Map.entry("target-is-tameable", noArgumentCondition("target-is-tameable",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Tameable)),
+                Map.entry("target-is-raider", noArgumentCondition("target-is-raider",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Raider)),
+                Map.entry("target-is-undead", noArgumentCondition("target-is-undead",
+                        ctx -> isUndeadEntity(targetOnlyEntity(ctx)))),
+                Map.entry("target-is-creature", noArgumentCondition("target-is-creature",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Creature)),
+                Map.entry("target-is-baby", noArgumentCondition("target-is-baby",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Ageable age && !age.isAdult())),
+                Map.entry("target-is-adult", noArgumentCondition("target-is-adult",
+                        ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Ageable age && age.isAdult())),
+                Map.entry("target-is-tamed", noArgumentCondition("target-is-tamed",
                         ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Tameable tameable
-                                && tameable.isTamed()),
-                Map.entry("target-is-sheared", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> isShearedEntity(targetOnlyEntity(ctx))),
-                Map.entry("target-is-saddled", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> isSaddledEntity(targetOnlyEntity(ctx))),
-                Map.entry("target-is-powered", (SkillCatalog.ConditionFactory) a ->
+                                && tameable.isTamed())),
+                Map.entry("target-is-sheared", noArgumentCondition("target-is-sheared",
+                        ctx -> isShearedEntity(targetOnlyEntity(ctx)))),
+                Map.entry("target-is-saddled", noArgumentCondition("target-is-saddled",
+                        ctx -> isSaddledEntity(targetOnlyEntity(ctx)))),
+                Map.entry("target-is-powered", noArgumentCondition("target-is-powered",
                         ctx -> targetOnlyEntity(ctx) instanceof org.bukkit.entity.Creeper creeper
-                                && creeper.isPowered()),
-                Map.entry("target-is-collidable", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isCollidable()),
+                                && creeper.isPowered())),
+                Map.entry("target-is-collidable", noArgumentCondition("target-is-collidable",
+                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isCollidable())),
                 Map.entry("target-has-offhand", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = str(a, 0, "");
                     return ctx -> hasOffhand(targetOnlyEntity(ctx), wanted);
@@ -3133,21 +3141,21 @@ public final class SkillExtras {
                     return dev.helstera.api.behavior.MobRelations.areSiblings(caster, target);
                     };
                 }),
-                Map.entry("target-is-sneaking", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isSneaking()),
-                Map.entry("target-has-ai", (SkillCatalog.ConditionFactory) a ->
+                Map.entry("target-is-sneaking", noArgumentCondition("target-is-sneaking",
+                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isSneaking())),
+                Map.entry("target-has-ai", noArgumentCondition("target-has-ai",
                         ctx -> ctx != null && ctx.targetEntity()
                                 .map(entity -> entity instanceof org.bukkit.entity.Mob mob && mob.hasAI())
-                                .orElse(false)),
-                Map.entry("target-has-gravity", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx != null && ctx.targetEntity().map(Entity::hasGravity).orElse(false)),
-                Map.entry("target-is-silent", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx != null && ctx.targetEntity().map(Entity::isSilent).orElse(false)),
-                Map.entry("target-is-valid", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> ctx != null && ctx.targetEntity().map(Entity::isValid).orElse(false)),
-                Map.entry("target-is-alive", (SkillCatalog.ConditionFactory) a ->
+                                .orElse(false))),
+                Map.entry("target-has-gravity", noArgumentCondition("target-has-gravity",
+                        ctx -> ctx != null && ctx.targetEntity().map(Entity::hasGravity).orElse(false))),
+                Map.entry("target-is-silent", noArgumentCondition("target-is-silent",
+                        ctx -> ctx != null && ctx.targetEntity().map(Entity::isSilent).orElse(false))),
+                Map.entry("target-is-valid", noArgumentCondition("target-is-valid",
+                        ctx -> ctx != null && ctx.targetEntity().map(Entity::isValid).orElse(false))),
+                Map.entry("target-is-alive", noArgumentCondition("target-is-alive",
                         ctx -> ctx != null && ctx.targetEntity()
-                                .map(entity -> entity.isValid() && !entity.isDead()).orElse(false)),
+                                .map(entity -> entity.isValid() && !entity.isDead()).orElse(false))),
                 Map.entry("mounted", (SkillCatalog.ConditionFactory) a -> {
                     requireNoConditionArguments(a, "mounted");
                     return ctx -> conditionEntity(ctx) instanceof LivingEntity living && living.isInsideVehicle();
@@ -3178,10 +3186,10 @@ public final class SkillExtras {
                         return distance.isPresent() && !compare(distance.getAsDouble(), comparison);
                     };
                 }),
-                Map.entry("target-has-line-of-sight", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetAiLineOfSight(ctx).orElse(false)),
-                Map.entry("target-not-in-line-of-sight", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetAiLineOfSight(ctx).map(found -> !found).orElse(false)),
+                Map.entry("target-has-line-of-sight", noArgumentCondition("target-has-line-of-sight",
+                        ctx -> targetAiLineOfSight(ctx).orElse(false))),
+                Map.entry("target-not-in-line-of-sight", noArgumentCondition("target-not-in-line-of-sight",
+                        ctx -> targetAiLineOfSight(ctx).map(found -> !found).orElse(false))),
                 Map.entry("moving", (SkillCatalog.ConditionFactory) a -> {
                     boolean exact = movingExact(a);
                     return ctx -> moving(ctx, exact);
@@ -3209,50 +3217,46 @@ public final class SkillExtras {
                     requireNoConditionArguments(a, "target-is-leashed");
                     return ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isLeashed();
                 }),
-                Map.entry("target-is-sprinting", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isSprinting()),
-                Map.entry("target-is-flying", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isFlying()),
-                Map.entry("target-is-blocking", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isBlocking()),
-                Map.entry("target-is-gliding", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isGliding()),
-                Map.entry("target-is-swimming", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isSwimming()),
-                Map.entry("target-on-fire", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).getFireTicks() > 0),
-                Map.entry("target-in-air", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && !living.isOnGround()),
-                Map.entry("target-in-water", (SkillCatalog.ConditionFactory) a -> {
-                    return ctx -> {
-                        LivingEntity target = targetOnlyEntity(ctx);
-                        if (target == null) return false;
-                        try {
-                            return target.isInWater();
-                        } catch (RuntimeException ignored) {
-                            return false;
-                        }
-                    };
-                }),
-                Map.entry("target-in-lava", (SkillCatalog.ConditionFactory) a -> {
-                    return ctx -> {
-                        LivingEntity target = targetOnlyEntity(ctx);
-                        if (target == null) return false;
-                        try {
-                            return target.isInLava();
-                        } catch (RuntimeException ignored) {
-                            return false;
-                        }
-                    };
-                }),
-                Map.entry("target-is-glowing", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isGlowing()),
-                Map.entry("target-is-invisible", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isInvisible()),
-                Map.entry("target-is-climbing", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isClimbing()),
-                Map.entry("target-is-frozen", (SkillCatalog.ConditionFactory) a ->
-                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isFrozen()),
+                Map.entry("target-is-sprinting", noArgumentCondition("target-is-sprinting",
+                        ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isSprinting())),
+                Map.entry("target-is-flying", noArgumentCondition("target-is-flying",
+                        ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isFlying())),
+                Map.entry("target-is-blocking", noArgumentCondition("target-is-blocking",
+                        ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isBlocking())),
+                Map.entry("target-is-gliding", noArgumentCondition("target-is-gliding",
+                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isGliding())),
+                Map.entry("target-is-swimming", noArgumentCondition("target-is-swimming",
+                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isSwimming())),
+                Map.entry("target-on-fire", noArgumentCondition("target-on-fire",
+                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).getFireTicks() > 0)),
+                Map.entry("target-in-air", noArgumentCondition("target-in-air",
+                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && !living.isOnGround())),
+                Map.entry("target-in-water", noArgumentCondition("target-in-water", ctx -> {
+                    LivingEntity target = targetOnlyEntity(ctx);
+                    if (target == null) return false;
+                    try {
+                        return target.isInWater();
+                    } catch (RuntimeException ignored) {
+                        return false;
+                    }
+                })),
+                Map.entry("target-in-lava", noArgumentCondition("target-in-lava", ctx -> {
+                    LivingEntity target = targetOnlyEntity(ctx);
+                    if (target == null) return false;
+                    try {
+                        return target.isInLava();
+                    } catch (RuntimeException ignored) {
+                        return false;
+                    }
+                })),
+                Map.entry("target-is-glowing", noArgumentCondition("target-is-glowing",
+                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isGlowing())),
+                Map.entry("target-is-invisible", noArgumentCondition("target-is-invisible",
+                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isInvisible())),
+                Map.entry("target-is-climbing", noArgumentCondition("target-is-climbing",
+                        ctx -> targetOnlyEntity(ctx) instanceof LivingEntity living && living.isClimbing())),
+                Map.entry("target-is-frozen", noArgumentCondition("target-is-frozen",
+                        ctx -> targetOnlyEntity(ctx) != null && targetOnlyEntity(ctx).isFrozen())),
                 Map.entry("target-is-blocked", (SkillCatalog.ConditionFactory) a -> {
                     double above = num(a, 0, 1.0);
                     return ctx -> {
@@ -3589,16 +3593,16 @@ public final class SkillExtras {
                         return false;
                     };
                 }),
-                Map.entry("has-dialog-open", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                Map.entry("has-dialog-open", noArgumentCondition("has-dialog-open", ctx -> {
                     if (!hasInstance(ctx)) return false;
                     java.util.function.IntPredicate lookup = dialogueLookup;
                     return lookup != null && lookup.test(id(ctx));
-                }),
-                Map.entry("is-in-cinematic", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                })),
+                Map.entry("is-in-cinematic", noArgumentCondition("is-in-cinematic", ctx -> {
                     if (!hasInstance(ctx) || !(conditionEntity(ctx) instanceof Player player)) return false;
                     CinematicLookup lookup = cinematicLookup;
                     return lookup != null && lookup.isActiveForPlayer(id(ctx), player);
-                }),
+                })),
                 Map.entry("material-on-cooldown", (SkillCatalog.ConditionFactory) a -> {
                     String materialName = keyedArg(a, "material", "mat", "m");
                     if (materialName == null) materialName = str(a, 0, "ENDER_PEARL");
@@ -3648,9 +3652,9 @@ public final class SkillExtras {
                     final String expectedSlot = slot;
                     return ctx -> itemIsSimilar(ctx, expected, expectedSlot);
                 }),
-                Map.entry("item-recharging", (SkillCatalog.ConditionFactory) a ->
+                Map.entry("item-recharging", noArgumentCondition("item-recharging",
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.HumanEntity human
-                                && human.getAttackCooldown() < 1.0f),
+                                && human.getAttackCooldown() < 1.0f)),
                 Map.entry("trigger-block-type", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = keyedArg(a, "types", "type", "t", "material", "mat", "m",
                             "block", "b");
@@ -5038,10 +5042,13 @@ public final class SkillExtras {
     }
 
     private static SkillCatalog.ConditionFactory timeAlias(String name) {
-        return ignored -> ctx -> {
+        return args -> {
+            requireNoConditionArguments(args, name);
+            return ctx -> {
             Location location = selfLoc(ctx);
             if (location == null || location.getWorld() == null) return false;
             return matchesTime(name, location.getWorld().getTime());
+            };
         };
     }
 
@@ -5076,10 +5083,13 @@ public final class SkillExtras {
     }
 
     private static SkillCatalog.ConditionFactory weatherAlias(String name) {
-        return ignored -> ctx -> {
+        return args -> {
+            requireNoConditionArguments(args, name);
+            return ctx -> {
             Location location = selfLoc(ctx);
             if (location == null || location.getWorld() == null) return false;
             return matchesWeather(name, location.getWorld().hasStorm(), location.getWorld().isThundering());
+            };
         };
     }
 

@@ -3977,6 +3977,33 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("entity category and state condition arguments remain fail closed across migration and runtime")
+    void entityCategoryAndStateConditionArgumentsRemainFailClosed() {
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        for (String source : List.of(
+                "?isLiving{unknown=true}", "?isPlayer{unknown=true}", "?isMob{unknown=true}",
+                "?isUndead{unknown=true}", "?isBaby{unknown=true}", "?isTamed{unknown=true}",
+                "?onGround{unknown=true}", "?inWater{unknown=true}", "?inLava{unknown=true}",
+                "?targetIsPlayer{unknown=true}", "?targetIsLiving{unknown=true}",
+                "?targetIsSneaking{unknown=true}", "?targetHasAI{unknown=true}",
+                "?targetIsAlive{unknown=true}", "?targetInWater{unknown=true}",
+                "?targetIsGlowing{unknown=true}", "?hasDialogOpen{unknown=true}",
+                "?isInCinematic{unknown=true}", "?itemRecharging{unknown=true}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertFalse(mapped.translated(), source);
+            assertEquals(source, mapped.condition(), source);
+        }
+        for (String canonical : List.of(
+                "is-living", "is-player", "is-mob", "is-undead", "is-baby", "is-tamed",
+                "on-ground", "in-water", "in-lava", "target-is-player", "target-is-living",
+                "target-is-sneaking", "target-has-ai", "target-is-alive", "target-in-water",
+                "target-is-glowing", "has-dialog-open", "is-in-cinematic", "item-recharging")) {
+            assertNull(skills.bindCondition(canonical + " unknown=true"), canonical);
+        }
+    }
+
+    @Test
     @DisplayName("imported TargetHasPotionEffect preserves level and duration ranges on the explicit target")
     void importedTargetHasPotionEffectReachesTargetOnlyRuntime() {
         var instance = mock(dev.helstera.api.instance.ModelInstance.class);
