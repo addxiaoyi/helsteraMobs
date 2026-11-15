@@ -965,6 +965,51 @@ public final class SkillExtras {
         }
     }
 
+    private static NumberRange potionEffectRange(List<String> args, int index, String label) {
+        if (args == null || args.size() <= index || args.get(index) == null
+                || args.get(index).isBlank()) return null;
+        NumberRange parsed = numberRange(args, index);
+        if (parsed == null || !finiteNumberRange(args, index)) {
+            throw new IllegalArgumentException("invalid " + label + " range");
+        }
+        return parsed;
+    }
+
+    private static boolean finiteNumberRange(List<String> args, int index) {
+        String raw = str(args, index, "");
+        if ((raw.equals(">") || raw.equals(">=") || raw.equals("<") || raw.equals("<="))
+                && args.size() > index + 1) {
+            raw += str(args, index + 1, "");
+        }
+        raw = raw.trim();
+        for (String operator : List.of(">=", "<=", ">", "<")) {
+            if (raw.startsWith(operator)) raw = raw.substring(operator.length()).trim();
+        }
+        int to = raw.toLowerCase(Locale.ROOT).indexOf("to");
+        if (to > 0) {
+            return finiteNumber(raw.substring(0, to).trim())
+                    && finiteNumber(raw.substring(to + 2).trim())
+                    && Double.parseDouble(raw.substring(0, to).trim())
+                    <= Double.parseDouble(raw.substring(to + 2).trim());
+        }
+        int separator = raw.indexOf('-', 1);
+        if (separator > 0) {
+            return finiteNumber(raw.substring(0, separator).trim())
+                    && finiteNumber(raw.substring(separator + 1).trim())
+                    && Double.parseDouble(raw.substring(0, separator).trim())
+                    <= Double.parseDouble(raw.substring(separator + 1).trim());
+        }
+        return finiteNumber(raw);
+    }
+
+    private static boolean finiteNumber(String raw) {
+        try {
+            return raw != null && !raw.isBlank() && Double.isFinite(Double.parseDouble(raw.trim()));
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
     private static LivingEntity conditionEntity(BehaviorContext ctx) {
         if (ctx == null) return null;
         LivingEntity target = ctx.targetEntity().orElse(null);
@@ -3831,11 +3876,13 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("has-potion-effect", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && a.size() > 3) {
+                        throw new IllegalArgumentException("has-potion-effect accepts type, level and duration");
+                    }
                     String wanted = str(a, 0, "ANY");
-                    NumberRange level = a == null || a.size() <= 1 || a.get(1).isBlank()
-                            ? null : numberRange(a, 1);
-                    NumberRange duration = a == null || a.size() <= 2 || a.get(2).isBlank()
-                            ? null : numberRange(a, 2);
+                    if (wanted.isBlank()) throw new IllegalArgumentException("potion effect type is required");
+                    NumberRange level = potionEffectRange(a, 1, "potion amplifier");
+                    NumberRange duration = potionEffectRange(a, 2, "potion duration");
                     return ctx -> {
                         LivingEntity entity = conditionEntity(ctx);
                         if (entity == null) return false;
@@ -3946,6 +3993,28 @@ public final class SkillExtras {
                         return target.getActivePotionEffects().stream()
                                 .anyMatch(e -> e.getType().getKey().getKey()
                                         .equalsIgnoreCase(name.toLowerCase(Locale.ROOT)));
+                    };
+                }),
+                Map.entry("target-has-potion-effect", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && a.size() > 3) {
+                        throw new IllegalArgumentException("target-has-potion-effect accepts type, level and duration");
+                    }
+                    String wanted = str(a, 0, "ANY");
+                    if (wanted.isBlank()) throw new IllegalArgumentException("potion effect type is required");
+                    NumberRange level = potionEffectRange(a, 1, "potion amplifier");
+                    NumberRange duration = potionEffectRange(a, 2, "potion duration");
+                    return ctx -> {
+                        LivingEntity target = targetOnlyEntity(ctx);
+                        if (target == null) return false;
+                        return target.getActivePotionEffects().stream().anyMatch(effect -> {
+                            String actualType = effect.getType() == null ? ""
+                                    : effect.getType().getKey().getKey();
+                            boolean typeMatches = wanted.isBlank() || "ANY".equalsIgnoreCase(wanted)
+                                    || actualType.equalsIgnoreCase(wanted);
+                            return typeMatches
+                                    && (level == null || level.contains(effect.getAmplifier()))
+                                    && (duration == null || duration.contains(effect.getDuration()));
+                        });
                     };
                 }),
                 Map.entry("target-has-auras", (SkillCatalog.ConditionFactory) a -> {

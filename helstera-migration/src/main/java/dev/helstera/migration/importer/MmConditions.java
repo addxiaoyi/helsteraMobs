@@ -144,6 +144,12 @@ public final class MmConditions {
     private static final Map<String, String> AURA_TYPE_ARGUMENTS = Map.of(
             "auragroup", "type", "auratype", "type", "group", "type",
             "type", "type", "t", "type", "g", "type");
+    private static final Map<String, String> POTION_EFFECT_ARGUMENTS = Map.ofEntries(
+            Map.entry("effect", "type"), Map.entry("potion", "type"),
+            Map.entry("type", "type"), Map.entry("t", "type"),
+            Map.entry("e", "type"), Map.entry("level", "level"),
+            Map.entry("lvl", "level"), Map.entry("l", "level"),
+            Map.entry("duration", "duration"), Map.entry("d", "duration"));
     private static final Set<String> BLOCK_TYPE_ARGUMENTS = Set.of(
             "types", "type", "t", "material", "mat", "m", "block", "b");
     private static final Set<String> BLOCK_TYPE_IN_RADIUS_ARGUMENTS = Set.of(
@@ -1171,11 +1177,11 @@ public final class MmConditions {
             return new Mapped("is-using-spyglass", true);
         }
         if ("haspotioneffect".equals(name)) {
-            String effect = firstArgument(body, "type", "t");
-            if (effect == null) effect = normalizeScalar(body);
-            if (effect == null || effect.contains("=")) effect = "ANY";
-            String level = firstArgument(body, "level", "lvl", "l");
-            String duration = firstArgument(body, "duration", "d");
+            Map<String, String> arguments = strictValueArguments(body, POTION_EFFECT_ARGUMENTS, "type");
+            if (arguments == null) return new Mapped(s, false);
+            String effect = arguments.getOrDefault("type", "ANY");
+            String level = arguments.get("level");
+            String duration = arguments.get("duration");
             if (level != null && !validNumberRange(level)) return new Mapped(s, false);
             if (duration != null && !validNumberRange(duration)) return new Mapped(s, false);
             String mapped = "has-potion-effect " + effect;
@@ -1484,9 +1490,25 @@ public final class MmConditions {
                     : new Mapped("target-potion-effect-active " + effect, true);
         }
         if ("targethaspotioneffect".equals(name) || "targethaspotion".equals(name)) {
-            String effect = firstArgument(body, "effect", "potion", "type", "e");
-            return effect == null ? new Mapped(s, false)
-                    : new Mapped("target-potion-effect-active " + effect, true);
+            Map<String, String> arguments = strictValueArguments(body, Map.ofEntries(
+                    Map.entry("effect", "effect"), Map.entry("potion", "effect"),
+                    Map.entry("type", "effect"), Map.entry("e", "effect"),
+                    Map.entry("level", "level"), Map.entry("lvl", "level"),
+                    Map.entry("l", "level"), Map.entry("duration", "duration"),
+                    Map.entry("d", "duration")), "effect");
+            if (arguments == null) return new Mapped(s, false);
+            String effect = arguments.get("effect");
+            if (effect == null || effect.isBlank()) return new Mapped(s, false);
+            String level = arguments.get("level");
+            String duration = arguments.get("duration");
+            if (level != null && !validNumberRange(level)
+                    || duration != null && !validNumberRange(duration)) {
+                return new Mapped(s, false);
+            }
+            StringBuilder mapped = new StringBuilder("target-has-potion-effect ").append(effect);
+            if (level != null) mapped.append(' ').append(level);
+            if (duration != null) mapped.append(' ').append(duration);
+            return new Mapped(mapped.toString(), true);
         }
         if ("holding".equals(name)) {
             String item = normalizeScalar(body);

@@ -562,7 +562,7 @@ class SkillServiceTest {
     }
 
     @Test
-    @DisplayName("target-has-item and target-potion-effect-active use only the explicit target")
+    @DisplayName("target inventory and potion conditions use only the explicit target")
     void targetInventoryAndPotionConditionsUseOnlyTarget() {
         var svc = service();
         var instance = mock(ModelInstance.class);
@@ -590,15 +590,57 @@ class SkillServiceTest {
         try {
             assertFalse(registry.testCondition(svc.bindCondition("target-has-item SHIELD >=1"), context));
             assertFalse(registry.testCondition(svc.bindCondition("target-potion-effect-active SPEED"), context));
+            assertFalse(registry.testCondition(svc.bindCondition("target-has-potion-effect SPEED"), context));
             var noTarget = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
             assertFalse(registry.testCondition(svc.bindCondition("target-has-item SHIELD >=1"), noTarget));
             assertFalse(registry.testCondition(svc.bindCondition("target-potion-effect-active SPEED"), noTarget));
+            assertFalse(registry.testCondition(svc.bindCondition("target-has-potion-effect SPEED"), noTarget));
 
             when(targetInventory.getContents()).thenReturn(new ItemStack[]{actual});
             assertTrue(registry.testCondition(svc.bindCondition("target-has-item SHIELD >=1"), context));
+
+            var effect = mock(org.bukkit.potion.PotionEffect.class);
+            when(effect.getType()).thenReturn(null);
+            when(effect.getAmplifier()).thenReturn(1);
+            when(effect.getDuration()).thenReturn(80);
+            when(target.getActivePotionEffects()).thenReturn(java.util.Set.of(effect));
+            assertTrue(registry.testCondition(svc.bindCondition(
+                    "target-has-potion-effect ANY 1 80"), context));
+            assertTrue(registry.testCondition(svc.bindCondition(
+                    "target-has-potion-effect ANY 1to2 80to100"), context));
+            assertFalse(registry.testCondition(svc.bindCondition(
+                    "target-has-potion-effect ANY >1"), context));
+            assertFalse(registry.testCondition(svc.bindCondition(
+                    "target-has-potion-effect ANY 0 81"), context));
         } finally {
             SkillExtras.itemResolver(null);
         }
+    }
+
+    @Test
+    @DisplayName("HasPotionEffect keeps caster scope and rejects invalid ranges at bind time")
+    void hasPotionEffectValidatesRangesAndUsesCasterScope() {
+        var svc = service();
+        var instance = mock(ModelInstance.class);
+        var caster = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        var effect = mock(org.bukkit.potion.PotionEffect.class);
+        when(effect.getType()).thenReturn(null);
+        when(effect.getAmplifier()).thenReturn(1);
+        when(effect.getDuration()).thenReturn(80);
+        when(caster.getActivePotionEffects()).thenReturn(java.util.Set.of(effect));
+        var context = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        assertTrue(registry.testCondition(svc.bindCondition(
+                "has-potion-effect ANY 1to2 80to100"), context));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "has-potion-effect ANY 0 81"), context));
+        assertNull(svc.bindCondition("has-potion-effect ANY >NaN"));
+        assertNull(svc.bindCondition("has-potion-effect ANY 1 80 extra"));
+        assertFalse(registry.testCondition(svc.bindCondition(
+                "has-potion-effect ANY 1 80"), BehaviorContext.of(null,
+                (LivingEntity) null, 1.0, -1, 0, "IDLE")));
     }
 
     @Test

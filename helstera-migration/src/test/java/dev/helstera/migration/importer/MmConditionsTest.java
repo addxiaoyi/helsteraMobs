@@ -1380,8 +1380,13 @@ class MmConditionsTest {
     void officialHasPotionEffectConditionMapsTypeLevelAndDuration() {
         assertEquals("has-potion-effect SPEED 0-2 0-9999",
                 t("?hasPotionEffect{t=SPEED;l=0-2;d=0-9999}"));
+        assertEquals("has-potion-effect SPEED >=1",
+                t("?hasPotionEffect{effect=SPEED;level=>=1}"));
         assertEquals("has-potion-effect ANY", t("?hasPotionEffect"));
         assertFalse(translated("?hasPotionEffect{t=SPEED;l=invalid}"));
+        assertFalse(translated("?hasPotionEffect{type=SPEED;unknown=true}"));
+        assertFalse(translated("?hasPotionEffect{type=SPEED;type=POISON}"));
+        assertFalse(translated("?hasPotionEffect{type=SPEED;duration=Infinity}"));
     }
 
     @Test
@@ -1843,7 +1848,14 @@ class MmConditionsTest {
         assertEquals("target-has-item item=*_SWORD amount=1to2 strict=true",
                 t("?targetHasItem{item=*_SWORD;amount=1to2;strict=true}"));
         assertEquals("target-potion-effect-active SPEED", t("?targetPotionEffectActive{effect=SPEED}"));
-        assertEquals("target-potion-effect-active SPEED", t("?targetHasPotionEffect{effect=SPEED}"));
+        assertEquals("target-has-potion-effect SPEED", t("?targetHasPotionEffect{effect=SPEED}"));
+        assertEquals("target-has-potion-effect SPEED 0-2 1-200",
+                t("?targetHasPotionEffect{type=SPEED;level=0-2;duration=1-200}"));
+        assertEquals("target-has-potion-effect SPEED >=1",
+                t("?targetHasPotionEffect{e=SPEED;l=>=1}"));
+        assertFalse(translated("?targetHasPotionEffect{type=SPEED;unknown=true}"));
+        assertFalse(translated("?targetHasPotionEffect{type=SPEED;level=NaN}"));
+        assertFalse(translated("?targetHasPotionEffect{type=SPEED;level=1;level=2}"));
         assertFalse(translated("?targetHasAuras{effect=SPEED}"));
         assertFalse(translated("?targetHasAuras"));
         assertEquals("mythic-target-has-aura aura=FURY", t("?targetHasAuras{aura=FURY}"));

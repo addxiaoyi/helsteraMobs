@@ -1505,9 +1505,12 @@ pending.
 
 Incremental condition update: official `HasPotionEffect` now matches active
 Bukkit potion effects by type, amplifier, and remaining duration ranges, with
-`ANY` type support. Migration, binder, unit, and condition-catalog self-test
-coverage are included. Exploratory Paper 1.21.4 fixture r8 and strict Paper
-1.21.1-133 fixture `srv-paper-integration-final-r8` record
+`ANY` type support. Its importer accepts the official `type`/`effect`, `level`,
+and `duration` aliases while preserving unknown and duplicate arguments; the
+runtime rejects malformed ranges at bind time and fails closed without a
+caster entity. Migration and AI coverage includes inclusive ranges, invalid
+range rejection, and caster-only scope. Exploratory Paper 1.21.4 fixture r8
+and strict Paper 1.21.1-133 fixture `srv-paper-integration-final-r8` record
 `potionEffectCondition=passed`.
 
 Incremental Mythic Aura update: Mythic `Aura`/`Buff`/`Debuff` now tracks named
@@ -2087,8 +2090,14 @@ fallback; unit, migration, and exploratory Paper 1.21.11 r28 coverage protect
 the distinction from the corresponding caster conditions.
 
 The same target-only family includes `targetHasPotionEffect`, `targetHolding`,
-and `targetWearing`, with dedicated canonical names, importer regression
-coverage, and exploratory Paper 1.21.11 r30 evidence through the aggregate
+and `targetWearing`, with dedicated canonical names and importer regression
+coverage. `targetHasPotionEffect` now keeps the official `type`/`effect`,
+`level`, and `duration` ranges through migration and applies both ranges to
+the explicit target; malformed, duplicate, and unknown arguments remain
+preserved. `targetPotionEffectActive` remains the name-only active-effect
+alias. Runtime and migration-to-runtime tests cover target-only selection,
+inclusive ranges, missing targets, and caster fallback rejection. Exploratory
+Paper 1.21.11 r30 evidence covers the target-only family through the aggregate
 target-state probe. Mythic `targetHasAuras{aura=...}` maps to the named Aura
 registry and checks only the explicit target; this is distinct from the
 historical internal PotionEffect-backed `target-has-auras` condition.

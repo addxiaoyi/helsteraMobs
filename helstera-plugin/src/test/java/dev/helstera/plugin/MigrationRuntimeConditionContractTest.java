@@ -3950,6 +3950,78 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported TargetHasPotionEffect preserves level and duration ranges on the explicit target")
+    void importedTargetHasPotionEffectReachesTargetOnlyRuntime() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var effect = mock(org.bukkit.potion.PotionEffect.class);
+        when(effect.getType()).thenReturn(null);
+        when(effect.getAmplifier()).thenReturn(1);
+        when(effect.getDuration()).thenReturn(80);
+        when(caster.getActivePotionEffects()).thenReturn(java.util.Set.of(effect));
+        when(target.getActivePotionEffects()).thenReturn(java.util.Set.of(effect));
+
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, target, 1, -1, 0, "IDLE");
+        var missing = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, (org.bukkit.entity.LivingEntity) null, 1, -1, 0, "IDLE");
+
+        var imported = dev.helstera.migration.importer.MmConditions.translate(
+                "?targetHasPotionEffect{type=ANY;level=1to2;duration=80to100}");
+        assertTrue(imported.translated());
+        assertEquals("target-has-potion-effect ANY 1to2 80to100", imported.condition());
+        String bound = skills.bindCondition(imported.condition());
+        assertNotNull(bound, skills.warnings().toString());
+        assertTrue(registry.testCondition(bound, context));
+
+        assertFalse(registry.testCondition(skills.bindCondition(
+                "target-has-potion-effect ANY >1"), context));
+        assertFalse(registry.testCondition(skills.bindCondition(
+                "target-has-potion-effect ANY 1 81"), context));
+        assertFalse(registry.testCondition(bound, missing));
+
+        when(target.getActivePotionEffects()).thenReturn(java.util.Set.of());
+        assertFalse(registry.testCondition(bound, context));
+        assertTrue(caster.getActivePotionEffects().contains(effect),
+                "the caster fixture must not be used as a target fallback");
+    }
+
+    @Test
+    @DisplayName("imported HasPotionEffect keeps caster scope and rejects malformed ranges")
+    void importedHasPotionEffectReachesCasterRuntime() {
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var effect = mock(org.bukkit.potion.PotionEffect.class);
+        when(effect.getType()).thenReturn(null);
+        when(effect.getAmplifier()).thenReturn(1);
+        when(effect.getDuration()).thenReturn(80);
+        when(caster.getActivePotionEffects()).thenReturn(java.util.Set.of(effect));
+
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, (org.bukkit.entity.LivingEntity) null, 1, -1, 0, "IDLE");
+
+        var imported = dev.helstera.migration.importer.MmConditions.translate(
+                "?hasPotionEffect{effect=ANY;level=1to2;duration=80to100}");
+        assertTrue(imported.translated());
+        assertEquals("has-potion-effect ANY 1to2 80to100", imported.condition());
+        String bound = skills.bindCondition(imported.condition());
+        assertNotNull(bound, skills.warnings().toString());
+        assertTrue(registry.testCondition(bound, context));
+        assertNull(skills.bindCondition("has-potion-effect ANY >NaN"));
+        assertFalse(registry.testCondition(skills.bindCondition(
+                "has-potion-effect ANY 1 81"), context));
+    }
+
+    @Test
     @DisplayName("imported angry and pollinated aliases reach their runtime state consumers")
     void importedAngryAndPollinatedConditionsReachRuntime() {
         var bee = mock(org.bukkit.entity.Bee.class);

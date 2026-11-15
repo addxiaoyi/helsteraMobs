@@ -2523,7 +2523,7 @@ public final class SkillService {
             case "playerkills", "player-kills", "player-kill-count" -> "player-kills";
             case "targethaspotion", "target-has-potion", "targethaspotioneffect",
                     "target-has-potion-effect" ->
-                    "target-potion-effect-active";
+                    "target-has-potion-effect";
             case "targetholding", "target-holding" -> "target-holding";
             case "targetwearing", "target-wearing" -> "target-wearing";
             case "ownerisplayer", "owner-is-player" -> "owner-is-player";
