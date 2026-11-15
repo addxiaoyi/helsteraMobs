@@ -669,6 +669,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'uuidCondition'; status = 'passed'; observations = @('uuid-condition result=true imported=true trigger-positive=true literal-positive=true mismatched-rejected=true invalid-preserved=true')
     }
+    $fullReport.expectedProbeIds += 'mobsInChunkImportedCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'mobsInChunkImportedCondition'; status = 'passed'; observations = @('imported-mobs-in-chunk-condition default-zero=true range-positive=true zero-negative=true invalid-preserved=true passed=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'

@@ -16,7 +16,7 @@ Audited against the matrix on 2026-11-15:
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is Paper 1.21.1-133, with 457 probes: 438
+The latest full release fixture is Paper 1.21.1-133, with 458 probes: 439
 passed, 19 expected rejections, and zero failed or incomplete. This proves only
 the registered probe catalog. MythicMobs 5.7.2 has separate focused evidence;
 the full release fixture does not load MythicMobs. See the

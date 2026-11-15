@@ -11,6 +11,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.World;
+import org.bukkit.Chunk;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Farmland;
@@ -250,6 +251,45 @@ class SkillConditionsTest {
         assertFalse(extraFactory("living-in-radius").create(List.of(">=1", "5")).test(ctx()));
         assertFalse(extraFactory("mobs-in-chunk").create(List.of(">=1")).test(ctx()));
         assertFalse(extraFactory("dimension-is").create(List.of("NORMAL")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("mobs-in-chunk compares live chunk counts against exact, ranged and default amounts")
+    void mobsInChunkSupportsOfficialAmountRangesAndDefault() {
+        World world = mock(World.class);
+        Chunk chunk = mock(Chunk.class);
+        Location origin = new Location(world, 24, 64, -8);
+        Entity first = mock(org.bukkit.entity.Zombie.class);
+        Entity second = mock(org.bukkit.entity.Skeleton.class);
+        Entity player = mock(Player.class);
+        when(world.getChunkAt(1, -1)).thenReturn(chunk);
+        when(world.getChunkAt(origin)).thenReturn(chunk);
+        when(chunk.getEntities()).thenReturn(new Entity[]{first, second, player});
+        when(first.isValid()).thenReturn(true);
+        when(second.isValid()).thenReturn(true);
+
+        BehaviorContext context = BehaviorContext.execution(
+                null, null, 1.0, -1, 0, "MOBS_IN_CHUNK", null, null, List.of(), origin);
+        assertTrue(extraFactory("mobs-in-chunk").create(List.of("2to3")).test(context));
+        assertTrue(extraFactory("mobs-in-chunk").create(List.of("2")).test(context));
+        assertTrue(extraFactory("mobs-in-chunk").create(List.of("=2")).test(context));
+        assertTrue(extraFactory("mobs-in-chunk").create(List.of(">=1")).test(context));
+        assertTrue(extraFactory("mobs-in-chunk").create(List.of(">=", "1")).test(context));
+        assertFalse(extraFactory("mobs-in-chunk").create(List.of(">=3")).test(context));
+        assertTrue(extraFactory("mobs-in-chunk").create(List.of("<3")).test(context));
+        assertFalse(extraFactory("mobs-in-chunk").create(List.of("3to4")).test(context));
+        assertFalse(extraFactory("mobs-in-chunk").create(List.of("malformed")).test(context));
+        assertFalse(extraFactory("mobs-in-chunk").create(List.of()).test(ctx()));
+
+        Chunk emptyChunk = mock(Chunk.class);
+        when(world.getChunkAt(2, -1)).thenReturn(emptyChunk);
+        Location emptyOrigin = new Location(world, 40, 64, -8);
+        when(world.getChunkAt(emptyOrigin)).thenReturn(emptyChunk);
+        when(emptyChunk.getEntities()).thenReturn(new Entity[0]);
+        BehaviorContext emptyContext = BehaviorContext.execution(
+                null, null, 1.0, -1, 0, "MOBS_IN_CHUNK", null, null, List.of(),
+                emptyOrigin);
+        assertTrue(extraFactory("mobs-in-chunk").create(List.of()).test(emptyContext));
     }
 
     @Test

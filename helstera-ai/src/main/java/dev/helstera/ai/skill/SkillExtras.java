@@ -4259,8 +4259,22 @@ public final class SkillExtras {
                     return ctx -> compare(countLivingNear(ctx, radius), comparison);
                 }),
                 Map.entry("mobs-in-chunk", (SkillCatalog.ConditionFactory) a -> {
-                    Comparison comparison = comparison(a, 0, ">=");
-                    return ctx -> compare(countMobsInChunk(ctx), comparison);
+                    String expression = str(a, 0, "0").trim();
+                    if (expression.startsWith(">") || expression.startsWith("<")
+                            || expression.startsWith("!=")) {
+                        Comparison required = comparison(a, 0, ">=");
+                        return ctx -> {
+                            int count = countMobsInChunk(ctx);
+                            return count >= 0 && compare(count, required);
+                        };
+                    }
+                    if (expression.startsWith("==")) expression = expression.substring(2).trim();
+                    else if (expression.startsWith("=")) expression = expression.substring(1).trim();
+                    NumberRange amount = numberRange(List.of(expression), 0);
+                    return ctx -> {
+                        int count = countMobsInChunk(ctx);
+                        return amount != null && count >= 0 && amount.contains(count);
+                    };
                 }),
                 Map.entry("dimension-is", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = str(a, 0, "");
@@ -8941,15 +8955,15 @@ public final class SkillExtras {
 
     private static int countMobsInChunk(BehaviorContext ctx) {
         Location location = selfLoc(ctx);
-        if (location == null || location.getWorld() == null) return 0;
+        if (location == null || location.getWorld() == null) return -1;
         int count = 0;
         try {
             for (Entity entity : location.getChunk().getEntities()) {
                 if (entity instanceof org.bukkit.entity.Mob mob && mob.isValid()) count++;
-                if (count > 512) break;
             }
         } catch (Throwable ignored) {
             SkillFaults.swallow("SkillExtras#countMobsInChunk");
+            return -1;
         }
         return count;
     }

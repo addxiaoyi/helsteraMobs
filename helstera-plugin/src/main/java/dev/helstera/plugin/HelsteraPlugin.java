@@ -6399,6 +6399,34 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     private record SprintingConditionProbe(boolean runtime, boolean imported) { }
 
+    private boolean runImportedMobsInChunkConditionSelfTest(SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext emptyChunkContext,
+            dev.helstera.api.behavior.BehaviorContext occupiedChunkContext) {
+        var importedDefault = dev.helstera.migration.importer.MmConditions.translate("?mobsInChunk");
+        var importedRange = dev.helstera.migration.importer.MmConditions.translate(
+                "?mobsInChunk{a=1to2}");
+        var importedZero = dev.helstera.migration.importer.MmConditions.translate(
+                "?mobsInChunk{amount=0}");
+        var importedInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?mobsInChunk{amount=-1}");
+        String defaultKey = importedDefault.translated()
+                ? skills.bindCondition(importedDefault.condition()) : null;
+        String rangeKey = importedRange.translated() ? skills.bindCondition(importedRange.condition()) : null;
+        String zeroKey = importedZero.translated() ? skills.bindCondition(importedZero.condition()) : null;
+        boolean defaultZero = "mobs-in-chunk 0".equals(importedDefault.condition())
+                && defaultKey != null && behaviors.testCondition(defaultKey, emptyChunkContext);
+        boolean rangePositive = rangeKey != null && behaviors.testCondition(rangeKey, occupiedChunkContext);
+        boolean zeroNegative = zeroKey != null && !behaviors.testCondition(zeroKey, occupiedChunkContext);
+        boolean invalidPreserved = !importedInvalid.translated()
+                && "?mobsInChunk{amount=-1}".equals(importedInvalid.condition());
+        boolean passed = defaultZero && rangePositive && zeroNegative && invalidPreserved;
+        getLogger().info("imported-mobs-in-chunk-condition default-zero=" + defaultZero
+                + " range-positive=" + rangePositive + " zero-negative=" + zeroNegative
+                + " invalid-preserved=" + invalidPreserved + " passed=" + passed);
+        return passed;
+    }
+
     private SprintingConditionProbe runSprintingConditionProbe(SkillService skills,
             BehaviorRegistry behaviors,
             dev.helstera.api.behavior.BehaviorContext context,
@@ -13461,8 +13489,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("mobs-in-chunk =0"), emptyChunkContext);
                 boolean mobsInChunkBoundaries = cleanChunkPair && zeroChunkCount
                         && occupiedChunkCount && adjacentChunkExcluded;
+                boolean importedMobsInChunkCondition = runImportedMobsInChunkConditionSelfTest(
+                        skills, behaviors, emptyChunkContext, occupiedChunkContext);
                 mobsInChunkCondition = utilityMobsChunk && utilityMobsChunkReject
-                        && mobsInChunkBoundaries;
+                        && mobsInChunkBoundaries && importedMobsInChunkCondition;
                 boolean utilityDimension = behaviors.testCondition(
                         skills.bindCondition("dimension-is NORMAL"), conditionContext);
                 boolean chanceAlways = behaviors.testCondition(

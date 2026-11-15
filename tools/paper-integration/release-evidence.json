@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-mobs-in-chunk-range-strict-20261115-r3",
+    "reportFixtureDirectory": "srv-paper-mobs-in-chunk-range-strict-20261115-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mobs-in-chunk-range-strict-20261115-r3.json",
+    "reportSha256": "ba6a3dd030701764b3c8037c5cf5cc543c38446c5f251309a5d4f8b4dcc47dd7",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mobs-in-chunk-range-strict-20261115-r3.log.gz",
+    "logSha256": "f90c604bbda9c5410aced7bff34f9a1efdab88a9b8e36bd811ee59db3217c608",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-mobs-in-chunk-range-strict-20261115-r3-client-logs.tar.gz",
+    "clientLogSha256": "70c6ae9f31780f5cbfd727868f7f46e9a9cf9886901d69efd0a657eb66556364",
+    "pluginSha256": "70f7b62a59345bbe5bf19f02003ed627844fae64487abfe7ca4d737c711dbb45",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-parent-derived-import-strict-20261115-r2",
     "reportFixtureDirectory": "srv-paper-parent-derived-import-strict-20261115-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-parent-derived-import-strict-20261115-r2.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-parent-derived-import-strict-20261115-r2-client-logs.tar.gz",
     "clientLogSha256": "16d79e123775980acd11494f3b1ee4f9111b7cdc398aa645036f08d571eb11ed",
     "pluginSha256": "d3b78fdd61bf3fe96a1590a432108846b7a45987a9e946ea1531d782e2fe19fb",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-mobs-in-chunk-range-strict-20261115-r3"
   },
   {
     "fixtureId": "srv-paper-sprinting-strict-20261115-r2",

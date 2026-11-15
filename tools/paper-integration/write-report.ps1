@@ -265,6 +265,7 @@ $probeSpecs = [ordered]@{
     survivalModeCondition = 'survival-mode-condition positive=true negative=true restored=true'
     distanceFromSpawnCondition = 'condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true'
     mobsInChunkCondition = 'condition-utility-details .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true'
+    mobsInChunkImportedCondition = 'imported-mobs-in-chunk-condition default-zero=true range-positive=true zero-negative=true invalid-preserved=true passed=true'
     chanceCondition = 'condition-utility-details .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true'
     biomeCondition = 'spatial-condition-details .*biome-exact=true .*biome-partial=true .*biome-reject=true .*biome-type-category=true'
     biomeImported = 'biome-imported partial=true exact-rejected=true invalid-preserved=true'

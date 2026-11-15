@@ -123,6 +123,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] attack-cooldown-placeholder result=true in-range=true recharging=true caster=0.5 target=0.5 aliases=true non-player-unresolved=true absorption=true absorption-aliases=true absorption-zero=true non-player-absorption=true absorption-restored=true scoped-entity-type=true scoped-display=true scoped-coordinates=true scoped-distance-squared=true scoped-display-restored=true scoped-food-stats=true non-human-food-stats-unresolved=true food-stats-restored=true',
         '[Server thread/INFO]: [helsteraMobs] target-fluids-delayed imported=true water=true lava=true in-liquid-water=true in-liquid-lava=true in-liquid-waterlogged=true in-liquid-dry=true invalid-preserved=true restored=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] imported-mobs-in-chunk-condition default-zero=true range-positive=true zero-negative=true invalid-preserved=true passed=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
         '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
@@ -999,6 +1000,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'survivalModeCondition').status -eq 'passed') 'survival mode condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'distanceFromSpawnCondition').status -eq 'passed') 'distance from spawn boundary probe'
     Assert-True (($report.probes | Where-Object id -eq 'mobsInChunkCondition').status -eq 'passed') 'mobs in chunk condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'mobsInChunkImportedCondition').status -eq 'passed') 'imported mobs in chunk condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'chanceCondition').status -eq 'passed') 'chance condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'biomeCondition').status -eq 'passed') 'biome condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'biomeImported').status -eq 'passed') 'imported biome condition probe'
@@ -1958,6 +1960,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'skillTreeQueueSnapshot'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'skillTreeQueueSnapshot'; status = 'passed'; observations = @('synthetic queue snapshot evidence')
+    }
+    $fullCatalogReport.expectedProbeIds += 'mobsInChunkImportedCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'mobsInChunkImportedCondition'; status = 'passed'; observations = @('imported-mobs-in-chunk-condition default-zero=true range-positive=true zero-negative=true invalid-preserved=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'healthImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

@@ -1297,6 +1297,11 @@
       "status": "passed"
     },
     {
+      "id": "mobsInChunkImportedCondition",
+      "status": "passed",
+      "requiredObservation": "imported-mobs-in-chunk-condition default-zero=true range-positive=true zero-negative=true invalid-preserved=true passed=true"
+    },
+    {
       "id": "modelDisplay",
       "status": "passed"
     },

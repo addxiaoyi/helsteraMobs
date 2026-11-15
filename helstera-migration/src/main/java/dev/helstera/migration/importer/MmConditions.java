@@ -120,6 +120,8 @@ public final class MmConditions {
             "types", "types", "type", "types", "t", "types",
             "amount", "amount", "a", "amount",
             "radius", "radius", "r", "radius");
+    private static final Map<String, String> MOBS_IN_CHUNK_ARGUMENTS = Map.of(
+            "amount", "amount", "a", "amount");
     private static final Map<String, String> LOOKING_AT_ARGUMENTS = Map.of(
             "type", "type", "t", "type", "block", "block", "b", "block",
             "entity", "entity", "e", "entity", "distance", "distance", "d", "distance");
@@ -546,7 +548,11 @@ public final class MmConditions {
             return radiusAmountCondition(body, "living-in-radius", s);
         }
         if ("mobsinchunk".equals(name)) {
-            return numericCondition(body, "mobs-in-chunk", s, "amount", "a");
+            Map<String, String> arguments = strictValueArguments(body, MOBS_IN_CHUNK_ARGUMENTS, "amount");
+            if (arguments == null) return new Mapped(s, false);
+            String amount = arguments.getOrDefault("amount", "0");
+            if (!validNonNegativeCountRange(amount)) return new Mapped(s, false);
+            return new Mapped("mobs-in-chunk " + amount.trim(), true);
         }
         if ("dimension".equals(name)) {
             String value = firstArgument(body, "dimension", "d", "environment", "env");

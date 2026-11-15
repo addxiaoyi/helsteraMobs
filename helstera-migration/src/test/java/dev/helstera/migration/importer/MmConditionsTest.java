@@ -743,9 +743,20 @@ class MmConditionsTest {
     void extendedOfficialPopulationAndDimensionConditionsMap() {
         assertEquals("living-in-radius >=2 5", t("?livingInRadius{a=>=2;r=5}"));
         assertEquals("living-in-radius >=1 5", t("?livingInRadius{radius=5}"));
+        assertEquals("mobs-in-chunk 0", t("?mobsInChunk"));
         assertEquals("mobs-in-chunk >=2", t("?mobsInChunk{amount=>=2}"));
+        assertEquals("mobs-in-chunk 1to5", t("?mobsInChunk{amount=1to5}"));
+        assertEquals("mobs-in-chunk <5", t("?mobsInChunk{a=<5}"));
         assertEquals("dimension-is NETHER", t("?dimension{d=NETHER}"));
         assertTrue(translated("?mobsInChunk{a=>=1}"));
+        for (String invalid : List.of(
+                "?mobsInChunk{amount=5to1}",
+                "?mobsInChunk{amount=-1}",
+                "?mobsInChunk{amount=1;amount=2}",
+                "?mobsInChunk{amount=1;unknown=true}",
+                "?mobsInChunk{amount=NaN}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test
