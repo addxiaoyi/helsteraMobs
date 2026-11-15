@@ -15869,6 +15869,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " has-item-strict-positive=" + hasItemEvidence.strictPositive()
                         + " has-item-range-inclusive=" + hasItemEvidence.rangeInclusive()
                         + " has-item-range-negative=" + hasItemEvidence.rangeNegative()
+                        + " has-item-tag-positive=" + hasItemEvidence.tagPositive()
+                        + " has-item-qualified-tag-positive=" + hasItemEvidence.qualifiedTagPositive()
+                        + " has-item-missing-tag-rejected=" + hasItemEvidence.missingTagRejected()
+                        + " has-item-wildcard-positive=" + hasItemEvidence.wildcardPositive()
+                        + " has-item-wildcard-negative=" + hasItemEvidence.wildcardNegative()
+                        + " imported-has-item-tag-positive=" + hasItemEvidence.importedTagPositive()
+                        + " imported-target-has-item-wildcard-positive=" + hasItemEvidence.importedWildcardPositive()
                         + " imported-has-item-positive=" + hasItemEvidence.importedPositive()
                         + " imported-target-has-item-positive=" + hasItemEvidence.importedTargetPositive()
                         + " imported-has-item-invalid-preserved=" + hasItemEvidence.invalidPreserved()
@@ -16041,11 +16048,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private record HasItemConditionEvidence(boolean passed, boolean looseMetadataMatch,
                                             boolean strictMetadataReject, boolean strictPositive,
                                             boolean rangeInclusive, boolean rangeNegative,
-                                            boolean importedPositive, boolean importedTargetPositive,
-                                            boolean invalidPreserved, boolean restored) {
+                                            boolean tagPositive, boolean qualifiedTagPositive,
+                                            boolean missingTagRejected, boolean wildcardPositive,
+                                            boolean wildcardNegative, boolean importedTagPositive,
+                                            boolean importedWildcardPositive, boolean importedPositive,
+                                            boolean importedTargetPositive, boolean invalidPreserved,
+                                            boolean restored) {
         private static HasItemConditionEvidence failed() {
             return new HasItemConditionEvidence(false, false, false, false,
-                    false, false, false, false, false, false);
+                    false, false, false, false, false, false, false, false,
+                    false, false, false, false, false);
         }
     }
 
@@ -16062,6 +16074,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean strictPositive = false;
         boolean rangeInclusive = false;
         boolean rangeNegative = false;
+        boolean tagPositive = false;
+        boolean qualifiedTagPositive = false;
+        boolean missingTagRejected = false;
+        boolean wildcardPositive = false;
+        boolean wildcardNegative = false;
+        boolean importedTagPositive = false;
+        boolean importedWildcardPositive = false;
         boolean importedPositive = false;
         boolean importedTargetPositive = false;
         boolean invalidPreserved = false;
@@ -16100,6 +16119,36 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             rangeNegative = !behaviors.testCondition(skills.bindCondition(
                     "has-item item=SHIELD amount=3to4"), context);
 
+            inventory.clear();
+            inventory.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.ARROW));
+            tagPositive = behaviors.testCondition(skills.bindCondition(
+                    "has-item item=#arrows amount=>=1"), context);
+            qualifiedTagPositive = behaviors.testCondition(skills.bindCondition(
+                    "has-item item=#minecraft:arrows amount=1"), context);
+            missingTagRejected = !behaviors.testCondition(skills.bindCondition(
+                    "has-item item=#helstera:missing_item_tag amount=>=1"), context);
+            var importedTag = dev.helstera.migration.importer.MmConditions.translate(
+                    "?hasItem{item=#arrows;amount=1}");
+            String importedTagKey = importedTag.translated()
+                    ? skills.bindCondition(importedTag.condition()) : null;
+            importedTagPositive = importedTagKey != null
+                    && behaviors.testCondition(importedTagKey, context);
+
+            inventory.clear();
+            inventory.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.NETHERITE_SWORD));
+            wildcardPositive = behaviors.testCondition(skills.bindCondition(
+                    "has-item item=*_SWORD amount=>=1"), context);
+            wildcardNegative = !behaviors.testCondition(skills.bindCondition(
+                    "has-item item=*_AXE amount=>=1"), context);
+            var importedWildcard = dev.helstera.migration.importer.MmConditions.translate(
+                    "?targetHasItem{item=minecraft:*_sword;amount=>=1}");
+            String importedWildcardKey = importedWildcard.translated()
+                    ? skills.bindCondition(importedWildcard.condition()) : null;
+            importedWildcardPositive = importedWildcardKey != null
+                    && behaviors.testCondition(importedWildcardKey, context);
+
+            inventory.clear();
+            inventory.setItemInMainHand(new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
             var importedHasItem = dev.helstera.migration.importer.MmConditions.translate(
                     "?hasItem{item=SHIELD;amount=1to2;strict=true}");
             var importedTargetHasItem = dev.helstera.migration.importer.MmConditions.translate(
@@ -16122,10 +16171,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         boolean passed = baselinePositive && baselineNegative && looseMetadataMatch
                 && strictMetadataReject && strictPositive && rangeInclusive && rangeNegative
+                && tagPositive && qualifiedTagPositive && missingTagRejected && wildcardPositive
+                && wildcardNegative && importedTagPositive && importedWildcardPositive
                 && importedPositive && importedTargetPositive && invalidPreserved && restored;
         return new HasItemConditionEvidence(passed, looseMetadataMatch, strictMetadataReject,
-                strictPositive, rangeInclusive, rangeNegative, importedPositive,
-                importedTargetPositive, invalidPreserved, restored);
+                strictPositive, rangeInclusive, rangeNegative, tagPositive, qualifiedTagPositive,
+                missingTagRejected, wildcardPositive, wildcardNegative, importedTagPositive,
+                importedWildcardPositive, importedPositive, importedTargetPositive,
+                invalidPreserved, restored);
     }
 
     private boolean runImportedInvulnerabilityConditionSelfTest(

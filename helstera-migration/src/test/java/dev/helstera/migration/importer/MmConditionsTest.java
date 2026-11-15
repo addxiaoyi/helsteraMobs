@@ -1705,6 +1705,10 @@ class MmConditionsTest {
         assertEquals("target-air-level <=100", t("?targetAirLevel{value=<=100}"));
         assertEquals("target-has-item item=SHIELD amount=>=1 strict=false",
                 t("?targetHasItem{item=SHIELD;amount=>=1}"));
+        assertEquals("target-has-item item=#minecraft:arrows amount=1 strict=false",
+                t("?targetHasItem{item=#minecraft:arrows;amount=1}"));
+        assertEquals("target-has-item item=*_SWORD amount=1to2 strict=true",
+                t("?targetHasItem{item=*_SWORD;amount=1to2;strict=true}"));
         assertEquals("target-potion-effect-active SPEED", t("?targetPotionEffectActive{effect=SPEED}"));
         assertEquals("target-potion-effect-active SPEED", t("?targetHasPotionEffect{effect=SPEED}"));
         assertFalse(translated("?targetHasAuras{effect=SPEED}"));
@@ -1728,6 +1732,8 @@ class MmConditionsTest {
         assertEquals("target-health <=15", t("?targetHealth{h=<=15}"));
         assertEquals("target-health-percent >=50", t("?targetHealthPercent{p=>=50%}"));
         assertTrue(translated("?targetHasItem{item=SHIELD;amount=>=1}"));
+        assertTrue(translated("?targetHasItem{item=#arrows;amount=>=1}"));
+        assertTrue(translated("?targetHasItem{item=*_SWORD;amount=>=1}"));
     }
 
     @Test

@@ -1,4 +1,4 @@
-Latest strict fixture `srv-paper-has-item-strict-20261114-r1` completed 456 probes on Paper 1.21.1-133 with the current plugin artifact: 437 passed, 19 expected rejections, zero failed or incomplete. The `hasItemCondition` probe now covers real-player loose versus strict metadata matching, inclusive amount ranges, imported `HasItem` and `TargetHasItem`, unsupported `vanillaonly` preservation, and inventory restoration. See the [strict report](tools/paper-integration/reports/paper-1.21.1-has-item-strict-20261114-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). The broader Conditions catalog and full MythicMobs parity remain incomplete.
+Latest strict fixture `srv-paper-has-item-matcher-strict-20261115-r1` completed 456 probes on Paper 1.21.1-133 with the current plugin artifact: 437 passed, 19 expected rejections, zero failed or incomplete. Its real-player `hasItemCondition` probe verifies Bukkit item tags (`#arrows` and `#minecraft:arrows`), material-name wildcards (`*_SWORD` and a namespaced wildcard), missing-tag rejection, loose/strict metadata matching, inclusive amount ranges, imported `HasItem`/`TargetHasItem`, `vanillaonly=true` preservation, and inventory restoration. See the [strict report](tools/paper-integration/reports/paper-1.21.1-has-item-matcher-strict-20261115-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Third-party custom-item wildcard expansion and block-state selectors remain unverified; the broader Conditions catalog and full MythicMobs parity remain incomplete.
 Focused MythicMobs fixture `srv-paper-mythic-pack-strict-20261114-r7` also passed on Paper 1.21.1-133 with MythicMobs 5.7.2. MythicMobs' own API classified an API-spawned SkeletalMinion as Mythic and a vanilla Zombie as ordinary; Helstera's direct condition plus imported `IsMythicMob` and `IsMM` matched both outcomes. This focused check does not complete the broader Conditions catalog. See the [report](tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.json), [archived Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md).
 Previous strict fixture `srv-paper-prevent-vanilla-damage-strict-20261112-r3` verifies imported Mythic `Options.PreventVanillaDamage` through real direct melee and Arrow hits on Paper: both events remain uncancelled with zero damage, and both protected targets retain their health. Explicit `false` and malformed-value controls take real damage, while malformed input remains preserved. The full Paper 1.21.1-133 release catalog completed 454 probes (435 passed, 19 expected rejections), with zero failed or incomplete. See the [strict report](tools/paper-integration/reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). Full MythicMobs parity remains incomplete.
 Previous strict fixture `srv-paper-prevent-attack-strict-20261112-r1` verifies imported Mythic `Options.PreventAttack`: true cancels melee and projectile attacks, false allows them, and malformed input is preserved and safely allowed. Its full Paper 1.21.1-133 release catalog completed 453 probes (434 passed, 19 expected rejections), with zero failed or incomplete.
@@ -1377,7 +1377,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-has-item-strict-20261114-r1` has 456 probes (437 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-has-item-matcher-strict-20261115-r1` has 456 probes (437 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1388,14 +1388,14 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 This is a partial parity release. The matrix currently has `33`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-14). The full remaining work is:
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-15). The full remaining work is:
 
 Latest strict report has 456 probes, zero incomplete (437 passed, 19 expected rejections, zero failed).
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 609 cited IDs; 516 report files; 4 directories without reports; 89 missing directories; 292 archived release reports. The
+   Current fixture inventory: 610 cited IDs; 517 report files; 4 directories without reports; 89 missing directories; 293 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -741,6 +742,64 @@ class SkillServiceTest {
             assertNull(svc.bindCondition("has-item item=DIAMOND vanillaonly=true"));
         } finally {
             SkillExtras.itemResolver(null);
+        }
+    }
+
+    @Test
+    @DisplayName("has-item resolves Bukkit item tags and material wildcards")
+    void hasItemConditionSupportsTagsAndWildcards() throws Exception {
+        var svc = service();
+        var player = mock(Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        when(player.getInventory()).thenReturn(inventory);
+        ItemStack arrow = mock(ItemStack.class);
+        when(arrow.getType()).thenReturn(Material.ARROW);
+        when(arrow.getAmount()).thenReturn(1);
+        ItemStack sword = mock(ItemStack.class);
+        when(sword.getType()).thenReturn(Material.NETHERITE_SWORD);
+        when(sword.getAmount()).thenReturn(1);
+        AtomicReference<ItemStack[]> contents = new AtomicReference<>(new ItemStack[]{arrow});
+        when(inventory.getContents()).thenAnswer(ignored -> contents.get());
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        var serverField = org.bukkit.Bukkit.class.getDeclaredField("server");
+        serverField.setAccessible(true);
+        Object originalServer = serverField.get(null);
+        org.bukkit.Server server = mock(org.bukkit.Server.class);
+        serverField.set(null, server);
+        try {
+            var arrowsKey = org.bukkit.NamespacedKey.minecraft("arrows");
+            org.bukkit.Tag<Material> arrows = new org.bukkit.Tag<>() {
+                @Override public org.bukkit.NamespacedKey getKey() { return arrowsKey; }
+                @Override public boolean isTagged(Material material) { return material == Material.ARROW; }
+                @Override public java.util.Set<Material> getValues() { return java.util.Set.of(Material.ARROW); }
+            };
+            when(server.getTag(org.bukkit.Tag.REGISTRY_ITEMS, arrowsKey, Material.class)).thenReturn(arrows);
+
+            String shortTag = svc.bindCondition("has-item item=#arrows amount=>=1");
+            String qualifiedTag = svc.bindCondition("has-item item=#minecraft:arrows amount=1");
+            String missingTag = svc.bindCondition("has-item item=#missing_tag amount=>=1");
+            String wildcard = svc.bindCondition("has-item item=*_SWORD amount=>=1");
+            String qualifiedWildcard = svc.bindCondition("has-item item=minecraft:*_sword amount=1");
+            assertNotNull(shortTag, svc.warnings().toString());
+            assertNotNull(qualifiedTag, svc.warnings().toString());
+            assertNotNull(missingTag, svc.warnings().toString());
+            assertNotNull(wildcard, svc.warnings().toString());
+            assertNotNull(qualifiedWildcard, svc.warnings().toString());
+            assertTrue(registry.testCondition(shortTag, context));
+            assertTrue(registry.testCondition(qualifiedTag, context));
+            assertFalse(registry.testCondition(missingTag, context));
+
+            contents.set(new ItemStack[]{sword});
+            assertTrue(registry.testCondition(wildcard, context));
+            assertTrue(registry.testCondition(qualifiedWildcard, context));
+            ItemStack apple = mock(ItemStack.class);
+            when(apple.getType()).thenReturn(Material.APPLE);
+            when(apple.getAmount()).thenReturn(1);
+            contents.set(new ItemStack[]{apple});
+            assertFalse(registry.testCondition(wildcard, context));
+        } finally {
+            serverField.set(null, originalServer);
         }
     }
 

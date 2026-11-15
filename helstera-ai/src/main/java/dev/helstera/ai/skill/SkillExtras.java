@@ -726,6 +726,17 @@ public final class SkillExtras {
 
     private record ItemConditionOptions(String item, NumberRange amount, String slot, boolean strict) { }
 
+    private record ItemConditionMatcher(ItemStack expected, Set<Material> materials,
+                                        boolean vanilla, boolean strict) {
+        boolean matches(ItemStack stack) {
+            if (stack == null || stack.getType() == null
+                    || "AIR".equalsIgnoreCase(stack.getType().name())) return false;
+            if (materials == null) return matchesConditionItem(stack, expected, vanilla, strict);
+            if (!materials.contains(stack.getType())) return false;
+            return !strict || stack.isSimilar(new ItemStack(stack.getType(), 1));
+        }
+    }
+
     private static ItemConditionOptions itemConditionOptions(List<String> args) {
         Map<String, String> named = new LinkedHashMap<>();
         List<String> positional = new ArrayList<>();
@@ -3152,16 +3163,18 @@ public final class SkillExtras {
                 }),
                 Map.entry("has-item", (SkillCatalog.ConditionFactory) a -> {
                     ItemConditionOptions options = itemConditionOptions(a);
+                    boolean wildcard = options.item().indexOf('*') >= 0;
+                    ItemConditionMatcher wildcardMatcher = wildcard
+                            ? itemConditionMatcher(options.item(), options.strict()) : null;
                     return ctx -> {
-                        // Resolve at execution time: integrations may inject their
-                        // custom-item resolver after skills.yml has been bound.
-                        ItemStack expected = resolveItem(options.item(), 1);
                         LivingEntity target = ctx == null ? null : ctx.targetEntity().orElse(null);
                         if (target == null && ctx != null) target = ctx.target().orElse(null);
                         if (target == null) target = conditionEntity(ctx);
-                        if (target == null || expected == null) return false;
-                        return options.amount().contains(countMatchingItems(target, expected,
-                                options.slot(), vanillaItemName(options.item()), options.strict()));
+                        if (target == null) return false;
+                        ItemConditionMatcher matcher = wildcard ? wildcardMatcher
+                                : itemConditionMatcher(options.item(), options.strict());
+                        return matcher != null && options.amount().contains(
+                                countMatchingItems(target, matcher, options.slot()));
                     };
                 }),
                 Map.entry("has-free-inventory-slot", (SkillCatalog.ConditionFactory) a ->
@@ -3188,12 +3201,16 @@ public final class SkillExtras {
                 }),
                 Map.entry("target-has-item", (SkillCatalog.ConditionFactory) a -> {
                     ItemConditionOptions options = itemConditionOptions(a);
+                    boolean wildcard = options.item().indexOf('*') >= 0;
+                    ItemConditionMatcher wildcardMatcher = wildcard
+                            ? itemConditionMatcher(options.item(), options.strict()) : null;
                     return ctx -> {
                         LivingEntity target = targetOnlyEntity(ctx);
-                        ItemStack expected = resolveItem(options.item(), 1);
-                        return target != null && expected != null
-                                && options.amount().contains(countMatchingItems(target, expected,
-                                options.slot(), vanillaItemName(options.item()), options.strict()));
+                        if (target == null) return false;
+                        ItemConditionMatcher matcher = wildcard ? wildcardMatcher
+                                : itemConditionMatcher(options.item(), options.strict());
+                        return matcher != null && options.amount().contains(
+                                countMatchingItems(target, matcher, options.slot()));
                     };
                 }),
                 Map.entry("wearing", (SkillCatalog.ConditionFactory) a -> {
@@ -7337,6 +7354,61 @@ public final class SkillExtras {
         return material == null || material.isAir() ? null : new ItemStack(material, amount);
     }
 
+    private static ItemConditionMatcher itemConditionMatcher(String raw, boolean strict) {
+        if (raw == null || raw.isBlank()) return null;
+        String selector = raw.trim();
+        if (selector.startsWith("#") || selector.indexOf('*') >= 0) {
+            Set<Material> materials = resolveItemTypes(selector);
+            return materials == null || materials.isEmpty()
+                    ? null : new ItemConditionMatcher(null, materials, false, strict);
+        }
+        ItemStack expected = resolveItem(selector, 1);
+        return expected == null ? null : new ItemConditionMatcher(expected, null,
+                vanillaItemName(selector), strict);
+    }
+
+    private static Set<Material> resolveItemTypes(String wanted) {
+        if (wanted == null || wanted.isBlank()) return null;
+        String selector = wanted.trim();
+        Set<Material> materials = new java.util.HashSet<>();
+        if (selector.startsWith("#")) {
+            try {
+                org.bukkit.NamespacedKey key = org.bukkit.NamespacedKey.fromString(
+                        selector.substring(1).toLowerCase(Locale.ROOT));
+                if (key == null) return null;
+                org.bukkit.Tag<Material> tag = org.bukkit.Bukkit.getTag(
+                        org.bukkit.Tag.REGISTRY_ITEMS, key, Material.class);
+                if (tag == null) return null;
+                for (Material material : tag.getValues()) {
+                    if (material != null && !"AIR".equalsIgnoreCase(material.name())) materials.add(material);
+                }
+                return Set.copyOf(materials);
+            } catch (Throwable ignored) {
+                SkillFaults.swallow("SkillExtras#resolveItemTypes");
+                return null;
+            }
+        }
+
+        String upper = selector.toUpperCase(Locale.ROOT);
+        int namespaceSeparator = upper.indexOf(':');
+        if (namespaceSeparator >= 0) {
+            if (namespaceSeparator == 0 || namespaceSeparator != upper.lastIndexOf(':')
+                    || !"MINECRAFT".equals(upper.substring(0, namespaceSeparator))) return null;
+            upper = upper.substring(namespaceSeparator + 1);
+        }
+        if (upper.indexOf('*') >= 0) {
+            for (Material material : Material.values()) {
+                if (!"AIR".equalsIgnoreCase(material.name()) && matchesGlob(material.name(), upper)) {
+                    materials.add(material);
+                }
+            }
+            return Set.copyOf(materials);
+        }
+        Material material = Material.matchMaterial(upper);
+        if (material == null || "AIR".equalsIgnoreCase(material.name())) return null;
+        return Set.of(material);
+    }
+
     private static boolean vanillaItemName(String raw) {
         if (raw == null) return false;
         String name = raw.trim();
@@ -7372,6 +7444,26 @@ public final class SkillExtras {
         return total;
     }
 
+    private static int countMatchingItems(LivingEntity entity, ItemConditionMatcher matcher, String slotName) {
+        if (entity instanceof Player player && "all".equalsIgnoreCase(slotName)) {
+            return countMatching(player.getInventory().getContents(), matcher);
+        }
+        if (entity.getEquipment() == null) return 0;
+        String slot = slotName == null ? "all" : slotName.trim().toLowerCase(Locale.ROOT);
+        if (!"all".equals(slot)) {
+            EquipmentSlot equipmentSlot = equipmentSlot(slot);
+            return countMatching(new ItemStack[]{entity.getEquipment().getItem(equipmentSlot)}, matcher);
+        }
+        return countMatching(new ItemStack[]{
+                entity.getEquipment().getItem(EquipmentSlot.HAND),
+                entity.getEquipment().getItem(EquipmentSlot.OFF_HAND),
+                entity.getEquipment().getItem(EquipmentSlot.HEAD),
+                entity.getEquipment().getItem(EquipmentSlot.CHEST),
+                entity.getEquipment().getItem(EquipmentSlot.LEGS),
+                entity.getEquipment().getItem(EquipmentSlot.FEET)
+        }, matcher);
+    }
+
     private static int countMatching(ItemStack[] contents, ItemStack expected, boolean vanilla, boolean strict) {
         int total = 0;
         if (contents == null) return total;
@@ -7383,6 +7475,15 @@ public final class SkillExtras {
             if (sameItem) {
                 total += stack.getAmount();
             }
+        }
+        return total;
+    }
+
+    private static int countMatching(ItemStack[] contents, ItemConditionMatcher matcher) {
+        int total = 0;
+        if (contents == null || matcher == null) return total;
+        for (ItemStack stack : contents) {
+            if (matcher.matches(stack)) total += stack.getAmount();
         }
         return total;
     }

@@ -318,7 +318,7 @@ $probeSpecs = [ordered]@{
     foodLevelCondition = 'skill-actions .*food-level=true'
     foodSaturationCondition = 'skill-actions .*food-saturation=true'
     freeInventorySlotCondition = 'skill-actions .*free-inventory-slot=true'
-    hasItemCondition = 'skill-actions .*has-item=true .*has-item-loose-metadata-match=true .*has-item-strict-metadata-reject=true .*has-item-strict-positive=true .*has-item-range-inclusive=true .*has-item-range-negative=true .*imported-has-item-positive=true .*imported-target-has-item-positive=true .*imported-has-item-invalid-preserved=true .*has-item-restored=true'
+    hasItemCondition = 'skill-actions .*has-item=true .*has-item-loose-metadata-match=true .*has-item-strict-metadata-reject=true .*has-item-strict-positive=true .*has-item-range-inclusive=true .*has-item-range-negative=true .*has-item-tag-positive=true .*has-item-qualified-tag-positive=true .*has-item-missing-tag-rejected=true .*has-item-wildcard-positive=true .*has-item-wildcard-negative=true .*imported-has-item-tag-positive=true .*imported-target-has-item-wildcard-positive=true .*imported-has-item-positive=true .*imported-target-has-item-positive=true .*imported-has-item-invalid-preserved=true .*has-item-restored=true'
     airLevelCondition = 'skill-actions .*air-level=true'
     lookingAtCondition = 'imported-looking-at-condition primary-mapped=true alias-mapped=true entity-mapped=true positive=true alias-positive=true wrong-block-rejected=true short-block-distance-rejected=true negative=true entity-positive=true wrong-entity-rejected=true short-entity-distance-rejected=true invalid-rejected=true restored=true'
     itemRechargingCondition = 'skill-actions .*item-recharging-condition=true'
