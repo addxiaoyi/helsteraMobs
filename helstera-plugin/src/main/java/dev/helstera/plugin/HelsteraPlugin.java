@@ -6708,6 +6708,88 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private void runImportedComparisonBoundarySelfTest(org.bukkit.World world,
+            org.bukkit.entity.LivingEntity source,
+            ModelInstance modelInstance,
+            SkillService skills,
+            BehaviorRegistry behaviors) {
+        var comparisonTarget = world.spawn(source.getLocation().clone().add(5, 0, 0),
+                org.bukkit.entity.Zombie.class);
+        try {
+            double distance = source.getLocation().distance(comparisonTarget.getLocation());
+            int light = source.getLocation().getBlock().getLightLevel();
+            var comparisonContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    modelInstance, comparisonTarget, 1.0, distance, 0, "integration");
+            comparisonTarget.setHealth(comparisonTarget.getMaxHealth() / 2.0);
+            var missingTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    modelInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+            boolean targetHealthComparisons = true;
+            for (String raw : new String[]{"?targetHealthPercent{>=0.5}",
+                    "?targetHealthPercent{<=50%}", "?targetHealth{=" + comparisonTarget.getHealth() + "}"}) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
+                targetHealthComparisons &= mapped.translated()
+                        && behaviors.testCondition(skills.bindCondition(mapped.condition()), comparisonContext)
+                        && !behaviors.testCondition(skills.bindCondition(mapped.condition()), missingTargetContext);
+            }
+            for (String raw : new String[]{"?targetHealthPercent{<0.5}",
+                    "?targetHealthPercent{>50%}"}) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
+                targetHealthComparisons &= mapped.translated()
+                        && !behaviors.testCondition(skills.bindCondition(mapped.condition()), comparisonContext);
+            }
+            boolean invalidTargetHealthPreserved = true;
+            for (String raw : new String[]{"?targetHealth{50%}", "?targetHealthPercent{1e308}"}) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
+                invalidTargetHealthPreserved &= !mapped.translated() && raw.equals(mapped.condition());
+            }
+            getLogger().info("target-health-imported result="
+                    + (targetHealthComparisons && invalidTargetHealthPreserved)
+                    + " comparisons=" + targetHealthComparisons
+                    + " invalid-preserved=" + invalidTargetHealthPreserved);
+
+            boolean boundaries = true;
+            boolean importedDistance = true;
+            for (String raw : new String[]{"?distance{d=" + distance + "}",
+                    "?distance{d=<=" + distance + "}", "?distance{d=>=" + distance + "}"}) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
+                importedDistance &= mapped.translated() && behaviors.testCondition(
+                        skills.bindCondition(mapped.condition()), comparisonContext);
+            }
+            for (String raw : new String[]{"?distance{d=<" + distance + "}",
+                    "?distance{d=>" + distance + "}"}) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
+                importedDistance &= mapped.translated() && !behaviors.testCondition(
+                        skills.bindCondition(mapped.condition()), comparisonContext);
+            }
+            for (String raw : new String[]{"?targetDistance{<= " + distance + "}",
+                    "?targetDistance{>= " + distance + "}", "?lightLevel{<= " + light + "}",
+                    "?lightLevel{>= " + light + "}"}) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
+                boundaries &= mapped.translated() && behaviors.testCondition(
+                        skills.bindCondition(mapped.condition()), comparisonContext);
+            }
+            for (String raw : new String[]{"?targetDistance{< " + distance + "}",
+                    "?targetDistance{> " + distance + "}", "?lightLevel{< " + light + "}",
+                    "?lightLevel{> " + light + "}"}) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
+                boundaries &= mapped.translated() && !behaviors.testCondition(
+                        skills.bindCondition(mapped.condition()), comparisonContext);
+            }
+            boolean invalidPreserved = true;
+            for (String raw : new String[]{"?distance{NaN}", "?distance{5%}", "?distance",
+                    "?targetDistance{NaN}", "?targetDistance{5%}", "?lightLevel{invalid}"}) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
+                invalidPreserved &= !mapped.translated() && raw.equals(mapped.condition());
+            }
+            getLogger().info("comparison-boundary-imported result="
+                    + (boundaries && importedDistance && invalidPreserved)
+                    + " boundaries=" + boundaries + " distance-imported=" + importedDistance
+                    + " invalid-preserved=" + invalidPreserved);
+        } finally {
+            comparisonTarget.remove();
+        }
+    }
+
     private PlayerStateConditionProbe runPlayerStateConditionProbe(SkillService skills,
             BehaviorRegistry behaviors,
             dev.helstera.api.behavior.BehaviorContext context,
@@ -11631,65 +11713,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 } finally {
                     zombie.setAbsorptionAmount(originalAbsorption);
                 }
-                var comparisonTarget = world.spawn(zombie.getLocation().clone().add(5, 0, 0),
-                        org.bukkit.entity.Zombie.class);
-                try {
-                    double distance = zombie.getLocation().distance(comparisonTarget.getLocation());
-                    int light = zombie.getLocation().getBlock().getLightLevel();
-                    var comparisonContext = dev.helstera.api.behavior.BehaviorContext.of(
-                            modelInstance, comparisonTarget, 1.0, distance, 0, "integration");
-                    comparisonTarget.setHealth(comparisonTarget.getMaxHealth() / 2.0);
-                    var missingTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
-                            modelInstance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
-                    boolean targetHealthComparisons = true;
-                    for (String source : new String[]{"?targetHealthPercent{>=0.5}",
-                            "?targetHealthPercent{<=50%}", "?targetHealth{=" + comparisonTarget.getHealth() + "}"}) {
-                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
-                        targetHealthComparisons &= mapped.translated()
-                                && behaviors.testCondition(skills.bindCondition(mapped.condition()), comparisonContext)
-                                && !behaviors.testCondition(skills.bindCondition(mapped.condition()), missingTargetContext);
-                    }
-                    for (String source : new String[]{"?targetHealthPercent{<0.5}",
-                            "?targetHealthPercent{>50%}"}) {
-                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
-                        targetHealthComparisons &= mapped.translated()
-                                && !behaviors.testCondition(skills.bindCondition(mapped.condition()), comparisonContext);
-                    }
-                    boolean invalidTargetHealthPreserved = true;
-                    for (String source : new String[]{"?targetHealth{50%}", "?targetHealthPercent{1e308}"}) {
-                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
-                        invalidTargetHealthPreserved &= !mapped.translated() && source.equals(mapped.condition());
-                    }
-                    getLogger().info("target-health-imported result="
-                            + (targetHealthComparisons && invalidTargetHealthPreserved)
-                            + " comparisons=" + targetHealthComparisons
-                            + " invalid-preserved=" + invalidTargetHealthPreserved);
-                    boolean boundaries = true;
-                    for (String source : new String[]{"?targetDistance{<= " + distance + "}",
-                            "?targetDistance{>= " + distance + "}", "?lightLevel{<= " + light + "}",
-                            "?lightLevel{>= " + light + "}"}) {
-                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
-                        boundaries &= mapped.translated() && behaviors.testCondition(
-                                skills.bindCondition(mapped.condition()), comparisonContext);
-                    }
-                    for (String source : new String[]{"?targetDistance{< " + distance + "}",
-                            "?targetDistance{> " + distance + "}", "?lightLevel{< " + light + "}",
-                            "?lightLevel{> " + light + "}"}) {
-                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
-                        boundaries &= mapped.translated() && !behaviors.testCondition(
-                                skills.bindCondition(mapped.condition()), comparisonContext);
-                    }
-                    boolean invalidPreserved = true;
-                    for (String source : new String[]{"?targetDistance{NaN}", "?targetDistance{5%}",
-                            "?lightLevel{invalid}"}) {
-                        var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
-                        invalidPreserved &= !mapped.translated() && source.equals(mapped.condition());
-                    }
-                    getLogger().info("comparison-boundary-imported result=" + (boundaries && invalidPreserved)
-                            + " boundaries=" + boundaries + " invalid-preserved=" + invalidPreserved);
-                } finally {
-                    comparisonTarget.remove();
-                }
+                runImportedComparisonBoundarySelfTest(world, zombie, modelInstance, skills, behaviors);
                 spawnReasonCondition = runSpawnReasonConditionSelfTest(skills, behaviors, zombie, context);
                 var waterMobProbe = world.spawn(location.clone().add(6, 0, 0),
                         org.bukkit.entity.Cod.class);

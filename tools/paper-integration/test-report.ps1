@@ -1984,7 +1984,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'comparisonBoundaryImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'comparisonBoundaryImportedCondition'; status = 'passed'; observations = @('comparison-boundary-imported result=true boundaries=true invalid-preserved=true')
+        id = 'comparisonBoundaryImportedCondition'; status = 'passed'; observations = @('comparison-boundary-imported result=true boundaries=true distance-imported=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'targetHealthImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2410,7 +2410,7 @@ try {
     Assert-True $missingComparisonRejected 'full release gate rejects missing imported comparison boundary evidence'
     $fullCatalogReport.expectedProbeIds += 'comparisonBoundaryImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'comparisonBoundaryImportedCondition'; status = 'passed'; observations = @('comparison-boundary-imported result=true boundaries=true invalid-preserved=true')
+        id = 'comparisonBoundaryImportedCondition'; status = 'passed'; observations = @('comparison-boundary-imported result=true boundaries=true distance-imported=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'targetHealthImportedCondition' })
     $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'targetHealthImportedCondition' })

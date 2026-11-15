@@ -11,16 +11,17 @@ Audited against the matrix on 2026-11-15:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
-| `implemented-runtime` | 110 | A runtime implementation exists; the row's evidence still limits the claim. |
+| `implemented-runtime` | 112 | A runtime implementation exists; the row's evidence still limits the claim. |
 | `mapped-unverified` | 33 | Mapping or partial runtime support exists, but the full stated behavior is not verified. |
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-audience-targeter-strict-20261115-r1` on Paper 1.21.1-133, with 460
+The latest full release fixture is `srv-paper-distance-strict-20261115-r1` on Paper 1.21.1-133, with 460
 probes: 441 passed, 19 expected rejections, and zero failed or incomplete. It
-adds production Audience `@Targeter` dispatch evidence for `limit=1` and entity
-filters, while preserving fail-closed behavior for malformed, duplicate, empty,
-and non-finite audience arguments. MythicMobs 5.7.2 has separate focused
+adds production imported `Distance` condition evidence for `d`/`distance` aliases,
+strict and inclusive boundaries, and fail-closed preservation of missing, NaN,
+and percentage inputs. The existing Audience `@Targeter` dispatch and client
+workflow coverage remains in the same full catalog. MythicMobs 5.7.2 has separate focused
 evidence; the full release fixture does not load MythicMobs. See the
 [release evidence index](tools/paper-integration/release-evidence.json),
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
@@ -97,8 +98,10 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   `DamageCause` now defaults to `ENTITY_ATTACK` and has strict Paper release
   evidence for its imported damage-trigger path. `StatDamageModifier` now has
   importer/runtime coverage plus strict evidence from both synthetic dispatch
-  and a naturally generated Paper damage event; retain the full catalog as the
-  remaining Conditions-level work.
+  and a naturally generated Paper damage event. The official `Distance` condition
+  now has an independent `implemented-runtime` row with importer/runtime tests and
+  strict Paper evidence; retain the full catalog as the remaining Conditions-level
+  work.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

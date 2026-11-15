@@ -1,4 +1,4 @@
-Latest full-catalog strict fixture `srv-paper-audience-targeter-strict-20261115-r1` completed all 460 probes on Paper 1.21.1-133: 441 passed, 19 expected rejections, zero failed or incomplete. It adds production evidence for Audience `@Targeter` dispatch: shared targeter parsing preserves `limit=1` and entity filters, while malformed, duplicate, empty, and non-finite audience arguments fail closed. The same run passes the two-client delivery/filter workflow, menu, interactable, show-health, web reload, and real Potion consumption/expiry probes. Plugin SHA-256: `3fda0937fe671bdf78f979e5c04136d9dddf31e61388cdf90fab32917593a7f0`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-audience-targeter-strict-20261115-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions catalog remains incomplete.
+Latest full-catalog strict fixture `srv-paper-distance-strict-20261115-r1` completed all 460 probes on Paper 1.21.1-133: 441 passed, 19 expected rejections, zero failed or incomplete. It adds production evidence for the official `Distance` condition: `?distance{<5}`, the `d` and `distance` argument aliases, strict/inclusive comparison boundaries, and fail-closed preservation of missing, NaN, and percentage inputs. The same run passes the two-client delivery/filter workflow, menu, interactable, show-health, web reload, and real Potion consumption/expiry probes. Plugin SHA-256: `c502db1e811572debaa0fb78d31f466b62a1ae3b542cf159e0a5a4e6653a5929`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-distance-strict-20261115-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions catalog remains incomplete.
 Runtime and importer support cover Mythic `MetaskillCondition`/`skillcondition` parameters and `DetermineCondition`/`detCond` result modes, including scoped parameters, nested evaluation, recursion guards, and fail-closed synchronous execution. AI, migration, importer-to-runtime, and focused Paper 1.21.1 tests pass for direct/imported aliases, parameter isolation, nested result modes, missing determinations, and malformed-input preservation. See the [Paper report](tools/paper-integration/reports/paper-1.21.1-metaskill-condition-strict-20261115-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions catalog remains incomplete.
 
 Focused Paper 1.21.1-133 fixture `srv-paper-nested-skill-cooldown-strict-20261115-r3` now verifies imported nested `skill{s=...;cooldown=5t}` execution against a real Zombie: one execution per cooldown window, immediate blocking, reopening after the cooldown, and preservation/warnings for NaN, negative, and duplicate values. See the [Paper report](tools/paper-integration/reports/paper-1.21.1-nested-skill-cooldown-strict-20261115-r3.json) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). The full Skills importer remains `mapped-unverified`.
@@ -1398,7 +1398,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-audience-targeter-strict-20261115-r1` has 460 probes (441 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-distance-strict-20261115-r1` has 460 probes (441 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1414,14 +1414,14 @@ all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 460 probes, zero incomplete (441 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-audience-targeter-strict-20261115-r1`; its `audienceDispatch` coverage includes production shared `@Targeter` dispatch, `limit=1`, entity filters, and fail-closed malformed, duplicate, empty, and non-finite arguments.
+Latest strict report has 460 probes, zero incomplete (441 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-distance-strict-20261115-r1`; its `comparisonBoundaryImportedCondition` coverage includes production imported `Distance` aliases, strict/inclusive boundaries, and fail-closed missing, NaN, and percentage inputs. The same report retains the full runtime catalog and client workflows.
 
 Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-20261115-r3` adds two-player production coverage for conditional-targeter hyphen/underscore aliases, `condition`/`c` aliases, chained condition filtering, and fail-closed unknown, duplicate, empty, and malformed private arguments. It records 434 passed probes, 19 observed expected rejections, and one unrelated `not-observed` probe; it does not change the full-catalog release boundary or the `mapped-unverified` Context Targeters row.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 626 cited IDs; 532 report files; 4 directories without reports; 90 missing directories; 309 archived release reports. The
+   Current fixture inventory: 627 cited IDs; 534 report files; 4 directories without reports; 89 missing directories; 310 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

@@ -1050,7 +1050,8 @@
     },
     {
       "id": "comparisonBoundaryImportedCondition",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservation": "comparison-boundary-imported result=true boundaries=true distance-imported=true invalid-preserved=true"
     },
     {
       "id": "targetHealthImportedCondition",

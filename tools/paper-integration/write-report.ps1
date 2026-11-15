@@ -208,7 +208,7 @@ $probeSpecs = [ordered]@{
     healthAbsorptionCondition = 'skill-actions .*health-absorption-condition=true'
     healthImportedCondition = 'health-imported result=true comparisons=true duplicate-rejected=true overflow-preserved=true invalid-preserved=true'
     healthRangeImportedCondition = 'health-range-imported result=true ranges=true invalid-preserved=true'
-    comparisonBoundaryImportedCondition = 'comparison-boundary-imported result=true boundaries=true invalid-preserved=true'
+    comparisonBoundaryImportedCondition = 'comparison-boundary-imported result=true boundaries=true distance-imported=true invalid-preserved=true'
     targetHealthImportedCondition = 'target-health-imported result=true comparisons=true invalid-preserved=true'
     environmentImportedCondition = 'environment-imported result=true valid=true invalid-rejected=true'
     potionEffectCondition = 'skill-actions .*potion-effect-condition=true'

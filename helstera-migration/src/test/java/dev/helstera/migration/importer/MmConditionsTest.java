@@ -110,13 +110,18 @@ class MmConditionsTest {
     void distanceMapsToDistanceConditions() {
         // 距离是格数不是百分比：<5 必须是 5 格。
         // 误按百分数换算会得到 0.05 格，条件恒真，免疫范围悄悄缩到 1/20 格。
+        assertEquals("distance <5", t("?distance{<5}"));
+        assertEquals("distance >=3", t("?distance{d=>=3}"));
+        assertEquals("distance =7", t("?distance{distance=7}"));
         assertEquals("distance <5", t("?targetDistance{<5}"));
         assertEquals("distance >8", t("?targetDistance{>8}"));
         assertEquals("distance <5", t("?targetDistance{distance=<5}"));
         assertEquals("distance <=5", t("?targetDistance{<=5}"));
         assertEquals("light-level >=8", t("?lightlevel{>=8}"));
         assertEquals("light-level <8", t("?lightlevel{<8}"));
-        for (String invalid : List.of("?targetDistance{NaN}", "?targetDistance{5%}",
+        for (String invalid : List.of("?distance", "?distance{NaN}", "?distance{5%}",
+                "?distance{d=1;distance=2}", "?distance{unknown=5}",
+                "?targetDistance{NaN}", "?targetDistance{5%}",
                 "?lightlevel{bad}", "?targethealth{invalid}", "?targethealthpercent{NaN}")) {
             assertFalse(translated(invalid), invalid);
             assertEquals(invalid, t(invalid));

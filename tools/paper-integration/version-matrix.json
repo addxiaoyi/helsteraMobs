@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-audience-targeter-strict-20261115-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-audience-targeter-strict-20261115-r1.json"
+      "releaseFixtureId": "srv-paper-distance-strict-20261115-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-distance-strict-20261115-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

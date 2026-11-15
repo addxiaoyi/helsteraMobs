@@ -272,6 +272,10 @@ public final class MmConditions {
             Mapped result = compare(body, "distance");
             return result.translated() ? result : new Mapped(s, false);
         }
+        if ("distance".equals(name) && body != null) {
+            Mapped result = compare(body, "distance");
+            return result.translated() ? result : new Mapped(s, false);
+        }
         if ("targethealth".equals(name) && body != null) {
             Mapped result = compare(body, "target-health");
             return result.translated() ? result : new Mapped(s, false);
@@ -1750,7 +1754,8 @@ public final class MmConditions {
             String bareKey = notEqualKey ? key.substring(0, key.length() - 1) : key;
             if (bareKey.equals("value") || bareKey.equals("amount") || bareKey.equals("level")
                     || bareKey.equals("distance") || bareKey.equals("health") || bareKey.equals("h")
-                    || bareKey.equals("hp") || bareKey.equals("percent") || bareKey.equals("p")) {
+                    || bareKey.equals("hp") || bareKey.equals("percent") || bareKey.equals("p")
+                    || ("distance".equals(kind) && bareKey.equals("d"))) {
                 s = (notEqualKey ? "!=" : "") + s.substring(equals + 1).trim();
             }
         }

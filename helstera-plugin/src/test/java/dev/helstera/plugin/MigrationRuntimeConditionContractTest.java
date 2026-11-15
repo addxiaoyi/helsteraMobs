@@ -4218,7 +4218,8 @@ class MigrationRuntimeConditionContractTest {
             assertTrue(mapped.translated(), raw);
             assertTrue(registry.testCondition(skills.bindCondition(mapped.condition()), context), raw);
         }
-        for (String raw : List.of("?targetDistance{<5}", "?targetDistance{>5}",
+        for (String raw : List.of("?distance{<5}", "?distance{>5}",
+                "?targetDistance{<5}", "?targetDistance{>5}",
                 "?lightlevel{<8}", "?lightlevel{>8}")) {
             var mapped = dev.helstera.migration.importer.MmConditions.translate(raw);
             assertTrue(mapped.translated(), raw);
