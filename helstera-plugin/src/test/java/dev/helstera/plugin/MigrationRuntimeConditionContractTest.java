@@ -60,6 +60,48 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Mythic UUID compares the selected entity and evaluates trigger UUID placeholders")
+    void importedUuidConditionReachesRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var trigger = mock(org.bukkit.entity.LivingEntity.class);
+        UUID targetId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        UUID triggerId = targetId;
+        when(target.getUniqueId()).thenReturn(targetId);
+        when(trigger.getUniqueId()).thenReturn(triggerId);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1.0, -1, 0, "integration", null, trigger, List.of(target), null, null);
+        var differentTrigger = mock(org.bukkit.entity.LivingEntity.class);
+        when(differentTrigger.getUniqueId()).thenReturn(
+                UUID.fromString("123e4567-e89b-12d3-a456-426614174002"));
+        var mismatchContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1.0, -1, 0, "integration", null,
+                differentTrigger, List.of(target), null, null);
+
+        var imported = dev.helstera.migration.importer.MmConditions.translate(
+                "?uuid{u=\"<trigger.uuid>\"}");
+        assertTrue(imported.translated());
+        assertEquals("uuid <trigger.uuid>", imported.condition());
+        String key = service.bindCondition(imported.condition());
+        assertNotNull(key);
+        assertTrue(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(key, mismatchContext));
+
+        var targetIdCondition = dev.helstera.migration.importer.MmConditions.translate(
+                "?uuid{" + targetId + "}");
+        assertTrue(targetIdCondition.translated());
+        assertTrue(registry.testCondition(service.bindCondition(targetIdCondition.condition()), context));
+        assertNull(service.bindCondition("uuid not-a-uuid"));
+        for (String source : List.of("?uuid{u=not-a-uuid}", "?uuid{u=<trigger.name>}",
+                "?uuid{u=" + targetId + ";unknown=true}")) {
+            var rejected = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertFalse(rejected.translated(), source);
+            assertEquals(source, rejected.condition());
+        }
+    }
+
+    @Test
     @DisplayName("LastDamager targeter follows direct and projectile damage sources")
     void lastDamagerTargeterUsesBukkitLastDamageCause() {
         var caster = mock(org.bukkit.entity.LivingEntity.class);

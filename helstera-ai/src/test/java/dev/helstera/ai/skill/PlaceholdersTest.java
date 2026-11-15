@@ -44,6 +44,20 @@ class PlaceholdersTest {
     }
 
     @Test
+    void triggerUuidPlaceholderReadsTheTriggerEntity() {
+        var trigger = mock(org.bukkit.entity.Entity.class);
+        var id = java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        when(trigger.getUniqueId()).thenReturn(id);
+        var context = BehaviorContext.continueExecution(null, (org.bukkit.entity.LivingEntity) null,
+                1.0, -1, 0, "integration", null, trigger, java.util.List.of(), null, null);
+
+        assertEquals(id.toString(), Placeholders.resolve("<trigger.uuid>", context));
+        assertTrue(Placeholders.knownKeys().contains("trigger.uuid"));
+        assertEquals("<trigger.name>", Placeholders.resolve("<trigger.name>", context));
+        assertEquals("<trigger.uuid>", Placeholders.resolve("<trigger.uuid>", ctx(1, -1, "IDLE")));
+    }
+
+    @Test
     @DisplayName("血量占位符按一位小数输出")
     void formatsHealthWithOneDecimal() {
         var c = ctx(0.2299999, -1, "IDLE");

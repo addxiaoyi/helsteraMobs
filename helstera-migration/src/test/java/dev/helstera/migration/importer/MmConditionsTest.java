@@ -1058,6 +1058,25 @@ class MmConditionsTest {
     }
 
     @Test
+    @DisplayName("UUID 条件严格导入静态 UUID 与受支持的实体 UUID 占位符")
+    void officialUuidConditionMapsValuesStrictly() {
+        String id = "123e4567-e89b-12d3-a456-426614174000";
+        assertEquals("uuid " + id, t("?uuid{u=" + id + "}"));
+        assertEquals("uuid " + id, t("?UUID{uuid=\"" + id + "\"}"));
+        assertEquals("uuid <trigger.uuid>", t("?uuid{u=\"<trigger.uuid>\"}"));
+        assertEquals("uuid <target.uuid>", t("?uuid{uuid=<target.uuid>}"));
+
+        for (String invalid : List.of(
+                "?uuid", "?uuid{u=}", "?uuid{u=not-a-uuid}",
+                "?uuid{u=123e4567-e89b-12d3-a456-42661417400}",
+                "?uuid{u=<trigger.name>}", "?uuid{u=<unknown.uuid>}",
+                "?uuid{u=" + id + ";unknown=true}",
+                "?uuid{u=" + id + ";uuid=" + id + "}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
     void officialTemplateTypeConditionMapsTemplateAliasesAndLists() {
         assertEquals("template-type templates=mythic_undead",
                 t("?TemplateType{t=Undead}"));

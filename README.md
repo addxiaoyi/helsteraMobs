@@ -1,4 +1,4 @@
-Latest full-catalog strict fixture `srv-paper-condition-release-strict-20261115-r4` completed all 456 probes on Paper 1.21.1-133: 437 passed, 19 expected rejections, zero failed or incomplete. It verifies plugin SHA-256 `1adeee218f27764636e8cc7ba93b9ec8780d0bc7a5112280a9e7fb3b77e5bd7e`, including Mythic `?inLiquid` across water, lava, waterlogged blocks, a dry negative, malformed-input preservation, and block restoration. See the [strict report](tools/paper-integration/reports/paper-1.21.1-condition-release-strict-20261115-r4.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). The full release fixture did not load MythicMobs; focused MythicMobs 5.7.2 evidence remains separate. The broader Conditions catalog remains incomplete.
+Latest full-catalog strict fixture `srv-paper-uuid-condition-strict-20261115-r2` completed all 457 probes on Paper 1.21.1-133: 438 passed, 19 expected rejections, zero failed or incomplete. It verifies plugin SHA-256 `83781d813e53d717fc56b69ba7119ff0df17705e822ce47158a1ed2ab11a9da4`, including Mythic `uuid`/`u` condition import, literal and `<trigger.uuid>` matching, mismatch rejection, and invalid-input preservation. See the [strict report](tools/paper-integration/reports/paper-1.21.1-uuid-condition-strict-20261115-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). The full release fixture did not load MythicMobs; focused MythicMobs 5.7.2 evidence remains separate. The broader Conditions catalog remains incomplete.
 Previous strict fixture `srv-paper-has-item-matcher-strict-20261115-r1` completed the same 456-probe release catalog and verifies real-player Bukkit item tags, material wildcards, metadata matching, inclusive amount ranges, imported `HasItem`/`TargetHasItem`, and inventory restoration. Third-party custom-item wildcard expansion and block-state selectors remain unverified.
 Focused MythicMobs condition fixture `srv-paper-mythic-pack-strict-20261115-r10` passed on Paper 1.21.1-133 with MythicMobs 5.7.2: direct and imported `MythicMobType` default exact matching accepted `SkeletalMinion` and rejected `Minion`; `exactmatch=false` accepted the contained name and rejected unrelated `CaveWraith`. Existing direct/imported `MobsInRadius` single/multiple/case-insensitive checks also passed. See the [report](tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r10.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md).
 Focused MythicMobs fixture `srv-paper-mythic-pack-strict-20261114-r7` also passed on Paper 1.21.1-133 with MythicMobs 5.7.2. MythicMobs' own API classified an API-spawned SkeletalMinion as Mythic and a vanilla Zombie as ordinary; Helstera's direct condition plus imported `IsMythicMob` and `IsMM` matched both outcomes. This focused check does not complete the broader Conditions catalog. See the [report](tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.json), [archived Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md).
@@ -1398,7 +1398,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-radius-conditions-strict-20261115-r1` has 456 probes (437 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-uuid-condition-strict-20261115-r2` has 457 probes (438 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1409,9 +1409,12 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 This is a partial parity release. The matrix currently has `33`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-15). The full remaining work is:
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-15). The ordered work packages,
+all 33 open rows, and per-capability completion contract are recorded in the
+[MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
+work is:
 
-Latest strict report has 456 probes, zero incomplete (437 passed, 19 expected rejections, zero failed).
+Latest strict report has 457 probes, zero incomplete (438 passed, 19 expected rejections, zero failed).
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;

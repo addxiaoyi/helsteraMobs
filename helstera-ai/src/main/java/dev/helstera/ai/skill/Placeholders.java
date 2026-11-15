@@ -77,6 +77,7 @@ public final class Placeholders {
         return switch (scope) {
             case "caster" -> caster(ctx, field);
             case "target" -> target(ctx, field);
+            case "trigger" -> trigger(ctx, field);
             case "skill" -> skill(ctx, dot < 0 ? "" : key.substring(dot + 1));
             case "ctx" -> context(ctx, field);
             case "mob" -> caster(ctx, field);       // 兼容旧写法
@@ -212,6 +213,11 @@ public final class Placeholders {
         return null;
     }
 
+    private static String trigger(BehaviorContext ctx, String field) {
+        if (ctx == null || !"uuid".equals(normalizeField(field))) return null;
+        return ctx.trigger().map(Entity::getUniqueId).map(Object::toString).orElse(null);
+    }
+
     /** Resolves current skill context and skill-tree variables. */
     private static String skill(BehaviorContext ctx, String field) {
         if (field.regionMatches(true, 0, "var.", 0, 4) && field.length() > 4) {
@@ -332,6 +338,7 @@ public final class Placeholders {
     /** 已知占位符的完整键名清单，供体检报告对照。 */
     public static List<String> knownKeys() {
         List<String> out = new ArrayList<>();
+        out.add("trigger.uuid");
         for (String scope : List.of("caster", "target", "skill")) {
             for (String f : List.of("hp", "hp.percent", "hp.raw", "hp.max", "health", "maxhealth",
                     "name", "type", "world", "loc.x", "loc.y", "loc.z",

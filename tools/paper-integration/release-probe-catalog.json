@@ -1992,6 +1992,11 @@
       "status": "passed"
     },
     {
+      "id": "uuidCondition",
+      "status": "passed",
+      "requiredObservation": "uuid-condition result=true imported=true trigger-positive=true literal-positive=true mismatched-rejected=true invalid-preserved=true"
+    },
+    {
       "id": "vehicleEvents",
       "status": "passed"
     },

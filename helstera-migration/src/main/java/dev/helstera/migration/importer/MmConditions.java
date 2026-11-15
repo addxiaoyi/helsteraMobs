@@ -47,6 +47,8 @@ public final class MmConditions {
     private static final Map<String, String> MYTHIC_MOB_TYPE_ARGUMENTS = Map.of(
             "type", "types", "types", "types", "t", "types",
             "exactmatch", "exactmatch", "em", "exactmatch");
+    private static final Map<String, String> UUID_ARGUMENTS = Map.of(
+            "uuid", "uuid", "u", "uuid");
     private static final Map<String, String> TRIGGER_ITEM_TYPE_ARGUMENTS = Map.of(
             "types", "types", "type", "types", "t", "types", "material", "types",
             "mat", "types", "m", "types", "items", "types", "item", "types", "i", "types");
@@ -1083,6 +1085,12 @@ public final class MmConditions {
         }
         if ("ismythicmob".equals(name) || "ismm".equals(name)) {
             return new Mapped("is-mythic-mob", true);
+        }
+        if ("uuid".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(body, UUID_ARGUMENTS, "uuid");
+            String value = arguments == null ? null : unquoteAuraValue(arguments.get("uuid"));
+            return validUuidConditionValue(value)
+                    ? new Mapped("uuid " + value, true) : new Mapped(s, false);
         }
         if ("mythicmobtype".equals(name) || "mmtype".equals(name)) {
             Map<String, String> arguments = strictValueArguments(body, MYTHIC_MOB_TYPE_ARGUMENTS, "types");
@@ -2623,6 +2631,16 @@ public final class MmConditions {
         return value != null && !value.isBlank() && value.length() <= 128
                 && !value.equals(".") && !value.equals("..")
                 && value.chars().noneMatch(c -> Character.isISOControl(c) || c == '/' || c == '\\');
+    }
+
+    private static boolean validUuidConditionValue(String value) {
+        if (value == null || value.isBlank()) return false;
+        if (value.matches("(?i)^<(?:caster|mob|target|player|trigger)\\.uuid>$")) return true;
+        try {
+            return java.util.UUID.fromString(value).toString().equalsIgnoreCase(value);
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
 
     private static boolean validPluginConditionName(String raw, String plugin) {

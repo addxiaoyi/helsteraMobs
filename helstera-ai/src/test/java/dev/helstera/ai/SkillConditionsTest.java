@@ -285,6 +285,34 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("UUID condition compares the selected entity and resolves trigger UUID at execution time")
+    void officialUuidConditionMatchesEntityAndTriggerPlaceholder() {
+        var target = mock(LivingEntity.class);
+        var other = mock(LivingEntity.class);
+        var targetId = java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174000");
+        var otherId = java.util.UUID.fromString("123e4567-e89b-12d3-a456-426614174001");
+        when(target.getUniqueId()).thenReturn(targetId);
+        when(other.getUniqueId()).thenReturn(otherId);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "integration", null, other, List.of(target), null, null);
+        var matchingTriggerContext = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "integration", null, target, List.of(target), null, null);
+        var factory = extraFactory("uuid");
+
+        assertTrue(factory.create(List.of(targetId.toString())).test(context));
+        assertFalse(factory.create(List.of(otherId.toString())).test(context));
+        assertTrue(factory.create(List.of("u=<target.uuid>")).test(context));
+        assertTrue(factory.create(List.of("<trigger.uuid>")).test(matchingTriggerContext));
+        assertFalse(factory.create(List.of("<trigger.uuid>")).test(context));
+        assertFalse(factory.create(List.of("<trigger.uuid>")).test(ctx()));
+        assertFalse(factory.create(List.of(targetId.toString())).test(ctx()));
+        assertThrows(IllegalArgumentException.class, () -> factory.create(List.of("not-a-uuid")));
+        assertThrows(IllegalArgumentException.class, () -> factory.create(List.of("<missing.uuid>")));
+        assertThrows(IllegalArgumentException.class,
+                () -> factory.create(List.of("uuid=" + targetId, "u=" + targetId)));
+    }
+
+    @Test
     @DisplayName("CompareValues 支持数字、字符串和操作符别名")
     void officialCompareValuesConditionComparesTypedValues() {
         assertTrue(extraFactory("compare-values").create(List.of("2", "10", "<")).test(ctx()));

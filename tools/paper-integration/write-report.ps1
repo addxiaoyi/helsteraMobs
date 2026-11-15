@@ -416,6 +416,7 @@ $probeSpecs = [ordered]@{
     importedPlayerKillsCondition = 'imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true'
     playerKillsCondition = 'skill-actions .*player-kills-condition=true'
     mythicMobTypeCondition = 'skill-actions .*mythic-mob-type-condition=true'
+    uuidCondition = 'uuid-condition result=true imported=true trigger-positive=true literal-positive=true mismatched-rejected=true invalid-preserved=true'
     variableContainsCondition = 'skill-actions .*variable-contains-condition=true'
     attackerTargeter = 'skill-trigger .*attacker-targeter=true'
     threatTargeter = 'skill-targeter threat-targeter=true'

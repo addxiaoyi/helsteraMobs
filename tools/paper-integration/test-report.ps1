@@ -156,6 +156,7 @@ try {
         '[Server thread/INFO]: imported-signal-trigger imported=true mapped=true generic=true selector=true payload=true sender=true trigger=true invalid-preserved=true last-signal=true passed=true',
         '[Server thread/INFO]: imported-timer-trigger imported=true mapped=true aligned=true independent=true invalid-preserved=true source=true passed=true',
         '[Server thread/INFO]: imported-player-kills-condition primary-mapped=true range-mapped=true positive=true negative=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] uuid-condition result=true imported=true trigger-positive=true literal-positive=true mismatched-rejected=true invalid-preserved=true',
         '[Server thread/INFO]: tempt-probe-delayed entity-target-trigger=true target-events=1 target-find-misses=0',
         '[Server thread/INFO]: item-pickup trigger=true player=HelsteraTester',
         '[Server thread/INFO]: vehicle-events enter=true exit=true dismount=true eject=true destroy=true player=HelsteraTester',
@@ -941,6 +942,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'playerKillsCondition').status -eq 'passed') 'player kills condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'importedPlayerKillsCondition').status -eq 'passed') 'imported player kills condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'mythicMobTypeCondition').status -eq 'passed') 'mythic mob type condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'uuidCondition').status -eq 'passed') 'UUID condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'variableContainsCondition').status -eq 'passed') 'variable contains condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionCatalog').status -eq 'passed') 'condition catalog probe'
     Assert-True (($report.probes | Where-Object id -eq 'enderDragonAliveCondition').status -eq 'passed') 'EnderDragonAlive positive/negative probe'
@@ -1959,6 +1961,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'healthImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'healthImportedCondition'; status = 'passed'; observations = @('health-imported result=true comparisons=true duplicate-rejected=true overflow-preserved=true invalid-preserved=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'uuidCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'uuidCondition'; status = 'passed'; observations = @('uuid-condition result=true imported=true trigger-positive=true literal-positive=true mismatched-rejected=true invalid-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'healthRangeImportedCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

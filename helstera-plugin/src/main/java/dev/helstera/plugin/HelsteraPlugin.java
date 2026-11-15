@@ -739,6 +739,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (getConfig().getBoolean("debug.self-test-item-effects", false)) {
             runItemEffectsSelfTest();
+            scheduleImportedUuidConditionSelfTest();
         }
         if (getConfig().getBoolean("debug.self-test-loot", false)) {
             runLootSelfTest();
@@ -6290,6 +6291,75 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }
+    }
+
+    private boolean runImportedUuidConditionSelfTest(SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.instance.ModelInstance instance,
+            org.bukkit.entity.LivingEntity entity) {
+        var importedTrigger = dev.helstera.migration.importer.MmConditions.translate(
+                "?uuid{u=\"<trigger.uuid>\"}");
+        var importedLiteral = dev.helstera.migration.importer.MmConditions.translate(
+                "?UUID{uuid=" + entity.getUniqueId() + "}");
+        var importedInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?uuid{u=not-a-uuid}");
+        var importedUnknownArgument = dev.helstera.migration.importer.MmConditions.translate(
+                "?uuid{u=" + entity.getUniqueId() + ";unknown=true}");
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                instance, entity, 1.0, -1, 0, "integration", null,
+                entity, java.util.List.of(entity), entity.getLocation(), null);
+        String triggerKey = importedTrigger.translated()
+                ? skills.bindCondition(importedTrigger.condition()) : null;
+        String literalKey = importedLiteral.translated()
+                ? skills.bindCondition(importedLiteral.condition()) : null;
+        String mismatchKey = skills.bindCondition("uuid 123e4567-e89b-12d3-a456-426614174099");
+        boolean triggerPositive = triggerKey != null && behaviors.testCondition(triggerKey, context);
+        boolean literalPositive = literalKey != null && behaviors.testCondition(literalKey, context);
+        boolean mismatchRejected = mismatchKey != null && !behaviors.testCondition(mismatchKey, context);
+        boolean invalidPreserved = !importedInvalid.translated()
+                && "?uuid{u=not-a-uuid}".equals(importedInvalid.condition())
+                && !importedUnknownArgument.translated()
+                && ("?uuid{u=" + entity.getUniqueId() + ";unknown=true}")
+                .equals(importedUnknownArgument.condition());
+        boolean passed = triggerPositive && literalPositive && mismatchRejected && invalidPreserved;
+        getLogger().info("uuid-condition result=" + passed
+                + " imported=" + (triggerKey != null && literalKey != null)
+                + " trigger-positive=" + triggerPositive
+                + " literal-positive=" + literalPositive
+                + " mismatched-rejected=" + mismatchRejected
+                + " invalid-preserved=" + invalidPreserved);
+        return passed;
+    }
+
+    private void scheduleImportedUuidConditionSelfTest() {
+        getServer().getScheduler().runTaskLater(this, () -> {
+            var worlds = getServer().getWorlds();
+            if (worlds.isEmpty()) {
+                getLogger().info("uuid-condition result=false imported=false trigger-positive=false"
+                        + " literal-positive=false mismatched-rejected=false invalid-preserved=false reason=no-world");
+                return;
+            }
+            SkillService skills = skillService instanceof SkillService service ? service : null;
+            BehaviorRegistry behaviors = behaviorRegistry instanceof BehaviorRegistry registry ? registry : null;
+            if (skills == null || behaviors == null) {
+                getLogger().info("uuid-condition result=false imported=false trigger-positive=false"
+                        + " literal-positive=false mismatched-rejected=false invalid-preserved=false reason=runtime-unavailable");
+                return;
+            }
+            org.bukkit.entity.Zombie entity = null;
+            try {
+                entity = worlds.get(0).spawn(worlds.get(0).getSpawnLocation().clone().add(0, 2, 0),
+                        org.bukkit.entity.Zombie.class);
+                entity.setAI(false);
+                entity.setInvulnerable(true);
+                runImportedUuidConditionSelfTest(skills, behaviors, null, entity);
+            } catch (Throwable failure) {
+                getLogger().warning("uuid-condition result=false imported=false trigger-positive=false"
+                        + " literal-positive=false mismatched-rejected=false invalid-preserved=false error=" + failure);
+            } finally {
+                if (entity != null && entity.isValid()) entity.remove();
+            }
+        }, 1L);
     }
 
     private boolean runImportedItemSimilarityProbe(SkillService skills,

@@ -962,6 +962,29 @@ public final class SkillExtras {
         return entity instanceof LivingEntity living ? living : null;
     }
 
+    private static boolean uuidMatches(BehaviorContext ctx, String rawExpected) {
+        LivingEntity entity = conditionEntity(ctx);
+        if (entity == null || rawExpected == null) return false;
+        String resolved = Placeholders.resolve(rawExpected, ctx);
+        try {
+            UUID expected = UUID.fromString(resolved);
+            return expected.toString().equalsIgnoreCase(resolved)
+                    && expected.equals(entity.getUniqueId());
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean validUuidConditionValue(String value) {
+        if (value == null || value.isBlank()) return false;
+        if (value.matches("(?i)^<(?:caster|mob|target|player|trigger)\\.uuid>$")) return true;
+        try {
+            return UUID.fromString(value).toString().equalsIgnoreCase(value);
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
     private static Set<String> templateTypeArguments(List<String> args) {
         if (args == null || args.isEmpty()) {
             throw new IllegalArgumentException("template-type requires at least one template");
@@ -3986,6 +4009,18 @@ public final class SkillExtras {
                 }),
                 Map.entry("is-mythic-mob", (SkillCatalog.ConditionFactory) a ->
                         SkillExtras::isMythicMob),
+                Map.entry("uuid", (SkillCatalog.ConditionFactory) a -> {
+                    if (a == null || a.size() != 1) {
+                        throw new IllegalArgumentException("uuid requires exactly one UUID value");
+                    }
+                    String expected = keyedArg(a, "uuid", "u");
+                    if (expected == null) expected = str(a, 0, "");
+                    if (!validUuidConditionValue(expected)) {
+                        throw new IllegalArgumentException("uuid requires a canonical UUID or UUID placeholder");
+                    }
+                    String value = expected;
+                    return ctx -> uuidMatches(ctx, value);
+                }),
                 Map.entry("mythic-mob-type", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = keyedArg(a, "type", "types", "t");
                     if (wanted == null) wanted = str(a, 0, "");

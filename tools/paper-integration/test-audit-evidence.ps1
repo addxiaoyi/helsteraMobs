@@ -665,6 +665,10 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'preventVanillaDamageImported'; status = 'passed'; observations = @('prevent-vanilla-damage-imported result=true imported=true configured=true policies=true direct-zero=true projectile-zero=true direct-uncancelled=true projectile-uncancelled=true direct-health-unchanged=true projectile-health-unchanged=true controls-unchanged=true controls-damaged=true invalid-preserved=true invalid-unchanged=true invalid-health-damaged=true projectile-hit=true')
     }
+    $fullReport.expectedProbeIds += 'uuidCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'uuidCondition'; status = 'passed'; observations = @('uuid-condition result=true imported=true trigger-positive=true literal-positive=true mismatched-rejected=true invalid-preserved=true')
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'
