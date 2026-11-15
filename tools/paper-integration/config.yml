@@ -3,6 +3,8 @@ debug:
   self-test-model: example/emberling
   self-test-delay-ticks: 40
   self-test-mythic-pack-condition: false
+  self-test-metaskill-condition: false
+  self-test-nested-skill-cooldown: false
   self-test-entity-options: true
   self-test-item-effects: true
   self-test-item-group-cooldown: false

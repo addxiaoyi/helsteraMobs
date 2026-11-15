@@ -5092,3 +5092,21 @@ The plugin SHA-256 is
 `94653168d595a247c66bc55a8d1e5ba32fa37fa6f0edbd27d99fcd366baa313c` and the
 Paper jar SHA-256 is `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
 
+Focused Paper 1.21.1-133 fixture `srv-paper-nested-skill-cooldown-strict-20261115-r3`
+passed the production importer/runtime probe for nested Mythic `skill` cooldowns.
+Three imported `skill{s=cooldown_child;cooldown=5t}` actions execute only once in
+the same cooldown window, a second immediate parent cast is blocked, and the
+child opens again after eight observed server ticks. The same probe preserves
+`NaN`, negative, and duplicate cooldown inputs, records all three migration
+warnings, and confirms that malformed lines never enter the executable action
+list. This remains exploratory feature evidence and does not complete the full
+Skills importer or Mechanics catalog.
+Report: `tools/paper-integration/reports/paper-1.21.1-nested-skill-cooldown-strict-20261115-r3.json`,
+SHA-256 `3feaa949e1a628361d0f33abb2d12f9076d470179dcf95645511ceb03b96630f`.
+Token-redacted compressed log:
+`tools/paper-integration/reports/paper-1.21.1-nested-skill-cooldown-strict-20261115-r3.log.gz`,
+SHA-256 `39e2f574ba712743187b75f252c27340a0a8d8d50d78999f4bc41602454e4877`.
+The plugin SHA-256 is
+`9b66ac4f5ad543cac9c27414b8cfa6c20ae83544da499c46971c445de2dd67e2` and the
+Paper jar SHA-256 is `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+

@@ -753,6 +753,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test-metaskill-condition", false)) {
             runMetaskillConditionSelfTest();
         }
+        if (getConfig().getBoolean("debug.self-test-nested-skill-cooldown", false)) {
+            runNestedSkillCooldownSelfTest();
+        }
         if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
             runEntityOptionsSelfTest();
         }
@@ -1590,6 +1593,119 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " and-mode=" + andMode + " not-mode=" + notMode
                     + " undetermined-rejected=" + undeterminedRejected
                     + " malformed-preserved=" + malformedPreserved + " passed=" + passed);
+        }, Math.max(1, delay));
+    }
+
+    /** Verifies imported nested Mythic skill cooldowns against real Paper execution. */
+    private void runNestedSkillCooldownSelfTest() {
+        int delay = getConfig().getInt("debug.self-test-delay-ticks", 40);
+        getServer().getScheduler().runTaskLater(this, () -> {
+            Path root = null;
+            org.bukkit.entity.Zombie target = null;
+            try {
+                var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+                if (world == null) throw new IllegalStateException("Paper world is unavailable");
+                root = Files.createTempDirectory("helstera-nested-skill-cooldown-");
+                Path source = Files.createDirectories(root.resolve("Skills")).resolve("probe.yml");
+                String validLine = "skill{s=cooldown_child;cooldown=5t} @Target";
+                Files.writeString(source, """
+                        skills:
+                          cooldown_parent:
+                            Skills:
+                              - 'skill{s=cooldown_child;cooldown=5t} @Target'
+                              - 'skill{s=cooldown_child;cooldown=5t} @Target'
+                              - 'skill{s=cooldown_child;cooldown=5t} @Target'
+                          cooldown_child:
+                            Skills: ['heal{amount=2} @Target']
+                          cooldown_invalid:
+                            Skills:
+                              - 'skill{s=cooldown_child;cooldown=NaN} @Target'
+                              - 'skill{s=cooldown_child;cooldown=-1s} @Target'
+                              - 'skill{s=cooldown_child;cooldown=1s;cooldown=2s} @Target'
+                        """);
+                var entries = new MythicMobsImporter().convert(source);
+                var entry = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file")))
+                        .findFirst().orElseThrow();
+                var yaml = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(entry.get("content"))));
+                boolean imported = yaml.getStringList("skills.cooldown_parent.on-decision")
+                        .equals(List.of(validLine, validLine, validLine))
+                        && yaml.getStringList("skills.cooldown_child.on-decision")
+                        .equals(List.of("heal-targets 2 @target"));
+                boolean invalidPreserved = yaml.getStringList("skills.cooldown_invalid.unsupported")
+                        .equals(List.of(
+                                "skill{s=cooldown_child;cooldown=NaN} @Target",
+                                "skill{s=cooldown_child;cooldown=-1s} @Target",
+                                "skill{s=cooldown_child;cooldown=1s;cooldown=2s} @Target"))
+                        && yaml.getStringList("skills.cooldown_invalid.on-decision").isEmpty();
+                long invalidWarningCount = entries.stream()
+                        .filter(e -> "WARN".equals(e.get("severity")))
+                        .filter(e -> String.valueOf(e.get("note")).contains("Invalid skill execution options"))
+                        .count();
+                long invalidInputWarningCount = entries.stream()
+                        .filter(e -> "WARN".equals(e.get("severity")))
+                        .filter(e -> String.valueOf(e.get("note")).contains("Invalid"))
+                        .count();
+                boolean warnings = invalidWarningCount == 2 && invalidInputWarningCount == 3;
+
+                target = world.spawn(world.getSpawnLocation().clone().add(84, 4, 84),
+                        org.bukkit.entity.Zombie.class);
+                target.setAI(false);
+                target.setInvulnerable(true);
+                target.setHealth(10.0);
+                var registry = new BehaviorRegistryImpl();
+                var skills = new dev.helstera.ai.skill.SkillService(registry, getLogger());
+                skills.loadSkills(yaml.getConfigurationSection("skills"));
+                var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        null, target, 0.5, 1.0, 0, "paper-nested-cooldown", null,
+                        target, List.of(target), target.getLocation(), null);
+                boolean firstCast = skills.castSkill("cooldown_parent", context);
+                double afterFirst = target.getHealth();
+                boolean blockedImmediately = skills.castSkill("cooldown_parent", context)
+                        && Math.abs(target.getHealth() - afterFirst) < 0.001;
+                final Path fixtureRoot = root;
+                final org.bukkit.entity.Zombie probeTarget = target;
+                getServer().getScheduler().runTaskLater(this, () -> {
+                    try {
+                        boolean reopened = skills.castSkill("cooldown_parent", context)
+                                && Math.abs(probeTarget.getHealth() - 14.0) < 0.001;
+                        boolean oneActionPerWindow = Math.abs(afterFirst - 12.0) < 0.001;
+                        boolean passed = imported && invalidPreserved && warnings && firstCast
+                                && oneActionPerWindow && blockedImmediately && reopened;
+                        getLogger().info("[自检] nested-skill-cooldown imported=" + imported
+                                + " invalid-preserved=" + invalidPreserved + " warnings=" + warnings
+                                + " invalid-warning-count=" + invalidWarningCount
+                                + " invalid-input-warning-count=" + invalidInputWarningCount
+                                + " first-cast=" + firstCast + " one-action-per-window=" + oneActionPerWindow
+                                + " blocked-immediately=" + blockedImmediately + " reopened=" + reopened
+                                + " after-first=" + afterFirst + " after-reopen=" + probeTarget.getHealth()
+                                + " passed=" + passed);
+                    } finally {
+                        probeTarget.remove();
+                        try {
+                            Files.deleteIfExists(fixtureRoot.resolve("Skills/probe.yml"));
+                            Files.deleteIfExists(fixtureRoot.resolve("Skills"));
+                            Files.deleteIfExists(fixtureRoot);
+                        } catch (java.io.IOException cleanupFailure) {
+                            getLogger().warning("nested skill cooldown probe cleanup failed=" + cleanupFailure);
+                        }
+                    }
+                }, 8L);
+                target = null;
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] nested-skill-cooldown exception="
+                        + failure.getClass().getSimpleName() + ":" + failure.getMessage());
+                if (target != null) target.remove();
+                if (root != null) {
+                    try {
+                        Files.deleteIfExists(root.resolve("Skills/probe.yml"));
+                        Files.deleteIfExists(root.resolve("Skills"));
+                        Files.deleteIfExists(root);
+                    } catch (java.io.IOException cleanupFailure) {
+                        getLogger().warning("nested skill cooldown probe cleanup failed=" + cleanupFailure);
+                    }
+                }
+            }
         }, Math.max(1, delay));
     }
 

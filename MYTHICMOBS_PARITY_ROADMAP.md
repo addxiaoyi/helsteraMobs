@@ -115,8 +115,11 @@ Matrix rows: `Mechanics catalog`, `Skills importer`, `Context targeters`,
 - Nested `skill{s=...;cooldown=...}` now preserves validated cooldown
   metadata through Mythic import and applies a per-instance runtime gate;
   malformed, duplicate, and non-nested cooldowns remain preserved or rejected.
-  A production Paper observation is still required before this slice can change
-  the Skills importer row from `mapped-unverified`.
+  Focused Paper 1.21.1-133 evidence is now recorded in
+  `srv-paper-nested-skill-cooldown-strict-20261115-r3`, covering one execution
+  per cooldown window, immediate blocking, reopening, and malformed-value
+  preservation. The full Skills importer row remains `mapped-unverified` until
+  the declared Skills and Mechanics catalogs are covered.
 - Complete official targeter names, filters, modifiers, ordering, limits,
   chaining, location/entity distinctions, and invalid-input behavior.
 - Verify trigger registration, event actor/target/trigger context, priority,

@@ -13,6 +13,17 @@ pwsh -NoProfile -File tools/paper-integration/run-metaskill-condition-fixture.ps
 
 The runner pins the Paper 1.21.1-133 jar by SHA-256, adds isolated test skills to a fresh server data directory, enables the production skill self-test, and archives a JSON report plus a token-redacted compressed log. The focused probe covers direct and imported `MetaskillCondition`/`skillcondition`, scoped parameters, nested determinations and `OR`/`AND`/`NOT` modes, missing determination rejection, and malformed-input preservation. Latest run `srv-paper-metaskill-condition-strict-20261115-r2` passed all assertions. This is exploratory feature evidence, not a full-catalog release-gate run; other Paper versions and the full MythicMobs Skills catalog remain unverified.
 
+## Focused nested skill cooldown fixture
+
+Run the isolated Paper 1.21.1 production-runtime probe after packaging the plugin:
+
+```powershell
+./mvnw -B -pl helstera-plugin -am package
+pwsh -NoProfile -File tools/paper-integration/run-nested-skill-cooldown-fixture.ps1 -EvidenceRevision rN
+```
+
+The runner pins Paper 1.21.1-133, imports three valid nested `skill{s=...;cooldown=5t}` lines and three malformed/conflicting lines into a fresh server, then exercises the production skill runtime against a real Zombie. The probe verifies one child execution per cooldown window, immediate blocking, reopening after five ticks, and preservation plus warnings for invalid values. Fixture `srv-paper-nested-skill-cooldown-strict-20261115-r3` passed. This is exploratory feature evidence and does not complete the full Skills importer or Mechanics catalog.
+
 ## Focused MythicMobs pack-condition fixture
 
 Run the exact MythicMobs 5.7.2/Paper 1.21.1 condition probe after packaging the plugin:

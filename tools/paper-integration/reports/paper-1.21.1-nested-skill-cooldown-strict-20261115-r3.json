@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-15T19:50:44.8688177Z",
+  "fixtureDirectory": "srv-paper-nested-skill-cooldown-strict-20261115-r3",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "9b66ac4f5ad543cac9c27414b8cfa6c20ae83544da499c46971c445de2dd67e2",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "nestedSkillCooldownRuntime"
+  ],
+  "probes": [
+    {
+      "id": "nestedSkillCooldownRuntime",
+      "status": "passed",
+      "observations": [
+        "nested-skill-cooldown imported=true invalid-preserved=true warnings=true invalid-warning-count=2 invalid-input-warning-count=3 first-cast=true one-action-per-window=true blocked-immediately=true reopened=true after-first=12.0 after-reopen=14.0 passed=true"
+      ]
+    }
+  ]
+}
