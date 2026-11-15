@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-uuid-condition-strict-20261115-r2",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-uuid-condition-strict-20261115-r2.json"
+      "releaseFixtureId": "srv-paper-sprinting-strict-20261115-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

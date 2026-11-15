@@ -11,7 +11,7 @@ Audited against the matrix on 2026-11-15:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
-| `implemented-runtime` | 104 | A runtime implementation exists; the row's evidence still limits the claim. |
+| `implemented-runtime` | 106 | A runtime implementation exists; the row's evidence still limits the claim. |
 | `mapped-unverified` | 33 | Mapping or partial runtime support exists, but the full stated behavior is not verified. |
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |

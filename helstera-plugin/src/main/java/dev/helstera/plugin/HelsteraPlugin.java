@@ -92,6 +92,9 @@ import java.util.stream.Collectors;
  */
 public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
+    private record PlayerStateConditionProbe(boolean flying, boolean sneaking, boolean gliding,
+            boolean sprinting, boolean importedSprinting) { }
+
     private HelsteraEventBus bus;
     private ModelValidator validator;
     private ModelRegistryImpl registry;          // 核心模块，始终存在
@@ -6290,6 +6293,64 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             outputDirectoryExisted, mobFiles, instanceIds);
                 }
             }
+        }
+    }
+
+    private PlayerStateConditionProbe runPlayerStateConditionProbe(SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext context,
+            Player player) {
+        // Inventory and game-mode mechanics earlier in the self-test can clear
+        // these flags, so re-establish them immediately before evaluation.
+        player.setGameMode(org.bukkit.GameMode.CREATIVE);
+        player.setAllowFlight(true);
+        player.setFlying(true);
+        player.setSneaking(true);
+        player.setGliding(true);
+        boolean flying = behaviors.testCondition(skills.bindCondition("is-flying"), context);
+        boolean sneaking = behaviors.testCondition(skills.bindCondition("issneaking"), context);
+        boolean gliding = behaviors.testCondition(skills.bindCondition("is-gliding"), context);
+        player.setGameMode(org.bukkit.GameMode.SURVIVAL);
+        var sprinting = runSprintingConditionProbe(skills, behaviors, context, player);
+        return new PlayerStateConditionProbe(flying, sneaking, gliding,
+                sprinting.runtime(), sprinting.imported());
+    }
+
+    private record SprintingConditionProbe(boolean runtime, boolean imported) { }
+
+    private SprintingConditionProbe runSprintingConditionProbe(SkillService skills,
+            BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext context,
+            Player player) {
+        var imported = dev.helstera.migration.importer.MmConditions.translate("?Sprinting");
+        var importedAlias = dev.helstera.migration.importer.MmConditions.translate("?issprinting");
+        var importedInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                "?Sprinting{unknown=true}");
+        String importedKey = imported.translated() ? skills.bindCondition(imported.condition()) : null;
+        String importedAliasKey = importedAlias.translated()
+                ? skills.bindCondition(importedAlias.condition()) : null;
+        String runtimeKey = skills.bindCondition("is-sprinting");
+        boolean oldSprinting = player.isSprinting();
+        try {
+            player.setSprinting(true);
+            boolean directPositive = player.isSprinting()
+                    && behaviors.testCondition(runtimeKey, context);
+            boolean importedPositive = importedKey != null && importedAliasKey != null
+                    && behaviors.testCondition(importedKey, context)
+                    && behaviors.testCondition(importedAliasKey, context);
+            player.setSprinting(false);
+            boolean directNegative = !player.isSprinting()
+                    && !behaviors.testCondition(runtimeKey, context);
+            boolean importedNegative = importedKey != null && importedAliasKey != null
+                    && !behaviors.testCondition(importedKey, context)
+                    && !behaviors.testCondition(importedAliasKey, context);
+            boolean invalidPreserved = !importedInvalid.translated()
+                    && "?Sprinting{unknown=true}".equals(importedInvalid.condition());
+            return new SprintingConditionProbe(directPositive && directNegative,
+                    importedKey != null && importedAliasKey != null
+                            && importedPositive && importedNegative && invalidPreserved);
+        } finally {
+            player.setSprinting(oldSprinting);
         }
     }
 
@@ -14884,6 +14945,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean stateFlying = false;
                 boolean stateSneaking = false;
                 boolean stateGliding = false;
+                boolean stateSprinting = false;
+                boolean importedSprintingCondition = false;
                 boolean stateBlocking = false;
                 boolean spyglassCondition = false;
                 boolean importedSpyglassCondition = false;
@@ -14933,6 +14996,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean oldFlying = permissionProbe.isFlying();
                     boolean oldSneaking = permissionProbe.isSneaking();
                     boolean oldGliding = permissionProbe.isGliding();
+                    boolean oldSprinting = permissionProbe.isSprinting();
                     boolean oldGlowing = permissionProbe.isGlowing();
                     var oldGameMode = permissionProbe.getGameMode();
                     int oldExperienceLevel = permissionProbe.getLevel();
@@ -15602,18 +15666,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             "oxygen 20", stateContext);
                     oxygenMechanic = oxygenDispatched && permissionProbe.getRemainingAir() == 120;
                     permissionProbe.setRemainingAir(oldRemainingAir);
-                    // Re-establish the server-side state immediately before
-                    // evaluating the state conditions; inventory and game-mode
-                    // mechanics above can clear flight/use state on Paper.
-                    permissionProbe.setGameMode(org.bukkit.GameMode.CREATIVE);
-                    permissionProbe.setAllowFlight(true);
-                    permissionProbe.setFlying(true);
-                    permissionProbe.setSneaking(true);
-                    permissionProbe.setGliding(true);
-                    stateFlying = behaviors.testCondition(skills.bindCondition("is-flying"), stateContext);
-                    stateSneaking = behaviors.testCondition(skills.bindCondition("issneaking"), stateContext);
-                    stateGliding = behaviors.testCondition(skills.bindCondition("is-gliding"), stateContext);
-                    permissionProbe.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                    var stateProbe = runPlayerStateConditionProbe(skills, behaviors,
+                            stateContext, permissionProbe);
+                    stateFlying = stateProbe.flying();
+                    stateSneaking = stateProbe.sneaking();
+                    stateGliding = stateProbe.gliding();
+                    stateSprinting = stateProbe.sprinting();
+                    importedSprintingCondition = stateProbe.importedSprinting();
                     // Keep the shield equipped while checking Player#isBlocking.
                     // Restoring oldMainHand before this point can cancel the
                     // client's active use-item state and turn a valid workflow
@@ -15699,11 +15758,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + importedSpyglassInvalidRejected);
                     permissionProbe.getInventory().setItemInMainHand(spyglassPreviousHand);
                     permissionProbe.setGameMode(oldGameMode);
-                    stateConditions = stateFlying && stateSneaking && stateGliding;
+                    stateConditions = stateFlying && stateSneaking && stateGliding
+                            && stateSprinting && importedSprintingCondition;
                     permissionProbe.setFlying(oldFlying);
                     permissionProbe.setAllowFlight(oldAllowFlight);
                     permissionProbe.setSneaking(oldSneaking);
                     permissionProbe.setGliding(oldGliding);
+                    permissionProbe.setSprinting(oldSprinting);
                     permissionProbe.getInventory().setItemInMainHand(oldMainHand);
                     permissionAttachment = permissionProbe.addAttachment(this, "integration.probe", true);
                     permissionProbe.recalculatePermissions();
@@ -16111,6 +16172,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " state-flying=" + stateFlying
                         + " state-sneaking=" + stateSneaking
                         + " state-gliding=" + stateGliding
+                        + " state-sprinting=" + stateSprinting
+                        + " state-sprinting-imported=" + importedSprintingCondition
                         + " state-blocking=" + stateBlocking
                         + " spyglass-condition=" + spyglassCondition
                         + " imported-spyglass-condition=" + importedSpyglassCondition

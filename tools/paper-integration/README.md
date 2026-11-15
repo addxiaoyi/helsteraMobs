@@ -1,6 +1,6 @@
 # Isolated Paper Integration Server
 
-Latest full-catalog strict fixture `srv-paper-uuid-condition-strict-20261115-r2` completes 457 probes on Paper 1.21.1-133 (438 passed, 19 expected rejections, zero failed or incomplete). Its `uuidCondition` probe verifies imported `uuid`/`u`, literal and `<trigger.uuid>` matches, mismatched rejection, and malformed-input preservation. Report and redacted logs are archived in [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md); the release baseline and artifact hashes are recorded in `release-evidence.json`. The full Conditions catalog remains incomplete.
+Latest full-catalog strict fixture `srv-paper-sprinting-strict-20261115-r1` passes all 457 probes on Paper 1.21.1-133 (438 passed, 19 expected rejections, zero failed or incomplete). Its `stateConditions` probe verifies runtime sprinting positives and negatives, imported Mythic `?Sprinting`/`?issprinting` aliases in both states, unknown-argument preservation, and player-state restoration. Report and redacted logs are archived in [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md); the release baseline and artifact hashes are recorded in `release-evidence.json`. The full Conditions catalog remains incomplete.
 
 ## Focused MythicMobs pack-condition fixture
 

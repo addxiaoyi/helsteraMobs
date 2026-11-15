@@ -324,7 +324,7 @@ $probeSpecs = [ordered]@{
     itemRechargingCondition = 'skill-actions .*item-recharging-condition=true'
     importedItemSimilarityConditions = 'imported-item-similarity-conditions entity-primary-mapped=true entity-alias-mapped=true entity-positive=true entity-alias-positive=true entity-negative=true entity-invalid-preserved=true inventory-primary-mapped=true inventory-alias-mapped=true inventory-positive=true inventory-alias-positive=true inventory-negative=true inventory-invalid-preserved=true result=true'
     playerPotionEvents = 'skill-actions .*player-potion-events=true'
-    stateConditions = 'skill-actions .*state-conditions=true .*state-flying=true .*state-sneaking=true .*state-gliding=true'
+    stateConditions = 'skill-actions .*state-conditions=true .*state-flying=true .*state-sneaking=true .*state-gliding=true .*state-sprinting=true .*state-sprinting-imported=true'
     entityStateConditions = 'skill-actions .*entity-state-conditions=true'
     stateBlocking = 'skill-actions .*state-blocking=true'
     spyglassCondition = 'skill-actions .*spyglass-condition=true'
