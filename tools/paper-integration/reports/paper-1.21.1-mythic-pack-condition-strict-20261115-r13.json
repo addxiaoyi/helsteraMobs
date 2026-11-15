@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-15T17:02:47.1634683Z",
+  "fixtureDirectory": "srv-paper-mythic-pack-strict-20261115-r13",
+  "evidenceMode": "release",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "4773347d963645ad142d4295cc1bb4cfc49604755ab156892f7a1a47998a060f",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "externalPlugin": "MythicMobs 5.7.2 (Modrinth version FTWvGuE5)",
+  "externalPluginSource": "https://cdn.modrinth.com/data/NLuc7Jjh/versions/FTWvGuE5/MythicMobs-5.7.2.jar",
+  "externalPluginLicense": "All Rights Reserved; local integration test only, not redistributed",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "externalPluginSha512": "d297fe2bf4fa651b6fed87be2c9d5112129f78b5309ac4716e44e2fbe84308e5d6e2b5939b4c39b5e1b5c42ab2c5d7628498b5cfa9ad0faea24561cdfafdd2a0",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "mythicMobTypeAndPackConditions"
+  ],
+  "probes": [
+    {
+      "id": "mythicMobTypeAndPackConditions",
+      "status": "passed",
+      "observations": [
+        "mythic-pack-condition actual-version=2.4.1 pack-loaded=true case-sensitive=true missing-rejected=true exact-version=true wrong-version-rejected=true greater-equal=true greater-lower-rejected=true greater-upper=true greater-major-component-rejected=true malformed-preserved=true duplicate-preserved=true premium-api-available=true premium-state=false premium-alias=true is-premium-alias=true is-cool-alias=true premium-arguments-preserved=true premium-runtime-arguments-rejected=true mythic-mob-api-available=true mythic-mob-oracle-positive=true mythic-mob-oracle-negative=true mythic-mob-runtime-positive=true mythic-mob-runtime-negative=true mythic-mob-imported-positive=true mythic-mob-imported-negative=true ismm-alias-positive=true ismm-alias-negative=true mythic-mob-radius-type-positive=true mythic-mob-radius-type-negative=true mythic-mob-imported-radius-type-positive=true mythic-mob-imported-radius-type-negative=true mythic-mob-radius-type-list-positive=true mythic-mob-imported-radius-type-list-positive=true mythic-mob-radius-type-case-positive=true mythic-mob-imported-radius-type-case-positive=true mythic-mob-origin-type-positive=true mythic-mob-origin-type-negative=true mythic-mob-imported-origin-type-positive=true mythic-mob-imported-origin-type-negative=true mythic-mob-origin-type-list-positive=true mythic-mob-origin-type-case-positive=true mythic-mob-origin-range-positive=true mythic-mob-origin-unknown-type-rejected=true mythic-mob-type-exact-positive=true mythic-mob-type-exact-substring-rejected=true mythic-mob-type-contains-positive=true mythic-mob-type-contains-negative=true mythic-mob-type-imported-exact-positive=true mythic-mob-type-imported-exact-substring-rejected=true mythic-mob-type-imported-contains-positive=true mythic-mob-type-imported-contains-negative=true passed=true"
+      ]
+    }
+  ]
+}

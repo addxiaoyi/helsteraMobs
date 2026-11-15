@@ -1401,7 +1401,7 @@
     {
       "id": "radiusConditions",
       "status": "passed",
-      "requiredObservation": "radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-excluded=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true"
+      "requiredObservation": "radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-excluded=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true"
     },
     {
       "id": "preventSunburnNatural",

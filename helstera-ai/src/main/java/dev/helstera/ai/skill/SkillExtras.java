@@ -228,6 +228,11 @@ public final class SkillExtras {
     }
 
     private static volatile MythicMobTypeMatcher mythicMobTypeMatcher;
+    public interface MythicMobTypeQuery {
+        boolean isKnownType(String mobType);
+        java.util.Optional<Boolean> matches(Entity entity, String mobType);
+    }
+    private static volatile MythicMobTypeQuery mythicMobTypeQuery;
     private static volatile AuraRegistry auraRegistry;
     private static final Map<String, String> AURA_NAME_ARGUMENTS = Map.ofEntries(
             Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
@@ -401,6 +406,11 @@ public final class SkillExtras {
         mythicMobTypeMatcher = matcher;
     }
 
+    /** Connects origin-condition filters to the optional MythicMobs type registry and live lookup. */
+    public static void mythicMobTypeQuery(MythicMobTypeQuery query) {
+        mythicMobTypeQuery = query;
+    }
+
     public static void auraRegistry(AuraRegistry registry) {
         auraRegistry = registry;
     }
@@ -506,6 +516,7 @@ public final class SkillExtras {
         managedEntityLookup = null;
         mythicMobLookup = null;
         mythicMobTypeMatcher = null;
+        mythicMobTypeQuery = null;
         audienceMobSelector = null;
         executionAudienceWriter = null;
         auraRegistry = null;
@@ -4251,10 +4262,14 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("mobs-near-origin", (SkillCatalog.ConditionFactory) a -> {
-                    Comparison amount = comparison(a, 0, ">=");
+                    NumberRange amount = nonNegativeCountRange(a, 0, "1");
                     double radius = nonNegativeRadius(a, 1, 5);
-                    String types = str(a, 2, "");
-                    return ctx -> compare(countMobsNearOrigin(ctx, radius, types), amount);
+                    Set<String> types = mobTypeFilter(a, 2);
+                    if (!knownMobTypes(types)) return ctx -> false;
+                    return ctx -> {
+                        java.util.OptionalInt count = countMobsNearOrigin(ctx, radius, types);
+                        return count.isPresent() && amount.contains(count.getAsInt());
+                    };
                 }),
                 Map.entry("living-in-radius", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, ">=");
@@ -8890,38 +8905,99 @@ public final class SkillExtras {
         return false;
     }
 
-    private static int countMobsNearOrigin(BehaviorContext ctx, double radius, String types) {
-        Location origin = ctx == null ? null : ctx.origin().orElse(null);
-        if (origin == null || origin.getWorld() == null || !Double.isFinite(radius) || radius < 0) {
-            return 0;
-        }
-        Entity source = ctx.instanceValid()
-                ? ctx.instance().baseEntity().orElse(null) : null;
-        Set<String> wanted = new java.util.HashSet<>();
-        if (types != null && !types.isBlank()) {
-            for (String raw : types.split(",")) {
-                String type = raw.trim().toUpperCase(Locale.ROOT);
-                if (type.isBlank()) continue;
-                try {
-                    wanted.add(org.bukkit.entity.EntityType.valueOf(type).name());
-                } catch (IllegalArgumentException ignored) {
-                    return 0;
-                }
+    private static boolean knownMobTypes(Set<String> types) {
+        if (types == null || types.isEmpty()) return true;
+        for (String type : types) {
+            try {
+                nativeEntityType(type);
+                continue;
+            } catch (IllegalArgumentException ignored) {
+                // Custom MythicMobs names are checked through the optional registry below.
+            }
+            MythicMobTypeQuery query = mythicMobTypeQuery;
+            if (query == null) return false;
+            try {
+                if (!query.isKnownType(type)) return false;
+            } catch (Throwable ignored) {
+                SkillFaults.swallow("SkillExtras#mythicMobTypeQuery");
+                return false;
             }
         }
+        return true;
+    }
+
+    private static org.bukkit.entity.EntityType nativeEntityType(String name) {
+        String value = name;
+        if (value.regionMatches(true, 0, "minecraft:", 0, "minecraft:".length())) {
+            value = value.substring("minecraft:".length());
+        }
+        return org.bukkit.entity.EntityType.valueOf(value.toUpperCase(Locale.ROOT));
+    }
+
+    private static java.util.Optional<Boolean> matchesMobsNearOriginType(Entity entity,
+                                                                           Set<String> types) {
+        boolean lookupUnavailable = false;
+        for (String type : types) {
+            try {
+                org.bukkit.entity.EntityType nativeType = nativeEntityType(type);
+                if (entity.getType() == nativeType) return java.util.Optional.of(true);
+                continue;
+            } catch (IllegalArgumentException ignored) {
+                // Non-Bukkit names are resolved against MythicMobs below.
+            }
+            MythicMobTypeQuery query = mythicMobTypeQuery;
+            if (query == null) return java.util.Optional.empty();
+            java.util.Optional<Boolean> result;
+            try {
+                result = query.matches(entity, type);
+            } catch (Throwable ignored) {
+                SkillFaults.swallow("SkillExtras#mythicMobTypeQuery");
+                lookupUnavailable = true;
+                continue;
+            }
+            if (result == null || result.isEmpty()) {
+                lookupUnavailable = true;
+                continue;
+            }
+            if (result.get()) return java.util.Optional.of(true);
+        }
+        return lookupUnavailable ? java.util.Optional.empty() : java.util.Optional.of(false);
+    }
+
+    private static java.util.OptionalInt countMobsNearOrigin(BehaviorContext ctx, double radius,
+                                                               Set<String> types) {
+        Location origin = ctx == null ? null : ctx.origin().orElse(null);
+        if (origin == null || origin.getWorld() == null || !Double.isFinite(radius) || radius < 0) {
+            return java.util.OptionalInt.empty();
+        }
+        double radiusSquared = radius * radius;
+        if (!Double.isFinite(radiusSquared)) return java.util.OptionalInt.empty();
+        Entity source = ctx != null && ctx.instanceValid()
+                ? ctx.instance().baseEntity().orElse(null) : null;
         int count = 0;
         try {
             for (Entity entity : origin.getWorld().getNearbyEntities(origin, radius, radius, radius)) {
                 if (entity == source || !(entity instanceof org.bukkit.entity.Mob mob)
                         || !mob.isValid()) continue;
-                if (!wanted.isEmpty() && !wanted.contains(entity.getType().name())) continue;
+                Location location = entity.getLocation();
+                if (location == null || location.getWorld() != origin.getWorld()) {
+                    return java.util.OptionalInt.empty();
+                }
+                double distanceSquared = location.distanceSquared(origin);
+                if (!Double.isFinite(distanceSquared)) return java.util.OptionalInt.empty();
+                if (distanceSquared > radiusSquared) continue;
+                if (!types.isEmpty()) {
+                    java.util.Optional<Boolean> matches = matchesMobsNearOriginType(entity, types);
+                    if (matches.isEmpty()) return java.util.OptionalInt.empty();
+                    if (!matches.get()) continue;
+                }
                 count++;
-                if (count > 512) break;
             }
         } catch (Throwable ignored) {
             SkillFaults.swallow("SkillExtras#countMobsNearOrigin");
+            return java.util.OptionalInt.empty();
         }
-        return count;
+        return java.util.OptionalInt.of(count);
     }
 
     private static int countLivingNear(BehaviorContext ctx, double radius) {

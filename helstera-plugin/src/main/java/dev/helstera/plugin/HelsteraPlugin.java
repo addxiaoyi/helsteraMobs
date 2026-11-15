@@ -621,6 +621,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     mythicAdapter != null && mythicAdapter.isMythicMob(entity));
             dev.helstera.ai.skill.SkillExtras.mythicMobTypeMatcher((entity, type, exactMatch) ->
                     mythicAdapter != null && mythicAdapter.isMythicMobType(entity, type, exactMatch));
+            dev.helstera.ai.skill.SkillExtras.mythicMobTypeQuery(new dev.helstera.ai.skill.SkillExtras.MythicMobTypeQuery() {
+                @Override
+                public boolean isKnownType(String type) {
+                    return mythicAdapter != null && mythicAdapter.hasMythicMobType(type);
+                }
+
+                @Override
+                public java.util.Optional<Boolean> matches(org.bukkit.entity.Entity entity, String type) {
+                    return mythicAdapter == null
+                            ? java.util.Optional.empty()
+                            : mythicAdapter.matchesMythicMobType(entity, type);
+                }
+            });
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);
         }
@@ -1190,6 +1203,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean mythicMobImportedRadiusTypeListPositive = false;
             boolean mythicMobRadiusTypeCasePositive = false;
             boolean mythicMobImportedRadiusTypeCasePositive = false;
+            boolean mythicMobOriginTypePositive = false;
+            boolean mythicMobOriginTypeNegative = false;
+            boolean mythicMobImportedOriginTypePositive = false;
+            boolean mythicMobImportedOriginTypeNegative = false;
+            boolean mythicMobOriginTypeListPositive = false;
+            boolean mythicMobOriginTypeCasePositive = false;
+            boolean mythicMobOriginRangePositive = false;
+            boolean mythicMobOriginUnknownTypeRejected = false;
             boolean mythicMobTypeExactPositive = false;
             boolean mythicMobTypeExactSubstringRejected = false;
             boolean mythicMobTypeContainsPositive = false;
@@ -1265,6 +1286,45 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 var radiusContext = dev.helstera.api.behavior.BehaviorContext.execution(
                                         null, null, 1.0, -1, 0, "mythic-mob-radius-probe", null,
                                         null, java.util.List.of(), mythicMobProbe.getLocation());
+                                String originTypeCondition = skills.bindCondition(
+                                        "mobs-near-origin 1 0.5 SkeletalMinion");
+                                String originUnrelatedTypeCondition = skills.bindCondition(
+                                        "mobs-near-origin 1 0.5 StaticallyChargedSheep");
+                                mythicMobOriginTypePositive = originTypeCondition != null
+                                        && behaviors.testCondition(originTypeCondition, radiusContext);
+                                mythicMobOriginTypeNegative = originUnrelatedTypeCondition != null
+                                        && !behaviors.testCondition(originUnrelatedTypeCondition, radiusContext);
+                                String originRangeCondition = skills.bindCondition(
+                                        "mobs-near-origin 1to2 0.5 SkeletalMinion");
+                                mythicMobOriginRangePositive = originRangeCondition != null
+                                        && behaviors.testCondition(originRangeCondition, radiusContext);
+                                String originListCondition = skills.bindCondition(
+                                        "mobs-near-origin 1 0.5 SkeletalMinion,SKELETON");
+                                mythicMobOriginTypeListPositive = originListCondition != null
+                                        && behaviors.testCondition(originListCondition, radiusContext);
+                                String originCaseCondition = skills.bindCondition(
+                                        "mobs-near-origin 1 0.5 skeletalminion");
+                                mythicMobOriginTypeCasePositive = originCaseCondition != null
+                                        && behaviors.testCondition(originCaseCondition, radiusContext);
+                                String originUnknownCondition = skills.bindCondition(
+                                        "mobs-near-origin <=0 0.5 HelsteraMissingProbeMob");
+                                mythicMobOriginUnknownTypeRejected = originUnknownCondition != null
+                                        && !behaviors.testCondition(originUnknownCondition, radiusContext);
+                                var importedOriginType = dev.helstera.migration.importer.MmConditions.translate(
+                                        "?MobsNearOrigin{types=SkeletalMinion;radius=0.5;amount=1}");
+                                var importedOriginUnrelatedType =
+                                        dev.helstera.migration.importer.MmConditions.translate(
+                                                "?MobsNearOrigin{types=StaticallyChargedSheep;radius=0.5;amount=1}");
+                                String importedOriginTypeCondition = importedOriginType.translated()
+                                        ? skills.bindCondition(importedOriginType.condition()) : null;
+                                String importedOriginUnrelatedTypeCondition =
+                                        importedOriginUnrelatedType.translated()
+                                                ? skills.bindCondition(importedOriginUnrelatedType.condition()) : null;
+                                mythicMobImportedOriginTypePositive = importedOriginTypeCondition != null
+                                        && behaviors.testCondition(importedOriginTypeCondition, radiusContext);
+                                mythicMobImportedOriginTypeNegative = importedOriginUnrelatedTypeCondition != null
+                                        && !behaviors.testCondition(importedOriginUnrelatedTypeCondition,
+                                                radiusContext);
                                 String customTypeCondition = skills.bindCondition(
                                         "mobs-in-radius 1 8 SkeletalMinion");
                                 String unrelatedTypeCondition = skills.bindCondition(
@@ -1406,6 +1466,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && mythicMobImportedRadiusTypePositive && mythicMobImportedRadiusTypeNegative
                     && mythicMobRadiusTypeListPositive && mythicMobImportedRadiusTypeListPositive
                     && mythicMobRadiusTypeCasePositive && mythicMobImportedRadiusTypeCasePositive
+                    && mythicMobOriginTypePositive && mythicMobOriginTypeNegative
+                    && mythicMobImportedOriginTypePositive && mythicMobImportedOriginTypeNegative
+                    && mythicMobOriginTypeListPositive && mythicMobOriginTypeCasePositive
+                    && mythicMobOriginRangePositive && mythicMobOriginUnknownTypeRejected
                     && mythicMobTypeExactPositive && mythicMobTypeExactSubstringRejected
                     && mythicMobTypeContainsPositive && mythicMobTypeContainsNegative
                     && mythicMobTypeImportedExactPositive && mythicMobTypeImportedExactSubstringRejected
@@ -1440,6 +1504,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " mythic-mob-imported-radius-type-list-positive=" + mythicMobImportedRadiusTypeListPositive
                     + " mythic-mob-radius-type-case-positive=" + mythicMobRadiusTypeCasePositive
                     + " mythic-mob-imported-radius-type-case-positive=" + mythicMobImportedRadiusTypeCasePositive
+                    + " mythic-mob-origin-type-positive=" + mythicMobOriginTypePositive
+                    + " mythic-mob-origin-type-negative=" + mythicMobOriginTypeNegative
+                    + " mythic-mob-imported-origin-type-positive=" + mythicMobImportedOriginTypePositive
+                    + " mythic-mob-imported-origin-type-negative=" + mythicMobImportedOriginTypeNegative
+                    + " mythic-mob-origin-type-list-positive=" + mythicMobOriginTypeListPositive
+                    + " mythic-mob-origin-type-case-positive=" + mythicMobOriginTypeCasePositive
+                    + " mythic-mob-origin-range-positive=" + mythicMobOriginRangePositive
+                    + " mythic-mob-origin-unknown-type-rejected=" + mythicMobOriginUnknownTypeRejected
                     + " mythic-mob-type-exact-positive=" + mythicMobTypeExactPositive
                     + " mythic-mob-type-exact-substring-rejected=" + mythicMobTypeExactSubstringRejected
                     + " mythic-mob-type-contains-positive=" + mythicMobTypeContainsPositive
@@ -17271,6 +17343,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean mobsTypePositive = false;
         boolean mobsTypeNegative = false;
         boolean mobsDefaultRadiusNegative = false;
+        boolean mobsNearOriginImported = false;
+        boolean mobsNearOriginDefaultExact = false;
+        boolean mobsNearOriginExactPositive = false;
+        boolean mobsNearOriginExactNegative = false;
+        boolean mobsNearOriginRangePositive = false;
+        boolean mobsNearOriginTypePositive = false;
+        boolean mobsNearOriginTypeNegative = false;
+        boolean mobsNearOriginArmorStandExcluded = false;
+        boolean mobsNearOriginUnknownTypeRejected = false;
         boolean invalidRadiusArgumentsPreserved = false;
         boolean livingPositive = false;
         boolean livingNegative = false;
@@ -17322,6 +17403,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     "?mobsInRadius{types=ZOMBIE;radius=4}");
             var importedMobsDefaults = dev.helstera.migration.importer.MmConditions.translate(
                     "?mobsInRadius");
+            var importedMobsNearOrigin = dev.helstera.migration.importer.MmConditions.translate(
+                    "?mobsNearOrigin{types=ZOMBIE,COW;r=4;amount=2}");
+            var importedMobsNearOriginDefaults = dev.helstera.migration.importer.MmConditions.translate(
+                    "?mobsNearOrigin{types=ZOMBIE,COW;r=4}");
+            var importedMobsNearOriginRange = dev.helstera.migration.importer.MmConditions.translate(
+                    "?mobsNearOrigin{types=ZOMBIE,COW;r=4;amount=1to2}");
             var importedLiving = dev.helstera.migration.importer.MmConditions.translate(
                     "?livingInRadius{a=>=2;r=4}");
             var importedWithin = dev.helstera.migration.importer.MmConditions.translate(
@@ -17338,6 +17425,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && "mobs-in-radius 1 4 ZOMBIE".equals(importedMobs.condition())
                     && importedMobsDefaults.translated()
                     && "mobs-in-radius 1 5".equals(importedMobsDefaults.condition())
+                    && importedMobsNearOrigin.translated()
+                    && "mobs-near-origin 2 4 ZOMBIE,COW".equals(importedMobsNearOrigin.condition())
+                    && importedMobsNearOriginDefaults.translated()
+                    && "mobs-near-origin 1 4 ZOMBIE,COW".equals(importedMobsNearOriginDefaults.condition())
+                    && importedMobsNearOriginRange.translated()
+                    && "mobs-near-origin 1to2 4 ZOMBIE,COW".equals(importedMobsNearOriginRange.condition())
                     && importedLiving.translated()
                     && "living-in-radius >=2 4".equals(importedLiving.condition())
                     && importedWithin.translated()
@@ -17347,19 +17440,56 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             invalidRadiusArgumentsPreserved = !dev.helstera.migration.importer.MmConditions.translate(
                             "?playersInRadius{amount=3to2}").translated()
                     && !dev.helstera.migration.importer.MmConditions.translate(
-                            "?mobsInRadius{types=ZOMBIE,,SKELETON}").translated();
+                            "?mobsInRadius{types=ZOMBIE,,SKELETON}").translated()
+                    && !dev.helstera.migration.importer.MmConditions.translate(
+                            "?mobsNearOrigin{amount=3to2}").translated()
+                    && !dev.helstera.migration.importer.MmConditions.translate(
+                            "?mobsNearOrigin{types=ZOMBIE,,COW}").translated()
+                    && !dev.helstera.migration.importer.MmConditions.translate(
+                            "?mobsNearOrigin{radius=4;r=5}").translated();
             String playersKey = imported ? skills.bindCondition(importedPlayers.condition()) : null;
             String playersDefaultsKey = imported
                     ? skills.bindCondition(importedPlayersDefaults.condition()) : null;
             String entitiesKey = imported ? skills.bindCondition(importedEntities.condition()) : null;
             String mobsKey = imported ? skills.bindCondition(importedMobs.condition()) : null;
             String mobsDefaultsKey = imported ? skills.bindCondition(importedMobsDefaults.condition()) : null;
+            String mobsNearOriginKey = imported
+                    ? skills.bindCondition(importedMobsNearOrigin.condition()) : null;
+            String mobsNearOriginDefaultsKey = imported
+                    ? skills.bindCondition(importedMobsNearOriginDefaults.condition()) : null;
+            String mobsNearOriginRangeKey = imported
+                    ? skills.bindCondition(importedMobsNearOriginRange.condition()) : null;
             String livingKey = imported ? skills.bindCondition(importedLiving.condition()) : null;
             String withinKey = imported ? skills.bindCondition(importedWithin.condition()) : null;
             String notWithinKey = imported ? skills.bindCondition(importedNotWithin.condition()) : null;
             playersPositive = playersKey != null && behaviors.testCondition(playersKey, radiusContext);
             entitiesPositive = entitiesKey != null && behaviors.testCondition(entitiesKey, radiusContext);
             mobsPositive = mobsKey != null && behaviors.testCondition(mobsKey, radiusContext);
+            mobsNearOriginImported = mobsNearOriginKey != null && mobsNearOriginDefaultsKey != null
+                    && mobsNearOriginRangeKey != null;
+            String mobsNearOriginDefaultKey = skills.bindCondition("mobs-near-origin");
+            mobsNearOriginDefaultExact = mobsNearOriginDefaultKey != null
+                    && !behaviors.testCondition(mobsNearOriginDefaultKey, radiusContext);
+            mobsNearOriginExactPositive = mobsNearOriginKey != null
+                    && behaviors.testCondition(mobsNearOriginKey, radiusContext);
+            String mobsNearOriginWrongAmountKey = skills.bindCondition("mobs-near-origin 3 4");
+            mobsNearOriginExactNegative = mobsNearOriginWrongAmountKey != null
+                    && !behaviors.testCondition(mobsNearOriginWrongAmountKey, radiusContext);
+            mobsNearOriginRangePositive = mobsNearOriginRangeKey != null
+                    && behaviors.testCondition(mobsNearOriginRangeKey, radiusContext);
+            String mobsNearOriginTypeKey = skills.bindCondition("mobs-near-origin 1 4 ZOMBIE");
+            String mobsNearOriginWrongTypeKey = skills.bindCondition("mobs-near-origin 1 4 PIG");
+            mobsNearOriginTypePositive = mobsNearOriginTypeKey != null
+                    && behaviors.testCondition(mobsNearOriginTypeKey, radiusContext);
+            mobsNearOriginTypeNegative = mobsNearOriginWrongTypeKey != null
+                    && !behaviors.testCondition(mobsNearOriginWrongTypeKey, radiusContext);
+            String mobsNearOriginArmorKey = skills.bindCondition("mobs-near-origin 2 4");
+            mobsNearOriginArmorStandExcluded = mobsNearOriginArmorKey != null
+                    && behaviors.testCondition(mobsNearOriginArmorKey, radiusContext);
+            String mobsNearOriginUnknownKey = skills.bindCondition(
+                    "mobs-near-origin <=0 4 NOT_A_REGISTERED_MYTHIC_MOB");
+            mobsNearOriginUnknownTypeRejected = mobsNearOriginUnknownKey != null
+                    && !behaviors.testCondition(mobsNearOriginUnknownKey, radiusContext);
             String mobsArmorStandKey = skills.bindCondition("mobs-in-radius 3 4");
             mobsArmorStandExcluded = mobsArmorStandKey != null
                     && !behaviors.testCondition(mobsArmorStandKey, radiusContext);
@@ -17410,6 +17540,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && !behaviors.testCondition(notWithinKey, radiusTargetContext);
             imported = imported && playersKey != null && entitiesKey != null && mobsKey != null
                     && playersDefaultsKey != null && mobsDefaultsKey != null
+                    && mobsNearOriginImported && mobsNearOriginDefaultKey != null
+                    && mobsNearOriginDefaultsKey != null && mobsNearOriginRangeKey != null
                     && livingKey != null && withinKey != null && notWithinKey != null;
         } catch (Throwable failure) {
             getLogger().warning("[自检] radius conditions failed: " + failure);
@@ -17435,6 +17567,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 && entitiesNegative && mobsPositive && mobsNegative && mobsDefaultRadiusNegative
                 && mobsArmorStandExcluded
                 && mobsTypePositive && mobsTypeNegative
+                && mobsNearOriginImported && mobsNearOriginDefaultExact
+                && mobsNearOriginExactPositive && mobsNearOriginExactNegative
+                && mobsNearOriginRangePositive && mobsNearOriginTypePositive
+                && mobsNearOriginTypeNegative && mobsNearOriginArmorStandExcluded
+                && mobsNearOriginUnknownTypeRejected
                 && invalidRadiusArgumentsPreserved && livingPositive && livingNegative
                 && playerWithinPositive && playerWithinNegative && playerNotWithinPositive
                 && playerNotWithinNegative && subjectRestored && peerRestored;
@@ -17445,6 +17582,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " entities-positive=" + entitiesPositive + " entities-negative=" + entitiesNegative
                 + " mobs-positive=" + mobsPositive + " mobs-negative=" + mobsNegative
                 + " mobs-armor-stand-excluded=" + mobsArmorStandExcluded
+                + " mobs-near-origin-imported=" + mobsNearOriginImported
+                + " mobs-near-origin-default-exact=" + mobsNearOriginDefaultExact
+                + " mobs-near-origin-exact-positive=" + mobsNearOriginExactPositive
+                + " mobs-near-origin-exact-negative=" + mobsNearOriginExactNegative
+                + " mobs-near-origin-range-positive=" + mobsNearOriginRangePositive
+                + " mobs-near-origin-type-positive=" + mobsNearOriginTypePositive
+                + " mobs-near-origin-type-negative=" + mobsNearOriginTypeNegative
+                + " mobs-near-origin-armor-stand-excluded=" + mobsNearOriginArmorStandExcluded
+                + " mobs-near-origin-unknown-type-rejected=" + mobsNearOriginUnknownTypeRejected
                 + " mobs-default-radius-negative=" + mobsDefaultRadiusNegative
                 + " mobs-type-positive=" + mobsTypePositive + " mobs-type-negative=" + mobsTypeNegative
                 + " invalid-radius-arguments-preserved=" + invalidRadiusArgumentsPreserved

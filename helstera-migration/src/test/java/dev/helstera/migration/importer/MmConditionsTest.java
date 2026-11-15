@@ -1637,8 +1637,23 @@ class MmConditionsTest {
     void officialMobsNearOriginMapsAmountRadiusAndTypes() {
         assertEquals("mobs-near-origin >5 10 ExampleMob,SuperMob",
                 t("?mobsNearOrigin{type=ExampleMob,SuperMob;r=10;amount=>5}"));
-        assertEquals("mobs-near-origin >=1 5", t("?mobsNearOrigin{r=5}"));
+        assertEquals("mobs-near-origin 1 5", t("?mobsNearOrigin{r=5}"));
+        assertEquals("mobs-near-origin 1 5", t("?mobsNearOrigin"));
+        assertEquals("mobs-near-origin 1 8 SkeletalMinion",
+                t("?MobsNearOrigin{types=SkeletalMinion;radius=8;amount=1}"));
+        assertEquals("mobs-near-origin 1to3 5 ZOMBIE,SKELETON",
+                t("?mobsNearOrigin{a=1to3;t=ZOMBIE,SKELETON}"));
         assertTrue(translated("?mobsNearOrigin{r=5}"));
+        for (String invalid : List.of(
+                "?mobsNearOrigin{amount=1.5}",
+                "?mobsNearOrigin{amount=3to2}",
+                "?mobsNearOrigin{amount=>=-1}",
+                "?mobsNearOrigin{amount=1;count=2}",
+                "?mobsNearOrigin{radius=5;r=6}",
+                "?mobsNearOrigin{types=ZOMBIE,,SKELETON}",
+                "?mobsNearOrigin{unknown=true}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test

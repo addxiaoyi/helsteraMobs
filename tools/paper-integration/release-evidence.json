@@ -1,5 +1,26 @@
 [
   {
+    "fixtureId": "srv-paper-mythic-mob-types-full-strict-20261115-r1",
+    "reportFixtureDirectory": "srv-paper-mythic-mob-types-full-strict-20261115-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-mob-types-full-strict-20261115-r1.json",
+    "reportSha256": "6664c10728bacdb9da4c210e75e4eee2bae7690c9ceb4c0dfb06e0bb8e3218a6",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-mob-types-full-strict-20261115-r1.log.gz",
+    "logSha256": "890f1195e560a59a6fc1bd67ac79c686025c6f6bf25e4afe540c63e6fc431be1",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-mythic-mob-types-full-strict-20261115-r1-client-logs.tar.gz",
+    "clientLogSha256": "7b22b10935502c1d8296a909152d7be0cfaa1e6ae239b9151d0540c178351f6c",
+    "pluginSha256": "4773347d963645ad142d4295cc1bb4cfc49604755ab156892f7a1a47998a060f",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-mythic-pack-strict-20261115-r13",
+    "reportFixtureDirectory": "srv-paper-mythic-pack-strict-20261115-r13",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.json",
+    "reportSha256": "fa88fec0a12b7d7193c26c1d351bd3fca0dc1d37b91ee05410a0857f41adb17a",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.log.gz",
+    "logSha256": "59f5a50f30c85132e7e59993d1bc879b1b48b5e4b21be6f88d21024decf5fbd7",
+    "pluginSha256": "4773347d963645ad142d4295cc1bb4cfc49604755ab156892f7a1a47998a060f"
+  },
+  {
     "fixtureId": "srv-paper-mobs-in-radius-strict-20261115-r1",
     "reportFixtureDirectory": "srv-paper-mobs-in-radius-strict-20261115-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-mobs-in-radius-strict-20261115-r1.json",
@@ -9,7 +30,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-mobs-in-radius-strict-20261115-r1-client-logs.tar.gz",
     "clientLogSha256": "7c565f7e19c50e38c74d8a7458cf0234fadf79dacfb90e1b1e15d0cfd92d596a",
     "pluginSha256": "cb305e1c80089498fc9070359e7a9c91a911091b0c00e716cea8c32e1443354d",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-mythic-mob-types-full-strict-20261115-r1"
   },
   {
     "fixtureId": "srv-paper-mobs-in-chunk-range-strict-20261115-r3",

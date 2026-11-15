@@ -1809,6 +1809,114 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("MobsNearOrigin uses exact defaults, integer ranges, typed mobs, and fail-closed queries")
+    void mobsNearOriginMatchesOfficialDefaultsAndFailsClosed() {
+        SkillExtras.resetRuntimeHooks();
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        org.bukkit.entity.Mob zombie = mock(org.bukkit.entity.Mob.class);
+        org.bukkit.entity.Mob skeleton = mock(org.bukkit.entity.Mob.class);
+        org.bukkit.entity.Mob custom = mock(org.bukkit.entity.Mob.class);
+        when(zombie.isValid()).thenReturn(true);
+        when(skeleton.isValid()).thenReturn(true);
+        when(custom.isValid()).thenReturn(true);
+        when(zombie.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
+        when(skeleton.getType()).thenReturn(org.bukkit.entity.EntityType.SKELETON);
+        when(custom.getType()).thenReturn(org.bukkit.entity.EntityType.COW);
+        when(zombie.getLocation()).thenReturn(origin.clone().add(1, 0, 0));
+        when(skeleton.getLocation()).thenReturn(origin.clone().add(2, 0, 0));
+        when(custom.getLocation()).thenReturn(origin.clone().add(3, 0, 0));
+        org.bukkit.entity.Mob diagonal = mock(org.bukkit.entity.Mob.class);
+        when(diagonal.isValid()).thenReturn(true);
+        when(diagonal.getType()).thenReturn(org.bukkit.entity.EntityType.PIG);
+        when(diagonal.getLocation()).thenReturn(origin.clone().add(4, 4, 0));
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenReturn(List.of(zombie, skeleton, custom, diagonal));
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), origin);
+
+        var defaults = extraFactory("mobs-near-origin").create(List.of());
+        assertFalse(defaults.test(context), "three mobs do not equal the official exact default of one");
+        assertTrue(extraFactory("mobs-near-origin").create(List.of("3", "5")).test(context));
+        assertTrue(extraFactory("mobs-near-origin").create(List.of("2to3", "5")).test(context));
+        assertFalse(extraFactory("mobs-near-origin").create(List.of("1", "5", "ZOMBIE,SKELETON"))
+                .test(context), "the native type filter counts two matching mobs");
+        assertTrue(extraFactory("mobs-near-origin").create(List.of("2", "5", "ZOMBIE,SKELETON"))
+                .test(context));
+        org.mockito.Mockito.verify(world, org.mockito.Mockito.atLeastOnce())
+                .getNearbyEntities(origin, 5, 5, 5);
+
+        assertFalse(extraFactory("mobs-near-origin").create(List.of("<=0", "5", "UNKNOWN_MOB"))
+                .test(context), "unknown filters cannot pass as an empty count");
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenThrow(new IllegalStateException("nearby query unavailable"));
+        assertFalse(extraFactory("mobs-near-origin").create(List.of("<=0", "5")).test(context),
+                "query failures cannot pass upper-bound counts");
+        assertFalse(extraFactory("mobs-near-origin").create(List.of("<=0", "5")).test(ctx()),
+                "missing origins cannot pass upper-bound counts");
+
+        SkillExtras.resetRuntimeHooks();
+        var many = new java.util.ArrayList<Entity>();
+        for (int index = 0; index < 513; index++) {
+            org.bukkit.entity.Mob mob = (org.bukkit.entity.Mob) java.lang.reflect.Proxy.newProxyInstance(
+                    org.bukkit.entity.Mob.class.getClassLoader(), new Class<?>[]{org.bukkit.entity.Mob.class},
+                    (proxy, method, arguments) -> switch (method.getName()) {
+                        case "isValid" -> true;
+                        case "getType" -> org.bukkit.entity.EntityType.ZOMBIE;
+                        case "getLocation" -> origin.clone().add(1, 0, 0);
+                        case "hashCode" -> System.identityHashCode(proxy);
+                        case "equals" -> proxy == arguments[0];
+                        case "toString" -> "origin-mob-" + System.identityHashCode(proxy);
+                        default -> throw new UnsupportedOperationException(method.getName());
+                    });
+            many.add(mob);
+        }
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenReturn(many);
+        var manyContext = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), origin);
+        assertTrue(extraFactory("mobs-near-origin").create(List.of("513", "5")).test(manyContext));
+
+        SkillExtras.resetRuntimeHooks();
+        SkillExtras.mythicMobTypeQuery(new SkillExtras.MythicMobTypeQuery() {
+            @Override public boolean isKnownType(String name) { return name.equalsIgnoreCase("ForestGuardian"); }
+            @Override public java.util.Optional<Boolean> matches(Entity entity, String name) {
+                return java.util.Optional.of(entity == custom && name.equalsIgnoreCase("ForestGuardian"));
+            }
+        });
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenReturn(List.of(zombie, skeleton, custom));
+        assertTrue(extraFactory("mobs-near-origin").create(List.of("1", "5", "ForestGuardian"))
+                .test(context));
+        assertFalse(extraFactory("mobs-near-origin").create(List.of("<=0", "5", "MissingMob"))
+                .test(context));
+        SkillExtras.resetRuntimeHooks();
+        SkillExtras.mythicMobTypeQuery(new SkillExtras.MythicMobTypeQuery() {
+            @Override public boolean isKnownType(String name) {
+                return name.equalsIgnoreCase("BrokenLookup") || name.equalsIgnoreCase("ZOMBIE");
+            }
+            @Override public java.util.Optional<Boolean> matches(Entity entity, String name) {
+                return name.equalsIgnoreCase("BrokenLookup")
+                        ? java.util.Optional.empty() : java.util.Optional.of(false);
+            }
+        });
+        org.mockito.Mockito.doReturn(List.of(zombie)).when(world)
+                .getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                        org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble());
+        assertTrue(extraFactory("mobs-near-origin").create(List.of("1", "5", "BrokenLookup,ZOMBIE"))
+                .test(context), "a known native match remains decisive if another optional lookup is unavailable");
+        SkillExtras.resetRuntimeHooks();
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("mobs-near-origin").create(List.of("1.5")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("mobs-near-origin").create(List.of("3to2")));
+    }
+
+    @Test
     @DisplayName("PlayersInRadius uses official defaults, count ranges and spectator-only exclusion")
     void playersInRadiusUsesMythicDefaultsAndGameModeSemantics() {
         var world = mock(World.class);

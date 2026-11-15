@@ -48,7 +48,8 @@ class MythicMobsVersionContractTest {
     void activeEntityTypeLookupMatchesInternalNamesAndFailsClosed() throws Exception {
         var adapter = new MythicMobsAdapter(null, null, null);
         Entity mythicMob = entityProxy();
-        adapter.bindMythicMobLookup(new TypedFakeApiHelper(mythicMob));
+        adapter.bindMythicMobLookup(new TypedFakeApiHelper(mythicMob),
+                new FakeMobRegistry(Set.of("ForestGuardian")));
 
         assertTrue(adapter.isMythicMobType(mythicMob, "ForestGuardian"));
         assertTrue(adapter.isMythicMobType(mythicMob, "forestguardian"));
@@ -58,12 +59,22 @@ class MythicMobsVersionContractTest {
         assertTrue(adapter.isMythicMobType(mythicMob, "guardian", false));
         assertFalse(adapter.isMythicMobType(mythicMob, "Cave", false));
         assertFalse(adapter.isMythicMobType(mythicMob, "CaveWraith"));
+        assertTrue(adapter.hasMythicMobType("ForestGuardian"));
+        assertTrue(adapter.hasMythicMobType("forestguardian"),
+                "registry lookup accepts case-insensitive Mythic internal names");
+        assertFalse(adapter.hasMythicMobType("MissingMob"));
+        assertTrue(adapter.matchesMythicMobType(mythicMob, "forestguardian").orElseThrow());
+        assertFalse(adapter.matchesMythicMobType(entityProxy(), "ForestGuardian").orElseThrow());
         assertFalse(adapter.isMythicMobType(entityProxy(), "ForestGuardian"));
         assertFalse(adapter.isMythicMobType(null, "ForestGuardian"));
 
         adapter.bindMythicMobLookup(new FakeApiHelper(Set.of(mythicMob)));
         assertFalse(adapter.isMythicMobType(mythicMob, "ForestGuardian"),
                 "helpers without active mob type lookup must not retain stale bindings");
+        assertFalse(adapter.hasMythicMobType("ForestGuardian"),
+                "helpers without registry lookup must fail closed");
+        assertTrue(adapter.matchesMythicMobType(mythicMob, "ForestGuardian").isEmpty(),
+                "helpers without active-type lookup must report an unavailable query");
     }
 
     private static Entity entityProxy() {
@@ -107,6 +118,22 @@ class MythicMobsVersionContractTest {
 
         public java.util.Optional<FakeActiveMob> getMythicMobInstance(Entity entity) {
             return entity == active ? java.util.Optional.of(new FakeActiveMob()) : java.util.Optional.empty();
+        }
+
+        public FakeMythicMobType getMythicMob(String name) {
+            return "ForestGuardian".equals(name) ? new FakeMythicMobType() : null;
+        }
+    }
+
+    public static class FakeMobRegistry {
+        private final Set<String> names;
+
+        public FakeMobRegistry(Set<String> names) {
+            this.names = names;
+        }
+
+        public Set<String> getMobNames() {
+            return names;
         }
     }
 

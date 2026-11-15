@@ -37,6 +37,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     private Object mythicApiHelper;
     private Method isMythicMobMethod;
     private Method getMythicMobInstanceMethod;
+    private Method getMythicMobTypeMethod;
+    private Object mythicMobRegistry;
+    private Method getMythicMobNamesMethod;
     private final org.bukkit.configuration.file.FileConfiguration cfg;
 
     public MythicMobsAdapter(InstanceManagerImpl instances, dev.helstera.api.model.ModelRegistry registry,
@@ -96,6 +99,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         mythicApiHelper = null;
         isMythicMobMethod = null;
         getMythicMobInstanceMethod = null;
+        getMythicMobTypeMethod = null;
+        mythicMobRegistry = null;
+        getMythicMobNamesMethod = null;
         this.host = host;
         Plugin mm = Bukkit.getPluginManager().getPlugin("MythicMobs");
         if (mm == null || !mm.isEnabled()) {
@@ -114,12 +120,21 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
                         mm.getClass().getClassLoader());
                 Object mythic = api.getMethod("inst").invoke(null);
                 Object apiHelper = api.getMethod("getAPIHelper").invoke(mythic);
-                bindMythicMobLookup(apiHelper);
+                Object mobRegistry = null;
+                try {
+                    mobRegistry = api.getMethod("getMobManager").invoke(mythic);
+                } catch (ReflectiveOperationException | RuntimeException ignored) {
+                    // Active-entity and exact-name lookup remain available without registry enumeration.
+                }
+                bindMythicMobLookup(apiHelper, mobRegistry);
             } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
                 // The spawn/model bridge remains useful when an older API lacks this query.
                 mythicApiHelper = null;
                 isMythicMobMethod = null;
                 getMythicMobInstanceMethod = null;
+                getMythicMobTypeMethod = null;
+                mythicMobRegistry = null;
+                getMythicMobNamesMethod = null;
             }
             Class<?> eventClass = Class.forName("io.lumine.mythic.bukkit.events.MythicMobSpawnEvent");
             // 强转无法在编译期校验：MythicMobs 是软依赖，其事件类只有运行时才存在。
@@ -170,6 +185,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         mythicApiHelper = null;
         isMythicMobMethod = null;
         getMythicMobInstanceMethod = null;
+        getMythicMobTypeMethod = null;
+        mythicMobRegistry = null;
+        getMythicMobNamesMethod = null;
         if (mechanics != null) mechanics.disable();
         mechanics = null;
     }
@@ -210,10 +228,67 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         }
     }
 
+    /** Returns true only when the optional API confirms a registered Mythic mob type. */
+    public boolean hasMythicMobType(String expectedInternalName) {
+        if (expectedInternalName == null || expectedInternalName.isBlank()
+                || mythicApiHelper == null || getMythicMobTypeMethod == null
+                || (mythicPlugin != null && !mythicPlugin.isEnabled())) return false;
+        try {
+            Object value = getMythicMobTypeMethod.invoke(mythicApiHelper, expectedInternalName);
+            if (isPresent(value)) return true;
+            String registeredName = registeredMythicMobName(expectedInternalName);
+            if (registeredName == null || registeredName.equals(expectedInternalName)) return false;
+            return isPresent(getMythicMobTypeMethod.invoke(mythicApiHelper, registeredName));
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isPresent(Object value) {
+        if (value instanceof java.util.Optional<?> optional) return optional.isPresent();
+        return value != null;
+    }
+
+    private String registeredMythicMobName(String expectedInternalName) throws ReflectiveOperationException {
+        if (mythicMobRegistry == null || getMythicMobNamesMethod == null) return null;
+        Object names = getMythicMobNamesMethod.invoke(mythicMobRegistry);
+        if (!(names instanceof Iterable<?> iterable)) return null;
+        for (Object candidate : iterable) {
+            if (candidate instanceof String name && name.equalsIgnoreCase(expectedInternalName)) return name;
+        }
+        return null;
+    }
+
+    /** Empty means the optional API could not complete its lookup; false is a confirmed mismatch. */
+    public java.util.Optional<Boolean> matchesMythicMobType(Entity entity, String expectedInternalName) {
+        if (entity == null || expectedInternalName == null || expectedInternalName.isBlank()
+                || mythicApiHelper == null || getMythicMobInstanceMethod == null
+                || (mythicPlugin != null && !mythicPlugin.isEnabled())) return java.util.Optional.empty();
+        try {
+            Object activeMob = getMythicMobInstanceMethod.invoke(mythicApiHelper, entity);
+            if (activeMob instanceof java.util.Optional<?> optional) activeMob = optional.orElse(null);
+            if (activeMob == null) return java.util.Optional.of(false);
+            Object mythicType = activeMob.getClass().getMethod("getType").invoke(activeMob);
+            if (mythicType == null) return java.util.Optional.empty();
+            Object internalName = mythicType.getClass().getMethod("getInternalName").invoke(mythicType);
+            if (!(internalName instanceof String value)) return java.util.Optional.empty();
+            return java.util.Optional.of(value.equalsIgnoreCase(expectedInternalName));
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return java.util.Optional.empty();
+        }
+    }
+
     void bindMythicMobLookup(Object apiHelper) throws NoSuchMethodException {
+        bindMythicMobLookup(apiHelper, null);
+    }
+
+    void bindMythicMobLookup(Object apiHelper, Object mobRegistry) throws NoSuchMethodException {
         mythicApiHelper = null;
         isMythicMobMethod = null;
         getMythicMobInstanceMethod = null;
+        getMythicMobTypeMethod = null;
+        mythicMobRegistry = null;
+        getMythicMobNamesMethod = null;
         if (apiHelper == null) throw new NoSuchMethodException("MythicMobs API helper is null");
         Method method = apiHelper.getClass().getMethod("isMythicMob", Entity.class);
         if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != boolean.class) {
@@ -231,6 +306,29 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         mythicApiHelper = apiHelper;
         isMythicMobMethod = method;
         getMythicMobInstanceMethod = instanceMethod;
+        try {
+            Method typeMethod = apiHelper.getClass().getMethod("getMythicMob", String.class);
+            if (!Modifier.isStatic(typeMethod.getModifiers())) {
+                if (!typeMethod.canAccess(apiHelper)) typeMethod.trySetAccessible();
+                getMythicMobTypeMethod = typeMethod;
+            }
+        } catch (NoSuchMethodException ignored) {
+            // Older helpers may not expose registry lookup; custom filters fail closed.
+            getMythicMobTypeMethod = null;
+        }
+        if (mobRegistry != null) {
+            try {
+                Method namesMethod = mobRegistry.getClass().getMethod("getMobNames");
+                if (!Modifier.isStatic(namesMethod.getModifiers())
+                        && Iterable.class.isAssignableFrom(namesMethod.getReturnType())) {
+                    if (!namesMethod.canAccess(mobRegistry)) namesMethod.trySetAccessible();
+                    mythicMobRegistry = mobRegistry;
+                    getMythicMobNamesMethod = namesMethod;
+                }
+            } catch (NoSuchMethodException | RuntimeException ignored) {
+                // Some API versions expose exact lookup but not a type-name collection.
+            }
+        }
     }
 
     /** 反射事件执行器：MythicMobSpawnEvent -> getMobName() -> 绑定模型。 */

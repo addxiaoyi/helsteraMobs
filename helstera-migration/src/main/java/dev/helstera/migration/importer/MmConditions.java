@@ -531,18 +531,7 @@ public final class MmConditions {
             return mobsInRadiusCondition(body, s);
         }
         if ("mobsnearorigin".equals(name)) {
-            String radius = keyedArgument(body, "radius", "r");
-            String amount = keyedArgument(body, "amount", "a", "count", "min", "minimum", "n");
-            String types = keyedValue(body, "types", "type", "t");
-            if (radius == null) {
-                String positional = normalizeScalar(body);
-                radius = positional != null && validNumberRange(positional) ? positional : null;
-            }
-            if (radius == null || !validNumberRange(radius)) return new Mapped(s, false);
-            if (amount == null) amount = ">=1";
-            String mapped = "mobs-near-origin " + amount + " " + radius;
-            if (types != null && !types.isBlank()) mapped += " " + types;
-            return new Mapped(mapped, true);
+            return mobsNearOriginCondition(body, s);
         }
         if ("livinginradius".equals(name)) {
             return radiusAmountCondition(body, "living-in-radius", s);
@@ -2012,6 +2001,46 @@ public final class MmConditions {
         String mapped = "mobs-in-radius " + amount.trim() + " " + radius.trim();
         if (types != null) mapped += " " + types.trim();
         return new Mapped(mapped, true);
+    }
+
+    private static Mapped mobsNearOriginCondition(String body, String original) {
+        Map<String, String> arguments = strictValueArguments(body, MOBS_IN_RADIUS_ARGUMENTS, "radius");
+        if (arguments == null) return new Mapped(original, false);
+        String radius = arguments.getOrDefault("radius", "5");
+        String amount = arguments.getOrDefault("amount", "1");
+        String types = arguments.get("types");
+        if (!validRadius(radius) || !validNonNegativeIntegerCountRange(amount)
+                || types != null && !validEntityTypeList(types)) {
+            return new Mapped(original, false);
+        }
+        String mapped = "mobs-near-origin " + amount.trim() + " " + radius.trim();
+        if (types != null) mapped += " " + types.trim();
+        return new Mapped(mapped, true);
+    }
+
+    private static boolean validNonNegativeIntegerCountRange(String raw) {
+        if (!validNonNegativeCountRange(raw)) return false;
+        String value = raw.trim();
+        for (String operator : List.of(">=", "<=", ">", "<")) {
+            if (value.startsWith(operator)) return finiteNonNegativeInteger(value.substring(operator.length()));
+        }
+        int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+        if (to > 0) {
+            return finiteNonNegativeInteger(value.substring(0, to))
+                    && finiteNonNegativeInteger(value.substring(to + 2));
+        }
+        int separator = value.indexOf('-', 1);
+        if (separator > 0) {
+            return finiteNonNegativeInteger(value.substring(0, separator))
+                    && finiteNonNegativeInteger(value.substring(separator + 1));
+        }
+        return finiteNonNegativeInteger(value);
+    }
+
+    private static boolean finiteNonNegativeInteger(String raw) {
+        Double value = finiteNumber(raw);
+        return value != null && value >= 0 && value <= Integer.MAX_VALUE
+                && value == Math.rint(value);
     }
 
     private static boolean validNonNegativeCountRange(String raw) {
