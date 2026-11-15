@@ -99,6 +99,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean animals, boolean villagers, boolean tamed, boolean boundaries,
             boolean invalidRejected) { }
 
+    private record InactiveContextTargeterEvidence(boolean liveTarget, boolean liveTargets,
+            boolean liveTrigger, boolean liveAttacker, boolean targetFallback,
+            boolean targetsFiltered, boolean triggerRejected, boolean attackerRejected,
+            boolean projectileShooter, boolean projectileRemovedRejected,
+            boolean invalidRejected) { }
+
     private HelsteraEventBus bus;
     private ModelValidator validator;
     private ModelRegistryImpl registry;          // 核心模块，始终存在
@@ -14543,6 +14549,33 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " condition=" + contextChainCondition
                         + " aliases=" + contextConditionalAliases
                         + " private-invalid-rejected=" + contextConditionalPrivateRejected);
+                InactiveContextTargeterEvidence inactiveContextEvidence = ownerProbe == null
+                        ? new InactiveContextTargeterEvidence(false, false, false, false, false, false,
+                        false, false, false, false, false)
+                        : runInactiveContextTargeterSelfTest(world, modelInstance, ownerProbe);
+                boolean inactiveContextTargeters = inactiveContextEvidence.liveTarget()
+                        && inactiveContextEvidence.liveTargets()
+                        && inactiveContextEvidence.liveTrigger()
+                        && inactiveContextEvidence.liveAttacker()
+                        && inactiveContextEvidence.targetFallback()
+                        && inactiveContextEvidence.targetsFiltered()
+                        && inactiveContextEvidence.triggerRejected()
+                        && inactiveContextEvidence.attackerRejected()
+                        && inactiveContextEvidence.projectileShooter()
+                        && inactiveContextEvidence.projectileRemovedRejected()
+                        && inactiveContextEvidence.invalidRejected();
+                getLogger().info("context-targeter-inactive live-target=" + inactiveContextEvidence.liveTarget()
+                        + " live-targets=" + inactiveContextEvidence.liveTargets()
+                        + " live-trigger=" + inactiveContextEvidence.liveTrigger()
+                        + " live-attacker=" + inactiveContextEvidence.liveAttacker()
+                        + " target-fallback=" + inactiveContextEvidence.targetFallback()
+                        + " targets-filtered=" + inactiveContextEvidence.targetsFiltered()
+                        + " trigger-rejected=" + inactiveContextEvidence.triggerRejected()
+                        + " attacker-rejected=" + inactiveContextEvidence.attackerRejected()
+                        + " projectile-shooter=" + inactiveContextEvidence.projectileShooter()
+                        + " projectile-removed-rejected=" + inactiveContextEvidence.projectileRemovedRejected()
+                        + " invalid-rejected=" + inactiveContextEvidence.invalidRejected()
+                        + " passed=" + inactiveContextTargeters);
                 boolean argumentsRejected = true;
                 for (String spec : java.util.List.of("@living{r=1;radius=10}",
                         "@living{count=1;limit=2}", "@living{filter=!unknown-entity}",
@@ -17006,6 +17039,99 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             entity.setInvulnerable(originallyInvulnerable);
         }
         return passed && entity.isInvulnerable() == originallyInvulnerable;
+    }
+
+    private InactiveContextTargeterEvidence runInactiveContextTargeterSelfTest(
+            org.bukkit.World world,
+            dev.helstera.api.instance.ModelInstance modelInstance,
+            org.bukkit.entity.Player owner) {
+        org.bukkit.entity.Zombie activeTarget = null;
+        org.bukkit.entity.Zombie fallbackTarget = null;
+        org.bukkit.entity.Zombie triggerTarget = null;
+        org.bukkit.entity.Arrow projectile = null;
+        try {
+            var origin = owner.getLocation().clone().add(4, 0, 0);
+            activeTarget = world.spawn(origin, org.bukkit.entity.Zombie.class);
+            fallbackTarget = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Zombie.class);
+            triggerTarget = world.spawn(origin.clone().add(4, 0, 0), org.bukkit.entity.Zombie.class);
+            activeTarget.setAI(false);
+            fallbackTarget.setAI(false);
+            triggerTarget.setAI(false);
+
+            var liveTargetContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    modelInstance, activeTarget, 1, 0, 0, "integration", null,
+                    activeTarget, java.util.List.of(activeTarget, fallbackTarget), owner.getLocation(), null);
+            boolean liveTarget = dev.helstera.api.behavior.Targeters.select(
+                    "@target", liveTargetContext, java.util.List.of(), java.util.List.of())
+                    .equals(java.util.List.of(activeTarget));
+            boolean liveTargets = dev.helstera.api.behavior.Targeters.select(
+                    "@targets", liveTargetContext, java.util.List.of(), java.util.List.of())
+                    .equals(java.util.List.of(activeTarget, fallbackTarget));
+
+            var liveTriggerContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    modelInstance, (org.bukkit.entity.LivingEntity) null, 1, 0, 0, "integration", null,
+                    triggerTarget, java.util.List.of(), owner.getLocation(), null);
+            boolean liveTrigger = dev.helstera.api.behavior.Targeters.select(
+                    "@trigger", liveTriggerContext, java.util.List.of(), java.util.List.of())
+                    .equals(java.util.List.of(triggerTarget));
+            boolean liveAttacker = dev.helstera.api.behavior.Targeters.select(
+                    "@attacker", liveTriggerContext, java.util.List.of(), java.util.List.of())
+                    .equals(java.util.List.of(triggerTarget));
+
+            activeTarget.remove();
+            var inactiveTargetContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    modelInstance, activeTarget, 1, 0, 0, "integration", null,
+                    activeTarget, java.util.List.of(activeTarget, fallbackTarget), owner.getLocation(), null);
+            boolean targetFallback = dev.helstera.api.behavior.Targeters.select(
+                    "@target", inactiveTargetContext, java.util.List.of(), java.util.List.of())
+                    .equals(java.util.List.of(fallbackTarget));
+            boolean targetsFiltered = dev.helstera.api.behavior.Targeters.select(
+                    "@targets", inactiveTargetContext, java.util.List.of(), java.util.List.of())
+                    .equals(java.util.List.of(fallbackTarget));
+            boolean triggerRejected = dev.helstera.api.behavior.Targeters.select(
+                    "@trigger", inactiveTargetContext, java.util.List.of(), java.util.List.of()).isEmpty();
+            boolean attackerRejected = dev.helstera.api.behavior.Targeters.select(
+                    "@attacker", inactiveTargetContext, java.util.List.of(), java.util.List.of()).isEmpty();
+
+            projectile = world.spawn(origin.clone().add(2, 1, 0), org.bukkit.entity.Arrow.class);
+            projectile.setShooter(owner);
+            var projectileContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    modelInstance, (org.bukkit.entity.LivingEntity) null, 1, 0, 0, "integration", null,
+                    projectile, java.util.List.of(), owner.getLocation(), null);
+            boolean projectileShooter = dev.helstera.api.behavior.Targeters.select(
+                    "@trigger", projectileContext, java.util.List.of(), java.util.List.of())
+                    .equals(java.util.List.of(owner))
+                    && dev.helstera.api.behavior.Targeters.select(
+                    "@attacker", projectileContext, java.util.List.of(), java.util.List.of())
+                    .equals(java.util.List.of(owner));
+            projectile.remove();
+            boolean projectileRemovedRejected = dev.helstera.api.behavior.Targeters.select(
+                    "@trigger", projectileContext, java.util.List.of(), java.util.List.of()).isEmpty()
+                    && dev.helstera.api.behavior.Targeters.select(
+                    "@attacker", projectileContext, java.util.List.of(), java.util.List.of()).isEmpty();
+
+            boolean invalidRejected = dev.helstera.api.behavior.Targeters.select(
+                    "@target{limit=invalid}", inactiveTargetContext,
+                    java.util.List.of(), java.util.List.of()).isEmpty()
+                    && dev.helstera.api.behavior.Targeters.select(
+                    "@trigger{sort=invalid}", liveTriggerContext,
+                    java.util.List.of(), java.util.List.of()).isEmpty()
+                    && dev.helstera.api.behavior.Targeters.select(
+                    "@attacker{radius=NaN}", liveTriggerContext,
+                    java.util.List.of(), java.util.List.of()).isEmpty();
+            return new InactiveContextTargeterEvidence(liveTarget, liveTargets, liveTrigger, liveAttacker,
+                    targetFallback, targetsFiltered, triggerRejected, attackerRejected,
+                    projectileShooter, projectileRemovedRejected, invalidRejected);
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] inactive context targeters failed: " + failure);
+            return new InactiveContextTargeterEvidence(false, false, false, false, false, false,
+                    false, false, false, false, false);
+        } finally {
+            if (projectile != null && projectile.isValid()) projectile.remove();
+            if (activeTarget != null && activeTarget.isValid()) activeTarget.remove();
+            if (fallbackTarget != null && fallbackTarget.isValid()) fallbackTarget.remove();
+            if (triggerTarget != null && triggerTarget.isValid()) triggerTarget.remove();
+        }
     }
 
     private void runContextTargeterRelationsSelfTest(

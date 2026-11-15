@@ -230,6 +230,11 @@
       "status": "passed"
     },
     {
+      "id": "contextTargeterInactive",
+      "status": "passed",
+      "requiredObservation": "context-targeter-inactive live-target=true live-targets=true live-trigger=true live-attacker=true target-fallback=true targets-filtered=true trigger-rejected=true attacker-rejected=true projectile-shooter=true projectile-removed-rejected=true invalid-rejected=true passed=true"
+    },
+    {
       "id": "contextTargeterControls",
       "status": "passed"
     },

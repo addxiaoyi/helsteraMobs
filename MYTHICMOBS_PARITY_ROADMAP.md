@@ -16,16 +16,15 @@ Audited against the matrix on 2026-11-15:
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-cone-targeter-families-strict-20261115-r2` on Paper 1.21.1-133, with 461
-probes: 442 passed, 19 expected rejections, and zero failed or incomplete. It
-adds production cone-family targeter evidence for `@PlayersInCone`,
-`@MobsInCone`, `@MonstersInCone`, `@AnimalsInCone`, `@VillagersInCone`, and
-`@TamedInCone`, including family filtering, geometry boundaries, and malformed
-argument rejection. The same catalog retains the imported `Distance` condition,
-Audience `@Targeter` dispatch, and client workflow coverage. MythicMobs 5.7.2
-has separate focused evidence; the full release fixture does not load MythicMobs.
-See the [release evidence index](tools/paper-integration/release-evidence.json),
-[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version
+The latest full release fixture is `srv-paper-context-targeter-inactive-strict-20261115-r1` on Paper 1.21.1-133, with 462
+probes: 443 passed, 19 expected rejections, and zero failed or incomplete. It
+adds production lifecycle evidence for live and removed `@target`, `@targets`,
+`@trigger`, and `@attacker` contexts, including projectile-shooter rejection
+and fail-closed invalid arguments. The same catalog retains the full runtime
+and client workflow coverage. MythicMobs 5.7.2 has separate focused evidence;
+the full release fixture does not load MythicMobs. See the [release evidence
+index](tools/paper-integration/release-evidence.json), [Paper
+evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version
 matrix](tools/paper-integration/version-matrix.json).
 
 The next targeter contract slice is now implemented in the shared API: spatial
@@ -41,9 +40,11 @@ row remains `mapped-unverified`.
 The shared API now also rejects inactive direct context entities for `@target`,
 `@targets`, `@trigger`, and `@attacker`, including projectile shooters. API and
 cross-module tests cover scalar fallback, inherited target lists, multi-target
-filtering, direct/projectile triggers, and dead or removed entities. A real Paper
-fixture for entity removal and trigger cleanup is still required before this
-boundary can be promoted beyond `mapped-unverified`.
+filtering, direct/projectile triggers, and dead or removed entities. The strict
+Paper fixture `srv-paper-context-targeter-inactive-strict-20261115-r1` now
+verifies entity removal and trigger cleanup for this slice. The broader Context
+targeters row still remains `mapped-unverified` until the complete targeter
+catalog and its parameters have been verified.
 
 The cone targeter family is expanded in the shared API and verified in the
 strict release fixture `srv-paper-cone-targeter-families-strict-20261115-r2` with

@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-context-targeter-inactive-strict-20261115-r1",
+    "reportFixtureDirectory": "srv-paper-context-targeter-inactive-strict-20261115-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1.json",
+    "reportSha256": "57470bbaf53365e9c238b055a3ed8c67fffaae44d3dec4355fe77eefb5edc2ab",
+    "log": "tools/paper-integration/reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1.log.gz",
+    "logSha256": "0939e219b879300952225fbee28835e436e5de71fe273782c1de959b9bbc1086",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1-client-logs.tar.gz",
+    "clientLogSha256": "2efb2995e56ac466f2b69faea8393a1a37ae2800e49efce628c22106c2952b55",
+    "pluginSha256": "cf47341951771fafa34cfc2824b5a6b402645f3340a5cd0b05607b428da995a6",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-cone-targeter-families-strict-20261115-r2",
     "reportFixtureDirectory": "srv-paper-cone-targeter-families-strict-20261115-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-cone-targeter-families-strict-20261115-r2.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-cone-targeter-families-strict-20261115-r2-client-logs.tar.gz",
     "clientLogSha256": "daa63d9075d281169b9af73fa2a875a2041d34b4ee82243f2371679c4c79b919",
     "pluginSha256": "69de84ecfd7c94d1f64684a52dc9aa72d77ffbc2b82bd7d0c10be7836b999b08",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-context-targeter-inactive-strict-20261115-r1"
   },
   {
     "fixtureId": "srv-paper-distance-strict-20261115-r1",

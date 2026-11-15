@@ -492,6 +492,7 @@ public final class Targeters {
     private static LivingEntity projectileShooter(org.bukkit.entity.Entity trigger) {
         if (!(trigger instanceof org.bukkit.entity.Projectile projectile)) return null;
         try {
+            if (!projectile.isValid() || projectile.isDead()) return null;
             return projectile.getShooter() instanceof LivingEntity living ? living : null;
         } catch (RuntimeException ignored) {
             return null;

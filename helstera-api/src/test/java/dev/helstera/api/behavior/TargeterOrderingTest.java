@@ -1085,8 +1085,12 @@ class TargeterOrderingTest {
         var projectile = (org.bukkit.entity.Projectile) Proxy.newProxyInstance(
                 org.bukkit.entity.Projectile.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.entity.Projectile.class},
-                (proxy, method, args) -> method.getName().equals("getShooter")
-                        ? attacker : defaultValue(method.getReturnType()));
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> true;
+                    case "isDead" -> false;
+                    case "getShooter" -> attacker;
+                    default -> defaultValue(method.getReturnType());
+                });
         var context = BehaviorContext.continueExecution(null, null, 1, 2, 0,
                 "skill", null, projectile, List.of(), null, null);
         assertSame(attacker, Targeters.select("@attacker", context, List.of(), List.of()).get(0));
@@ -1099,8 +1103,12 @@ class TargeterOrderingTest {
         var projectile = (org.bukkit.entity.Projectile) Proxy.newProxyInstance(
                 org.bukkit.entity.Projectile.class.getClassLoader(),
                 new Class<?>[]{org.bukkit.entity.Projectile.class},
-                (proxy, method, args) -> method.getName().equals("getShooter")
-                        ? shooter : defaultValue(method.getReturnType()));
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> true;
+                    case "isDead" -> false;
+                    case "getShooter" -> shooter;
+                    default -> defaultValue(method.getReturnType());
+                });
         var context = BehaviorContext.continueExecution(null, null, 1, 2, 0,
                 "skill", null, projectile, List.of(), null, null);
         assertSame(shooter, Targeters.select("@trigger", context, List.of(), List.of()).get(0));
@@ -1134,6 +1142,20 @@ class TargeterOrderingTest {
                 "skill", null, deadProjectile, List.of(), null, null);
         assertEquals(List.of(), Targeters.select("@trigger", projectileContext, List.of(), List.of()));
         assertEquals(List.of(), Targeters.select("@attacker", projectileContext, List.of(), List.of()));
+
+        var removedProjectile = (org.bukkit.entity.Projectile) Proxy.newProxyInstance(
+                org.bukkit.entity.Projectile.class.getClassLoader(),
+                new Class<?>[]{org.bukkit.entity.Projectile.class},
+                (proxy, method, args) -> switch (method.getName()) {
+                    case "isValid" -> false;
+                    case "isDead" -> true;
+                    case "getShooter" -> activeTarget;
+                    default -> defaultValue(method.getReturnType());
+                });
+        var removedProjectileContext = BehaviorContext.continueExecution(null, null, 1, 2, 0,
+                "skill", null, removedProjectile, List.of(), null, null);
+        assertEquals(List.of(), Targeters.select("@trigger", removedProjectileContext, List.of(), List.of()));
+        assertEquals(List.of(), Targeters.select("@attacker", removedProjectileContext, List.of(), List.of()));
 
         var throwingProjectile = (org.bukkit.entity.Projectile) Proxy.newProxyInstance(
                 org.bukkit.entity.Projectile.class.getClassLoader(),

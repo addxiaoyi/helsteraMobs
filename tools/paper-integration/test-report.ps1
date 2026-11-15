@@ -274,6 +274,7 @@ try {
         '[Server thread/INFO]: spatial-targeter-details targeter-controls=true targeter-sorts=true targeter-skip-index=true targeter-limit-zero=true targeter-negative-filter=true targeter-invalid-limits=true cone-family-players=true cone-family-mobs=true cone-family-monsters=true cone-family-animals=true cone-family-villagers=true cone-family-tamed=true cone-family-boundaries=true cone-family-invalid-rejected=true',
         '[Server thread/INFO]: context-targeter-controls order=true radius=true invalid-rejected=true',
         '[Server thread/INFO]: context-targeter-chain targets=true trigger=true excluded=true condition=true aliases=true private-invalid-rejected=true',
+        '[Server thread/INFO]: context-targeter-inactive live-target=true live-targets=true live-trigger=true live-attacker=true target-fallback=true targets-filtered=true trigger-rejected=true attacker-rejected=true projectile-shooter=true projectile-removed-rejected=true invalid-rejected=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] death-loot natural=true dead=true cause=BukkitDamage items=2 conditional-drop=true rejected-drop-absent=true dynamic-chance-drop=true exclusive-range-drop=true range-amount=1 experience=10',
         '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-count natural=true total-items=128 diamonds=31 emeralds=97 count-passed=true weights-passed=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] death-loot-bonus natural=true level-only=4 luck-only=3 combined=5 zero=2 weighted-max=4 potion-luck=3 potion-effective-luck=1.0 weighted-item-count=true fractional-samples=128 fractional-extra-lines=64 fractional-range=true passed=true',
@@ -612,6 +613,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'aiRoute').status -eq 'passed') 'AI route waypoint Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'contextTargeterControls').status -eq 'passed') 'context targeter controls probe'
     Assert-True (($report.probes | Where-Object id -eq 'contextTargeterChain').status -eq 'passed') 'context targeter chain probe'
+    Assert-True (($report.probes | Where-Object id -eq 'contextTargeterInactive').status -eq 'passed') 'inactive context targeter lifecycle probe'
     Assert-True (($report.probes | Where-Object id -eq 'lastDamagerTargeter').status -eq 'passed') 'LastDamager targeter Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'targetOfTargetTargeter').status -eq 'passed') 'TargetOfTarget targeter Paper probe'
 
@@ -1334,6 +1336,10 @@ try {
     $fullCatalogReport.expectedProbeIds += 'contextTargeterRelations'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'contextTargeterRelations'; status = 'passed'; observations = @('context-targeter-relations passenger=true passengers=true mount=true vehicle=true owner-location=true parent-location=true invalid-rejected=true passed=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'contextTargeterInactive'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'contextTargeterInactive'; status = 'passed'; observations = @('context-targeter-inactive live-target=true live-targets=true live-trigger=true live-attacker=true target-fallback=true targets-filtered=true trigger-rejected=true attacker-rejected=true projectile-shooter=true projectile-removed-rejected=true invalid-rejected=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'lastDamagerTargeter'
     $fullCatalogReport.probes += [pscustomobject]@{
