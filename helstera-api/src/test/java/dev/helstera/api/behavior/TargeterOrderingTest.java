@@ -993,6 +993,31 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("cone targeter aliases filter entity families before applying geometry")
+    void coneTargeterAliasesFilterEntityFamilies() {
+        World world = proxy(World.class, (method, args) -> null);
+        var origin = new org.bukkit.Location(world, 0, 0, 0, 0, 0);
+        var source = proxy(dev.helstera.api.instance.ModelInstance.class,
+                (method, args) -> method.equals("location") ? origin : null);
+        var player = locatedLiving(org.bukkit.entity.Player.class, new org.bukkit.Location(world, 0, 0, 4));
+        var monster = locatedLiving(org.bukkit.entity.Monster.class, new org.bukkit.Location(world, 0, 0, 5));
+        var animal = locatedLiving(org.bukkit.entity.Animals.class, new org.bukkit.Location(world, 0, 0, 6));
+        List<LivingEntity> candidates = List.of(player, monster, animal);
+
+        assertEquals(List.of(player), Targeters.select("@PlayersInCone{angle=90;length=8}",
+                BehaviorContext.continueExecution(source, null, 1, 0, 0, "skill", null,
+                        null, candidates, origin, null), candidates, List.of()));
+        assertEquals(List.of(monster, animal), Targeters.select("@MobsInCone{90;8}",
+                BehaviorContext.continueExecution(source, null, 1, 0, 0, "skill", null,
+                        null, candidates, origin, null), candidates, List.of()));
+        assertEquals(List.of(), Targeters.select("@PlayersInCone{angle=bad}",
+                BehaviorContext.continueExecution(source, null, 1, 0, 0, "skill", null,
+                        null, candidates, origin, null), candidates, List.of()));
+        assertTrue(Targeters.names().containsAll(List.of("playersincone", "mobsincone",
+                "monstersincone", "animalsincone", "villagersincone", "tamedincone")));
+    }
+
+    @Test
     @DisplayName("context targeter chains apply subsequent filters")
     void contextTargeterChainAppliesFilters() {
         var player = activeLivingProxy(org.bukkit.entity.Player.class);

@@ -101,6 +101,12 @@ public final class Targeters {
         BUILTIN.put("cone", Targeters::cone);
         BUILTIN.put("livingincone", Targeters::cone);
         BUILTIN.put("entitiesincone", Targeters::cone);
+        BUILTIN.put("playersincone", Targeters::playersInCone);
+        BUILTIN.put("mobsincone", Targeters::mobsInCone);
+        BUILTIN.put("monstersincone", Targeters::monstersInCone);
+        BUILTIN.put("animalsincone", Targeters::animalsInCone);
+        BUILTIN.put("villagersincone", Targeters::villagersInCone);
+        BUILTIN.put("tamedincone", Targeters::tamedInCone);
         BUILTIN.put("lineofsight", Targeters::lineOfSight);
         BUILTIN.put("los", Targeters::lineOfSight);
         BUILTIN.put("livinginline", Targeters::line);
@@ -1818,6 +1824,46 @@ public final class Targeters {
         return orderedBy(selected, e -> 0, e -> distance(src, e));
     }
 
+    private static List<LivingEntity> playersInCone(ModelInstance src,
+                                                    Collection<? extends LivingEntity> candidates,
+                                                    List<String> args) {
+        return cone(src, filteredByType(src, candidates, entity -> entity instanceof Player), args);
+    }
+
+    private static List<LivingEntity> mobsInCone(ModelInstance src,
+                                                 Collection<? extends LivingEntity> candidates,
+                                                 List<String> args) {
+        return cone(src, filteredByType(src, candidates, entity -> !(entity instanceof Player)), args);
+    }
+
+    private static List<LivingEntity> monstersInCone(ModelInstance src,
+                                                     Collection<? extends LivingEntity> candidates,
+                                                     List<String> args) {
+        return cone(src, filteredByType(src, candidates,
+                entity -> entity instanceof org.bukkit.entity.Monster), args);
+    }
+
+    private static List<LivingEntity> animalsInCone(ModelInstance src,
+                                                    Collection<? extends LivingEntity> candidates,
+                                                    List<String> args) {
+        return cone(src, filteredByType(src, candidates,
+                entity -> entity instanceof org.bukkit.entity.Animals), args);
+    }
+
+    private static List<LivingEntity> villagersInCone(ModelInstance src,
+                                                      Collection<? extends LivingEntity> candidates,
+                                                      List<String> args) {
+        return cone(src, filteredByType(src, candidates,
+                entity -> entity instanceof org.bukkit.entity.Villager), args);
+    }
+
+    private static List<LivingEntity> tamedInCone(ModelInstance src,
+                                                  Collection<? extends LivingEntity> candidates,
+                                                  List<String> args) {
+        return cone(src, filteredByType(src, candidates,
+                entity -> entity instanceof org.bukkit.entity.Tameable tameable && tameable.isTamed()), args);
+    }
+
     private static List<LivingEntity> lineOfSight(ModelInstance src,
                                                   Collection<? extends LivingEntity> candidates,
                                                   List<String> args) {
@@ -1909,7 +1955,9 @@ public final class Targeters {
         java.util.Set<String> named = switch (name) {
             case "sphere" -> java.util.Set.of("radius");
             case "ring" -> java.util.Set.of("min", "max");
-            case "cone", "livingincone", "entitiesincone" -> java.util.Set.of("angle", "length");
+            case "cone", "livingincone", "entitiesincone", "playersincone", "mobsincone",
+                    "monstersincone", "animalsincone", "villagersincone", "tamedincone" ->
+                    java.util.Set.of("angle", "length");
             case "lineofsight", "los" -> java.util.Set.of("max", "length");
             case "livinginline", "entitiesinline" -> java.util.Set.of("length", "width");
             default -> null;
@@ -1920,7 +1968,8 @@ public final class Targeters {
         int positionalLimit = switch (name) {
             case "sphere" -> 1;
             case "ring" -> 2;
-            case "cone", "livingincone", "entitiesincone" -> 2;
+            case "cone", "livingincone", "entitiesincone", "playersincone", "mobsincone",
+                    "monstersincone", "animalsincone", "villagersincone", "tamedincone" -> 2;
             case "lineofsight", "los" -> 1;
             default -> 0;
         };
@@ -1933,7 +1982,8 @@ public final class Targeters {
                 String positionalName = switch (name) {
                     case "sphere" -> "radius";
                     case "ring" -> positional == 0 ? "min" : "max";
-                    case "cone", "livingincone", "entitiesincone" ->
+                    case "cone", "livingincone", "entitiesincone", "playersincone", "mobsincone",
+                            "monstersincone", "animalsincone", "villagersincone", "tamedincone" ->
                             positional == 0 ? "angle" : "length";
                     case "lineofsight", "los" -> "max";
                     default -> "";

@@ -44,6 +44,14 @@ filtering, direct/projectile triggers, and dead or removed entities. A real Pape
 fixture for entity removal and trigger cleanup is still required before this
 boundary can be promoted beyond `mapped-unverified`.
 
+The cone targeter family is expanded in the shared API with
+`@PlayersInCone`, `@MobsInCone`, `@MonstersInCone`, `@AnimalsInCone`,
+`@VillagersInCone`, and `@TamedInCone`. These aliases apply the existing
+angle/length grammar and geometry after the requested entity-family filter, with
+API coverage for positional, named, mixed-family, and malformed inputs. Paper
+runtime evidence for these aliases remains a follow-up before the Context
+targeters row can move beyond `mapped-unverified`.
+
 ## Completion contract
 
 A capability can leave `mapped-unverified` only when all applicable checks below
