@@ -1368,6 +1368,11 @@ try {
         throw 'Synthetic full catalog report must contain audience-filter-delivery.'
     }
     $fullCatalogAudienceFilter[0].observations = @('{"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":true,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}')
+    $fullCatalogAudienceDispatch = @($fullCatalogReport.probes | Where-Object id -eq 'audienceDispatch')
+    Assert-True ($fullCatalogAudienceDispatch.Count -eq 1) 'synthetic full catalog contains the audience dispatch probe'
+    $fullCatalogAudienceDispatch[0].observations = @($fullCatalogAudienceDispatch[0].observations | ForEach-Object {
+        $_ -replace 'particle-dispatched=true ', 'particle-dispatched=true targeter-dispatched=true '
+    })
     $fullCatalogAiRoute = @($fullCatalogReport.probes | Where-Object id -eq 'aiRoute')
     if ($fullCatalogAiRoute.Count -ne 1) {
         throw 'Synthetic full catalog report must contain aiRoute.'

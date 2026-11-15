@@ -465,7 +465,7 @@ $probeSpecs = [ordered]@{
     # managed entities; the probe identity is established by its delayed marker,
     # reason, and cancellation state.
     entityTargetDelayed = 'tempt-probe-delayed entity-target-trigger=true target-events=[1-9][0-9]* target-find-misses=[0-9]+ target-reason=(?:CLOSEST_PLAYER|TEMPT) target-cancelled=false'
-    audienceDispatch = 'audience player=\S+ message-dispatched=true title-dispatched=true actionbar-dispatched=true particle-dispatched=true radius-included-dispatched=true radius-excluded-dispatched=true permission-included-dispatched=true'
+    audienceDispatch = 'audience player=\S+ message-dispatched=true title-dispatched=true actionbar-dispatched=true particle-dispatched=true targeter-dispatched=true radius-included-dispatched=true radius-excluded-dispatched=true permission-included-dispatched=true'
 }
 if ($env:PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW -ne 'true') {
     $probeSpecs.Remove('spawningDistanceClientWalk')

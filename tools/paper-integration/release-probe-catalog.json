@@ -96,7 +96,8 @@
     },
     {
       "id": "audienceDispatch",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "audience player=\\S+ message-dispatched=true title-dispatched=true actionbar-dispatched=true particle-dispatched=true targeter-dispatched=true radius-included-dispatched=true radius-excluded-dispatched=true permission-included-dispatched=true"
     },
     {
       "id": "executionAudienceMutation",

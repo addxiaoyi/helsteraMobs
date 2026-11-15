@@ -1,7 +1,11 @@
 package dev.helstera.ai.skill;
 
 import org.junit.jupiter.api.Test;
+import org.bukkit.entity.Player;
 
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -31,5 +35,27 @@ class AudienceFilterTest {
         assertTrue(excludedPermission.permission().equals("helstera.menu"));
         assertTrue(excludedFaction.factionExcluded());
         assertTrue(excludedFaction.faction().equals("undead"));
+    }
+
+    @Test
+    void malformedAudienceFiltersFailClosed() {
+        assertFalse(SkillExtras.AudienceSpec.parse("permission:", 16).valid());
+        assertFalse(SkillExtras.AudienceSpec.parse("radius{r=NaN}", 16).valid());
+        assertFalse(SkillExtras.AudienceSpec.parse(
+                "radius{permission=one;permission=two}", 16).valid());
+        assertFalse(SkillExtras.AudienceSpec.parse("radius{r=12", 16).valid());
+        assertFalse(SkillExtras.AudienceSpec.parse("unknown", 16).valid());
+    }
+
+    @Test
+    void audienceTargetersUseTheSharedTargeterParser() {
+        Player target = org.mockito.Mockito.mock(Player.class);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, target, 1.0, 4.0, 0, "AUDIENCE");
+
+        assertEquals(List.of(target), SkillExtras.selectAudienceTargeter(
+                "@target{limit=1}", context, List.of(target)));
+        assertTrue(SkillExtras.selectAudienceTargeter(
+                "@target{limit=0}", context, List.of(target)).isEmpty());
     }
 }

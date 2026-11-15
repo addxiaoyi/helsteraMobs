@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-audience-targeter-strict-20261115-r1",
+    "reportFixtureDirectory": "srv-paper-audience-targeter-strict-20261115-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-audience-targeter-strict-20261115-r1.json",
+    "reportSha256": "3e45fa29c4cd29a5b74d3d7870f84e7a7ed7bad90ef7fe6ccbf194129b799a1c",
+    "log": "tools/paper-integration/reports/paper-1.21.1-audience-targeter-strict-20261115-r1.log.gz",
+    "logSha256": "3be5e692ddd38536af1afa566c9deb6b700d52593f36b97291e80235cc2dadcb",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-audience-targeter-strict-20261115-r1-client-logs.tar.gz",
+    "clientLogSha256": "bedde3f53fc07f846a4cb717c1fc3b60066d2824d465c657825fdbc699b6b427",
+    "pluginSha256": "3fda0937fe671bdf78f979e5c04136d9dddf31e61388cdf90fab32917593a7f0",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-stat-damage-strict-20261115-r3",
     "reportFixtureDirectory": "srv-paper-stat-damage-strict-20261115-r3",
     "report": "tools/paper-integration/reports/paper-1.21.1-stat-damage-strict-20261115-r3.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-stat-damage-strict-20261115-r3-client-logs.tar.gz",
     "clientLogSha256": "116e3af9c4a8502e4f1a8145d59de65508d5dcc258373a2cf1ccdff95a69cc91",
     "pluginSha256": "e6c098fd440c769f3177cd4d1919686a7b2993b43a12319626c5b2dafcd357b7",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-audience-targeter-strict-20261115-r1"
   },
   {
     "fixtureId": "srv-paper-mythic-mob-types-full-strict-20261115-r1",

@@ -16,12 +16,12 @@ Audited against the matrix on 2026-11-15:
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is Paper 1.21.1-133, with 460 probes: 441
-passed, 19 expected rejections, and zero failed or incomplete. It includes a
-real naturally generated `EntityDamageByEntityEvent` probe for
-`statDamageModifierCondition`, alongside the synthetic dispatch coverage.
-MythicMobs 5.7.2 has separate focused evidence; the full release fixture does
-not load MythicMobs. See the
+The latest full release fixture is `srv-paper-audience-targeter-strict-20261115-r1` on Paper 1.21.1-133, with 460
+probes: 441 passed, 19 expected rejections, and zero failed or incomplete. It
+adds production Audience `@Targeter` dispatch evidence for `limit=1` and entity
+filters, while preserving fail-closed behavior for malformed, duplicate, empty,
+and non-finite audience arguments. MythicMobs 5.7.2 has separate focused
+evidence; the full release fixture does not load MythicMobs. See the
 [release evidence index](tools/paper-integration/release-evidence.json),
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
 [version matrix](tools/paper-integration/version-matrix.json).
@@ -183,7 +183,9 @@ Matrix rows: `Audience parsing and delivery`, `Audience actions`, `Full SkillTre
 semantics`, and `Custom menu pagination and visibility`.
 
 - Verify audience filters in combinations across permission, faction, world,
-  radius, region, and reconnect/client protocol boundaries.
+  radius, region, and reconnect/client protocol boundaries; retain the current
+  shared-targeter `limit`/entity-filter evidence while extending client-visible
+  coverage to each supported selector family.
 - Cover SkillTree prerequisites, unlock conditions, nested casts, persistence,
   atomic writes, restart, death, unload/reload, config changes, and client UI.
 - Complete menu condition parsing, pagination, visibility, action permissions,

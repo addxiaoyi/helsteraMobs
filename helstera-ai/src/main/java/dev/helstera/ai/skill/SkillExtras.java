@@ -3,6 +3,7 @@ package dev.helstera.ai.skill;
 import dev.helstera.api.util.EntityTypeSelector;
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.behavior.SkillTreeContext;
+import dev.helstera.api.behavior.Targeters;
 import dev.helstera.api.behavior.VariableLocations;
 import dev.helstera.api.instance.ModelInstance;
 import org.bukkit.GameMode;
@@ -7913,10 +7914,13 @@ public final class SkillExtras {
 
     private static java.util.List<Player> audiencePlayers(BehaviorContext ctx, String audience, double radius) {
         AudienceSpec spec = AudienceSpec.parse(audience, radius);
+        if (!spec.valid()) return new ArrayList<>();
         String kind = spec.kind();
         java.util.LinkedHashSet<Player> players = new java.util.LinkedHashSet<>();
         if (ctx == null) return new ArrayList<>();
-        if (kind.equals("target")) ctx.target().ifPresent(players::add);
+        if (audience != null && audience.trim().startsWith("@")) {
+            players.addAll(selectAudienceTargeter(audience, ctx, org.bukkit.Bukkit.getOnlinePlayers()));
+        } else if (kind.equals("target")) ctx.target().ifPresent(players::add);
         else if (kind.equals("targets")) {
             for (LivingEntity living : targetEntities(ctx)) {
                 if (living instanceof Player player) players.add(player);
@@ -7926,6 +7930,9 @@ public final class SkillExtras {
         else if (kind.equals("all")) {
             players.addAll(org.bukkit.Bukkit.getOnlinePlayers());
             ctx.target().ifPresent(players::add);
+        }
+        else if (kind.equals("server") || kind.equals("everyone")) {
+            players.addAll(org.bukkit.Bukkit.getOnlinePlayers());
         }
         else {
             Location origin = ctx.origin().orElse(null);
@@ -7985,6 +7992,28 @@ public final class SkillExtras {
         return List.copyOf(players);
     }
 
+    /**
+     * Resolve an audience targeter through the same parser and filter ordering
+     * used by skill target selection. Audience delivery must not silently
+     * downgrade {@code @PlayersInRadius{target=...;limit=...}} to a plain
+     * radius scan just because it is used by a message or title action.
+     */
+    static List<Player> selectAudienceTargeter(String raw, BehaviorContext context,
+                                               Collection<? extends LivingEntity> candidates) {
+        if (raw == null || raw.isBlank() || !raw.trim().startsWith("@") || context == null) {
+            return List.of();
+        }
+        try {
+            return Targeters.select(raw, context,
+                            candidates == null ? List.of() : candidates, List.of()).stream()
+                    .filter(Player.class::isInstance)
+                    .map(Player.class::cast)
+                    .toList();
+        } catch (RuntimeException ignored) {
+            return List.of();
+        }
+    }
+
     private static String worldName(Location location) {
         return location == null || location.getWorld() == null ? "null" : location.getWorld().getName();
     }
@@ -8029,33 +8058,59 @@ public final class SkillExtras {
     }
 
     static record AudienceSpec(String kind, double radius, String permission, String faction,
-                               boolean permissionExcluded, boolean factionExcluded) {
+                               boolean permissionExcluded, boolean factionExcluded, boolean valid) {
         static AudienceSpec parse(String raw, double fallbackRadius) {
             String value = raw == null ? "target" : raw.trim();
+            boolean valid = !value.isBlank();
             if (value.startsWith("@")) value = value.substring(1);
             String permission = null;
             String faction = null;
             boolean permissionExcluded = false;
             boolean factionExcluded = false;
+            boolean permissionSeen = false;
+            boolean factionSeen = false;
+            boolean radiusSeen = false;
             int open = value.indexOf('{');
+            if (open >= 0) {
+                if (!value.endsWith("}") || open == 0) valid = false;
+            }
             if (open >= 0 && value.endsWith("}")) {
                 String body = value.substring(open + 1, value.length() - 1);
                 for (String part : body.split("[;,]")) {
+                    if (part.isBlank()) {
+                        valid = false;
+                        continue;
+                    }
                     int eq = part.indexOf('=');
-                    if (eq <= 0) continue;
+                    if (eq <= 0) {
+                        // Targeter-specific options are validated by Targeters;
+                        // the audience parser only owns its delivery filters.
+                        continue;
+                    }
                     String key = part.substring(0, eq).trim().toLowerCase(Locale.ROOT);
                     String val = part.substring(eq + 1).trim();
                     boolean excluded = val.startsWith("!") || val.startsWith("-");
                     if (excluded) val = val.substring(1).trim();
                     if (key.equals("permission") || key.equals("perm")) {
+                        if (permissionSeen || val.isBlank()) valid = false;
+                        permissionSeen = true;
                         permission = val;
                         permissionExcluded = excluded;
                     } else if (key.equals("faction")) {
+                        if (factionSeen || val.isBlank()) valid = false;
+                        factionSeen = true;
                         faction = val;
                         factionExcluded = excluded;
                     }
                     else if (key.equals("radius") || key.equals("r")) {
-                        try { fallbackRadius = Double.parseDouble(val); } catch (NumberFormatException ignored) { }
+                        if (radiusSeen) valid = false;
+                        radiusSeen = true;
+                        try {
+                            fallbackRadius = Double.parseDouble(val);
+                            if (!Double.isFinite(fallbackRadius) || fallbackRadius < 0) valid = false;
+                        } catch (NumberFormatException ignored) {
+                            valid = false;
+                        }
                     }
                 }
                 value = value.substring(0, open);
@@ -8066,23 +8121,37 @@ public final class SkillExtras {
                     String prefix = value.substring(0, colon).trim().toLowerCase(Locale.ROOT);
                     String suffix = value.substring(colon + 1).trim();
                     if (prefix.equals("permission") || prefix.equals("perm")) {
+                        if (suffix.isBlank()) valid = false;
                         permissionExcluded = suffix.startsWith("!") || suffix.startsWith("-");
                         if (permissionExcluded) suffix = suffix.substring(1).trim();
+                        if (suffix.isBlank()) valid = false;
                         permission = suffix;
                         value = "all";
                     } else if (prefix.equals("faction")) {
+                        if (suffix.isBlank()) valid = false;
                         factionExcluded = suffix.startsWith("!") || suffix.startsWith("-");
                         if (factionExcluded) suffix = suffix.substring(1).trim();
+                        if (suffix.isBlank()) valid = false;
                         faction = suffix;
                         value = "world";
+                    } else {
+                        valid = false;
                     }
                 }
             }
             String normalized = value.toLowerCase(Locale.ROOT);
             if (normalized.equals("pir") || normalized.equals("playersinradius") || normalized.equals("players-in-radius")) normalized = "nearby";
             if (normalized.equals("p") || normalized.equals("players")) normalized = "world";
+            if (raw != null && raw.trim().startsWith("@")) {
+                // The targeter registry owns the actual name and arguments. We
+                // only reject malformed audience-owned braces here.
+                valid = valid && !value.isBlank();
+            } else if (!Set.of("target", "targets", "self", "all", "world", "nearby",
+                    "radius", "server", "everyone").contains(normalized)) {
+                valid = false;
+            }
             return new AudienceSpec(normalized, Math.max(0, fallbackRadius), permission, faction,
-                    permissionExcluded, factionExcluded);
+                    permissionExcluded, factionExcluded, valid);
         }
     }
 

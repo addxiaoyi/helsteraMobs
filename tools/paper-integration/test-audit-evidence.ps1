@@ -128,6 +128,11 @@ try {
     $audienceFilterProbe = @($fullReport.probes | Where-Object id -eq 'audience-filter-delivery')
     if ($audienceFilterProbe.Count -ne 1) { throw 'Synthetic release report must contain audience-filter-delivery.' }
     $audienceFilterProbe[0].observations = @('{"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":true,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}')
+    $audienceDispatchProbe = @($fullReport.probes | Where-Object id -eq 'audienceDispatch')
+    if ($audienceDispatchProbe.Count -ne 1) { throw 'Synthetic release report must contain audienceDispatch.' }
+    $audienceDispatchProbe[0].observations = @($audienceDispatchProbe[0].observations | ForEach-Object {
+        $_ -replace 'particle-dispatched=true ', 'particle-dispatched=true targeter-dispatched=true '
+    })
     $naturalMobOptions = @($fullReport.probes | Where-Object id -eq 'mobOptionsNatural')
     if ($naturalMobOptions.Count -ne 1) { throw 'Synthetic release report must contain mobOptionsNatural.' }
     $naturalMobOptions[0].observations = @($naturalMobOptions[0].observations | ForEach-Object {

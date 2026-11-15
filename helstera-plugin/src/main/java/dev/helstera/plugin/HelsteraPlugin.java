@@ -27401,6 +27401,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 var title = skills.bindAction("audience-title target &bAUDIENCE_TITLE_OK 0 20 0");
                 var actionbar = skills.bindAction("audience-actionbar target &eAUDIENCE_ACTIONBAR_OK");
                 var particle = skills.bindAction("audience-particle target FLAME 4 32");
+                var targeterMessage = skills.bindAction(
+                        "audience-message @target{limit=1} &dAUDIENCE_TARGETER_OK");
                 var radiusIncluded = skills.bindAction("audience-message radius &dAUDIENCE_RADIUS_INCLUDED 4096");
                 var radiusExcluded = skills.bindAction("audience-message radius &dAUDIENCE_RADIUS_EXCLUDED 0.1");
                 var permissionIncluded = skills.bindAction("audience-message permission:helstera.menu &dAUDIENCE_PERMISSION_INCLUDED");
@@ -27411,6 +27413,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean titleSent = title != null && skills.runAction(title, context);
                 boolean actionbarSent = actionbar != null && skills.runAction(actionbar, context);
                 boolean particleSent = particle != null && skills.runAction(particle, context);
+                boolean targeterSent = targeterMessage != null && skills.runAction(targeterMessage, context);
                 boolean radiusIncludedSent = radiusIncluded != null && skills.runAction(radiusIncluded, context);
                 boolean radiusExcludedSent = radiusExcluded != null && skills.runAction(radiusExcluded, context);
                 boolean permissionIncludedSent = permissionIncluded != null && skills.runAction(permissionIncluded, context);
@@ -27427,6 +27430,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " title-dispatched=" + titleSent
                         + " actionbar-dispatched=" + actionbarSent
                         + " particle-dispatched=" + particleSent
+                        + " targeter-dispatched=" + targeterSent
                         + " radius-included-dispatched=" + radiusIncludedSent
                         + " radius-excluded-dispatched=" + radiusExcludedSent
                         + " permission-included-dispatched=" + permissionIncludedSent
