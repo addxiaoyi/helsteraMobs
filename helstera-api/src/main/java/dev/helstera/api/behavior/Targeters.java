@@ -1029,6 +1029,11 @@ public final class Targeters {
         if (!parsed.valid()) return List.of();
         List<String> args = parsed.args().isEmpty()
                 ? (fallbackArgs == null ? List.of() : fallbackArgs) : parsed.args();
+        // Spatial targeters historically parsed their private arguments inside
+        // the handler and silently replaced malformed values with defaults.
+        // Validate the effective argument list here as well so action-side
+        // fallback arguments cannot bypass the same fail-closed contract.
+        if (!validTargeterArguments(parsed.name(), args, parsed.radius())) return List.of();
         Collection<? extends LivingEntity> scoped = candidates == null ? List.of() : candidates;
         if (SERVER_PLAYER_TARGETERS.contains(parsed.name())) {
             if (expandWorld) scoped = org.bukkit.Bukkit.getOnlinePlayers();
@@ -1321,6 +1326,7 @@ public final class Targeters {
             if (!validArgumentSyntax(argumentBody)) {
                 return invalid(canonicalName(value.substring(0, open)));
             }
+            String targeterName = canonicalName(value.substring(0, open));
             List<String> args = new ArrayList<>();
             Integer limit = null;
             Integer skip = null;
@@ -1354,7 +1360,8 @@ public final class Targeters {
                     String generic = switch (key.toLowerCase(Locale.ROOT)) {
                         case "limit", "count" -> "limit";
                         case "skiptargetsuptoindex", "stuti" -> "skip";
-                        case "r", "radius" -> "radius";
+                        case "r" -> "radius";
+                        case "radius" -> targeterName.equals("sphere") ? null : "radius";
                         case "filter", "type" -> "filter";
                         case "target" -> "target";
                         case "ignore" -> "ignore";
@@ -1382,7 +1389,8 @@ public final class Targeters {
                                 || key.equalsIgnoreCase("stuti")) {
                             skip = Integer.valueOf(rawValue);
                             if (skip < 0) valid = false;
-                        } else if (key.equalsIgnoreCase("r") || key.equalsIgnoreCase("radius")) {
+                        } else if (key.equalsIgnoreCase("r")
+                                || key.equalsIgnoreCase("radius") && !targeterName.equals("sphere")) {
                             radius = Double.valueOf(rawValue);
                             if (!Double.isFinite(radius) || radius < 0) valid = false;
                         } else if (key.equalsIgnoreCase("filter") || key.equalsIgnoreCase("type")) {
@@ -1475,7 +1483,9 @@ public final class Targeters {
                     }
                 } else args.add(token);
             }
-            return new ParsedSpec(canonicalName(value.substring(0, open)), args,
+            String name = targeterName;
+            if (!validTargeterArguments(name, args, radius)) valid = false;
+            return new ParsedSpec(name, args,
                     limit, skip, radius, filter, targetFilter, ignoreFilter, targetSelf,
                     targetPlayers, targetCreative, targetSpectator, targetInvulnerable,
                     targetArmorStands, targetAnimals, targetCreatures, targetVillagers,
@@ -1706,6 +1716,7 @@ public final class Targeters {
     private static List<LivingEntity> sphere(ModelInstance src,
                                              Collection<? extends LivingEntity> candidates,
                                              List<String> args) {
+        if (!validTargeterArguments("sphere", args)) return List.of();
         double radius = numberArg(args, 0, 5.0);
         radius = namedNumber(args, "radius", radius);
         return withinRadius(src, candidates, radius, false);
@@ -1714,6 +1725,7 @@ public final class Targeters {
     private static List<LivingEntity> ring(ModelInstance src,
                                            Collection<? extends LivingEntity> candidates,
                                            List<String> args) {
+        if (!validTargeterArguments("ring", args)) return List.of();
         double min = numberArg(args, 0, 4.0);
         double max = numberArg(args, 1, 6.0);
         if (args != null) { min = namedNumber(args, "min", min); max = namedNumber(args, "max", max); }
@@ -1731,6 +1743,7 @@ public final class Targeters {
     private static List<LivingEntity> cone(ModelInstance src,
                                            Collection<? extends LivingEntity> candidates,
                                            List<String> args) {
+        if (!validTargeterArguments("cone", args)) return List.of();
         Location origin = src == null ? null : src.location();
         if (origin == null || origin.getWorld() == null) return List.of();
         double angle = numberArg(args, 0, 90.0);
@@ -1761,6 +1774,7 @@ public final class Targeters {
     private static List<LivingEntity> lineOfSight(ModelInstance src,
                                                   Collection<? extends LivingEntity> candidates,
                                                   List<String> args) {
+        if (!validTargeterArguments("lineofsight", args)) return List.of();
         Location origin = src == null ? null : src.location();
         if (origin == null || origin.getWorld() == null) return List.of();
         double max = numberArg(args, 0, 32.0);
@@ -1789,6 +1803,7 @@ public final class Targeters {
     private static List<LivingEntity> line(ModelInstance src,
                                            Collection<? extends LivingEntity> candidates,
                                            List<String> args) {
+        if (!validTargeterArguments("livinginline", args)) return List.of();
         LivingEntity target = candidates.stream().findFirst().orElse(null);
         if (target == null || src == null || src.location() == null) return List.of();
         Location start = src.location();
@@ -1825,10 +1840,95 @@ public final class Targeters {
         return orderedBy(selected, e -> 0, e -> distance(src, e));
     }
 
+    /**
+     * Validates the private argument grammar of spatial targeters.
+     *
+     * <p>These values used to be parsed by {@code numberArg}/{@code namedNumber}
+     * with a default on every failure.  That made a typo such as
+     * {@code @ring{min=bad}} execute as a different targeter.  Keep the
+     * validation next to the shared dispatch path so both inline and fallback
+     * arguments have identical fail-closed behavior.</p>
+     */
+    private static boolean validTargeterArguments(String targeter, List<String> args) {
+        return validTargeterArguments(targeter, args, null);
+    }
+
+    private static boolean validTargeterArguments(String targeter, List<String> args, Double genericRadius) {
+        if (args == null || args.isEmpty()) return true;
+        String name = targeter == null ? "" : targeter.toLowerCase(Locale.ROOT);
+        if (name.equals("sphere") && genericRadius != null
+                && args.stream().anyMatch(raw -> raw != null && (raw.indexOf('=') < 0
+                || raw.substring(0, raw.indexOf('=')).trim().equalsIgnoreCase("radius")))) return false;
+        java.util.Set<String> named = switch (name) {
+            case "sphere" -> java.util.Set.of("radius");
+            case "ring" -> java.util.Set.of("min", "max");
+            case "cone", "livingincone", "entitiesincone" -> java.util.Set.of("angle", "length");
+            case "lineofsight", "los" -> java.util.Set.of("max", "length");
+            case "livinginline", "entitiesinline" -> java.util.Set.of("length", "width");
+            default -> null;
+        };
+        if (named == null) return true;
+
+        int positional = 0;
+        int positionalLimit = switch (name) {
+            case "sphere" -> 1;
+            case "ring" -> 2;
+            case "cone", "livingincone", "entitiesincone" -> 2;
+            case "lineofsight", "los" -> 1;
+            default -> 0;
+        };
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (String raw : args) {
+            if (raw == null || raw.isBlank()) return false;
+            int equals = raw.indexOf('=');
+            if (equals < 0) {
+                if (positional >= positionalLimit || !finiteNonNegative(raw.trim())) return false;
+                String positionalName = switch (name) {
+                    case "sphere" -> "radius";
+                    case "ring" -> positional == 0 ? "min" : "max";
+                    case "cone", "livingincone", "entitiesincone" ->
+                            positional == 0 ? "angle" : "length";
+                    case "lineofsight", "los" -> "max";
+                    default -> "";
+                };
+                if (!seen.add(positionalName)) return false;
+                positional++;
+                continue;
+            }
+            if (equals <= 0 || equals == raw.length() - 1) return false;
+            String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String canonical = switch (name) {
+                case "lineofsight", "los" -> switch (key) {
+                    case "max", "length" -> "max";
+                    default -> key;
+                };
+                default -> key;
+            };
+            if (!named.contains(key) || !seen.add(canonical)
+                    || !finiteNonNegative(raw.substring(equals + 1).trim())) return false;
+        }
+        return true;
+    }
+
+    private static boolean finiteNonNegative(String raw) {
+        try {
+            double value = Double.parseDouble(raw);
+            return Double.isFinite(value) && value >= 0;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
     private static double numberArg(List<String> args, int index, double fallback) {
-        if (args == null || index >= args.size()) return fallback;
-        try { return Double.parseDouble(args.get(index).trim()); }
-        catch (NumberFormatException ignored) { return fallback; }
+        if (args == null) return fallback;
+        int positional = 0;
+        for (String arg : args) {
+            if (arg == null || arg.indexOf('=') >= 0) continue;
+            if (positional++ != index) continue;
+            try { return Double.parseDouble(arg.trim()); }
+            catch (NumberFormatException ignored) { return fallback; }
+        }
+        return fallback;
     }
 
     private static double namedNumber(List<String> args, String name, double fallback) {

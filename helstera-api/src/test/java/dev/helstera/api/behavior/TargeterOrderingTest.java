@@ -186,6 +186,51 @@ class TargeterOrderingTest {
     }
 
     @Test
+    @DisplayName("spatial targeter arguments are finite, non-negative, and fail closed")
+    void spatialTargeterArgumentsFailClosed() {
+        World world = proxy(World.class, (method, args) -> null);
+        var origin = new org.bukkit.Location(world, 0, 0, 0);
+        var source = proxy(dev.helstera.api.instance.ModelInstance.class,
+                (method, args) -> method.equals("location") ? origin : null);
+        var candidate = locatedLiving(org.bukkit.entity.LivingEntity.class,
+                new org.bukkit.Location(world, 0, 0, 1));
+
+        assertEquals(List.of(candidate), Targeters.select(
+                "@sphere{radius=2}", source, List.of(candidate), List.of()));
+        assertEquals(List.of(candidate), Targeters.select(
+                "@sphere{2}", source, List.of(candidate), List.of()));
+        assertEquals(List.of(candidate), Targeters.select(
+                "@ring{min=2;max=0}", source, List.of(candidate), List.of()),
+                "reversed non-negative ring bounds retain the existing inclusive swap semantics");
+        assertEquals(List.of(candidate), Targeters.select(
+                "@cone{angle=180;length=2}", source, List.of(candidate), List.of()));
+        assertEquals(List.of(candidate), Targeters.select(
+                "@los{max=2}", source, List.of(candidate), List.of()));
+        assertEquals(List.of(candidate), Targeters.select(
+                "@livinginline{length=2;width=0}", source, List.of(candidate), List.of()));
+
+        for (String spec : List.of(
+                "@sphere{radius=bad}", "@sphere{radius=NaN}", "@sphere{radius=Infinity}",
+                "@sphere{radius=-1}", "@sphere{unknown=1}", "@sphere{radius=1;radius=2}",
+                "@sphere{radius=1;1}", "@sphere{1;2}",
+                "@ring{min=bad}", "@ring{max=-1}", "@ring{min=1;min=2}",
+                "@ring{unknown=1}", "@ring{min=1;2}", "@ring{1;2;3}",
+                "@cone{angle=bad}", "@cone{length=NaN}", "@cone{angle=-1}",
+                "@cone{angle=1;length=2;unknown=3}", "@cone{angle=1;angle=2}",
+                "@lineofsight{max=bad}", "@lineofsight{length=Infinity}",
+                "@los{max=1;length=2}", "@los{unknown=1}", "@los{1;2}",
+                "@livinginline{width=NaN}", "@livinginline{length=-1}",
+                "@livinginline{length=1;width=2;width=3}",
+                "@livinginline{unknown=1}", "@livinginline{1}")) {
+            assertEquals(List.of(), Targeters.select(spec, source, List.of(candidate), List.of()), spec);
+        }
+        assertEquals(List.of(), Targeters.select("@sphere", source, List.of(candidate), List.of("bad")));
+        assertEquals(List.of(), Targeters.byName("sphere").select(
+                source, List.of(candidate), List.of("bad")),
+                "direct registry dispatch must keep the same fail-closed contract");
+    }
+
+    @Test
     @DisplayName("nearest living and mob aliases resolve to the canonical selectors")
     void nearestAliasesResolve() {
         var player = livingProxy(org.bukkit.entity.Player.class);
@@ -1235,6 +1280,16 @@ class TargeterOrderingTest {
                 new Class<?>[]{type}, (proxy, method, args) -> {
                     if (method.getName().equals("getType")) return org.bukkit.entity.EntityType.ZOMBIE;
                     if (method.getName().equals("getLocation")) return new org.bukkit.Location(null, 0, 0, 0);
+                    return defaultValue(method.getReturnType());
+                }));
+    }
+
+    private static <T extends org.bukkit.entity.LivingEntity> T locatedLiving(
+            Class<T> type, org.bukkit.Location location) {
+        return type.cast(Proxy.newProxyInstance(type.getClassLoader(),
+                new Class<?>[]{type}, (proxy, method, args) -> {
+                    if (method.getName().equals("getType")) return org.bukkit.entity.EntityType.ZOMBIE;
+                    if (method.getName().equals("getLocation")) return location;
                     return defaultValue(method.getReturnType());
                 }));
     }

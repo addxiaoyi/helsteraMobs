@@ -26,6 +26,13 @@ evidence; the full release fixture does not load MythicMobs. See the
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
 [version matrix](tools/paper-integration/version-matrix.json).
 
+The next targeter contract slice is now implemented in the shared API: spatial
+targeters reject malformed, negative, non-finite, duplicate, and unknown private
+arguments instead of falling back to handler defaults. API coverage includes
+inline and fallback arguments for sphere, ring, cone, line-of-sight, and line;
+these checks have no new Paper fixture yet, so the Context targeters row remains
+`mapped-unverified`.
+
 ## Completion contract
 
 A capability can leave `mapped-unverified` only when all applicable checks below

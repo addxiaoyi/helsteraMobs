@@ -1395,7 +1395,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-stat-damage-strict-20261115-r3` has 460 probes (441 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-audience-targeter-strict-20261115-r1` has 460 probes (441 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1411,7 +1411,7 @@ all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 460 probes, zero incomplete (441 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-stat-damage-strict-20261115-r3`; its `statDamageModifierCondition` coverage includes a naturally generated Paper damage event and the synthetic production dispatch self-test.
+Latest strict report has 460 probes, zero incomplete (441 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-audience-targeter-strict-20261115-r1`; its `audienceDispatch` coverage includes production shared `@Targeter` dispatch, `limit=1`, entity filters, and fail-closed malformed, duplicate, empty, and non-finite arguments.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
@@ -1697,7 +1697,7 @@ the entire MythicMobs feature catalog.
 - Spawner restart persistence now has Paper 1.21.1-133 evidence: fixture `srv-paper-spawner-restart-20261031-r2` performs two real plugin boots and records `stage=write before=0 after=1 generated=true result=true`, then `stage=verify before=1 after=1 restored=true result=true` from the same plugin data directory.
 - Spawner natural cooldown restoration passed four independent Paper 1.21.1-133 restarts. Latest fixture `srv-paper-spawner-natural-restart-20261106-r5` also confirms a non-finite Chance fails closed across both boots; the natural spawn restored 580 remaining ticks and occurred after 579 observed ticks. Reports and hashed logs are indexed in [Paper startup evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 - `set-target` and `clear-target` mechanics now have strict Paper evidence: fixture `srv-paper-integration-targeters-20261031-r3` records `set-target-mechanic=true clear-target-mechanic=true` after dispatching both actions through the production `SkillService` to a managed Bukkit Mob.
-- Runtime targeter aliases now have strict Paper evidence: fixture `srv-paper-runtime-alias-20261031-r2` executes `@Players_In_World`, `@Mobs_In_World`, `@Nearest_Living_Entity`, and `@Nearest_Mob` and records the complete `ai-selector-core` probe as passed.
+- Runtime targeter aliases now have strict Paper evidence: fixture `srv-paper-runtime-alias-20261031-r2` executes `@Players_In_World`, `@Mobs_In_World`, `@Nearest_Living_Entity`, and `@Nearest_Mob` and records the complete `ai-selector-core` probe as passed. The shared API now also rejects malformed, negative, non-finite, duplicate, and unknown private arguments for spatial targeters (`sphere`, `ring`, `cone`, line-of-sight, and line), including action fallback arguments; this has API coverage but no new Paper fixture yet.
 - Vehicle enter/exit/dismount/eject/destroy trigger coverage is now lifecycle-independent from the online player probe; strict fixture `srv-paper-integration-exp-20261031-r17` records `vehicle-events enter=true exit=true dismount=true eject=true destroy=true`.
 
 ### Remaining Work
@@ -1993,6 +1993,11 @@ Paper 1.21.1 release evidence 仍待匹配 server jar。
 - **`threat` 需要档案开 `threat-enabled`**，否则返回**空候选**而不是悄悄退回「最近」。这是刻意的——回落会让「按仇恨选目标」静默变成「选最近的」，而配置看上去完全正常。
 
 等分时一律按距离兜底，保证排序确定：否则每 tick 遍历顺序的微小变化会让模型在候选之间反复横跳，表现为周期性抽搐转向。
+
+空间类 targeter 的专属数字参数也会严格失败关闭：`sphere` 使用
+`radius`，`ring` 使用 `min`/`max`，`cone` 使用 `angle`/`length`，视线使用
+`max`/`length`，直线使用 `length`/`width`。参数必须是有限非负数；重复键、
+未知键、超量位置参数和 action fallback 中的非法值都会返回空候选集。
 
 ## Boss 血条
 
