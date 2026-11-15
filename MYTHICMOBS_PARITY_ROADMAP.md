@@ -81,6 +81,9 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   semantics; cover caster, target, trigger, location, and missing-context cases.
 - Verify imported conditions through real Paper entities, with positive,
   negative, malformed, and state-restoration controls.
+- Preserve official per-condition defaults and validate argument aliases;
+  `DamageCause` now defaults to `ENTITY_ATTACK` and has strict Paper release
+  evidence for its imported damage-trigger path.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

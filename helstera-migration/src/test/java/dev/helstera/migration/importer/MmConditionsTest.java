@@ -650,8 +650,15 @@ class MmConditionsTest {
     @Test
     void damageCauseConditionMapsEventCause() {
         assertEquals("damage-cause ENTITY_ATTACK", t("?damageCause{ENTITY_ATTACK}"));
+        assertEquals("damage-cause ENTITY_ATTACK", t("?damageCause"));
+        assertEquals("damage-cause ENTITY_ATTACK", t("?damageCause{}"));
+        assertEquals("damage-cause FIRE", t("?damageCause{c=fire}"));
         assertTrue(translated("?damageCause{ENTITY_ATTACK}"));
-        assertFalse(translated("?damageCause"));
+        for (String malformed : List.of(
+                "?damageCause{cause=}", "?damageCause{FIRE;cause=ENTITY_ATTACK}",
+                "?damageCause{unknown=FIRE}", "?damageCause{NOT_A_DAMAGE_CAUSE}")) {
+            assertUntranslatedPreserved(malformed);
+        }
     }
 
     @Test

@@ -3741,7 +3741,7 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("damage-cause", (SkillCatalog.ConditionFactory) a -> {
-                    String wanted = str(a, 0, "");
+                    String wanted = str(a, 0, "ENTITY_ATTACK");
                     return ctx -> ctx != null && !wanted.isBlank()
                             && ctx.damageCause().map(cause -> cause.name().equalsIgnoreCase(wanted)).orElse(false);
                 }),

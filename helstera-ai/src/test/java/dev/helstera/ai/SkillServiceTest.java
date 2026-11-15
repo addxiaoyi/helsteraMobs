@@ -655,7 +655,9 @@ class SkillServiceTest {
         assertNotNull(key, svc.warnings().toString());
         assertTrue(registry.testCondition(key, context));
         assertFalse(registry.testCondition(svc.bindCondition("damage-cause FIRE"), context));
+        assertTrue(registry.testCondition(svc.bindCondition("damage-cause"), context));
         assertFalse(registry.testCondition(key, ctx(1.0, 0)));
+        assertFalse(registry.testCondition(svc.bindCondition("damage-cause"), ctx(1.0, 0)));
     }
 
     @Test

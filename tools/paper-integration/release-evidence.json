@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-sprinting-strict-20261115-r2",
+    "reportFixtureDirectory": "srv-paper-sprinting-strict-20261115-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r2.json",
+    "reportSha256": "26241f31f9b3da7c00f735ce1ccee98ecd5d542883f5f2d97877f657378da93f",
+    "log": "tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r2.log.gz",
+    "logSha256": "c4f9c4319ae9afe9f78c7130a7b0ec9a3f3a0e9229c89f7534d300897ac68ab2",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r2-client-logs.tar.gz",
+    "clientLogSha256": "c61abeebd2346b4104e2e6857d8889b4cd34c5239f400e3991de4edd71e43a81",
+    "pluginSha256": "a3391c1d9c26ee53ceecdce633b4ed1c345db3be9c5238f147eab2ee36de4857",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-sprinting-strict-20261115-r1",
     "reportFixtureDirectory": "srv-paper-sprinting-strict-20261115-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r1-client-logs.tar.gz",
     "clientLogSha256": "8b70fdde28a75c1a870428791c90163f28119a2a939be14572c79c82f34d4a8b",
     "pluginSha256": "8211e5802d48567adf127f4b8e04fd6742afd97283b159404aed6082195a80f2",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-sprinting-strict-20261115-r2"
   },
   {
     "fixtureId": "srv-paper-uuid-condition-strict-20261115-r2",

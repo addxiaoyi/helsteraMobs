@@ -401,7 +401,7 @@ $probeSpecs = [ordered]@{
     pinTargeters = '\[自检\] pin-targeters result=true multi-dispatch=true random-single=true move-single=true reject-multi-move=true region-set-break=true region-cap-rejected=true'
     pinConditions = '\[自检\] pin-conditions result=true distance=true origin-distance=true origin-inside=true origin-outside=true origin-missing-rejected=true region=true'
     skillTrigger = 'skill-trigger .*damage=true .*attack=true .*teleport=true .*bukkit-attacked=true'
-    damageCauseCondition = 'skill-trigger .*damage-cause-condition=true .*damage-amount-condition=true .*bow-tension-condition=true'
+    damageCauseCondition = 'skill-trigger .*damage-cause-default-condition=true .*damage-cause-condition=true .*damage-amount-condition=true .*bow-tension-condition=true'
     damageTagCondition = 'skill-trigger .*damage-tag-condition=true'
     bowTensionCondition = 'skill-trigger .*bow-tension-condition=true'
     cancelledCondition = 'skill-trigger .*cancelled-condition=true .*cancelled-after=true'

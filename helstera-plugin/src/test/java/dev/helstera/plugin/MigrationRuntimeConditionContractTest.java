@@ -33,6 +33,32 @@ import static org.mockito.Mockito.*;
 class MigrationRuntimeConditionContractTest {
 
     @Test
+    @DisplayName("imported Mythic DamageCause defaults to ENTITY_ATTACK and fails closed without event context")
+    void importedDamageCauseDefaultReachesRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var imported = dev.helstera.migration.importer.MmConditions.translate("?damageCause");
+        assertTrue(imported.translated());
+        assertEquals("damage-cause ENTITY_ATTACK", imported.condition());
+
+        var attackContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "on-damage", null,
+                null, List.of(), null, null, null,
+                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK);
+        var fireContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "on-damage", null,
+                null, List.of(), null, null, null,
+                org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE);
+        String defaultCondition = service.bindCondition(imported.condition());
+        assertNotNull(defaultCondition, service.warnings().toString());
+        assertTrue(registry.testCondition(defaultCondition, attackContext));
+        assertFalse(registry.testCondition(defaultCondition, fireContext));
+        assertFalse(registry.testCondition(defaultCondition,
+                dev.helstera.api.behavior.BehaviorContext.of(
+                        null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "on-damage")));
+    }
+
+    @Test
     @DisplayName("imported Mythic Premium aliases use the optional runtime provider")
     void importedMythicPremiumAliasesReachRuntime() {
         var registry = new BehaviorRegistryImpl();

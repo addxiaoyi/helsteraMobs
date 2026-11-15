@@ -49,6 +49,8 @@ public final class MmConditions {
             "exactmatch", "exactmatch", "em", "exactmatch");
     private static final Map<String, String> UUID_ARGUMENTS = Map.of(
             "uuid", "uuid", "u", "uuid");
+    private static final Map<String, String> DAMAGE_CAUSE_ARGUMENTS = Map.of(
+            "damagecause", "damagecause", "cause", "damagecause", "c", "damagecause");
     private static final Map<String, String> TRIGGER_ITEM_TYPE_ARGUMENTS = Map.of(
             "types", "types", "type", "types", "t", "types", "material", "types",
             "mat", "types", "m", "types", "items", "types", "item", "types", "i", "types");
@@ -962,8 +964,16 @@ public final class MmConditions {
                     ? new Mapped(s, false) : new Mapped("air-level " + body, true);
         }
         if ("damagecause".equals(name) || "cause".equals(name)) {
-            return body == null || body.isBlank()
-                    ? new Mapped(s, false) : new Mapped("damage-cause " + body, true);
+            Map<String, String> arguments = strictValueArguments(body, DAMAGE_CAUSE_ARGUMENTS, "damagecause");
+            if (arguments == null) return new Mapped(s, false);
+            String cause = arguments.getOrDefault("damagecause", "ENTITY_ATTACK");
+            try {
+                cause = org.bukkit.event.entity.EntityDamageEvent.DamageCause
+                        .valueOf(cause.toUpperCase(Locale.ROOT)).name();
+            } catch (IllegalArgumentException ignored) {
+                return new Mapped(s, false);
+            }
+            return new Mapped("damage-cause " + cause, true);
         }
         if ("damageamount".equals(name) || "amount".equals(name) || "a".equals(name)) {
             String value = firstArgument(body, "damageamount", "amount", "a");

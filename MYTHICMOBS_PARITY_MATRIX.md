@@ -23,7 +23,7 @@ Version-gated behavior:
 
 Evidence baseline: 2026-11-15, Paper API 1.21.1-R0.1-SNAPSHOT.
 
-Latest strict release evidence: `srv-paper-sprinting-strict-20261115-r1` completes 457 probes on Paper 1.21.1-133 (438 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `8211e5802d48567adf127f4b8e04fd6742afd97283b159404aed6082195a80f2`). Its `stateConditions` probe verifies sprinting true/false through the runtime and imported Mythic `?Sprinting`/`?issprinting` paths, rejects unknown arguments, and restores the player's initial state. Separate focused evidence verifies MythicMobs 5.7.2 behavior and is not part of the full release catalog. The complete Conditions catalog remains `mapped-unverified`; full parity remains incomplete.
+Latest strict release evidence: `srv-paper-sprinting-strict-20261115-r2` completes 457 probes on Paper 1.21.1-133 (438 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `a3391c1d9c26ee53ceecdce633b4ed1c345db3be9c5238f147eab2ee36de4857`). Its `damageCauseCondition` probe verifies imported Mythic `?damageCause` defaults to `ENTITY_ATTACK`, passes the matching damage event, and rejects a `FIRE` control. `stateConditions` continues to verify imported sprinting aliases and restores the player's initial state. See the [strict report](tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r2.json). Separate focused evidence verifies MythicMobs 5.7.2 behavior and is not part of the full release catalog. The complete Conditions catalog remains `mapped-unverified`; full parity remains incomplete.
 
 Previous strict release evidence: `srv-paper-scoped-placeholders-strict-20261114-r2` verifies scoped display names, entity types, squared distance, and Mythic `l.*` centered/precise coordinates, yaw, pitch, and world, with temporary display names restored. Its archived report and logs remain indexed in `tools/paper-integration/release-evidence.json`.
 
@@ -2241,6 +2241,16 @@ Damage-amount parity update: official `DamageAmount` now reads the current
 `>0`, and fails closed outside damage-trigger contexts. Importer aliases,
 unit coverage, and exploratory Paper r84 (`damage-amount-condition=true`) cover
 the range and trigger paths.
+
+Damage-cause default parity update: official [`DamageCause`](https://wiki.mythiccraft.io/mythicmobs/skills/conditions/DamageCause)
+uses `ENTITY_ATTACK` when its `damagecause`/`cause`/`c` argument is omitted.
+Migration now applies that default, normalizes valid Bukkit causes, and keeps
+empty, duplicate, unknown, and invalid values untranslated for preservation.
+Runtime evaluation uses the current damage-trigger cause and still fails closed
+without event context. Importer, runtime, and migration-to-runtime tests cover
+default, explicit, mismatch, and missing-context paths. Strict Paper fixture
+`srv-paper-sprinting-strict-20261115-r2` passed its imported `on-damage` probe with positive `ENTITY_ATTACK` and negative
+`FIRE` outcomes; this does not complete the broader Conditions catalog.
 
 Block-radius parity update: official `BlockTypeInRadius` now counts exact
 Bukkit material matches in a spherical block radius, with `types`/`amount`/

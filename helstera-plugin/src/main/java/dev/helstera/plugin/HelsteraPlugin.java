@@ -22960,6 +22960,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && living.getEquipment().getItemInMainHand().getType()
                             == org.bukkit.Material.DIAMOND_SWORD;
                     boolean damageCauseCondition = false;
+                    boolean damageCauseDefaultCondition = false;
                     boolean damageAmountCondition = false;
                     boolean damageTagCondition = false;
                     if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry damageBehaviors
@@ -22972,6 +22973,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 damageSkills.bindCondition("damage-amount >=2"), damageContext);
                         damageCauseCondition = damageBehaviors.testCondition(
                                 damageSkills.bindCondition("damage-cause ENTITY_ATTACK"), damageContext);
+                        var importedDamageCause = dev.helstera.migration.importer.MmConditions
+                                .translate("?damageCause");
+                        String importedDamageCauseKey = importedDamageCause.translated()
+                                ? damageSkills.bindCondition(importedDamageCause.condition()) : null;
+                        var fireDamageContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                triggerProbe, probeLiving, 1.0, -1, 0, "on-damage", null,
+                                probeEntity, java.util.List.of(probeLiving), probeEntity.getLocation(), null,
+                                probeDamage, org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE);
+                        damageCauseDefaultCondition = importedDamageCauseKey != null
+                                && damageBehaviors.testCondition(importedDamageCauseKey, damageContext)
+                                && !damageBehaviors.testCondition(importedDamageCauseKey, fireDamageContext);
                         var bowContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                                 triggerProbe, probeLiving, 1.0, -1, 0, "on-entity-shoot", null,
                                 probeEntity, java.util.List.of(probeLiving), probeEntity.getLocation(), null,
@@ -23193,6 +23205,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " target-of-target-invalid-rejected=" + targetOfTargetInvalidRejected
                             + " teleport-before=" + teleportBefore
                             + " bukkit-damage=" + bukkitDamage
+                            + " damage-cause-default-condition=" + damageCauseDefaultCondition
                             + " damage-cause-condition=" + damageCauseCondition
                             + " damage-amount-condition=" + damageAmountCondition
                             + " damage-tag-condition=" + damageTagCondition

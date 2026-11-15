@@ -1,6 +1,6 @@
 # Isolated Paper Integration Server
 
-Latest full-catalog strict fixture `srv-paper-sprinting-strict-20261115-r1` passes all 457 probes on Paper 1.21.1-133 (438 passed, 19 expected rejections, zero failed or incomplete). Its `stateConditions` probe verifies runtime sprinting positives and negatives, imported Mythic `?Sprinting`/`?issprinting` aliases in both states, unknown-argument preservation, and player-state restoration. Report and redacted logs are archived in [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md); the release baseline and artifact hashes are recorded in `release-evidence.json`. The full Conditions catalog remains incomplete.
+Latest full-catalog strict fixture `srv-paper-sprinting-strict-20261115-r2` passes all 457 probes on Paper 1.21.1-133 (438 passed, 19 expected rejections, zero failed or incomplete). `damageCauseCondition` verifies imported Mythic `?damageCause` defaults to `ENTITY_ATTACK` when omitted, matches an `ENTITY_ATTACK` damage event, rejects the `FIRE` control, and records the observation in the strict probe. `stateConditions` continues to cover imported sprinting aliases and state restoration. Plugin SHA-256: `a3391c1d9c26ee53ceecdce633b4ed1c345db3be9c5238f147eab2ee36de4857`. Report: [strict JSON](tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r2.json); archived redacted server/client logs and hashes are indexed in [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md) and `release-evidence.json`. The full Conditions catalog remains incomplete.
 
 ## Focused MythicMobs pack-condition fixture
 

@@ -8,7 +8,7 @@ ai:
   triggers:
     on-damage:
       require:
-        - damage-cause ENTITY_ATTACK
+        - damage-cause
         - damage-amount >=2
         - damage-tag tag=FIRE
       do:
