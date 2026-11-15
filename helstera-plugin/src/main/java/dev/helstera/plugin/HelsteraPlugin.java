@@ -14494,9 +14494,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         chainContext, chainCandidates, java.util.List.of());
                 boolean contextChainCondition = conditionalChainResult.equals(java.util.List.of(farTarget))
                         && conditionalChainExcluded.isEmpty();
+                var conditionalAliasResult = dev.helstera.api.behavior.Targeters.select(
+                        "@nearest-conditional-target{c=[target-health-above 50];limit=1}",
+                        chainContext, chainCandidates, java.util.List.of());
+                var conditionalAliasUnderscoreResult = dev.helstera.api.behavior.Targeters.select(
+                        "@nearest_conditional_target{condition=[target-health-above 50];limit=1}",
+                        chainContext, chainCandidates, java.util.List.of());
+                boolean contextConditionalAliases = conditionalAliasResult.equals(java.util.List.of(farTarget))
+                        && conditionalAliasUnderscoreResult.equals(java.util.List.of(farTarget));
+                boolean contextConditionalPrivateRejected = dev.helstera.api.behavior.Targeters.select(
+                        "@nearestConditionalTarget{conditions=[target-health-above 50];unknown=true}",
+                        chainContext, chainCandidates, java.util.List.of()).isEmpty()
+                        && dev.helstera.api.behavior.Targeters.select(
+                        "@nearestConditionalTarget{conditions=[target-health-above 50];c=[target-health-above 50]}",
+                        chainContext, chainCandidates, java.util.List.of()).isEmpty();
                 getLogger().info("context-targeter-chain targets=" + contextChainTargets
                         + " trigger=" + contextChainTrigger + " excluded=" + contextChainExcluded
-                        + " condition=" + contextChainCondition);
+                        + " condition=" + contextChainCondition
+                        + " aliases=" + contextConditionalAliases
+                        + " private-invalid-rejected=" + contextConditionalPrivateRejected);
                 boolean argumentsRejected = true;
                 for (String spec : java.util.List.of("@living{r=1;radius=10}",
                         "@living{count=1;limit=2}", "@living{filter=!unknown-entity}",

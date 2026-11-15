@@ -29,9 +29,12 @@ evidence; the full release fixture does not load MythicMobs. See the
 The next targeter contract slice is now implemented in the shared API: spatial
 targeters reject malformed, negative, non-finite, duplicate, and unknown private
 arguments instead of falling back to handler defaults. API coverage includes
-inline and fallback arguments for sphere, ring, cone, line-of-sight, and line;
-these checks have no new Paper fixture yet, so the Context targeters row remains
-`mapped-unverified`.
+inline and fallback arguments for sphere, ring, cone, line-of-sight, and line.
+Focused exploratory Paper fixture `srv-paper-targeter-context-alias-strict-20261115-r3`
+also verifies conditional-targeter hyphen/underscore aliases, `condition`/`c`
+argument aliases, and fail-closed private-argument validation with two real
+players. This does not replace the full strict catalog, so the Context targeters
+row remains `mapped-unverified`.
 
 ## Completion contract
 

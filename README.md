@@ -1416,6 +1416,8 @@ work is:
 
 Latest strict report has 460 probes, zero incomplete (441 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-audience-targeter-strict-20261115-r1`; its `audienceDispatch` coverage includes production shared `@Targeter` dispatch, `limit=1`, entity filters, and fail-closed malformed, duplicate, empty, and non-finite arguments.
 
+Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-20261115-r3` adds two-player production coverage for conditional-targeter hyphen/underscore aliases, `condition`/`c` aliases, chained condition filtering, and fail-closed unknown, duplicate, empty, and malformed private arguments. It records 434 passed probes, 19 observed expected rejections, and one unrelated `not-observed` probe; it does not change the full-catalog release boundary or the `mapped-unverified` Context Targeters row.
+
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.

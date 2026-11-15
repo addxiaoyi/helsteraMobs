@@ -1184,9 +1184,22 @@ class TargeterOrderingTest {
             assertEquals(List.of(high), Targeters.select(
                     "@nearestConditionalTarget{conditions=[health-above 0.5];count=1}",
                     context, candidates, List.of()));
+            assertEquals(List.of(high), Targeters.select(
+                    "@nearest-conditional-target{condition=[health-above 0.5];limit=1}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(high), Targeters.select(
+                    "@nearest_conditional_target{c=[health-above 0.5];limit=1}",
+                    context, candidates, List.of()));
             assertEquals(List.of(), Targeters.select(
                     "@nearestConditionalTarget{conditions=[health-above 0.5];radius=NaN}",
                     context, candidates, List.of()));
+            for (String invalid : List.of(
+                    "@nearestConditionalTarget{conditions=[health-above 0.5];unknown=true}",
+                    "@nearestConditionalTarget{conditions=[health-above 0.5];c=[health-above 0.5]}",
+                    "@nearestConditionalTarget{conditions=[]}",
+                    "@nearestConditionalTarget{conditions=}")) {
+                assertEquals(List.of(), Targeters.select(invalid, context, candidates, List.of()), invalid);
+            }
         } finally {
             Targeters.conditionProvider(null);
         }

@@ -282,7 +282,10 @@ public final class Targeters {
             Collection<? extends LivingEntity> candidates, List<String> fallbackArgs, boolean expandWorld) {
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!parsed.valid()) return List.of();
-        if (CONTEXT_TARGETERS.contains(parsed.name())) return selectConditional(spec, context, candidates);
+        if (CONTEXT_TARGETERS.contains(parsed.name())) {
+            return validConditionalTargeterArguments(parsed)
+                    ? selectConditional(spec, context, candidates) : List.of();
+        }
         // LastDamager has no targeter-specific arguments. Generic filters such as
         // limit/radius are still handled below, while an unknown named or
         // positional argument must not silently broaden the targeter contract.
@@ -537,7 +540,8 @@ public final class Targeters {
             int equals = raw.indexOf('=');
             if (equals < 0) continue;
             String key = raw.substring(0, equals).trim();
-            if (!key.equalsIgnoreCase("conditions") && !key.equalsIgnoreCase("condition")) continue;
+            if (!key.equalsIgnoreCase("conditions") && !key.equalsIgnoreCase("condition")
+                    && !key.equalsIgnoreCase("c")) continue;
             String value = raw.substring(equals + 1).trim();
             if (value.startsWith("[") && value.endsWith("]")) {
                 value = value.substring(1, value.length() - 1).trim();
@@ -545,6 +549,30 @@ public final class Targeters {
             return splitNestedArguments(value, ';', ',');
         }
         return List.of();
+    }
+
+    /**
+     * Validates the private argument contract of conditional targeters.
+     *
+     * <p>The generic parser preserves unknown named arguments for handlers that
+     * own their own grammar. Conditional targeters have one private argument:
+     * {@code conditions}, with Mythic's {@code condition} and {@code c} aliases.
+     * A typo must fail closed instead of being silently ignored.</p>
+     */
+    private static boolean validConditionalTargeterArguments(ParsedSpec parsed) {
+        boolean conditionSeen = false;
+        for (String raw : parsed.args()) {
+            if (raw == null || raw.isBlank()) return false;
+            int equals = raw.indexOf('=');
+            if (equals <= 0 || equals == raw.length() - 1) return false;
+            String key = raw.substring(0, equals).trim();
+            if (!key.equalsIgnoreCase("conditions") && !key.equalsIgnoreCase("condition")
+                    && !key.equalsIgnoreCase("c")) return false;
+            if (conditionSeen) return false;
+            conditionSeen = true;
+            if (conditionalConditions(List.of(raw)).isEmpty()) return false;
+        }
+        return conditionSeen;
     }
 
     private static List<String> splitNestedArguments(String raw, char primary, char secondary) {
@@ -1507,7 +1535,8 @@ public final class Targeters {
             return switch (compact) {
                 case "nearestentity", "nearestliving", "nearestlivingentity", "nearestmob",
                         "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld",
-                        "playersonserver", "targetoftarget", "lastdamager" -> compact;
+                        "playersonserver", "targetoftarget", "lastdamager",
+                        "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer" -> compact;
                 case "server", "everyone" -> "playersonserver";
                 default -> normalized;
             };
