@@ -209,7 +209,7 @@ public final class MythicSpec {
             String k = p.substring(0, eq).trim().toLowerCase(Locale.ROOT);
             if (k.equals("repeat-interval")) k = "repeatinterval";
             if (k.equals("skill")) k = "s";
-            if (!java.util.Set.of("s", "delay", "repeat", "repeatinterval").contains(k)
+            if (!java.util.Set.of("s", "delay", "repeat", "repeatinterval", "cooldown").contains(k)
                     || !seen.add(k)) return null;
             String v = p.substring(eq + 1).trim();
             if (v.isEmpty()) return null;

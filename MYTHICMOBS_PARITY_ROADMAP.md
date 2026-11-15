@@ -112,6 +112,11 @@ Matrix rows: `Mechanics catalog`, `Skills importer`, `Context targeters`,
   production runtime actions.
 - Finish metaskill reference, parameter, inheritance, target-scope, and nested
   execution semantics; ensure unsupported lines remain visible.
+- Nested `skill{s=...;cooldown=...}` now preserves validated cooldown
+  metadata through Mythic import and applies a per-instance runtime gate;
+  malformed, duplicate, and non-nested cooldowns remain preserved or rejected.
+  A production Paper observation is still required before this slice can change
+  the Skills importer row from `mapped-unverified`.
 - Complete official targeter names, filters, modifiers, ordering, limits,
   chaining, location/entity distinctions, and invalid-input behavior.
 - Verify trigger registration, event actor/target/trigger context, priority,

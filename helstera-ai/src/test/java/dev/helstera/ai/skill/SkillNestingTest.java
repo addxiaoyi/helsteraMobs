@@ -143,6 +143,49 @@ class SkillNestingTest {
     }
 
     @Test
+    @DisplayName("inline nested skill cooldown is strict and scoped per instance")
+    void inlineNestedSkillCooldownIsPerInstance() throws InterruptedException {
+        var fired = new AtomicInteger();
+        registry.registerAction("probe", context -> fired.incrementAndGet());
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  inner:
+                    on-decision: [probe]
+                """).getConfigurationSection("skills"));
+
+        String action = svc.bindAction("skill{s=inner;cooldown=30ms}");
+        assertNotNull(action, svc.warnings().toString());
+        var first = newInstanceCtx(101);
+        var second = newInstanceCtx(102);
+
+        assertTrue(registry.runAction(action, first));
+        assertTrue(registry.runAction(action, first));
+        assertEquals(1, fired.get(), "同一实例的第二次 inline 调用应被冷却拦截");
+        assertTrue(registry.runAction(action, second));
+        assertEquals(2, fired.get());
+
+        Thread.sleep(45);
+        assertTrue(registry.runAction(action, first));
+        assertEquals(3, fired.get());
+    }
+
+    @Test
+    void invalidInlineNestedCooldownFailsClosed() {
+        var svc = service();
+        svc.loadSkills(yaml("""
+                skills:
+                  inner:
+                    on-decision: []
+                """).getConfigurationSection("skills"));
+
+        assertNull(svc.bindAction("skill{s=inner;cooldown=NaN}"));
+        assertNull(svc.bindAction("skill{s=inner;cooldown=-1s}"));
+        assertNull(svc.bindAction("skill{s=inner;cooldown=1s;cooldown=2s}"));
+        assertTrue(svc.warnings().stream().anyMatch(w -> w.contains("inline cooldown")));
+    }
+
+    @Test
     @DisplayName("技能 A 调用技能 B，两级动作按序执行")
     void executesNestedSkill() {
         var fired = new AtomicInteger();

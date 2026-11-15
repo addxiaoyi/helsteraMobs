@@ -58,6 +58,15 @@ class MythicSkillSpecTest {
     }
 
     @Test
+    void parsesInlineNestedSkillCooldownAndRejectsDuplicates() {
+        MythicSkillSpec spec = MythicSkillSpec.parse("skill{s=ember;cooldown=250ms}");
+        assertEquals("ember", spec.arguments().get("s"));
+        assertEquals("250ms", spec.arguments().get("cooldown"));
+        assertThrows(IllegalArgumentException.class,
+                () -> MythicSkillSpec.parse("skill{s=ember;cooldown=1s;cooldown=2s}"));
+    }
+
+    @Test
     void preservesTargeterChainAndExecutionMetadata() {
         var spec = MythicSkillSpec.parse(
                 "damage{amount=5} @PlayersInWorld{limit=2} > @NearestMob ~onAttack 25% ?health{h=1}");

@@ -1844,6 +1844,14 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
 
         String mechanic = raw.split("[\\s{:]+", 2)[0].toLowerCase(Locale.ROOT);
+        if (!java.util.Set.of("skill", "skillmechanic").contains(mechanic)
+                && firstArg(raw, "cooldown") != null) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Inline cooldown is only supported on nested skill references; original line preserved.", "WARN");
+            return;
+        }
         if (!java.util.Set.of("skill", "skillmechanic", "dropitem").contains(mechanic)
                 && invalidExecutionOptions(raw)) {
             scan.unsupported.add(raw);
@@ -1975,7 +1983,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         String ref = MythicSpec.skillRef(raw);
         if (ref != null) {
             String suffix = executionSuffix(raw).trim();
-            boolean executionMetadata = firstArg(raw, "delay", "repeat", "repeatinterval", "repeat-interval") != null
+            boolean executionMetadata = firstArg(raw, "delay", "repeat", "repeatinterval", "repeat-interval", "cooldown") != null
                     || suffix.startsWith("@") || suffix.startsWith("?") || suffix.endsWith("%");
             if (executionMetadata) decisions.add(raw);
             else if (standaloneSkill) decisions.add("cast-skill " + ref);
@@ -2098,7 +2106,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (equals <= 0) continue;
             String name = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
             if (name.equals("repeat-interval")) name = "repeatinterval";
-            if (!java.util.Set.of("delay", "repeat", "repeatinterval").contains(name)) continue;
+            if (!java.util.Set.of("delay", "repeat", "repeatinterval", "cooldown").contains(name)) continue;
             String value = argument.substring(equals + 1).trim().toLowerCase(Locale.ROOT);
             if (!seen.add(name) || value.isEmpty()) return true;
             try {
@@ -2107,6 +2115,11 @@ public final class MythicMobsImporter implements MigrationImporter {
                     if (repeat < 0) return true;
                 } else {
                     double ticks;
+                    if (name.equals("cooldown")) {
+                        double millis = parseDurationMillis(value);
+                        if (!Double.isFinite(millis) || millis < 0 || millis >= Long.MAX_VALUE) return true;
+                        continue;
+                    }
                     if (value.endsWith("ms")) ticks = Double.parseDouble(value.substring(0, value.length() - 2)) / 50.0;
                     else if (value.endsWith("s")) ticks = Double.parseDouble(value.substring(0, value.length() - 1)) * 20.0;
                     else ticks = Double.parseDouble(value);
@@ -2118,6 +2131,46 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
         }
         return repeat == Integer.MAX_VALUE && interval > 0;
+    }
+
+    private static double parseDurationMillis(String raw) {
+        String number = raw;
+        double multiplier = 1000.0;
+        if (raw.endsWith("millis")) {
+            number = raw.substring(0, raw.length() - 6);
+            multiplier = 1.0;
+        } else if (raw.endsWith("milli")) {
+            number = raw.substring(0, raw.length() - 5);
+            multiplier = 1.0;
+        } else if (raw.endsWith("ms")) {
+            number = raw.substring(0, raw.length() - 2);
+            multiplier = 1.0;
+        } else if (raw.endsWith("ticks")) {
+            number = raw.substring(0, raw.length() - 5);
+            multiplier = 50.0;
+        } else if (raw.endsWith("tick")) {
+            number = raw.substring(0, raw.length() - 4);
+            multiplier = 50.0;
+        } else if (raw.endsWith("t")) {
+            number = raw.substring(0, raw.length() - 1);
+            multiplier = 50.0;
+        } else if (raw.endsWith("mins")) {
+            number = raw.substring(0, raw.length() - 4);
+            multiplier = 60_000.0;
+        } else if (raw.endsWith("min")) {
+            number = raw.substring(0, raw.length() - 3);
+            multiplier = 60_000.0;
+        } else if (raw.endsWith("m")) {
+            number = raw.substring(0, raw.length() - 1);
+            multiplier = 60_000.0;
+        } else if (raw.endsWith("secs")) {
+            number = raw.substring(0, raw.length() - 4);
+        } else if (raw.endsWith("sec")) {
+            number = raw.substring(0, raw.length() - 3);
+        } else if (raw.endsWith("s")) {
+            number = raw.substring(0, raw.length() - 1);
+        }
+        return Double.parseDouble(number.trim()) * multiplier;
     }
 
     private static boolean hasUnsupportedDropItemArguments(String raw) {

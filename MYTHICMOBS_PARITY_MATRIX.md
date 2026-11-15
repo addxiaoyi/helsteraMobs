@@ -3048,6 +3048,12 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 
 ## 7. Migration and Verification
 
+The Skills importer slice now preserves validated inline nested skill
+cooldowns (`skill{s=...;cooldown=...}`) and binds them to per-instance runtime
+gates. Duplicate, malformed, and non-nested cooldowns remain preserved or
+rejected. This has importer/runtime tests but no new Paper fixture, so the
+Skills importer row remains `mapped-unverified`.
+
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
 | `Options.HealOnReload` | implemented-runtime | Dedicated boolean parsing accepts `true/false`, `yes/no`, and `1/0`; valid values reach the managed runtime on reload and chunk load, while malformed values remain under `mob.unsupported.Options.HealOnReload` with warnings. Unit/importer tests cover parsing, preservation, timing, and invalid entity guards. Strict Paper fixture `srv-paper-heal-on-reload-strict-20261109-r1` verifies imported true/false behavior on real managed mobs in the complete 410-probe release catalog. |

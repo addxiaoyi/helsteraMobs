@@ -114,6 +114,7 @@ public record MythicSkillSpec(
             if (eq > 0) {
                 String key = value.substring(0, eq).trim().toLowerCase(Locale.ROOT);
                 if ((key.equals("delay") || key.equals("repeat") || key.equals("repeatinterval")
+                        || key.equals("cooldown")
                         || key.equals("repeat-interval"))
                         && (args.containsKey(key)
                         || key.equals("repeatinterval") && args.containsKey("repeat-interval")

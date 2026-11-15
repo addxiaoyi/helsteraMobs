@@ -1381,6 +1381,7 @@ class ImportersTest {
                     Skills:
                       - message{m=before}
                       - skill{s=Child}
+                      - skill{s=Child;cooldown=1s}
                       - message{m=after}
                 """);
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
@@ -1389,6 +1390,7 @@ class ImportersTest {
         assertEquals(List.of(
                         "message-target \"before\"",
                         "cast-skill Child",
+                        "skill{s=Child;cooldown=1s}",
                         "message-target \"after\""),
                 target.getStringList("skills.parent.on-decision"));
     }
@@ -1396,6 +1398,7 @@ class ImportersTest {
     @Test
     void skillReferenceStopsAtMechanicClosingBrace() {
         assertEquals("child", MythicSpec.skillRef("skill{s=child} @Target{limit=1}"));
+        assertEquals("child", MythicSpec.skillRef("skill{s=child;cooldown=1s}"));
         assertEquals("child", MythicSpec.skillRef("skill{delay=2;skill=child} ?health{value=>1}"));
         assertNull(MythicSpec.skillRef("skill{s=child"));
         assertNull(MythicSpec.skillRef("skill{note=\"text;s=child\"}"));
@@ -1418,11 +1421,13 @@ class ImportersTest {
                       - 'skill{s=child;repeat=2147483647;repeatinterval=1}'
                       - 'skill{s=child;repeatinterval=1e100s}'
                       - 'skill{s=child;delay=50ms;repeat=1;repeatinterval=0.25s}'
+                      - 'skill{s=child;cooldown=250ms}'
                 """);
         var entries = new MythicMobsImporter().convert(file);
         var target = YamlConfiguration.loadConfiguration(new StringReader(
                 String.valueOf(plan(entries).orElseThrow().get("content"))));
-        assertEquals(List.of("skill{s=child;delay=50ms;repeat=1;repeatinterval=0.25s}"),
+        assertEquals(List.of("skill{s=child;delay=50ms;repeat=1;repeatinterval=0.25s}",
+                        "skill{s=child;cooldown=250ms}"),
                 target.getStringList("skills.parent.on-decision"));
         assertEquals(5, target.getStringList("skills.parent.unsupported").size());
         assertEquals(5, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
@@ -1438,6 +1443,24 @@ class ImportersTest {
                 String.valueOf(plan(mobEntries).orElseThrow().get("content"))));
         assertEquals(List.of("skill{s=child;repeat=-1} ~onSpawn"), mobTarget.getStringList("mob.unsupported.Skills"));
         assertTrue(mobTarget.getStringList("mob.triggers.on-spawn.do").isEmpty());
+    }
+
+    @Test
+    void nonNestedCooldownIsPreservedInsteadOfBeingDropped(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/invalid-cooldown-scope.yml", """
+                skills:
+                  parent:
+                    Skills:
+                      - 'message{m=hello;cooldown=1s}'
+                """);
+        var entries = new MythicMobsImporter().convert(file);
+        var target = YamlConfiguration.loadConfiguration(new StringReader(
+                String.valueOf(plan(entries).orElseThrow().get("content"))));
+        assertTrue(target.getStringList("skills.parent.on-decision").isEmpty());
+        assertEquals(List.of("message{m=hello;cooldown=1s}"),
+                target.getStringList("skills.parent.unsupported"));
+        assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Inline cooldown")));
     }
 
     @Test

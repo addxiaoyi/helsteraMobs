@@ -31,7 +31,8 @@ import java.util.function.Consumer;
  * 环上的技能会被拦下并告警，而不是等到运行期栈溢出；运行期另有深度守卫兜底
  * ——配置是外部输入，不能假设它一定无环。</p>
  *
- * <p><b>冷却</b>：技能可写 {@code cooldown: 6s}，按「实例 + 技能」记录上次放行时间。</p>
+ * <p><b>冷却</b>：命名技能可写 {@code cooldown: 6s}；嵌套 Mythic 引用也支持
+ * {@code skill{s=name;cooldown=6s}}。两者都按实例隔离，后者还按绑定动作独立计时。</p>
  *
  * <p>线程约束：全部方法要求主线程，在插件启用阶段调用。</p>
  */
@@ -55,6 +56,8 @@ public final class SkillService {
     private final ThreadLocal<Deque<MetaskillConditionFrame>> metaskillConditionFrames = new ThreadLocal<>();
     /** 冷却记录："实例id|技能名" -> 上次放行时间（epoch 毫秒）。 */
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();
+    /** Inline Mythic skill-mechanic cooldowns: "实例id|绑定动作键" -> last invocation. */
+    private final Map<String, Long> inlineCooldowns = new ConcurrentHashMap<>();
     /** Runtime SetSkillCooldown overrides: "实例id|技能名" -> duration in milliseconds. */
     private final Map<String, Long> cooldownOverrides = new ConcurrentHashMap<>();
     private volatile java.util.function.Function<org.bukkit.entity.Entity,
@@ -1041,6 +1044,19 @@ public final class SkillService {
             return null;
         }
         String ref = parseSkillRef(spec);
+        long inlineCooldownMillis = 0;
+        if (parsed != null && parsed.arguments().containsKey("cooldown")) {
+            if (ref == null) {
+                warn("inline cooldown is only supported on a nested skill reference: \"" + spec + "\"");
+                return null;
+            }
+            try {
+                inlineCooldownMillis = parseInlineCooldownMillis(parsed.arguments().get("cooldown"));
+            } catch (IllegalArgumentException e) {
+                warn("invalid inline cooldown in \"" + spec + "\": " + e.getMessage());
+                return null;
+            }
+        }
         String nestedAction = ref != null ? bindCast(ref)
                 : "random-skill".equals(name) ? bindRandomSkill(args) : null;
         if ("random-skill".equals(name) && nestedAction == null) return null;
@@ -1098,12 +1114,13 @@ public final class SkillService {
         String key = actionName + (factoryArgs.isEmpty() ? "" : ":" + String.join(" ", factoryArgs));
         if (chance != null || !conditionKeys.isEmpty() || !triggerConditionKeys.isEmpty()
                 || !targetConditionKeys.isEmpty() || targeterSpec != null
-                || delayTicks > 0 || repeat > 0 || repeatInterval > 0) {
+                || delayTicks > 0 || repeat > 0 || repeatInterval > 0 || inlineCooldownMillis > 0) {
             key += "|meta:" + (chance == null ? "" : chance) + ":"
                     + String.join(",", conditionKeys) + ":@" + String.join(",", targetConditionKeys)
                     + ":~" + String.join(",", triggerConditionKeys)
                     + ":" + (targeterSpec == null ? "" : targeterSpec)
-                    + ":delay=" + delayTicks + ":repeat=" + repeat + ":interval=" + repeatInterval;
+                    + ":delay=" + delayTicks + ":repeat=" + repeat + ":interval=" + repeatInterval
+                    + ":cooldown=" + inlineCooldownMillis;
         }
         if (bound.add("a:" + key)) {
             try {
@@ -1117,6 +1134,22 @@ public final class SkillService {
                 } else if ("cancel-cast".equals(actionName) && factory != null) {
                     action = ctx -> {
                         if (ctx != null && ctx.instanceValid()) cancelCast(ctx.instance().instanceId());
+                    };
+                } else if (ref != null) {
+                    String nestedSkill = ref;
+                    String inlineScope = key;
+                    long requiredInlineCooldown = inlineCooldownMillis;
+                    action = ctx -> {
+                        if (requiredInlineCooldown > 0) {
+                            int instanceId = ctx != null && ctx.instance() != null
+                                    ? ctx.instance().instanceId() : -1;
+                            String cooldownKey = instanceId + "|" + inlineScope;
+                            long now = System.currentTimeMillis();
+                            Long previous = inlineCooldowns.get(cooldownKey);
+                            if (previous != null && now - previous < requiredInlineCooldown) return;
+                            inlineCooldowns.put(cooldownKey, now);
+                        }
+                        castSkill(nestedSkill, ctx);
                     };
                 } else {
                     action = factory != null ? factory.create(factoryArgs)
@@ -1255,7 +1288,7 @@ public final class SkillService {
 
     private static boolean isExecutionAttribute(String key) {
         return switch (key.toLowerCase(Locale.ROOT)) {
-            case "delay", "repeat", "repeatinterval", "repeat-interval" -> true;
+            case "delay", "repeat", "repeatinterval", "repeat-interval", "cooldown" -> true;
             default -> false;
         };
     }
@@ -1410,6 +1443,7 @@ public final class SkillService {
         }
         defs.clear();
         cooldowns.clear();
+        inlineCooldowns.clear();
         cooldownOverrides.clear();
         activeCasts.clear();
         skillQueue.clear();
@@ -2110,6 +2144,7 @@ public final class SkillService {
         if (chains != null) chains.forEach(chain -> chain[0] = false);
         String prefix = instanceId + "|";
         cooldowns.keySet().removeIf(key -> key.startsWith(prefix));
+        inlineCooldowns.keySet().removeIf(key -> key.startsWith(prefix));
         cooldownOverrides.keySet().removeIf(key -> key.startsWith(prefix));
         activeCasts.keySet().removeIf(key -> key.startsWith(prefix));
         skillQueue.remove(instanceId);
@@ -2208,6 +2243,59 @@ public final class SkillService {
             return (long) Math.max(0, Double.parseDouble(s) * 1000);
         } catch (NumberFormatException e) {
             return 0;
+        }
+    }
+
+    /** Parses an inline Mythic skill-mechanic cooldown without silently disabling it. */
+    private static long parseInlineCooldownMillis(String raw) {
+        if (raw == null || raw.isBlank()) throw new IllegalArgumentException("value is blank");
+        String value = raw.trim().toLowerCase(Locale.ROOT);
+        String number = value;
+        double multiplier = 1000.0;
+        if (value.endsWith("millis")) {
+            number = value.substring(0, value.length() - 6).trim();
+            multiplier = 1.0;
+        } else if (value.endsWith("milli")) {
+            number = value.substring(0, value.length() - 5).trim();
+            multiplier = 1.0;
+        } else if (value.endsWith("ms")) {
+            number = value.substring(0, value.length() - 2).trim();
+            multiplier = 1.0;
+        } else if (value.endsWith("ticks")) {
+            number = value.substring(0, value.length() - 5).trim();
+            multiplier = 50.0;
+        } else if (value.endsWith("tick")) {
+            number = value.substring(0, value.length() - 4).trim();
+            multiplier = 50.0;
+        } else if (value.endsWith("t")) {
+            number = value.substring(0, value.length() - 1).trim();
+            multiplier = 50.0;
+        } else if (value.endsWith("mins")) {
+            number = value.substring(0, value.length() - 4).trim();
+            multiplier = 60_000.0;
+        } else if (value.endsWith("min")) {
+            number = value.substring(0, value.length() - 3).trim();
+            multiplier = 60_000.0;
+        } else if (value.endsWith("m")) {
+            number = value.substring(0, value.length() - 1).trim();
+            multiplier = 60_000.0;
+        } else if (value.endsWith("secs")) {
+            number = value.substring(0, value.length() - 4).trim();
+        } else if (value.endsWith("sec")) {
+            number = value.substring(0, value.length() - 3).trim();
+        } else if (value.endsWith("s")) {
+            number = value.substring(0, value.length() - 1).trim();
+        }
+        try {
+            double amount = Double.parseDouble(number);
+            double millis = amount * multiplier;
+            if (!Double.isFinite(amount) || !Double.isFinite(millis) || amount < 0
+                    || millis < 0 || millis >= Long.MAX_VALUE) {
+                throw new NumberFormatException();
+            }
+            return (long) Math.ceil(millis);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("expected a finite non-negative duration", e);
         }
     }
 
