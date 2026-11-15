@@ -812,6 +812,23 @@ class MmConditionsTest {
     }
 
     @Test
+    void officialStatDamageModifierConditionMapsAliasesAndDefault() {
+        assertEquals("stat-damage-modifier 1", t("?statDamageModifier"));
+        assertEquals("stat-damage-modifier 1.01", t("?statDamageModifier{m=1.01}"));
+        assertEquals("stat-damage-modifier 0.99", t("?statDamage{damage=0.99}"));
+        assertEquals("stat-damage-modifier 0.8", t("?statDamageModifier{value=0.8}"));
+        for (String invalid : List.of(
+                "?statDamageModifier{m=NaN}",
+                "?statDamageModifier{m=Infinity}",
+                "?statDamageModifier{m=1to2}",
+                "?statDamageModifier{m=1;unknown=true}",
+                "?statDamageModifier{m=1;value=2}")) {
+            assertFalse(translated(invalid), invalid);
+            assertEquals(invalid, t(invalid), invalid);
+        }
+    }
+
+    @Test
     void officialOwnerConditionMapsAliases() {
         assertEquals("is-owner", t("?owner"));
         assertEquals("is-owner", t("?isOwner"));

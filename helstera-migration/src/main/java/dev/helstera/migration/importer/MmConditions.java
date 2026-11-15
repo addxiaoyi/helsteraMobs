@@ -51,6 +51,9 @@ public final class MmConditions {
             "uuid", "uuid", "u", "uuid");
     private static final Map<String, String> DAMAGE_CAUSE_ARGUMENTS = Map.of(
             "damagecause", "damagecause", "cause", "damagecause", "c", "damagecause");
+    private static final Map<String, String> STAT_DAMAGE_MODIFIER_ARGUMENTS = Map.of(
+            "value", "value", "v", "value", "amount", "value", "a", "value",
+            "damage", "value", "d", "value", "multiplier", "value", "m", "value");
     private static final Map<String, String> TRIGGER_ITEM_TYPE_ARGUMENTS = Map.of(
             "types", "types", "type", "types", "t", "types", "material", "types",
             "mat", "types", "m", "types", "items", "types", "item", "types", "i", "types");
@@ -976,6 +979,15 @@ public final class MmConditions {
             if (value == null || value.isBlank()) return new Mapped("damage-amount >0", true);
             return !validNumberRange(value) ? new Mapped(s, false)
                     : new Mapped("damage-amount " + value, true);
+        }
+        if ("statdamagemodifier".equals(name) || "statdamage".equals(name)) {
+            Map<String, String> arguments = strictValueArguments(
+                    body, STAT_DAMAGE_MODIFIER_ARGUMENTS, "value");
+            if (arguments == null) return new Mapped(s, false);
+            String value = arguments.getOrDefault("value", "1");
+            return finiteNumber(value) == null
+                    ? new Mapped(s, false)
+                    : new Mapped("stat-damage-modifier " + value, true);
         }
         if ("damagetag".equals(name) || "damagehastag".equals(name)) {
             String tag = keyedArgument(body, "tag", "t");

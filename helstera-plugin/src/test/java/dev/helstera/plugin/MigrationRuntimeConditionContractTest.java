@@ -59,6 +59,36 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Mythic StatDamageModifier reaches the Paper damage multiplier condition")
+    void importedStatDamageModifierReachesRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var event = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        var base = org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE;
+        when(event.isApplicable(base)).thenReturn(true);
+        when(event.getOriginalDamage(base)).thenReturn(10.0);
+        when(event.getFinalDamage()).thenReturn(10.2);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1.0, -1, 0, "on-damage", null, target, List.of(target),
+                null, null, event);
+
+        for (String source : List.of("?statDamageModifier{m=1.0}", "?statDamage{damage=1.0}")) {
+            var imported = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(imported.translated(), source);
+            assertEquals("stat-damage-modifier 1.0", imported.condition(), source);
+            String key = service.bindCondition(imported.condition());
+            assertNotNull(key, service.warnings().toString());
+            assertTrue(registry.testCondition(key, context), source);
+        }
+        assertFalse(registry.testCondition(service.bindCondition("stat-damage-modifier 1.2"), context));
+        assertNull(service.bindCondition("stat-damage-modifier NaN"));
+        assertFalse(registry.testCondition(service.bindCondition("stat-damage-modifier 0"),
+                dev.helstera.api.behavior.BehaviorContext.of(
+                        null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "on-damage")));
+    }
+
+    @Test
     @DisplayName("imported Mythic Premium aliases use the optional runtime provider")
     void importedMythicPremiumAliasesReachRuntime() {
         var registry = new BehaviorRegistryImpl();

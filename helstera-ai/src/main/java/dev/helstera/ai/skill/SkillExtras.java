@@ -3782,6 +3782,34 @@ public final class SkillExtras {
                                 && range.contains(damage.getFinalDamage());
                     };
                 }),
+                Map.entry("stat-damage-modifier", (SkillCatalog.ConditionFactory) a -> {
+                    double minimum = a == null || a.isEmpty() ? 1.0 : num(a, 0, 1.0);
+                    if (!Double.isFinite(minimum)) {
+                        throw new IllegalArgumentException("stat-damage-modifier value must be finite");
+                    }
+                    return ctx -> {
+                        if (ctx == null) return false;
+                        var event = ctx.cancellableEvent().orElse(null);
+                        if (!(event instanceof org.bukkit.event.entity.EntityDamageEvent damage)) return false;
+                        try {
+                            if (!damage.isApplicable(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE)) {
+                                return false;
+                            }
+                            double original = damage.getOriginalDamage(
+                                    org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE);
+                            double finalDamage = damage.getFinalDamage();
+                            if (!Double.isFinite(original) || !Double.isFinite(finalDamage)
+                                    || original == 0.0) return false;
+                            double multiplier = finalDamage / original;
+                            return Double.isFinite(multiplier) && multiplier > minimum;
+                        } catch (IllegalArgumentException | UnsupportedOperationException ex) {
+                            return false;
+                        } catch (RuntimeException ex) {
+                            SkillFaults.swallow("SkillExtras#statDamageModifier");
+                            return false;
+                        }
+                    };
+                }),
                 Map.entry("last-damage-cause", (SkillCatalog.ConditionFactory) a -> {
                     String wanted = str(a, 0, "ENTITY_ATTACK");
                     return ctx -> {

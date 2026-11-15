@@ -500,6 +500,11 @@
       "status": "passed"
     },
     {
+      "id": "statDamageModifierCondition",
+      "status": "passed",
+      "requiredObservationPattern": "skill-trigger .*stat-damage-modifier-condition=true .*stat-damage-modifier-neutral-rejected=true .*stat-damage-modifier-imported=true"
+    },
+    {
       "id": "damageMeleeMechanic",
       "status": "passed"
     },

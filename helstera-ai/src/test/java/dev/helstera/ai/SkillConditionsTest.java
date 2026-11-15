@@ -1281,6 +1281,35 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("StatDamageModifier 使用 Paper 伤害事件的原始/最终伤害倍率")
+    void officialStatDamageModifierConditionUsesDamageEventMultiplier() {
+        LivingEntity target = mock(LivingEntity.class);
+        var event = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        var base = org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE;
+        when(event.isApplicable(base)).thenReturn(true);
+        when(event.getOriginalDamage(base)).thenReturn(10.0);
+        when(event.getFinalDamage()).thenReturn(10.2);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "on-damage", null, target, List.of(target), null, null, event);
+
+        assertTrue(extraFactory("stat-damage-modifier").create(List.of("1.0")).test(context));
+        assertTrue(extraFactory("stat-damage-modifier").create(List.of()).test(context));
+        assertFalse(extraFactory("stat-damage-modifier").create(List.of("1.2")).test(context));
+        assertFalse(extraFactory("stat-damage-modifier").create(List.of("1.01")).test(ctx()));
+    }
+
+    @Test
+    @DisplayName("StatDamageModifier 在缺少可计算 BASE 时失败关闭")
+    void officialStatDamageModifierFailsClosedWithoutBaseDamage() {
+        LivingEntity target = mock(LivingEntity.class);
+        var event = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        when(event.isApplicable(org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE)).thenReturn(false);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "on-damage", null, target, List.of(target), null, null, event);
+        assertFalse(extraFactory("stat-damage-modifier").create(List.of("0")).test(context));
+    }
+
+    @Test
     @DisplayName("Owner 匹配 caster 的 Bukkit 或 Helstera owner，不回退到 target")
     void officialOwnerConditionMatchesCasterOwner() {
         var instance = mock(ModelInstance.class);

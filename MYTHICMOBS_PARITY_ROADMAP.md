@@ -12,13 +12,15 @@ Audited against the matrix on 2026-11-15:
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
 | `implemented-runtime` | 109 | A runtime implementation exists; the row's evidence still limits the claim. |
-| `mapped-unverified` | 33 | Mapping or partial runtime support exists, but the full stated behavior is not verified. |
+| `mapped-unverified` | 34 | Mapping or partial runtime support exists, but the full stated behavior is not verified. |
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is Paper 1.21.1-133, with 458 probes: 439
-passed, 19 expected rejections, and zero failed or incomplete. This proves only
-the registered probe catalog. MythicMobs 5.7.2 has separate focused evidence;
+The latest full release fixture is Paper 1.21.1-133, with 459 probes: 440
+passed, 19 expected rejections, and zero failed or incomplete. Its new
+`statDamageModifierCondition` observation is a synthetic event self-test; this
+proves only the registered probe catalog and does not establish naturally
+generated Paper damage-event parity. MythicMobs 5.7.2 has separate focused evidence;
 the full release fixture does not load MythicMobs. See the
 [release evidence index](tools/paper-integration/release-evidence.json),
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and
@@ -83,7 +85,9 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   negative, malformed, and state-restoration controls.
 - Preserve official per-condition defaults and validate argument aliases;
   `DamageCause` now defaults to `ENTITY_ATTACK` and has strict Paper release
-  evidence for its imported damage-trigger path.
+  evidence for its imported damage-trigger path. `StatDamageModifier` now has
+  importer/runtime coverage and a synthetic event self-test; add a naturally
+  generated Paper damage-event probe before treating the condition as verified.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

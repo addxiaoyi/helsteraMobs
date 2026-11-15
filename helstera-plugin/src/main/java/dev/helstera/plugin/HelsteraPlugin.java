@@ -23206,6 +23206,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean damageCauseCondition = false;
                     boolean damageCauseDefaultCondition = false;
                     boolean damageAmountCondition = false;
+                    boolean statDamageModifierCondition = false;
+                    boolean statDamageModifierNeutral = false;
+                    boolean statDamageModifierImported = false;
                     boolean damageTagCondition = false;
                     if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry damageBehaviors
                             && skillService instanceof dev.helstera.ai.skill.SkillService damageSkills) {
@@ -23215,6 +23218,52 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 probeDamage, probeDamage.getCause());
                         damageAmountCondition = damageBehaviors.testCondition(
                                 damageSkills.bindCondition("damage-amount >=2"), damageContext);
+                        var statDamageModifiers = new java.util.EnumMap<
+                                org.bukkit.event.entity.EntityDamageEvent.DamageModifier, Double>(
+                                org.bukkit.event.entity.EntityDamageEvent.DamageModifier.class);
+                        statDamageModifiers.put(
+                                org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE, 2.0);
+                        var statDamageModifierFunctions = new java.util.EnumMap<
+                                org.bukkit.event.entity.EntityDamageEvent.DamageModifier,
+                                com.google.common.base.Function<Double, Double>>(
+                                org.bukkit.event.entity.EntityDamageEvent.DamageModifier.class);
+                        statDamageModifierFunctions.put(
+                                org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE,
+                                value -> value);
+                        var boostedStatDamage = new org.bukkit.event.entity.EntityDamageEvent(
+                                probeEntity,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+                                statDamageModifiers, statDamageModifierFunctions);
+                        boostedStatDamage.setDamage(
+                                org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE, 2.2);
+                        var statDamageContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                triggerProbe, probeLiving, 1.0, -1, 0, "on-damage", null,
+                                probeEntity, java.util.List.of(probeLiving), probeEntity.getLocation(), null,
+                                boostedStatDamage, boostedStatDamage.getCause());
+                        statDamageModifierCondition = damageBehaviors.testCondition(
+                                damageSkills.bindCondition("stat-damage-modifier 1.05"), statDamageContext);
+                        var neutralStatDamage = new org.bukkit.event.entity.EntityDamageEvent(
+                                probeEntity,
+                                org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK,
+                                statDamageModifiers, statDamageModifierFunctions);
+                        statDamageModifierNeutral = !damageBehaviors.testCondition(
+                                damageSkills.bindCondition("stat-damage-modifier 1"),
+                                dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                        triggerProbe, probeLiving, 1.0, -1, 0, "on-damage", null,
+                                        probeEntity, java.util.List.of(probeLiving), probeEntity.getLocation(), null,
+                                        neutralStatDamage, neutralStatDamage.getCause()));
+                        var importedStatDamage = dev.helstera.migration.importer.MmConditions
+                                .translate("?statDamageModifier{m=1.05}");
+                        var importedStatDamageAlias = dev.helstera.migration.importer.MmConditions
+                                .translate("?statDamage{damage=1.05}");
+                        statDamageModifierImported = importedStatDamage.translated()
+                                && importedStatDamageAlias.translated()
+                                && damageBehaviors.testCondition(
+                                damageSkills.bindCondition(importedStatDamage.condition()), statDamageContext)
+                                && damageBehaviors.testCondition(
+                                damageSkills.bindCondition(importedStatDamageAlias.condition()), statDamageContext)
+                                && !dev.helstera.migration.importer.MmConditions
+                                .translate("?statDamageModifier{m=NaN}").translated();
                         damageCauseCondition = damageBehaviors.testCondition(
                                 damageSkills.bindCondition("damage-cause ENTITY_ATTACK"), damageContext);
                         var importedDamageCause = dev.helstera.migration.importer.MmConditions
@@ -23452,6 +23501,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " damage-cause-default-condition=" + damageCauseDefaultCondition
                             + " damage-cause-condition=" + damageCauseCondition
                             + " damage-amount-condition=" + damageAmountCondition
+                            + " stat-damage-modifier-condition=" + statDamageModifierCondition
+                            + " stat-damage-modifier-neutral-rejected=" + statDamageModifierNeutral
+                            + " stat-damage-modifier-imported=" + statDamageModifierImported
                             + " damage-tag-condition=" + damageTagCondition
                             + " tagged-damage-action=" + taggedDamageAction
                             + " tagged-damage-events=" + taggedDamageEvents.get()

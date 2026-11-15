@@ -2567,6 +2567,7 @@ public final class SkillService {
             case "airlevel", "air-level", "remainingair", "remaining-air", "air" -> "air-level";
             case "damagecause", "damage-cause", "cause" -> "damage-cause";
             case "damageamount", "damage-amount", "amount", "a" -> "damage-amount";
+            case "statdamagemodifier", "stat-damage-modifier", "statdamage" -> "stat-damage-modifier";
             case "damagetag", "damage-tag", "damagehastag", "damage-has-tag" -> "damage-tag";
             case "lastdamagecause", "last-damage-cause" -> "last-damage-cause";
             case "hasitem", "has-item", "item-count", "itemcount" -> "has-item";

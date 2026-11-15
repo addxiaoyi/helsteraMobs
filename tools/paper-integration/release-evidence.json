@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-stat-damage-strict-20261115-r2",
+    "reportFixtureDirectory": "srv-paper-stat-damage-strict-20261115-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-stat-damage-strict-20261115-r2.json",
+    "reportSha256": "b3ca8214140310e33fb7e8b934693adee6f87094922e17011f883be3c5c747eb",
+    "log": "tools/paper-integration/reports/paper-1.21.1-stat-damage-strict-20261115-r2.log.gz",
+    "logSha256": "a30ae3129ac293dd826844843b47ea64c14d05ae13c1eec38d1c7db40798c01b",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-stat-damage-strict-20261115-r2-client-logs.tar.gz",
+    "clientLogSha256": "1cb6be578ec79360ed68cccf7311ff5ee89704b880631bc64d08dcc43b118284",
+    "pluginSha256": "2604eb6fdfd3e9016fd9d7e8fc0a63b9c372ac7ed61a3863a0edd604919d03d0",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-mythic-mob-types-full-strict-20261115-r1",
     "reportFixtureDirectory": "srv-paper-mythic-mob-types-full-strict-20261115-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-mythic-mob-types-full-strict-20261115-r1.json",
