@@ -222,6 +222,12 @@ public final class SkillExtras {
     }
 
     private static volatile MythicMobLookup mythicMobLookup;
+    @FunctionalInterface
+    public interface MythicMobTypeMatcher {
+        boolean matches(Entity entity, String mobType);
+    }
+
+    private static volatile MythicMobTypeMatcher mythicMobTypeMatcher;
     private static volatile AuraRegistry auraRegistry;
     private static final Map<String, String> AURA_NAME_ARGUMENTS = Map.ofEntries(
             Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
@@ -390,6 +396,11 @@ public final class SkillExtras {
         mythicMobLookup = lookup;
     }
 
+    /** Connects radius type filters to MythicMobs' active mob type when available. */
+    public static void mythicMobTypeMatcher(MythicMobTypeMatcher matcher) {
+        mythicMobTypeMatcher = matcher;
+    }
+
     public static void auraRegistry(AuraRegistry registry) {
         auraRegistry = registry;
     }
@@ -494,6 +505,7 @@ public final class SkillExtras {
         cinematicLookup = null;
         managedEntityLookup = null;
         mythicMobLookup = null;
+        mythicMobTypeMatcher = null;
         audienceMobSelector = null;
         executionAudienceWriter = null;
         auraRegistry = null;
@@ -631,6 +643,75 @@ public final class SkillExtras {
             throw new IllegalArgumentException("count must be a non-negative integer: " + value);
         }
         return (int) value;
+    }
+
+    private static NumberRange nonNegativeCountRange(List<String> args, int index, String fallback) {
+        String raw = str(args, index, fallback);
+        NumberRange range = numberRange(List.of(raw), 0);
+        if (range == null || range.min() > range.max()) {
+            throw new IllegalArgumentException("invalid count range: " + raw);
+        }
+        String value = raw.trim();
+        for (String operator : List.of(">=", "<=", ">", "<")) {
+            if (value.startsWith(operator)) {
+                if (!finiteNonNegative(value.substring(operator.length()))) {
+                    throw new IllegalArgumentException("count range bound must be finite and non-negative: " + raw);
+                }
+                return range;
+            }
+        }
+        int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+        if (to > 0) {
+            if (!finiteNonNegative(value.substring(0, to))
+                    || !finiteNonNegative(value.substring(to + 2))) {
+                throw new IllegalArgumentException("count range bounds must be finite and non-negative: " + raw);
+            }
+        } else {
+            int separator = value.indexOf('-', 1);
+            if (separator > 0) {
+                if (!finiteNonNegative(value.substring(0, separator))
+                        || !finiteNonNegative(value.substring(separator + 1))) {
+                    throw new IllegalArgumentException("count range bounds must be finite and non-negative: " + raw);
+                }
+            } else if (!finiteNonNegative(value)) {
+                throw new IllegalArgumentException("count must be finite and non-negative: " + raw);
+            }
+        }
+        return range;
+    }
+
+    private static NumberRange minimumCountRange(List<String> args, int index, String fallback) {
+        String raw = str(args, index, fallback);
+        NumberRange parsed = nonNegativeCountRange(args, index, fallback);
+        String value = raw.trim();
+        if (value.startsWith(">") || value.startsWith("<")
+                || value.toLowerCase(Locale.ROOT).contains("to")
+                || value.indexOf('-', 1) > 0) return parsed;
+        return new NumberRange(parsed.min(), Double.POSITIVE_INFINITY, true, false);
+    }
+
+    private static boolean finiteNonNegative(String raw) {
+        try {
+            double value = Double.parseDouble(raw.trim());
+            return Double.isFinite(value) && value >= 0;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static Set<String> mobTypeFilter(List<String> args, int index) {
+        String raw = str(args, index, "");
+        if (raw.isBlank()) return Set.of();
+        Set<String> types = new java.util.LinkedHashSet<>();
+        for (String token : raw.split(",", -1)) {
+            String type = token.trim();
+            if (type.isEmpty() || type.chars().anyMatch(Character::isWhitespace)
+                    || type.chars().anyMatch(Character::isISOControl)) {
+                throw new IllegalArgumentException("invalid mob type list: " + raw);
+            }
+            types.add(type);
+        }
+        return Set.copyOf(types);
     }
 
     /** Resolves placeholder-backed numeric arguments when the action executes. */
@@ -3986,9 +4067,10 @@ public final class SkillExtras {
                 // ---- 范围统计 ----
 
                 Map.entry("players-in-radius", (SkillCatalog.ConditionFactory) a -> {
-                    int min = nonNegativeCount(a, 0, 1);
-                    double radius = nonNegativeRadius(a, 1, 16);
-                    return ctx -> countNear(ctx, radius, false) >= min;
+                    NumberRange amount = minimumCountRange(a, 0, ">0");
+                    double radius = nonNegativeRadius(a, 1, 32);
+                    boolean ignoreSpectator = bool(a, 2, true);
+                    return ctx -> amount.contains(countPlayersNear(ctx, radius, ignoreSpectator));
                 }),
                 Map.entry("entities-in-radius", (SkillCatalog.ConditionFactory) a -> {
                     int min = nonNegativeCount(a, 0, 1);
@@ -3996,9 +4078,10 @@ public final class SkillExtras {
                     return ctx -> countNear(ctx, radius, true) >= min;
                 }),
                 Map.entry("mobs-in-radius", (SkillCatalog.ConditionFactory) a -> {
-                    int min = nonNegativeCount(a, 0, 1);
-                    double radius = nonNegativeRadius(a, 1, 16);
-                    return ctx -> countMobsNear(ctx, radius) >= min;
+                    NumberRange amount = minimumCountRange(a, 0, "1");
+                    double radius = nonNegativeRadius(a, 1, 5);
+                    Set<String> types = mobTypeFilter(a, 2);
+                    return ctx -> amount.contains(countMobsNear(ctx, radius, types));
                 }),
                 Map.entry("mobs-near-origin", (SkillCatalog.ConditionFactory) a -> {
                     Comparison amount = comparison(a, 0, ">=");
@@ -8563,16 +8646,35 @@ public final class SkillExtras {
         return n;
     }
 
-    private static int countMobsNear(BehaviorContext ctx, double radius) {
+    private static int countPlayersNear(BehaviorContext ctx, double radius, boolean ignoreSpectator) {
         Location me = selfLoc(ctx);
-        if (me == null || radius <= 0) return 0;
+        if (me == null || !Double.isFinite(radius) || radius < 0) return 0;
+        int count = 0;
+        try {
+            for (Entity entity : me.getWorld().getNearbyEntities(me, radius, radius, radius)) {
+                if (entity instanceof Player player
+                        && (!ignoreSpectator || player.getGameMode() != GameMode.SPECTATOR)) {
+                    count++;
+                    if (count > 512) break;
+                }
+            }
+        } catch (Throwable ignored) {
+            SkillFaults.swallow("SkillExtras#countPlayersNear");
+        }
+        return count;
+    }
+
+    private static int countMobsNear(BehaviorContext ctx, double radius, Set<String> types) {
+        Location me = selfLoc(ctx);
+        if (me == null || !Double.isFinite(radius) || radius < 0) return 0;
         Entity source = ctx != null && ctx.instanceValid()
                 ? ctx.instance().baseEntity().orElse(null) : null;
         int n = 0;
         try {
             for (var entity : me.getWorld().getNearbyEntities(me, radius, radius, radius)) {
                 if (entity != source && entity instanceof LivingEntity living
-                        && !(living instanceof Player) && living.isValid()) {
+                        && !(living instanceof Player) && living.isValid()
+                        && (types.isEmpty() || matchesMobType(entity, types))) {
                     n++;
                 }
                 if (n > 512) break;
@@ -8581,6 +8683,28 @@ public final class SkillExtras {
             SkillFaults.swallow("SkillExtras#countMobsNear");
         }
         return n;
+    }
+
+    private static boolean matchesMobType(Entity entity, Set<String> wanted) {
+        if (entity == null || wanted == null || wanted.isEmpty()) return false;
+        org.bukkit.entity.EntityType entityType = entity.getType();
+        String nativeName = entityType == null ? "" : entityType.name();
+        String nativeKey = "";
+        if (entityType instanceof org.bukkit.Keyed keyed && keyed.getKey() != null) {
+            nativeKey = keyed.getKey().toString();
+        }
+        for (String type : wanted) {
+            if (type.equalsIgnoreCase(nativeName) || type.equalsIgnoreCase(nativeKey)) return true;
+            MythicMobTypeMatcher matcher = mythicMobTypeMatcher;
+            if (matcher != null) {
+                try {
+                    if (matcher.matches(entity, type)) return true;
+                } catch (Throwable ignored) {
+                    // An unavailable optional integration must never broaden a type filter.
+                }
+            }
+        }
+        return false;
     }
 
     private static int countMobsNearOrigin(BehaviorContext ctx, double radius, String types) {

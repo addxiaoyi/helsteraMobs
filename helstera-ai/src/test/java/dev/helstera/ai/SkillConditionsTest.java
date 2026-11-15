@@ -1686,6 +1686,83 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("PlayersInRadius uses official defaults, count ranges and spectator-only exclusion")
+    void playersInRadiusUsesMythicDefaultsAndGameModeSemantics() {
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        Player spectator = mock(Player.class);
+        Player creative = mock(Player.class);
+        Player survival = mock(Player.class);
+        when(spectator.getGameMode()).thenReturn(org.bukkit.GameMode.SPECTATOR);
+        when(creative.getGameMode()).thenReturn(org.bukkit.GameMode.CREATIVE);
+        when(survival.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenReturn(List.of(spectator, creative, survival));
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), origin);
+
+        var defaultCondition = extraFactory("players-in-radius").create(List.of());
+        assertTrue(defaultCondition.test(context), "creative and survival count; spectators are ignored by default");
+        org.mockito.Mockito.verify(world).getNearbyEntities(origin, 32, 32, 32);
+        assertFalse(extraFactory("players-in-radius").create(List.of(">2", "32", "true")).test(context));
+        assertTrue(extraFactory("players-in-radius").create(List.of("2to3", "32", "false")).test(context));
+        assertFalse(extraFactory("players-in-radius").create(List.of("<0", "32", "true")).test(context));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("players-in-radius").create(List.of("2to1")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("players-in-radius").create(List.of(">=-1")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("players-in-radius").create(List.of(">0", "32", "maybe")));
+    }
+
+    @Test
+    @DisplayName("MobsInRadius uses official defaults and matches native and Mythic type filters")
+    void mobsInRadiusMatchesFilteredTypesAndFailsClosed() throws Exception {
+        SkillExtras.resetRuntimeHooks();
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        LivingEntity zombie = mock(LivingEntity.class);
+        LivingEntity skeleton = mock(LivingEntity.class);
+        LivingEntity custom = mock(LivingEntity.class);
+        when(zombie.isValid()).thenReturn(true);
+        when(skeleton.isValid()).thenReturn(true);
+        when(custom.isValid()).thenReturn(true);
+        when(zombie.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
+        when(skeleton.getType()).thenReturn(org.bukkit.entity.EntityType.SKELETON);
+        when(custom.getType()).thenReturn(org.bukkit.entity.EntityType.COW);
+        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
+                .thenReturn(List.of(zombie, skeleton, custom));
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(), origin);
+
+        assertTrue(zombie instanceof LivingEntity);
+        assertTrue(zombie.isValid());
+        assertEquals(3, world.getNearbyEntities(origin, 5, 5, 5).size());
+        var defaults = extraFactory("mobs-in-radius").create(List.of());
+        assertTrue(defaults.test(context));
+        org.mockito.Mockito.verify(world, org.mockito.Mockito.atLeastOnce())
+                .getNearbyEntities(origin, 5, 5, 5);
+        assertTrue(extraFactory("mobs-in-radius").create(List.of("2", "5", "ZOMBIE,SKELETON"))
+                .test(context));
+        assertFalse(extraFactory("mobs-in-radius").create(List.of("1", "5", "UNKNOWN_MOB"))
+                .test(context));
+
+        SkillExtras.mythicMobTypeMatcher((entity, type) -> entity == custom && type.equalsIgnoreCase("ForestGuardian"));
+        assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "ForestGuardian"))
+                .test(context));
+        SkillExtras.mythicMobTypeMatcher((entity, type) -> { throw new IllegalStateException("API unavailable"); });
+        assertFalse(extraFactory("mobs-in-radius").create(List.of("1", "5", "ForestGuardian"))
+                .test(context));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("mobs-in-radius").create(List.of("1", "5", "ZOMBIE,,SKELETON")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("mobs-in-radius").create(List.of("1", "5", "ZOMBIE SKELETON")));
+        SkillExtras.resetRuntimeHooks();
+    }
+
+    @Test
     @DisplayName("official server version conditions are registered")
     void officialServerVersionConditionsAreRegistered() {
         assertNotNull(extraFactory("server-version").create(List.of("1.21.11")));

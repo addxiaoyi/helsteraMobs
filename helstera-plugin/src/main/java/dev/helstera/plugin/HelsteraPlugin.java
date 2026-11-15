@@ -616,6 +616,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     .map(MythicMobsAdapter.class::cast).orElse(null);
             dev.helstera.ai.skill.SkillExtras.mythicMobLookup(entity ->
                     mythicAdapter != null && mythicAdapter.isMythicMob(entity));
+            dev.helstera.ai.skill.SkillExtras.mythicMobTypeMatcher((entity, type) ->
+                    mythicAdapter != null && mythicAdapter.isMythicMobType(entity, type));
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);
         }
@@ -16927,10 +16929,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean imported = false;
         boolean playersPositive = false;
         boolean playersNegative = false;
+        boolean playersDefaultRadiusPositive = false;
+        boolean playersDefaultRadiusNegative = false;
         boolean entitiesPositive = false;
         boolean entitiesNegative = false;
         boolean mobsPositive = false;
         boolean mobsNegative = false;
+        boolean mobsTypePositive = false;
+        boolean mobsTypeNegative = false;
+        boolean mobsDefaultRadiusNegative = false;
+        boolean invalidRadiusArgumentsPreserved = false;
         boolean livingPositive = false;
         boolean livingNegative = false;
         boolean playerWithinPositive = false;
@@ -16969,10 +16977,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     null, zombie, 1.0, 2.0, 0, "integration");
             var importedPlayers = dev.helstera.migration.importer.MmConditions.translate(
                     "?playersInRadius{r=4}");
+            var importedPlayersDefaults = dev.helstera.migration.importer.MmConditions.translate(
+                    "?playersInRadius");
             var importedEntities = dev.helstera.migration.importer.MmConditions.translate(
                     "?entitiesInRadius{count=2;radius=4}");
             var importedMobs = dev.helstera.migration.importer.MmConditions.translate(
-                    "?mobsInRadius{radius=4}");
+                    "?mobsInRadius{types=ZOMBIE;radius=4}");
+            var importedMobsDefaults = dev.helstera.migration.importer.MmConditions.translate(
+                    "?mobsInRadius");
             var importedLiving = dev.helstera.migration.importer.MmConditions.translate(
                     "?livingInRadius{a=>=2;r=4}");
             var importedWithin = dev.helstera.migration.importer.MmConditions.translate(
@@ -16980,26 +16992,59 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var importedNotWithin = dev.helstera.migration.importer.MmConditions.translate(
                     "?playerNotWithin{distance=4}");
             imported = importedPlayers.translated()
-                    && "players-in-radius 1 4".equals(importedPlayers.condition())
+                    && "players-in-radius >0 4 true".equals(importedPlayers.condition())
+                    && importedPlayersDefaults.translated()
+                    && "players-in-radius >0 32 true".equals(importedPlayersDefaults.condition())
                     && importedEntities.translated()
                     && "entities-in-radius 2 4".equals(importedEntities.condition())
                     && importedMobs.translated()
-                    && "mobs-in-radius 1 4".equals(importedMobs.condition())
+                    && "mobs-in-radius 1 4 ZOMBIE".equals(importedMobs.condition())
+                    && importedMobsDefaults.translated()
+                    && "mobs-in-radius 1 5".equals(importedMobsDefaults.condition())
                     && importedLiving.translated()
                     && "living-in-radius >=2 4".equals(importedLiving.condition())
                     && importedWithin.translated()
                     && "player-within 4".equals(importedWithin.condition())
                     && importedNotWithin.translated()
                     && "player-not-within 4".equals(importedNotWithin.condition());
+            invalidRadiusArgumentsPreserved = !dev.helstera.migration.importer.MmConditions.translate(
+                            "?playersInRadius{amount=3to2}").translated()
+                    && !dev.helstera.migration.importer.MmConditions.translate(
+                            "?mobsInRadius{types=ZOMBIE,,SKELETON}").translated();
             String playersKey = imported ? skills.bindCondition(importedPlayers.condition()) : null;
+            String playersDefaultsKey = imported
+                    ? skills.bindCondition(importedPlayersDefaults.condition()) : null;
             String entitiesKey = imported ? skills.bindCondition(importedEntities.condition()) : null;
             String mobsKey = imported ? skills.bindCondition(importedMobs.condition()) : null;
+            String mobsDefaultsKey = imported ? skills.bindCondition(importedMobsDefaults.condition()) : null;
             String livingKey = imported ? skills.bindCondition(importedLiving.condition()) : null;
             String withinKey = imported ? skills.bindCondition(importedWithin.condition()) : null;
             String notWithinKey = imported ? skills.bindCondition(importedNotWithin.condition()) : null;
             playersPositive = playersKey != null && behaviors.testCondition(playersKey, radiusContext);
             entitiesPositive = entitiesKey != null && behaviors.testCondition(entitiesKey, radiusContext);
             mobsPositive = mobsKey != null && behaviors.testCondition(mobsKey, radiusContext);
+            if (playersDefaultsKey != null) {
+                permissionProbe.teleport(radiusOrigin.clone().add(20.0, 0, 0));
+                if (peer != null) peer.teleport(radiusOrigin.clone().add(22.0, 0, 0));
+                playersDefaultRadiusPositive = behaviors.testCondition(playersDefaultsKey, radiusContext);
+                permissionProbe.teleport(radiusOrigin.clone().add(40.0, 0, 0));
+                if (peer != null) peer.teleport(radiusOrigin.clone().add(42.0, 0, 0));
+                playersDefaultRadiusNegative = !behaviors.testCondition(playersDefaultsKey, radiusContext);
+                permissionProbe.teleport(radiusOrigin);
+                if (peer != null) peer.teleport(radiusOrigin.clone().add(1.0, 0, 0));
+            }
+            if (mobsDefaultsKey != null) {
+                zombie.teleport(radiusOrigin.clone().add(8.0, 0, 0));
+                cow.teleport(radiusOrigin.clone().add(9.0, 0, 0));
+                mobsDefaultRadiusNegative = !behaviors.testCondition(mobsDefaultsKey, radiusContext);
+                zombie.teleport(radiusOrigin.clone().add(2.0, 0, 0));
+                cow.teleport(radiusOrigin.clone().add(3.0, 0, 0));
+            }
+            String mobsTypeKey = skills.bindCondition("mobs-in-radius 1 4 ZOMBIE");
+            String mobsWrongTypeKey = skills.bindCondition("mobs-in-radius 1 4 PIG");
+            mobsTypePositive = mobsTypeKey != null && behaviors.testCondition(mobsTypeKey, radiusContext);
+            mobsTypeNegative = mobsWrongTypeKey != null
+                    && !behaviors.testCondition(mobsWrongTypeKey, radiusContext);
             livingPositive = livingKey != null && behaviors.testCondition(livingKey, radiusContext);
             playerWithinPositive = withinKey != null
                     && behaviors.testCondition(withinKey, radiusTargetContext);
@@ -17024,6 +17069,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             playerNotWithinNegative = notWithinKey != null
                     && !behaviors.testCondition(notWithinKey, radiusTargetContext);
             imported = imported && playersKey != null && entitiesKey != null && mobsKey != null
+                    && playersDefaultsKey != null && mobsDefaultsKey != null
                     && livingKey != null && withinKey != null && notWithinKey != null;
         } catch (Throwable failure) {
             getLogger().warning("[自检] radius conditions failed: " + failure);
@@ -17044,14 +17090,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
             }
         }
-        boolean passed = imported && playersPositive && playersNegative && entitiesPositive
-                && entitiesNegative && mobsPositive && mobsNegative && livingPositive && livingNegative
+        boolean passed = imported && playersPositive && playersNegative
+                && playersDefaultRadiusPositive && playersDefaultRadiusNegative && entitiesPositive
+                && entitiesNegative && mobsPositive && mobsNegative && mobsDefaultRadiusNegative
+                && mobsTypePositive && mobsTypeNegative
+                && invalidRadiusArgumentsPreserved && livingPositive && livingNegative
                 && playerWithinPositive && playerWithinNegative && playerNotWithinPositive
                 && playerNotWithinNegative && subjectRestored && peerRestored;
         getLogger().info("radius-condition-details imported=" + imported
                 + " players-positive=" + playersPositive + " players-negative=" + playersNegative
+                + " players-default-radius-positive=" + playersDefaultRadiusPositive
+                + " players-default-radius-negative=" + playersDefaultRadiusNegative
                 + " entities-positive=" + entitiesPositive + " entities-negative=" + entitiesNegative
                 + " mobs-positive=" + mobsPositive + " mobs-negative=" + mobsNegative
+                + " mobs-default-radius-negative=" + mobsDefaultRadiusNegative
+                + " mobs-type-positive=" + mobsTypePositive + " mobs-type-negative=" + mobsTypeNegative
+                + " invalid-radius-arguments-preserved=" + invalidRadiusArgumentsPreserved
                 + " living-positive=" + livingPositive + " living-negative=" + livingNegative
                 + " player-within-positive=" + playerWithinPositive
                 + " player-within-negative=" + playerWithinNegative

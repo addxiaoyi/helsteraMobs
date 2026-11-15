@@ -389,7 +389,7 @@ class MmConditionsTest {
     @DisplayName("范围、随机和战斗条件映射到已有运行时 evaluator")
     void runtimeBackedUtilityConditionsMap() {
         assertEquals("in-combat", t("?inCombat"));
-        assertEquals("players-in-radius 1 10", t("?playersInRadius{r=10}"));
+        assertEquals("players-in-radius >0 10 true", t("?playersInRadius{r=10}"));
         assertEquals("entities-in-radius 2 12", t("?entitiesInRadius{count=2;radius=12}"));
         assertEquals("mobs-in-radius 1 8", t("?mobsInRadius{radius=8}"));
         assertEquals("players-online >5", t("?playersOnline{amount=>5}"));
@@ -425,6 +425,33 @@ class MmConditionsTest {
         }
         assertFalse(translated("?playersInRadius{r=8;amount=invalid}"));
         assertFalse(translated("?livingInRadius{r=8;a=NaN}"));
+    }
+
+    @Test
+    @DisplayName("PlayersInRadius and MobsInRadius preserve official defaults and supported filters")
+    void officialRadiusPopulationConditionsMapDefaultsAndFilters() {
+        assertEquals("players-in-radius >0 32 true", t("?playersInRadius"));
+        assertEquals("players-in-radius >=2 12 false", t(
+                "?playerInRadius{amount=>=2;radius=12;is=false}"));
+        assertEquals("players-in-radius 1to4 8 true", t("?pir{a=1to4;r=8}"));
+        assertEquals("mobs-in-radius 1 5", t("?mobsInRadius"));
+        assertEquals("mobs-in-radius 2to4 9 ZOMBIE,SKELETON", t(
+                "?mobsInRadius{types=ZOMBIE,SKELETON;amount=2to4;r=9}"));
+        assertEquals("mobs-in-radius 1 5 ForestGuardian", t(
+                "?mobsInRadius{t=ForestGuardian}"));
+
+        for (String invalid : List.of(
+                "?playersInRadius{amount=-1}",
+                "?playersInRadius{amount=3to2}",
+                "?playersInRadius{amount=>Infinity}",
+                "?playersInRadius{ignorespectator=maybe}",
+                "?mobsInRadius{amount=-1}",
+                "?mobsInRadius{amount=NaN}",
+                "?mobsInRadius{types=ZOMBIE,,SKELETON}",
+                "?mobsInRadius{types=ZOMBIE SKELETON}",
+                "?mobsInRadius{unknown=ZOMBIE}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test

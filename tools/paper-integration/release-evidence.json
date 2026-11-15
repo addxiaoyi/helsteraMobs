@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-radius-conditions-strict-20261115-r1",
+    "reportFixtureDirectory": "srv-paper-radius-conditions-strict-20261115-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261115-r1.json",
+    "reportSha256": "4b3d58160fcad70c3728efe116acb97adcba643e3e9d8841d925778d33ccf92a",
+    "log": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261115-r1.log.gz",
+    "logSha256": "f2fd5da879326d3ff999196247820e32b8dc84093c0eb5adc688f8838ef0cbfa",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-radius-conditions-strict-20261115-r1-client-logs.tar.gz",
+    "clientLogSha256": "41937f00db6c27ae3e6ebabcda94a8d30c993fdd5cea175e88614adc2b8ac9cb",
+    "pluginSha256": "06cbae140d11c16795b53ecb15d3730538e73a1e247433b3b90834ede0485444",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-has-item-matcher-strict-20261115-r1",
     "reportFixtureDirectory": "srv-paper-has-item-matcher-strict-20261115-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-has-item-matcher-strict-20261115-r1.json",

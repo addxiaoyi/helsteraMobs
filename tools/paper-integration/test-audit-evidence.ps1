@@ -567,7 +567,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'radiusConditions'
     $fullReport.probes += [pscustomobject]@{
-        id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
+        id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
     }
     $fullReport.expectedProbeIds += 'importedPlayerKillsCondition'
     $fullReport.probes += [pscustomobject]@{

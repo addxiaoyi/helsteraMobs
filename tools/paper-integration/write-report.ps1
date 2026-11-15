@@ -270,7 +270,7 @@ $probeSpecs = [ordered]@{
     biomeImported = 'biome-imported partial=true exact-rejected=true invalid-preserved=true'
     invalidConditionsImported = 'invalid-imported-conditions valid-skill=true invalid-skill=true invalid-damage=true warnings=true'
     playerRadiusConditions = 'skill-actions .*player-radius-conditions=true'
-    radiusConditions = 'radius-condition-details imported=true players-positive=true players-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true'
+    radiusConditions = 'radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true'
     cooldownMechanics = 'skill-actions .*cooldown-mechanics=true'
     lastDamageCauseCondition = 'skill-actions .*last-damage-cause=true'
     motionConditions = 'skill-actions .*motion-conditions=true .*directional-velocity-condition=true .*fall-speed-condition=true'

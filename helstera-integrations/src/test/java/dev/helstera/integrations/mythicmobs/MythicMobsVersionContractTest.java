@@ -44,6 +44,23 @@ class MythicMobsVersionContractTest {
         assertFalse(adapter.isMythicMob(mythicMob), "API failures must fail closed");
     }
 
+    @Test
+    void activeEntityTypeLookupMatchesInternalNamesAndFailsClosed() throws Exception {
+        var adapter = new MythicMobsAdapter(null, null, null);
+        Entity mythicMob = entityProxy();
+        adapter.bindMythicMobLookup(new TypedFakeApiHelper(mythicMob));
+
+        assertTrue(adapter.isMythicMobType(mythicMob, "ForestGuardian"));
+        assertTrue(adapter.isMythicMobType(mythicMob, "forestguardian"));
+        assertFalse(adapter.isMythicMobType(mythicMob, "CaveWraith"));
+        assertFalse(adapter.isMythicMobType(entityProxy(), "ForestGuardian"));
+        assertFalse(adapter.isMythicMobType(null, "ForestGuardian"));
+
+        adapter.bindMythicMobLookup(new FakeApiHelper(Set.of(mythicMob)));
+        assertFalse(adapter.isMythicMobType(mythicMob, "ForestGuardian"),
+                "helpers without active mob type lookup must not retain stale bindings");
+    }
+
     private static Entity entityProxy() {
         return (Entity) Proxy.newProxyInstance(Entity.class.getClassLoader(), new Class<?>[]{Entity.class},
                 (proxy, method, arguments) -> switch (method.getName()) {
@@ -69,6 +86,34 @@ class MythicMobsVersionContractTest {
     public static class FailingApiHelper {
         public boolean isMythicMob(Entity entity) {
             throw new IllegalStateException("fixture API failure");
+        }
+    }
+
+    public static class TypedFakeApiHelper {
+        private final Entity active;
+
+        public TypedFakeApiHelper(Entity active) {
+            this.active = active;
+        }
+
+        public boolean isMythicMob(Entity entity) {
+            return entity == active;
+        }
+
+        public java.util.Optional<FakeActiveMob> getMythicMobInstance(Entity entity) {
+            return entity == active ? java.util.Optional.of(new FakeActiveMob()) : java.util.Optional.empty();
+        }
+    }
+
+    public static class FakeActiveMob {
+        public FakeMythicMobType getType() {
+            return new FakeMythicMobType();
+        }
+    }
+
+    public static class FakeMythicMobType {
+        public String getInternalName() {
+            return "ForestGuardian";
         }
     }
 }

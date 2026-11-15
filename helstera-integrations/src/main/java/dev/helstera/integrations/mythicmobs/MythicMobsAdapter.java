@@ -36,6 +36,7 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     private Plugin mythicPlugin;
     private Object mythicApiHelper;
     private Method isMythicMobMethod;
+    private Method getMythicMobInstanceMethod;
     private final org.bukkit.configuration.file.FileConfiguration cfg;
 
     public MythicMobsAdapter(InstanceManagerImpl instances, dev.helstera.api.model.ModelRegistry registry,
@@ -94,6 +95,7 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         mythicPlugin = null;
         mythicApiHelper = null;
         isMythicMobMethod = null;
+        getMythicMobInstanceMethod = null;
         this.host = host;
         Plugin mm = Bukkit.getPluginManager().getPlugin("MythicMobs");
         if (mm == null || !mm.isEnabled()) {
@@ -117,6 +119,7 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
                 // The spawn/model bridge remains useful when an older API lacks this query.
                 mythicApiHelper = null;
                 isMythicMobMethod = null;
+                getMythicMobInstanceMethod = null;
             }
             Class<?> eventClass = Class.forName("io.lumine.mythic.bukkit.events.MythicMobSpawnEvent");
             // 强转无法在编译期校验：MythicMobs 是软依赖，其事件类只有运行时才存在。
@@ -166,6 +169,7 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         mythicPlugin = null;
         mythicApiHelper = null;
         isMythicMobMethod = null;
+        getMythicMobInstanceMethod = null;
         if (mechanics != null) mechanics.disable();
         mechanics = null;
     }
@@ -180,17 +184,45 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         }
     }
 
+    /** Matches the exact Mythic internal name; unavailable APIs and lookup failures fail closed. */
+    public boolean isMythicMobType(Entity entity, String expectedInternalName) {
+        if (entity == null || expectedInternalName == null || expectedInternalName.isBlank()
+                || mythicApiHelper == null || getMythicMobInstanceMethod == null
+                || (mythicPlugin != null && !mythicPlugin.isEnabled())) return false;
+        try {
+            Object activeMob = getMythicMobInstanceMethod.invoke(mythicApiHelper, entity);
+            if (activeMob instanceof java.util.Optional<?> optional) activeMob = optional.orElse(null);
+            if (activeMob == null) return false;
+            Object mythicType = activeMob.getClass().getMethod("getType").invoke(activeMob);
+            if (mythicType == null) return false;
+            Object internalName = mythicType.getClass().getMethod("getInternalName").invoke(mythicType);
+            return internalName instanceof String value && value.equalsIgnoreCase(expectedInternalName);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError ignored) {
+            return false;
+        }
+    }
+
     void bindMythicMobLookup(Object apiHelper) throws NoSuchMethodException {
         mythicApiHelper = null;
         isMythicMobMethod = null;
+        getMythicMobInstanceMethod = null;
         if (apiHelper == null) throw new NoSuchMethodException("MythicMobs API helper is null");
         Method method = apiHelper.getClass().getMethod("isMythicMob", Entity.class);
         if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != boolean.class) {
             throw new NoSuchMethodException("BukkitAPIHelper.isMythicMob(Entity) has an incompatible signature");
         }
         if (!method.canAccess(apiHelper)) method.trySetAccessible();
+        Method instanceMethod = null;
+        try {
+            instanceMethod = apiHelper.getClass().getMethod("getMythicMobInstance", Entity.class);
+            if (Modifier.isStatic(instanceMethod.getModifiers())) instanceMethod = null;
+            else if (!instanceMethod.canAccess(apiHelper)) instanceMethod.trySetAccessible();
+        } catch (NoSuchMethodException ignored) {
+            // Older API helpers may expose only the boolean lookup; native filters remain available.
+        }
         mythicApiHelper = apiHelper;
         isMythicMobMethod = method;
+        getMythicMobInstanceMethod = instanceMethod;
     }
 
     /** 反射事件执行器：MythicMobSpawnEvent -> getMobName() -> 绑定模型。 */

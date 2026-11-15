@@ -19,7 +19,7 @@ Version-gated behavior:
 
 Evidence baseline: 2026-11-15, Paper API 1.21.1-R0.1-SNAPSHOT.
 
-Latest strict release evidence: `srv-paper-has-item-matcher-strict-20261115-r1` completes 456 probes on Paper 1.21.1-133 (437 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `665fccd0c9daaac68a634f52fdeeafc48194d81c2ea41061f9e02f3cf228c4e9`). Its real-player `hasItemCondition` probe verifies short and namespaced Bukkit item tags, wildcard material names, missing-tag rejection, loose/strict metadata matching, inclusive amount ranges, imported `HasItem`/`TargetHasItem`, preserved `vanillaonly=true`, and inventory restoration. Third-party custom-item wildcard expansion and block-state selectors remain unverified. The complete Conditions catalog remains `mapped-unverified`; full parity remains incomplete.
+Latest strict release evidence: `srv-paper-radius-conditions-strict-20261115-r1` completes 456 probes on Paper 1.21.1-133 (437 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `06cbae140d11c16795b53ecb15d3730538e73a1e247433b3b90834ede0485444`). Its player-radius probes verify Mythic-compatible defaults and the 32-block boundary, `MobsInRadius`'s 5-block default, Bukkit mob-type filtering, invalid-range preservation, and restoration. MythicMobs was not loaded, so live custom Mythic type lookup remains unverified. Previous strict fixture `srv-paper-has-item-matcher-strict-20261115-r1` verifies Bukkit item tags, material wildcards, metadata and amount matching, imported `HasItem`/`TargetHasItem`, and restoration; third-party custom-item wildcard expansion and block-state selectors remain unverified. The complete Conditions catalog remains `mapped-unverified`; full parity remains incomplete.
 
 Previous strict release evidence: `srv-paper-scoped-placeholders-strict-20261114-r2` verifies scoped display names, entity types, squared distance, and Mythic `l.*` centered/precise coordinates, yaw, pitch, and world, with temporary display names restored. Its archived report and logs remain indexed in `tools/paper-integration/release-evidence.json`.
 
@@ -661,9 +661,19 @@ Incremental radius-condition update: `PlayersInRadius`, `EntitiesInRadius`,
 reject negative, non-finite, or malformed radii during migration. Their count
 and amount arguments also reject non-finite and malformed numeric ranges,
 preventing invalid input from being silently projected into a runtime default.
-`MmConditionsTest` covers the fail-closed cases, while strict Paper fixture
-`srv-paper-radius-conditions-strict-20261108-r2` verifies imported positive and
-negative runtime behavior. The full Conditions catalog remains open.
+Follow-up work aligns `PlayersInRadius` with the documented defaults (amount
+`>0`, radius `32`, ignore Spectators), accepts `PlayerInRadius`/`pir`, and
+aligns `MobsInRadius` defaults (amount `1`, radius `5`) with type filters for
+Bukkit entity names and optional Mythic internal names. Count comparators and
+ranges are validated and evaluated as counts; Creative players remain counted,
+while Spectators are excluded only when configured. Importer, runtime, and
+reflection-adapter unit coverage verifies defaults, aliases, type filtering,
+malformed values, and fail-closed integration errors. Strict Paper 1.21.1-133
+fixture `srv-paper-radius-conditions-strict-20261115-r1` passes the full 456
+probe release gate (437 passed, 19 expected rejections, zero failed or
+incomplete) with the new default-radius, native type-filter, and invalid-input
+checks. The Paper fixture did not load MythicMobs, so live Mythic internal-name
+lookup remains unverified. The complete Conditions catalog remains open.
 
 Runtime parameter-boundary update: the shared `SpecArgs.num` loader now rejects
 `NaN` and infinities before any condition or mechanic factory captures them.
@@ -673,11 +683,14 @@ does not replace per-condition runtime and Paper evidence.
 
 Runtime radius-condition update: the `SkillExtras` implementations for
 `players-in-radius`, `entities-in-radius`, `mobs-in-radius`, `mobs-near-origin`,
-and `living-in-radius` now reject negative or non-finite radii. The three
-minimum-count variants also require a non-negative integer count instead of
-silently truncating negative or fractional values. `SpecArgValidationTest`
-covers these factory-boundary failures; the full Conditions catalog and a
-dedicated Paper radius fixture remain open.
+and `living-in-radius` reject negative or non-finite radii. `PlayersInRadius`
+and `MobsInRadius` compare configurable non-negative count ranges; native mob
+types match Bukkit namespaced or enum names, and Mythic internal names use the
+optional adapter. Unavailable custom-type lookup never disables the filter.
+Factory tests cover these boundaries; strict fixture
+`srv-paper-radius-conditions-strict-20261115-r1` verifies them on Paper
+1.21.1-133, including real default-radius and native type-filter controls. The
+complete Conditions catalog remains open.
 
 Incremental block-condition update: Mythic `BlockType`, `OnBlock`, and
 `BlockTypeInRadius` now preserve exact material lists, Bukkit block tags
@@ -2151,9 +2164,14 @@ the caster exclusion and target hit.
 Condition migration update: common Mythic `inCombat`, `playersInRadius`,
 `entitiesInRadius`, `mobsInRadius`, `randomChance`, `targetCount`, and
 `hungerBelow` spellings now translate through `MmConditions` to registered
-runtime evaluators. `mobs-in-radius` counts only valid non-player living mobs
-and excludes the managed caster; migration and binder regression coverage is
-included.
+runtime evaluators. `mobs-in-radius` counts only valid non-player living mobs,
+excludes the managed caster, and supports native and optional Mythic internal
+type filters; `players-in-radius` follows the documented spectator-only
+exclusion and amount/radius defaults. Importer and binder regression coverage
+is included. Strict Paper 1.21.1-133 fixture
+`srv-paper-radius-conditions-strict-20261115-r1` verifies default-range
+behavior, type-filter positive/negative cases, and malformed-input
+preservation.
 
 Exploratory Paper 1.21.11 r44 verifies the live evaluator chain for
 `incombat`, `targetcount`, `mobsinradius`, and `randomchance 100` through the
@@ -2995,7 +3013,7 @@ evidence, while the full Conditions catalog remains `mapped-unverified`.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-has-item-matcher-strict-20261115-r1` completes all 456 registered probes on Paper 1.21.1-133 (437 passed, 19 expected rejections) with the exact current plugin artifact. It includes real two-client menu/audience workflows, Potion consumption, interactables, web spawner reload, imported Plugin aliases, and the expanded HasItem/TargetHasItem probe for Bukkit tags, material wildcards, and negative matcher cases. Previous strict fixture `srv-paper-food-stats-strict-20261114-r1` completes all 455 registered probes and verifies scoped caster/target Player food level, saturation, and exhaustion, non-player rejection, and state restoration. Previous strict fixture `srv-paper-scoped-placeholders-strict-20261114-r2` verifies scoped display names, entity types, squared distance, and Mythic `l.*` coordinates/orientation/world with restoration controls. The same catalog rechecks imported Mythic `Options.PreventVanillaDamage` through actual direct melee and Arrow collisions, unchanged protected health, uncancelled zero-damage events, damaging false/malformed controls, and malformed preservation. The same full catalog rechecks PreventAttack, target-reason cancellation, PreventMount, and the stable water targeter probe. Previous strict fixtures verify absorption placeholders and aliases, zero values, non-player reads, `PreventLeashing`, projectile and explosion protection, fire protection, `Options.PreventOtherDrops`, `Options.PreventMobKillDrops`, `Options.DigOutOfGround`, Frog `Options.Type`/`Variant`, and legacy item-ID boundaries. The complete Mob Options catalog remains open. HasItem-specific evidence covers vanilla material matching, strict metadata equality, inclusive counts, import mappings, restoration, Bukkit item tags, and material-name wildcards; third-party custom-item wildcard expansion and block-state matchers remain unverified. Earlier strict evidence verifies ShowHealth delivery, Panda genes, Experience Orb options, `Options.Tamed` across tameable families, six mutable-family inverse controls, Camel false preservation, Horse saddle/armor, Donkey chest, Pig/Strider saddles, visibility settings, Armor Stand flags/equipment, and other focused probes. The full Conditions and Mob Options catalogs, universal option ordering, complete Mythic catalog, and broader Paper/client-version semantics remain open. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-radius-conditions-strict-20261115-r1` completes all 456 registered probes on Paper 1.21.1-133 (437 passed, 19 expected rejections) with the exact current plugin artifact; it verifies player-radius defaults and boundaries, the MobsInRadius default, Bukkit mob-type filtering, and invalid-range preservation. MythicMobs was not loaded, so live custom Mythic type matching remains unverified. Previous fixture `srv-paper-has-item-matcher-strict-20261115-r1` verifies Bukkit tags, material wildcards, and HasItem/TargetHasItem matcher cases. The catalog also includes real two-client menu/audience workflows, Potion consumption, interactables, web spawner reload, and imported Plugin aliases. Previous strict fixture `srv-paper-food-stats-strict-20261114-r1` completes all 455 registered probes and verifies scoped caster/target Player food level, saturation, and exhaustion, non-player rejection, and state restoration. Previous strict fixture `srv-paper-scoped-placeholders-strict-20261114-r2` verifies scoped display names, entity types, squared distance, and Mythic `l.*` coordinates/orientation/world with restoration controls. The same catalog rechecks imported Mythic `Options.PreventVanillaDamage` through actual direct melee and Arrow collisions, unchanged protected health, uncancelled zero-damage events, damaging false/malformed controls, and malformed preservation. The same full catalog rechecks PreventAttack, target-reason cancellation, PreventMount, and the stable water targeter probe. Previous strict fixtures verify absorption placeholders and aliases, zero values, non-player reads, `PreventLeashing`, projectile and explosion protection, fire protection, `Options.PreventOtherDrops`, `Options.PreventMobKillDrops`, `Options.DigOutOfGround`, Frog `Options.Type`/`Variant`, and legacy item-ID boundaries. The complete Mob Options catalog remains open. HasItem-specific evidence covers vanilla material matching, strict metadata equality, inclusive counts, import mappings, restoration, Bukkit item tags, and material-name wildcards; third-party custom-item wildcard expansion and block-state matchers remain unverified. Earlier strict evidence verifies ShowHealth delivery, Panda genes, Experience Orb options, `Options.Tamed` across tameable families, six mutable-family inverse controls, Camel false preservation, Horse saddle/armor, Donkey chest, Pig/Strider saddles, visibility settings, Armor Stand flags/equipment, and other focused probes. The full Conditions and Mob Options catalogs, universal option ordering, complete Mythic catalog, and broader Paper/client-version semantics remain open. Exact reports, compressed server/client logs, and plugin hashes are indexed in `tools/paper-integration/release-evidence.json`
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

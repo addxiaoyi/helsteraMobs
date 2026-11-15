@@ -108,6 +108,14 @@ public final class MmConditions {
             "region", "region", "r", "region");
     private static final Map<String, String> CLAIM_RADIUS_ARGUMENTS = Map.of(
             "radius", "radius", "r", "radius");
+    private static final Map<String, String> PLAYERS_IN_RADIUS_ARGUMENTS = Map.of(
+            "amount", "amount", "a", "amount",
+            "radius", "radius", "r", "radius", "distance", "radius", "d", "radius",
+            "ignorespectator", "ignore-spectator", "is", "ignore-spectator");
+    private static final Map<String, String> MOBS_IN_RADIUS_ARGUMENTS = Map.of(
+            "types", "types", "type", "types", "t", "types",
+            "amount", "amount", "a", "amount",
+            "radius", "radius", "r", "radius");
     private static final Map<String, String> LOOKING_AT_ARGUMENTS = Map.of(
             "type", "type", "t", "type", "block", "block", "b", "block",
             "entity", "entity", "e", "entity", "distance", "distance", "d", "distance");
@@ -507,14 +515,14 @@ public final class MmConditions {
                 || "audiencecontains".equals(name)) {
             return new Mapped("is-in-audience", true);
         }
-        if ("playersinradius".equals(name)) {
-            return radiusCondition(body, "players-in-radius");
+        if ("playersinradius".equals(name) || "playerinradius".equals(name) || "pir".equals(name)) {
+            return playersInRadiusCondition(body, s);
         }
         if ("entitiesinradius".equals(name)) {
             return radiusCondition(body, "entities-in-radius");
         }
         if ("mobsinradius".equals(name)) {
-            return radiusCondition(body, "mobs-in-radius");
+            return mobsInRadiusCondition(body, s);
         }
         if ("mobsnearorigin".equals(name)) {
             String radius = keyedArgument(body, "radius", "r");
@@ -1939,6 +1947,70 @@ public final class MmConditions {
         if (minimum != null && !validNumberRange(minimum)) return new Mapped(body, false);
         return new Mapped(runtimeName + " " + (minimum == null ? "1" : minimum)
                 + " " + radius, true);
+    }
+
+    private static Mapped playersInRadiusCondition(String body, String original) {
+        Map<String, String> arguments = strictValueArguments(body, PLAYERS_IN_RADIUS_ARGUMENTS, "radius");
+        if (arguments == null) return new Mapped(original, false);
+        String radius = arguments.getOrDefault("radius", "32");
+        String amount = arguments.getOrDefault("amount", ">0");
+        String ignoreSpectator = normalizedBoolean(arguments.getOrDefault("ignore-spectator", "true"));
+        if (!validRadius(radius) || !validNonNegativeCountRange(amount) || ignoreSpectator == null) {
+            return new Mapped(original, false);
+        }
+        return new Mapped("players-in-radius " + amount.trim() + " " + radius.trim()
+                + " " + ignoreSpectator, true);
+    }
+
+    private static Mapped mobsInRadiusCondition(String body, String original) {
+        Map<String, String> arguments = strictValueArguments(body, MOBS_IN_RADIUS_ARGUMENTS, "radius");
+        if (arguments == null) return new Mapped(original, false);
+        String radius = arguments.getOrDefault("radius", "5");
+        String amount = arguments.getOrDefault("amount", "1");
+        String types = arguments.get("types");
+        if (!validRadius(radius) || !validNonNegativeCountRange(amount)
+                || types != null && !validEntityTypeList(types)) {
+            return new Mapped(original, false);
+        }
+        String mapped = "mobs-in-radius " + amount.trim() + " " + radius.trim();
+        if (types != null) mapped += " " + types.trim();
+        return new Mapped(mapped, true);
+    }
+
+    private static boolean validNonNegativeCountRange(String raw) {
+        if (!validNumberRange(raw)) return false;
+        String value = raw.trim();
+        for (String operator : List.of(">=", "<=", ">", "<")) {
+            if (value.startsWith(operator)) return nonNegativeFiniteNumber(value.substring(operator.length()));
+        }
+        int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+        if (to > 0) {
+            Double low = finiteNumber(value.substring(0, to));
+            Double high = finiteNumber(value.substring(to + 2));
+            return low != null && high != null && low >= 0 && high >= low;
+        }
+        int separator = value.indexOf('-', 1);
+        if (separator > 0) {
+            Double low = finiteNumber(value.substring(0, separator));
+            Double high = finiteNumber(value.substring(separator + 1));
+            return low != null && high != null && low >= 0 && high >= low;
+        }
+        return nonNegativeFiniteNumber(value);
+    }
+
+    private static boolean nonNegativeFiniteNumber(String raw) {
+        Double value = finiteNumber(raw);
+        return value != null && value >= 0;
+    }
+
+    private static boolean validEntityTypeList(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        for (String type : raw.split(",", -1)) {
+            if (type.isBlank() || !type.equals(type.trim())
+                    || type.chars().anyMatch(Character::isWhitespace)
+                    || type.chars().anyMatch(Character::isISOControl)) return false;
+        }
+        return true;
     }
 
     private static Mapped radiusAmountCondition(String body, String runtimeName, String original) {
