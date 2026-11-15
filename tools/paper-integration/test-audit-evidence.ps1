@@ -303,6 +303,14 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'damageAttribution'; status = 'passed'; observations = @('damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true')
     }
+    $fullReport.expectedProbeIds += 'statDamageModifierCondition'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'statDamageModifierCondition'; status = 'passed'; observations = @('skill-trigger damage=true attack=true stat-damage-modifier-condition=true stat-damage-modifier-neutral-rejected=true stat-damage-modifier-imported=true')
+    }
+    $fullReport.expectedProbeIds += 'statDamageModifierNaturalEvent'
+    $fullReport.probes += [pscustomobject]@{
+        id = 'statDamageModifierNaturalEvent'; status = 'passed'; observations = @('stat-damage-natural-condition=true stat-damage-natural-imported=true stat-damage-natural-base-finite=true stat-damage-natural-final-finite=true stat-damage-natural-event=true passed=true')
+    }
     $fullReport.expectedProbeIds += 'importedMaterialCooldownCondition'
     $fullReport.probes += [pscustomobject]@{
         id = 'importedMaterialCooldownCondition'; status = 'passed'; observations = @('imported-material-cooldown-condition primary-mapped=true alias-mapped=true positive=true wrong-material-rejected=true')

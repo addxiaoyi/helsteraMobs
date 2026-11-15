@@ -404,6 +404,7 @@ $probeSpecs = [ordered]@{
     skillTrigger = 'skill-trigger .*damage=true .*attack=true .*teleport=true .*bukkit-attacked=true'
     damageCauseCondition = 'skill-trigger .*damage-cause-default-condition=true .*damage-cause-condition=true .*damage-amount-condition=true .*bow-tension-condition=true'
     statDamageModifierCondition = 'skill-trigger .*stat-damage-modifier-condition=true .*stat-damage-modifier-neutral-rejected=true .*stat-damage-modifier-imported=true'
+    statDamageModifierNaturalEvent = 'stat-damage-natural-condition=true .*stat-damage-natural-imported=true .*stat-damage-natural-base-finite=true .*stat-damage-natural-final-finite=true .*stat-damage-natural-event=true passed=true'
     damageTagCondition = 'skill-trigger .*damage-tag-condition=true'
     bowTensionCondition = 'skill-trigger .*bow-tension-condition=true'
     cancelledCondition = 'skill-trigger .*cancelled-condition=true .*cancelled-after=true'

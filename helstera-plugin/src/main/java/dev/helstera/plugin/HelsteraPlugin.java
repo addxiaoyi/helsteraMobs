@@ -20252,9 +20252,65 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 manager.attach(instance, profile);
                 attacker = world.spawn(location.clone().add(2, 0, 0), org.bukkit.entity.Zombie.class);
                 attacker.setAI(false);
+                final org.bukkit.entity.Zombie naturalAttacker = attacker;
+                var statDamageNaturalCondition = new java.util.concurrent.atomic.AtomicBoolean();
+                var statDamageNaturalImported = new java.util.concurrent.atomic.AtomicBoolean();
+                var statDamageNaturalBaseFinite = new java.util.concurrent.atomic.AtomicBoolean();
+                var statDamageNaturalFinalFinite = new java.util.concurrent.atomic.AtomicBoolean();
+                var statDamageNaturalOriginal = new java.util.concurrent.atomic.AtomicReference<>(Double.NaN);
+                var statDamageNaturalFinal = new java.util.concurrent.atomic.AtomicReference<>(Double.NaN);
+                org.bukkit.event.Listener statDamageNaturalObserver = new org.bukkit.event.Listener() { };
+                if (behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry naturalBehaviors) {
+                    getServer().getPluginManager().registerEvent(
+                            org.bukkit.event.entity.EntityDamageByEntityEvent.class,
+                            statDamageNaturalObserver, org.bukkit.event.EventPriority.MONITOR,
+                            (listener, event) -> {
+                                var damageEvent = (org.bukkit.event.entity.EntityDamageByEntityEvent) event;
+                                if (!damageEvent.getEntity().getUniqueId().equals(victim.getUniqueId())
+                                        || !(damageEvent.getDamager() instanceof org.bukkit.entity.Entity)) return;
+                                var base = org.bukkit.event.entity.EntityDamageEvent.DamageModifier.BASE;
+                                try {
+                                    double original = damageEvent.getOriginalDamage(base);
+                                    double finalDamage = damageEvent.getFinalDamage();
+                                    statDamageNaturalOriginal.set(original);
+                                    statDamageNaturalFinal.set(finalDamage);
+                                    statDamageNaturalBaseFinite.set(damageEvent.isApplicable(base)
+                                            && Double.isFinite(original) && original != 0.0);
+                                    statDamageNaturalFinalFinite.set(Double.isFinite(finalDamage));
+                                    var naturalContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                                            instance, naturalAttacker, victim.getMaxHealth() <= 0
+                                                    ? 1.0 : victim.getHealth() / victim.getMaxHealth(), -1, 0,
+                                            "on-damage", null, naturalAttacker, java.util.List.of(victim),
+                                            victim.getLocation(), null, damageEvent, damageEvent.getCause());
+                                    String naturalKey = skills.bindCondition("stat-damage-modifier 0");
+                                    var importedNatural = dev.helstera.migration.importer.MmConditions
+                                            .translate("?statDamage{damage=0}");
+                                    String importedNaturalKey = importedNatural.translated()
+                                            ? skills.bindCondition(importedNatural.condition()) : null;
+                                    statDamageNaturalCondition.set(naturalKey != null
+                                            && naturalBehaviors.testCondition(naturalKey, naturalContext));
+                                    statDamageNaturalImported.set(importedNaturalKey != null
+                                            && naturalBehaviors.testCondition(importedNaturalKey, naturalContext));
+                                } catch (RuntimeException ignored) {
+                                    // The live probe is fail-closed when a Paper build omits BASE.
+                                }
+                            }, this, false);
+                }
                 victim.setInvulnerable(false);
                 victim.setNoDamageTicks(0);
                 victim.damage(2, attacker);
+                org.bukkit.event.HandlerList.unregisterAll(statDamageNaturalObserver);
+                boolean statDamageNaturalPassed = statDamageNaturalCondition.get()
+                        && statDamageNaturalImported.get()
+                        && statDamageNaturalBaseFinite.get()
+                        && statDamageNaturalFinalFinite.get();
+                getLogger().info("stat-damage-natural-condition=" + statDamageNaturalCondition.get()
+                        + " stat-damage-natural-imported=" + statDamageNaturalImported.get()
+                        + " stat-damage-natural-base-finite=" + statDamageNaturalBaseFinite.get()
+                        + " stat-damage-natural-final-finite=" + statDamageNaturalFinalFinite.get()
+                        + " stat-damage-natural-original=" + statDamageNaturalOriginal.get()
+                        + " stat-damage-natural-final=" + statDamageNaturalFinal.get()
+                        + " stat-damage-natural-event=true passed=" + statDamageNaturalPassed);
                 boolean named = "IMPORTED_DAMAGE".equals(attacker.getCustomName());
                 boolean equipped = attacker.getEquipment() != null
                         && attacker.getEquipment().getItemInMainHand().getType() == org.bukkit.Material.GOLDEN_SWORD;

@@ -2013,6 +2013,14 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'preventTeleportImported'; status = 'passed'; observations = @('prevent-teleport-imported result=true imported=true mapped=true invalid-preserved=true spawned=true protected-api-blocked=true control-api-teleported=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'statDamageModifierCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'statDamageModifierCondition'; status = 'passed'; observations = @('skill-trigger damage=true attack=true stat-damage-modifier-condition=true stat-damage-modifier-neutral-rejected=true stat-damage-modifier-imported=true')
+    }
+    $fullCatalogReport.expectedProbeIds += 'statDamageModifierNaturalEvent'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'statDamageModifierNaturalEvent'; status = 'passed'; observations = @('stat-damage-natural-condition=true stat-damage-natural-imported=true stat-damage-natural-base-finite=true stat-damage-natural-final-finite=true stat-damage-natural-event=true passed=true')
+    }
     $fullCatalogPath = Join-Path $temp 'full-catalog-report.json'
     $originalPluginEnabled = $fullCatalogReport.pluginEnabled
     $fullCatalogReport.pluginEnabled = $false

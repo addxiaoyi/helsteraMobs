@@ -1,4 +1,4 @@
-Latest full-catalog strict fixture `srv-paper-stat-damage-strict-20261115-r2` completed all 459 probes on Paper 1.21.1-133: 440 passed, 19 expected rejections, zero failed or incomplete. It adds the `statDamageModifierCondition` synthetic event self-test; this verifies production skill dispatch, aliases, threshold behavior, and imported mapping without claiming a naturally generated Paper damage event. Plugin SHA-256: `2604eb6fdfd3e9016fd9d7e8fc0a63b9c372ac7ed61a3863a0edd604919d03d0`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-stat-damage-strict-20261115-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions catalog remains incomplete.
+Latest full-catalog strict fixture `srv-paper-stat-damage-strict-20261115-r3` completed all 460 probes on Paper 1.21.1-133: 441 passed, 19 expected rejections, zero failed or incomplete. It adds a real naturally generated `EntityDamageByEntityEvent` probe for `statDamageModifierCondition`; the event exposes finite original Bukkit `BASE` damage and final damage, and both direct and imported condition paths pass against that live event. Plugin SHA-256: `e6c098fd440c769f3177cd4d1919686a7b2993b43a12319626c5b2dafcd357b7`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-stat-damage-strict-20261115-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions catalog remains incomplete.
 Runtime and importer support cover Mythic `MetaskillCondition`/`skillcondition` parameters and `DetermineCondition`/`detCond` result modes, including scoped parameters, nested evaluation, recursion guards, and fail-closed synchronous execution. AI, migration, importer-to-runtime, and focused Paper 1.21.1 tests pass for direct/imported aliases, parameter isolation, nested result modes, missing determinations, and malformed-input preservation. See the [Paper report](tools/paper-integration/reports/paper-1.21.1-metaskill-condition-strict-20261115-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [parity matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions catalog remains incomplete.
 Previous strict fixture `srv-paper-has-item-matcher-strict-20261115-r1` completed the same 456-probe release catalog and verifies real-player Bukkit item tags, material wildcards, metadata matching, inclusive amount ranges, imported `HasItem`/`TargetHasItem`, and inventory restoration. Third-party custom-item wildcard expansion and block-state selectors remain unverified.
 Focused MythicMobs fixture `srv-paper-mythic-pack-strict-20261115-r13` passed on Paper 1.21.1-133 with MythicMobs 5.7.2. The direct and imported `MobsInRadius` paths now verify native and custom type filters at the origin, default exact matching, inclusive amount ranges, comma-separated lists, case-insensitive names, and unknown-type rejection; direct/imported `MythicMobType` exact and substring modes plus the MythicMobs API identity oracle also passed. The public build reports Premium false, so Premium-enabled behavior remains unverified. This is focused evidence, not the full release catalog. Plugin SHA-256: `4773347d963645ad142d4295cc1bb4cfc49604755ab156892f7a1a47998a060f`. Report: [reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.json), SHA-256 `fa88fec0a12b7d7193c26c1d351bd3fca0dc1d37b91ee05410a0857f41adb17a`. Compressed redacted log: [reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.log.gz), SHA-256 `59f5a50f30c85132e7e59993d1bc879b1b48b5e4b21be6f88d21024decf5fbd7`.
@@ -1395,7 +1395,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-stat-damage-strict-20261115-r2` has 459 probes (440 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-stat-damage-strict-20261115-r3` has 460 probes (441 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1404,14 +1404,14 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 ### Current Development Goals
 
-This is a partial parity release. The matrix currently has `34`
+This is a partial parity release. The matrix currently has `33`
 `mapped-unverified` rows (counted from the status column in
 `MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-15). The ordered work packages,
 all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 459 probes, zero incomplete (440 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-stat-damage-strict-20261115-r2`; its `statDamageModifierCondition` observation is a synthetic event self-test, so real naturally generated damage-event parity remains open.
+Latest strict report has 460 probes, zero incomplete (441 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-stat-damage-strict-20261115-r3`; its `statDamageModifierCondition` coverage includes a naturally generated Paper damage event and the synthetic production dispatch self-test.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
