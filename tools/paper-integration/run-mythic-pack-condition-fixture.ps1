@@ -126,7 +126,7 @@ try {
         throw 'Paper or MythicMobs did not finish startup; inspect the retained fixture logs.'
     }
     $probeDeadline = [DateTime]::UtcNow.AddSeconds(30)
-    $probePattern = 'mythic-pack-condition actual-version=2\.4\.1 .*premium-api-available=true .*premium-arguments-preserved=true premium-runtime-arguments-rejected=true mythic-mob-api-available=true mythic-mob-oracle-positive=true mythic-mob-oracle-negative=true mythic-mob-runtime-positive=true mythic-mob-runtime-negative=true mythic-mob-imported-positive=true mythic-mob-imported-negative=true ismm-alias-positive=true ismm-alias-negative=true passed=true'
+    $probePattern = 'mythic-pack-condition actual-version=2\.4\.1 .*premium-api-available=true .*premium-arguments-preserved=true premium-runtime-arguments-rejected=true mythic-mob-api-available=true mythic-mob-oracle-positive=true mythic-mob-oracle-negative=true mythic-mob-runtime-positive=true mythic-mob-runtime-negative=true mythic-mob-imported-positive=true mythic-mob-imported-negative=true ismm-alias-positive=true ismm-alias-negative=true mythic-mob-radius-type-positive=true mythic-mob-radius-type-negative=true mythic-mob-imported-radius-type-positive=true mythic-mob-imported-radius-type-negative=true passed=true'
     while ([DateTime]::UtcNow -lt $probeDeadline -and -not $process.HasExited -and
             -not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
         Start-Sleep -Milliseconds 250

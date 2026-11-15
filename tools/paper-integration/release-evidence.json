@@ -66,6 +66,16 @@
     "supersededBy": "srv-paper-plugin-condition-strict-20261114-r2"
   },
   {
+    "fixtureId": "srv-paper-mythic-pack-strict-20261115-r8",
+    "reportFixtureDirectory": "srv-paper-mythic-pack-strict-20261115-r8",
+    "report": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r8.json",
+    "reportSha256": "7d4209e45240ddaf60408692871dd73e20f9696821b997d1d4ba9e3f861a44d8",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r8.log.gz",
+    "logSha256": "697611ab3db1ea173ac6d0983e96008f1084d18bf1fd2c6433806cecd6005730",
+    "pluginSha256": "11f0e8a565998d7776dcca3ee4d3cc8e135afe1d740f9ec75fa8b928d683e115",
+    "fullReleaseCatalog": false
+  },
+  {
     "fixtureId": "srv-paper-mythic-pack-strict-20261114-r7",
     "reportFixtureDirectory": "srv-paper-mythic-pack-strict-20261114-r7",
     "report": "tools/paper-integration/reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.json",
