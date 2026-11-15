@@ -67,9 +67,9 @@ $parity = Get-Content -Raw (Join-Path $root 'MYTHICMOBS_PARITY_MATRIX.md')
 $startup = Get-Content -Raw (Join-Path $PSScriptRoot 'STARTUP_EVIDENCE.md')
 $paperReadme = Get-Content -Raw (Join-Path $PSScriptRoot 'README.md')
 $fixture = [regex]::Escape([string]$entry.releaseFixtureId)
-if ($readme -notmatch "Latest strict fixture ``$fixture``" -or
-        $paperReadme -notmatch "Latest strict fixture ``$fixture``" -or
-        $startup -notmatch "(?s)^# Paper Startup Evidence\s+Latest fixture ``$fixture``" -or
+if ($readme -notmatch "Latest (?:full-catalog )?strict fixture ``$fixture``" -or
+        $paperReadme -notmatch "Latest (?:full-catalog )?strict fixture ``$fixture``" -or
+        $startup -notmatch "(?s)^# Paper Startup Evidence\s+Latest (?:full-catalog )?fixture ``$fixture``" -or
         $parity -notmatch "(?m)^\| Paper integration suite \| mapped-unverified \| Current release fixture ``$fixture``") {
     throw 'Release fixture references in README, parity matrix, or Paper evidence do not match the version matrix.'
 }

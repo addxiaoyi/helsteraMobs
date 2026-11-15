@@ -1179,6 +1179,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean mythicMobRadiusTypeNegative = false;
             boolean mythicMobImportedRadiusTypePositive = false;
             boolean mythicMobImportedRadiusTypeNegative = false;
+            boolean mythicMobRadiusTypeListPositive = false;
+            boolean mythicMobImportedRadiusTypeListPositive = false;
+            boolean mythicMobRadiusTypeCasePositive = false;
+            boolean mythicMobImportedRadiusTypeCasePositive = false;
             org.bukkit.entity.Entity mythicMobProbe = null;
             org.bukkit.entity.Entity ordinaryMobProbe = null;
             String actualVersion = "unavailable";
@@ -1266,6 +1270,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                         && behaviors.testCondition(importedCustomTypeCondition, radiusContext);
                                 mythicMobImportedRadiusTypeNegative = importedUnrelatedTypeCondition != null
                                         && !behaviors.testCondition(importedUnrelatedTypeCondition, radiusContext);
+                                String multipleTypeCondition = skills.bindCondition(
+                                        "mobs-in-radius 1 8 CaveWraith,SkeletalMinion");
+                                mythicMobRadiusTypeListPositive = multipleTypeCondition != null
+                                        && behaviors.testCondition(multipleTypeCondition, radiusContext);
+                                var importedMultipleTypes = dev.helstera.migration.importer.MmConditions.translate(
+                                        "?MobsInRadius{types=CaveWraith,SkeletalMinion;radius=8}");
+                                String importedMultipleTypeCondition = importedMultipleTypes.translated()
+                                        ? skills.bindCondition(importedMultipleTypes.condition()) : null;
+                                mythicMobImportedRadiusTypeListPositive = importedMultipleTypeCondition != null
+                                        && behaviors.testCondition(importedMultipleTypeCondition, radiusContext);
+                                String lowerCaseTypeCondition = skills.bindCondition(
+                                        "mobs-in-radius 1 8 skeletalminion");
+                                mythicMobRadiusTypeCasePositive = lowerCaseTypeCondition != null
+                                        && behaviors.testCondition(lowerCaseTypeCondition, radiusContext);
+                                var importedLowerCaseType = dev.helstera.migration.importer.MmConditions.translate(
+                                        "?MobsInRadius{types=skeletalminion;radius=8}");
+                                String importedLowerCaseTypeCondition = importedLowerCaseType.translated()
+                                        ? skills.bindCondition(importedLowerCaseType.condition()) : null;
+                                mythicMobImportedRadiusTypeCasePositive = importedLowerCaseTypeCondition != null
+                                        && behaviors.testCondition(importedLowerCaseTypeCondition, radiusContext);
                             }
                         }
                     } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
@@ -1337,7 +1361,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && mythicMobImportedPositive && mythicMobImportedNegative
                     && mythicMobAliasPositive && mythicMobAliasNegative
                     && mythicMobRadiusTypePositive && mythicMobRadiusTypeNegative
-                    && mythicMobImportedRadiusTypePositive && mythicMobImportedRadiusTypeNegative;
+                    && mythicMobImportedRadiusTypePositive && mythicMobImportedRadiusTypeNegative
+                    && mythicMobRadiusTypeListPositive && mythicMobImportedRadiusTypeListPositive
+                    && mythicMobRadiusTypeCasePositive && mythicMobImportedRadiusTypeCasePositive;
             getLogger().info("[自检] mythic-pack-condition actual-version=" + actualVersion
                     + " pack-loaded=" + packLoaded + " case-sensitive=" + caseSensitive
                     + " missing-rejected=" + missingRejected + " exact-version=" + exactVersion
@@ -1364,6 +1390,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " mythic-mob-radius-type-negative=" + mythicMobRadiusTypeNegative
                     + " mythic-mob-imported-radius-type-positive=" + mythicMobImportedRadiusTypePositive
                     + " mythic-mob-imported-radius-type-negative=" + mythicMobImportedRadiusTypeNegative
+                    + " mythic-mob-radius-type-list-positive=" + mythicMobRadiusTypeListPositive
+                    + " mythic-mob-imported-radius-type-list-positive=" + mythicMobImportedRadiusTypeListPositive
+                    + " mythic-mob-radius-type-case-positive=" + mythicMobRadiusTypeCasePositive
+                    + " mythic-mob-imported-radius-type-case-positive=" + mythicMobImportedRadiusTypeCasePositive
                     + " passed=" + passed);
         }, Math.max(1, delay));
     }

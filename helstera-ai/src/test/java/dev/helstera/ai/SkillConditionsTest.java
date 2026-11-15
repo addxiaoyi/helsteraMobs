@@ -1752,6 +1752,10 @@ class SkillConditionsTest {
         SkillExtras.mythicMobTypeMatcher((entity, type) -> entity == custom && type.equalsIgnoreCase("ForestGuardian"));
         assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "ForestGuardian"))
                 .test(context));
+        assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "UNKNOWN_MOB,ForestGuardian"))
+                .test(context), "multiple type filters should match any configured type");
+        assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "forestguardian"))
+                .test(context), "Mythic internal-name matching should be case-insensitive");
         SkillExtras.mythicMobTypeMatcher((entity, type) -> { throw new IllegalStateException("API unavailable"); });
         assertFalse(extraFactory("mobs-in-radius").create(List.of("1", "5", "ForestGuardian"))
                 .test(context));
