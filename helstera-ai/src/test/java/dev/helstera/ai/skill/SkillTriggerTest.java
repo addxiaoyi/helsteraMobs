@@ -60,6 +60,14 @@ class SkillTriggerTest {
         assertSame(SkillTrigger.ITEM_CONSUME, SkillTrigger.of("onConsume"));
         assertSame(SkillTrigger.ITEM_CONSUME, SkillTrigger.of("onEat"));
         assertSame(SkillTrigger.ITEM_CONSUME, SkillTrigger.of("on-item-consume"));
+        assertSame(SkillTrigger.DAMAGE, SkillTrigger.of("onDamaged"));
+        assertSame(SkillTrigger.DAMAGE, SkillTrigger.of("onHurt"));
+        assertSame(SkillTrigger.DAMAGE, SkillTrigger.of("hurt"));
+        assertSame(SkillTrigger.ITEM_PICKUP, SkillTrigger.of("onPickup"));
+        assertSame(SkillTrigger.ITEM_DROP, SkillTrigger.of("onDrop"));
+        assertSame(SkillTrigger.ENTITY_SHOOT, SkillTrigger.of("onShoot"));
+        assertSame(SkillTrigger.VEHICLE_ENTER, SkillTrigger.of("onMount"));
+        assertSame(SkillTrigger.VEHICLE_EXIT, SkillTrigger.of("onDismount"));
         assertSame(SkillTrigger.INTERACT, SkillTrigger.of("eventOnInteract"));
         assertSame(SkillTrigger.TAME, SkillTrigger.of("onTame"));
         assertSame(SkillTrigger.BREED, SkillTrigger.of("onBreed"));

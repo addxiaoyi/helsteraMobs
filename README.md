@@ -1418,6 +1418,8 @@ work is:
 
 Latest strict report has 462 probes, zero incomplete (443 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-context-targeter-inactive-strict-20261115-r1`; its `contextTargeterInactive` coverage includes live target/trigger/attacker resolution, inactive-entity filtering, projectile-shooter removal rejection, and invalid-argument rejection, while retaining the full runtime catalog and client workflows.
 
+Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
+
 Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-20261115-r3` adds two-player production coverage for conditional-targeter hyphen/underscore aliases, `condition`/`c` aliases, chained condition filtering, and fail-closed unknown, duplicate, empty, and malformed private arguments. It records 434 passed probes, 19 observed expected rejections, and one unrelated `not-observed` probe; it does not change the full-catalog release boundary or the `mapped-unverified` Context Targeters row.
 
 1. **Matrix and evidence audit**: reconcile every row with source configuration,

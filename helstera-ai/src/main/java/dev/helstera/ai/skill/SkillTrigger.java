@@ -201,6 +201,22 @@ public enum SkillTrigger {
         if (n.equals("onitemconsume") || n.equals("itemconsume") || n.equals("oneat") || n.equals("eat")) {
             return ITEM_CONSUME;
         }
+        // Mythic's damage trigger has two documented spellings in existing
+        // packs.  The importer already canonicalizes both forms, but profiles
+        // loaded directly from YAML must take the same route; otherwise the
+        // key is retained as an unknown lowercase string and never dispatches.
+        if (n.equals("ondamaged") || n.equals("damaged")
+                || n.equals("onhurt") || n.equals("hurt")) {
+            return DAMAGE;
+        }
+        // Keep the common short Mythic event spellings usable in hand-written
+        // profiles too.  These map to existing Bukkit routes and therefore do
+        // not introduce a second event or a second execution path.
+        if (n.equals("onpickup") || n.equals("pickup")) return ITEM_PICKUP;
+        if (n.equals("ondrop") || n.equals("drop")) return ITEM_DROP;
+        if (n.equals("onshoot") || n.equals("shoot")) return ENTITY_SHOOT;
+        if (n.equals("onmount") || n.equals("mount")) return VEHICLE_ENTER;
+        if (n.equals("ondismount") || n.equals("dismount")) return VEHICLE_EXIT;
         if (n.equals("onchangeworld") || n.equals("changeworld")) return WORLD_CHANGE;
         // 先按全名匹配（onspawn / onspawn / on-spawn）
         for (SkillTrigger t : values()) {

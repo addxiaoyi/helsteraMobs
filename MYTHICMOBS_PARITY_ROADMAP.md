@@ -150,6 +150,10 @@ Matrix rows: `Mechanics catalog`, `Skills importer`, `Context targeters`,
 - Verify trigger registration, event actor/target/trigger context, priority,
   cancellation, natural timing, and cleanup. Separate synthetic event evidence
   from naturally produced events.
+- Keep direct profile loading aligned with Mythic import aliases: `onDamaged` /
+  `onHurt`, `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount` now
+  resolve to the existing canonical trigger routes. This closes a parser-level
+  silent-failure path; it does not claim additional Paper event coverage.
 - Exercise inline and trigger conditions through their actual skill dispatch
   paths, not only direct condition evaluation.
 

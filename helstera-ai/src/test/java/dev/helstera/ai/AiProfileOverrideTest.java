@@ -129,6 +129,8 @@ class AiProfileOverrideTest {
                 triggers:
                   onSpawn:
                     do: [stop]
+                  onDamaged:
+                    do: [stop]
                   on-item-consume:
                     do: [stop]
                 """));
@@ -136,9 +138,12 @@ class AiProfileOverrideTest {
         AiProfile profile = AiProfile.fromSection("aliases", section);
 
         assertTrue(profile.triggers.containsKey("on-spawn"));
+        assertTrue(profile.triggers.containsKey("on-damage"));
         assertTrue(profile.triggers.containsKey("on-consume"));
         assertFalse(profile.triggers.containsKey("onSpawn"));
+        assertFalse(profile.triggers.containsKey("onDamaged"));
         assertFalse(profile.triggers.containsKey("on-item-consume"));
+        assertEquals(1, profile.triggers.get("on-damage").actions.size());
     }
 
     @Test
