@@ -14822,31 +14822,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             && childTargets.get(0).equals(childProbe);
                     dev.helstera.api.behavior.MobRelations.clearParent(childProbe);
                     var modelMob = modelInstance.baseEntity().orElse(null);
-                    boolean casterParentSet = dev.helstera.api.behavior.MobRelations.setParent(modelMob, wolf);
-                    boolean siblingParentSet = dev.helstera.api.behavior.MobRelations.setParent(childProbe, wolf);
-                    var siblingContext = dev.helstera.api.behavior.BehaviorContext.of(
-                            modelInstance, childProbe, 1.0, 0.0, 0, "integration");
-                    boolean siblingCondition = behaviors.testCondition(
-                            skills.bindCondition("is-sibling"), siblingContext);
-                    boolean parentAliveCondition = behaviors.testCondition(
-                            skills.bindCondition("is-parent-alive"), childContext);
-                    dev.helstera.api.behavior.MobRelations.clearParent(modelMob);
-                    dev.helstera.api.behavior.MobRelations.clearParent(childProbe);
-                    var removedParent = world.spawn(wolf.getLocation(), org.bukkit.entity.Zombie.class);
-                    var orphanProbe = world.spawn(wolf.getLocation(), org.bukkit.entity.Pig.class);
-                    conditionCategoryEntities.addAll(java.util.List.of(removedParent, orphanProbe));
-                    dev.helstera.api.behavior.MobRelations.setParent(orphanProbe, removedParent);
-                    var orphanContext = dev.helstera.api.behavior.BehaviorContext.of(
-                            modelInstance, orphanProbe, 1.0, 0.0, 0, "integration");
-                    boolean parentAliveBeforeRemoval = behaviors.testCondition(
-                            skills.bindCondition("is-parent-alive"), orphanContext);
-                    removedParent.remove();
-                    boolean parentAliveAfterRemoval = behaviors.testCondition(
-                            skills.bindCondition("is-parent-alive"), orphanContext);
-                    parentDerivedConditions = casterParentSet && siblingParentSet
-                            && siblingCondition && parentAliveCondition
-                            && parentAliveBeforeRemoval && !parentAliveAfterRemoval;
-                    dev.helstera.api.behavior.MobRelations.clearParent(orphanProbe);
+                    parentDerivedConditions = verifyImportedParentDerivedConditions(world, wolf, childProbe,
+                            modelMob, modelInstance, childContext, skills, behaviors, conditionCategoryEntities);
                 }
                 if (ownerProbe != null) {
                     runContextTargeterRelationsSelfTest(world, wolf, ownerProbe, modelInstance, ownerInstance);
@@ -31300,6 +31277,61 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public CustomMenuService customMenus() { return customMenuService; }
 
     /** 模型校验器；供 /helstera check 汇总结构性问题。 */
+    private static boolean verifyImportedParentDerivedConditions(org.bukkit.World world,
+            org.bukkit.entity.Wolf wolf, org.bukkit.entity.Pig childProbe, org.bukkit.entity.Entity modelMob,
+            dev.helstera.api.instance.ModelInstance modelInstance,
+            dev.helstera.api.behavior.BehaviorContext childContext,
+            SkillService skills, BehaviorRegistry behaviors,
+            java.util.List<org.bukkit.entity.LivingEntity> conditionCategoryEntities) {
+        var importedParentAlive = dev.helstera.migration.importer.MmConditions.translate("?isParentAlive");
+        var importedParentAliveAlias = dev.helstera.migration.importer.MmConditions.translate("?parentAlive");
+        var importedSibling = dev.helstera.migration.importer.MmConditions.translate("?isSibling");
+        var importedSiblingAlias = dev.helstera.migration.importer.MmConditions.translate("?sibling");
+        boolean mapped = importedParentAlive.translated() && importedParentAliveAlias.translated()
+                && importedSibling.translated() && importedSiblingAlias.translated()
+                && "is-parent-alive".equals(importedParentAlive.condition())
+                && importedParentAlive.condition().equals(importedParentAliveAlias.condition())
+                && "is-sibling".equals(importedSibling.condition())
+                && importedSibling.condition().equals(importedSiblingAlias.condition());
+        String parentKey = mapped ? skills.bindCondition(importedParentAlive.condition()) : null;
+        String siblingKey = mapped ? skills.bindCondition(importedSibling.condition()) : null;
+        if (parentKey == null || siblingKey == null || world == null || wolf == null
+                || childProbe == null || modelMob == null || modelInstance == null) return false;
+
+        dev.helstera.api.behavior.MobRelations.clearParent(childProbe);
+        boolean casterParentSet = dev.helstera.api.behavior.MobRelations.setParent(modelMob, wolf);
+        boolean siblingParentSet = dev.helstera.api.behavior.MobRelations.setParent(childProbe, wolf);
+        var siblingContext = dev.helstera.api.behavior.BehaviorContext.of(
+                modelInstance, childProbe, 1.0, 0.0, 0, "integration");
+        boolean siblingPositive = behaviors.testCondition(siblingKey, siblingContext);
+        boolean parentAlivePositive = behaviors.testCondition(parentKey, childContext);
+        var missingContext = dev.helstera.api.behavior.BehaviorContext.of(
+                null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "integration");
+        boolean missingRejected = !behaviors.testCondition(parentKey, missingContext)
+                && !behaviors.testCondition(siblingKey, missingContext);
+
+        dev.helstera.api.behavior.MobRelations.clearParent(modelMob);
+        dev.helstera.api.behavior.MobRelations.clearParent(childProbe);
+        var removedParent = world.spawn(wolf.getLocation(), org.bukkit.entity.Zombie.class);
+        var orphanProbe = world.spawn(wolf.getLocation(), org.bukkit.entity.Pig.class);
+        conditionCategoryEntities.add(removedParent);
+        conditionCategoryEntities.add(orphanProbe);
+        boolean orphanCasterSet = dev.helstera.api.behavior.MobRelations.setParent(modelMob, removedParent);
+        boolean orphanSet = dev.helstera.api.behavior.MobRelations.setParent(orphanProbe, removedParent);
+        var orphanContext = dev.helstera.api.behavior.BehaviorContext.of(
+                modelInstance, orphanProbe, 1.0, 0.0, 0, "integration");
+        boolean parentAliveBeforeRemoval = behaviors.testCondition(parentKey, orphanContext);
+        boolean siblingBeforeRemoval = behaviors.testCondition(siblingKey, orphanContext);
+        removedParent.remove();
+        boolean parentAliveAfterRemoval = behaviors.testCondition(parentKey, orphanContext);
+        boolean siblingAfterRemoval = behaviors.testCondition(siblingKey, orphanContext);
+        dev.helstera.api.behavior.MobRelations.clearParent(modelMob);
+        dev.helstera.api.behavior.MobRelations.clearParent(orphanProbe);
+        return casterParentSet && siblingParentSet && siblingPositive && parentAlivePositive && missingRejected
+                && orphanCasterSet && orphanSet && parentAliveBeforeRemoval && siblingBeforeRemoval
+                && !parentAliveAfterRemoval && !siblingAfterRemoval;
+    }
+
     public ModelValidator validator() { return validator; }
     /**
      * 命令层与各子系统的唯一依赖面。

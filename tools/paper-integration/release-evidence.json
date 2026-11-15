@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-parent-derived-import-strict-20261115-r2",
+    "reportFixtureDirectory": "srv-paper-parent-derived-import-strict-20261115-r2",
+    "report": "tools/paper-integration/reports/paper-1.21.1-parent-derived-import-strict-20261115-r2.json",
+    "reportSha256": "1f35b567c9c0471ec4855e544ca9b682672dd3570ebfd286a248f7169d8a7205",
+    "log": "tools/paper-integration/reports/paper-1.21.1-parent-derived-import-strict-20261115-r2.log.gz",
+    "logSha256": "b3f131916f8bf51d2e62b7a723299a37bcc08e43cd0a15948eb48b42ea231e63",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-parent-derived-import-strict-20261115-r2-client-logs.tar.gz",
+    "clientLogSha256": "16d79e123775980acd11494f3b1ee4f9111b7cdc398aa645036f08d571eb11ed",
+    "pluginSha256": "d3b78fdd61bf3fe96a1590a432108846b7a45987a9e946ea1531d782e2fe19fb",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-sprinting-strict-20261115-r2",
     "reportFixtureDirectory": "srv-paper-sprinting-strict-20261115-r2",
     "report": "tools/paper-integration/reports/paper-1.21.1-sprinting-condition-strict-20261115-r2.json",

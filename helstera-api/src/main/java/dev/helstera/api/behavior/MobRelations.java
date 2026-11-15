@@ -162,7 +162,7 @@ public final class MobRelations {
         UUID firstParent = parentId(first);
         UUID secondParent = parentId(second);
         if (firstParent == null || !firstParent.equals(secondParent)) return false;
-        Entity parent = Bukkit.getEntity(firstParent);
+        Entity parent = resolve(firstParent);
         return parent != null && parent.isValid() && !parent.isDead();
     }
 }

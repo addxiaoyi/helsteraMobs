@@ -1711,7 +1711,9 @@ class MmConditionsTest {
         assertEquals("is-child", t("?isChild"));
         assertEquals("is-child", t("?child"));
         assertEquals("is-parent-alive", t("?isParentAlive"));
+        assertEquals("is-parent-alive", t("?parentAlive"));
         assertEquals("is-sibling", t("?isSibling"));
+        assertEquals("is-sibling", t("?sibling"));
         assertTrue(translated("?hasPassenger"));
     }
 

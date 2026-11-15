@@ -3834,6 +3834,92 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported parent-alive and sibling aliases evaluate live parent relations")
+    void importedParentDerivedConditionsReachRuntime() {
+        var parent = mock(org.bukkit.entity.Entity.class);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var unrelated = mock(org.bukkit.entity.LivingEntity.class);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        var casterData = mock(org.bukkit.persistence.PersistentDataContainer.class);
+        var targetData = mock(org.bukkit.persistence.PersistentDataContainer.class);
+        var unrelatedData = mock(org.bukkit.persistence.PersistentDataContainer.class);
+        var parentId = UUID.randomUUID();
+        var otherParentId = UUID.randomUUID();
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(parent.isValid()).thenReturn(true);
+        when(parent.isDead()).thenReturn(false);
+        when(parent.getUniqueId()).thenReturn(parentId);
+        when(caster.isValid()).thenReturn(true);
+        when(caster.isDead()).thenReturn(false);
+        when(caster.getPersistentDataContainer()).thenReturn(casterData);
+        when(target.isValid()).thenReturn(true);
+        when(target.isDead()).thenReturn(false);
+        when(target.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(target.getPersistentDataContainer()).thenReturn(targetData);
+        when(unrelated.isValid()).thenReturn(true);
+        when(unrelated.isDead()).thenReturn(false);
+        when(unrelated.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(unrelated.getPersistentDataContainer()).thenReturn(unrelatedData);
+        when(caster.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(casterData.get(any(org.bukkit.NamespacedKey.class),
+                eq(org.bukkit.persistence.PersistentDataType.STRING))).thenReturn(parentId.toString());
+        when(targetData.get(any(org.bukkit.NamespacedKey.class),
+                eq(org.bukkit.persistence.PersistentDataType.STRING))).thenReturn(parentId.toString());
+        when(unrelatedData.get(any(org.bukkit.NamespacedKey.class),
+                eq(org.bukkit.persistence.PersistentDataType.STRING))).thenReturn(otherParentId.toString());
+
+        var registry = new BehaviorRegistryImpl();
+        var skills = new SkillService(registry, null);
+        var targetContext = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, target, 1, -1, 0, "IDLE");
+        var unrelatedContext = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, unrelated, 1, -1, 0, "IDLE");
+        var missingContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, null, 1, -1, 0, "IDLE", null, null, List.of(), null, null);
+
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(() -> org.bukkit.Bukkit.getEntity(parentId)).thenReturn(parent);
+            bukkit.when(() -> org.bukkit.Bukkit.getEntity(otherParentId)).thenReturn(parent);
+            assertEquals(parentId, dev.helstera.api.behavior.MobRelations.parentId(target));
+            assertEquals(parent, org.bukkit.Bukkit.getEntity(parentId));
+            assertTrue(dev.helstera.api.behavior.MobRelations.isParentAlive(target));
+            for (String source : List.of("?isParentAlive", "?parentAlive")) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                assertTrue(mapped.translated(), source);
+                assertEquals("is-parent-alive", mapped.condition(), source);
+                String bound = skills.bindCondition(mapped.condition());
+                assertNotNull(bound, source);
+                assertTrue(registry.testCondition(bound, targetContext), source);
+                assertFalse(registry.testCondition(bound, missingContext), source);
+            }
+            for (String source : List.of("?isSibling", "?sibling")) {
+                var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+                assertTrue(mapped.translated(), source);
+                assertEquals("is-sibling", mapped.condition(), source);
+                String bound = skills.bindCondition(mapped.condition());
+                assertNotNull(bound, source);
+                assertTrue(registry.testCondition(bound, targetContext), source);
+                assertFalse(registry.testCondition(bound, unrelatedContext), source);
+                assertFalse(registry.testCondition(bound, missingContext), source);
+            }
+
+            when(parent.isDead()).thenReturn(true);
+            var parentAlive = dev.helstera.migration.importer.MmConditions.translate("?isParentAlive");
+            var sibling = dev.helstera.migration.importer.MmConditions.translate("?isSibling");
+            assertFalse(registry.testCondition(skills.bindCondition(parentAlive.condition()), targetContext));
+            assertFalse(registry.testCondition(skills.bindCondition(sibling.condition()), targetContext));
+
+            when(parent.isDead()).thenReturn(false);
+            bukkit.when(() -> org.bukkit.Bukkit.getEntity(parentId))
+                    .thenThrow(new IllegalStateException("Bukkit unavailable"));
+            assertFalse(registry.testCondition(skills.bindCondition(parentAlive.condition()), targetContext));
+            assertFalse(registry.testCondition(skills.bindCondition(sibling.condition()), targetContext));
+        }
+    }
+
+    @Test
     @DisplayName("imported angry and pollinated aliases reach their runtime state consumers")
     void importedAngryAndPollinatedConditionsReachRuntime() {
         var bee = mock(org.bukkit.entity.Bee.class);
