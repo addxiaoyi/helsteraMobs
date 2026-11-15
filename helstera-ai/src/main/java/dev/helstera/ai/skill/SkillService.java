@@ -414,7 +414,8 @@ public final class SkillService {
                 "target-is-vehicle", "target-has-passenger", "is-leashed", "target-is-leashed",
                 "has-owner", "target-has-owner", "owner-is-player", "owner-is-online",
                 "target-owner-is-player", "target-owner-is-online", "is-owner", "has-parent", "is-parent",
-                "is-parent-alive", "is-sibling", "is-in-audience", "has-free-inventory-slot",
+                "is-parent-alive", "is-sibling", "is-in-audience", "has-inventory-space",
+                "has-free-inventory-slot",
                 "mythic-premium")
                 .contains(name)) return null;
         if ("last-signal".equals(name) && conditionSpec.indexOf('{') >= 0) {
@@ -2681,6 +2682,7 @@ public final class SkillService {
             case "itemissimilar", "item-is-similar", "issimilar", "similarto", "similar-to" ->
                     "item-is-similar";
             case "itemrecharging", "item-recharging", "recharging" -> "item-recharging";
+            case "hasinventoryspace", "has-inventory-space" -> "has-inventory-space";
             case "hasfreeslot", "has-free-slot", "hasfreeinventoryslot",
                     "has-free-inventory-slot" -> "has-free-inventory-slot";
             case "potioneffectactive", "potionactive" -> "potion-effect-active";

@@ -3502,6 +3502,11 @@ public final class SkillExtras {
                 Map.entry("has-free-inventory-slot", (SkillCatalog.ConditionFactory) a ->
                         ctx -> conditionEntity(ctx) instanceof Player player
                                 && player.getInventory().firstEmpty() >= 0),
+                Map.entry("has-inventory-space", (SkillCatalog.ConditionFactory) a -> {
+                    requireNoConditionArguments(a, "has-inventory-space");
+                    return ctx -> conditionEntity(ctx) instanceof Player player
+                            && player.getInventory().firstEmpty() >= 0;
+                }),
                 Map.entry("has-currency", (SkillCatalog.ConditionFactory) a -> {
                     String rawAmount = keyedArg(a, "amount", "a", "value", "v");
                     if (rawAmount == null) rawAmount = str(a, 0, "");

@@ -200,6 +200,24 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("HasInventorySpace：官方条件只允许玩家目标且拒绝参数")
+    void hasInventorySpaceMatchesOfficialScope() {
+        var player = mock(Player.class);
+        var inventory = mock(org.bukkit.inventory.PlayerInventory.class);
+        when(player.getInventory()).thenReturn(inventory);
+        when(inventory.firstEmpty()).thenReturn(0, -1);
+        var condition = extraFactory("has-inventory-space").create(List.of());
+        var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
+
+        assertTrue(condition.test(context));
+        assertFalse(condition.test(context));
+        assertFalse(condition.test(BehaviorContext.of(null, mock(org.bukkit.entity.Zombie.class),
+                1.0, -1, 0, "IDLE")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("has-inventory-space").create(List.of("slot=0")));
+    }
+
+    @Test
     @DisplayName("Targets 匹配 skill tree 继承目标数量并支持 targets targeter")
     void officialTargetsConditionCountsInheritedTargets() {
         LivingEntity first = mock(LivingEntity.class);

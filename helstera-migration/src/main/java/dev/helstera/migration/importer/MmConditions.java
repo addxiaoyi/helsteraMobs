@@ -176,7 +176,7 @@ public final class MmConditions {
             "enderdragonalive", "isdragonalive", "dragonalive",
             "israiderpatrolleader", "ispatrolleader", "serverispaper", "ispaper", "ismythicmob", "ismm",
             "iscreeperprimed", "hasdialogopen", "dialogopen", "isincinematic", "incinematic",
-            "itemrecharging", "recharging", "hasfreeinventoryslot", "hasfreeslot",
+            "itemrecharging", "recharging", "hasinventoryspace", "hasfreeinventoryslot", "hasfreeslot",
             "vehicleisdead", "isvehicle", "vehicle", "moving", "ismoving", "haspassenger", "haspassengers",
             "isleashed", "leashed", "targetisleashed", "targetleashed", "hasowner", "ownerisplayer",
             "ownerisonline", "owner", "isowner", "targethasowner", "targetownerisplayer", "targetownerisonline",
@@ -1338,9 +1338,12 @@ public final class MmConditions {
             if (!validCommaList(types)) return new Mapped(s, false);
             return new Mapped("trigger-block-type " + types.toUpperCase(Locale.ROOT), true);
         }
-        if ("hasfreeinventoryslot".equals(name) || "hasfreeslot".equals(name)) {
+        if ("hasinventoryspace".equals(name) || "hasfreeinventoryslot".equals(name)
+                || "hasfreeslot".equals(name)) {
             return body == null || body.isBlank()
-                    ? new Mapped("has-free-inventory-slot", true) : new Mapped(s, false);
+                    ? new Mapped("hasinventoryspace".equals(name)
+                    ? "has-inventory-space" : "has-free-inventory-slot", true)
+                    : new Mapped(s, false);
         }
         if ("entitytype".equals(name) || "entitytypeis".equals(name) || "mobtype".equals(name)) {
             String type = entityTypeArgument(body);

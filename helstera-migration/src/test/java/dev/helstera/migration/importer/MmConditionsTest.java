@@ -727,10 +727,13 @@ class MmConditionsTest {
 
     @Test
     void freeInventorySlotConditionMapsWithoutArguments() {
+        assertEquals("has-inventory-space", t("?hasInventorySpace"));
         assertEquals("has-free-inventory-slot", t("?hasFreeInventorySlot"));
         assertEquals("has-free-inventory-slot", t("?hasFreeSlot"));
+        assertTrue(translated("?hasInventorySpace"));
         assertTrue(translated("?hasFreeInventorySlot"));
         assertTrue(translated("?HAS_FREE_SLOT"));
+        assertFalse(translated("?hasInventorySpace{slot=0}"));
         assertFalse(translated("?hasFreeInventorySlot{slot=0}"));
         assertFalse(translated("?hasFreeSlot{unknown=true}"));
     }

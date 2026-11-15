@@ -863,13 +863,14 @@ class MigrationRuntimeConditionContractTest {
         var registry = new BehaviorRegistryImpl();
         var service = new SkillService(registry, null);
 
-        for (String source : List.of("?hasFreeInventorySlot", "?hasFreeSlot")) {
+        for (String source : List.of("?hasInventorySpace", "?hasFreeInventorySlot", "?hasFreeSlot")) {
             String directKey = service.bindCondition(source);
             assertNotNull(directKey, service.warnings().toString());
             assertTrue(registry.testCondition(directKey, context), source);
             var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
             assertTrue(mapped.translated(), source);
-            assertEquals("has-free-inventory-slot", mapped.condition());
+            assertEquals(source.equals("?hasInventorySpace")
+                    ? "has-inventory-space" : "has-free-inventory-slot", mapped.condition());
             String key = service.bindCondition(mapped.condition());
             assertNotNull(key);
             assertTrue(registry.testCondition(key, context), source);
@@ -884,7 +885,9 @@ class MigrationRuntimeConditionContractTest {
         assertFalse(registry.testCondition(key, nonPlayer));
         assertNull(service.bindCondition("has-free-inventory-slot{unknown=true}"));
         assertNull(service.bindCondition("hasFreeSlot slot=0"));
-        for (String source : List.of("?hasFreeInventorySlot{slot=0}", "?hasFreeSlot{unknown=true}")) {
+        assertNull(service.bindCondition("hasInventorySpace{slot=0}"));
+        for (String source : List.of("?hasInventorySpace{slot=0}",
+                "?hasFreeInventorySlot{slot=0}", "?hasFreeSlot{unknown=true}")) {
             assertFalse(dev.helstera.migration.importer.MmConditions.translate(source).translated(), source);
         }
     }

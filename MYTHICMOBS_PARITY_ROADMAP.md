@@ -121,6 +121,12 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   now has an independent `implemented-runtime` row with importer/runtime tests and
   strict Paper evidence; retain the full catalog as the remaining Conditions-level
   work.
+- Official MythicMobs 5.7.2 `HasInventorySpace` is now mapped to a dedicated
+  `has-inventory-space` runtime condition. It checks the selected Player target's
+  `PlayerInventory#firstEmpty()` result, rejects arguments, and keeps the existing
+  `hasFreeInventorySlot`/`hasFreeSlot` project aliases stable. Importer, AI, and
+  plugin cross-module tests cover full, available, non-Player, missing-target,
+  and malformed-input cases; no new Paper evidence is claimed yet.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,
