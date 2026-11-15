@@ -2764,7 +2764,7 @@ public final class SkillService {
                     "var-set", "set-variable", "var-add", "var-math",
                     "score-set", "score-add", "signal", "dot", "mythic-aura",
                     "mythic-aura-remove", "add-to-audience", "remove-from-audience",
-                    "unset-audience", "teleport-mythic" -> true;
+                    "unset-audience", "teleport-mythic", "modify-damage" -> true;
             default -> false;
         };
     }
@@ -2893,6 +2893,7 @@ public final class SkillService {
             case "modifymaxhealth", "modify-max-health" -> "modify-max-health";
             case "removeeffect" -> "remove-effect";
             case "removealleffects" -> "remove-all-effects";
+            case "modifydamage", "moddamage", "modify-damage" -> "modify-damage";
             case "shootprojectile" -> "shoot-projectile";
             case "shoot", "projectile" -> "shoot-projectile";
             default -> name;

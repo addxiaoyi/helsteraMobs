@@ -756,6 +756,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test-nested-skill-cooldown", false)) {
             runNestedSkillCooldownSelfTest();
         }
+        if (getConfig().getBoolean("debug.self-test-modify-damage", false)) {
+            runModifyDamageSelfTest();
+        }
         if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
             runEntityOptionsSelfTest();
         }
@@ -1705,6 +1708,146 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         getLogger().warning("nested skill cooldown probe cleanup failed=" + cleanupFailure);
                     }
                 }
+            }
+        }, Math.max(1, delay));
+    }
+
+    /** Verifies imported Mythic modifydamage against real Paper damage events. */
+    private void runModifyDamageSelfTest() {
+        int delay = getConfig().getInt("debug.self-test-delay-ticks", 40);
+        getServer().getScheduler().runTaskLater(this, () -> {
+            Path root = null;
+            Path outputDirectory = getDataFolder().toPath().resolve("mobs").normalize();
+            boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
+            var mobFiles = new ArrayList<Path>();
+            org.bukkit.entity.Zombie attacker = null;
+            var ids = new ArrayList<Integer>();
+            var victims = new LinkedHashMap<String, org.bukkit.entity.LivingEntity>();
+            var observed = new LinkedHashMap<String, Double>();
+            var observedCauses = new LinkedHashMap<String, org.bukkit.event.entity.EntityDamageEvent.DamageCause>();
+            org.bukkit.event.Listener observer = new org.bukkit.event.Listener() { };
+            try {
+                var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
+                if (world == null || instances == null || !(ai instanceof dev.helstera.ai.AiManager manager)
+                        || !(skillService instanceof dev.helstera.ai.skill.SkillService skills)) {
+                    throw new IllegalStateException("runtime unavailable");
+                }
+                root = Files.createTempDirectory("helstera-modify-damage-");
+                Path mobDir = Files.createDirectory(root.resolve("Mobs"));
+                var definitions = new LinkedHashMap<String, List<String>>();
+                definitions.put("add", List.of(
+                        "modifyDamage{amount=2;damagetype=ENTITY_ATTACK;action=ADD} ~onDamaged",
+                        "modifyDamage{amount=NaN} ~onDamaged",
+                        "modifyDamage{damagetype=NOT_A_DAMAGE} ~onDamaged"));
+                definitions.put("mismatch", List.of(
+                        "modifyDamage{amount=3;damagetype=FIRE;action=SETTER} ~onDamaged"));
+                definitions.put("all", List.of(
+                        "modifyDamage{amount=3;damagetype=ALL;action=SETTER} ~onDamaged"));
+                var profiles = new LinkedHashMap<String, dev.helstera.ai.AiProfile>();
+                var mobIds = new LinkedHashMap<String, String>();
+                boolean imported = true;
+                boolean invalidPreserved = false;
+                boolean warnings = false;
+                for (var definition : definitions.entrySet()) {
+                    Path source = mobDir.resolve(definition.getKey() + ".yml");
+                    String sourceMobId = "ModifyDamageProbe_" + definition.getKey();
+                    StringBuilder sourceText = new StringBuilder(
+                            "mobs:\n  " + sourceMobId + ":\n    Type: ZOMBIE\n    Skills:\n");
+                    for (String skillLine : definition.getValue()) {
+                        sourceText.append("      - '").append(skillLine).append("'\n");
+                    }
+                    Files.writeString(source, sourceText.toString());
+                    var entries = new MythicMobsImporter().convert(source, root);
+                    var plan = entries.stream().filter(entry -> entry.containsKey("target-file"))
+                            .findFirst().orElseThrow();
+                    var yaml = YamlConfiguration.loadConfiguration(
+                            new java.io.StringReader(String.valueOf(plan.get("content"))));
+                    var section = yaml.getConfigurationSection("mob");
+                    if (section == null) throw new IllegalStateException("missing imported modify-damage mob");
+                    var profile = dev.helstera.ai.AiProfile.fromSection("modify-damage-" + definition.getKey(), section);
+                    skills.expandTriggers(profile);
+                    imported &= profile.triggers.containsKey("on-damage")
+                            && !profile.triggers.get("on-damage").actions.isEmpty();
+                    profiles.put(definition.getKey(), profile);
+                    String targetFile = String.valueOf(plan.get("target-file"));
+                    String targetMobId = String.valueOf(plan.get("target-mob-id"));
+                    Path destination = getDataFolder().toPath().resolve(targetFile).normalize();
+                    if (!targetFile.startsWith("mobs/") || !targetFile.endsWith(".yml")
+                            || !destination.startsWith(outputDirectory) || Files.exists(destination)) {
+                        throw new IOException("Unsafe or existing imported modify-damage mob: " + targetFile);
+                    }
+                    yaml.set("model", "example/emberling");
+                    yaml.set("entity.silent", true);
+                    Files.createDirectories(destination.getParent());
+                    Files.writeString(destination, yaml.saveToString());
+                    mobFiles.add(destination);
+                    mobIds.put(definition.getKey(), targetMobId);
+                    if (definition.getKey().equals("add")) {
+                        invalidPreserved = yaml.getStringList("mob.unsupported.Skills").size() == 2
+                                && profile.triggers.get("on-damage").actions.size() == 1;
+                        warnings = entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity")));
+                    }
+                }
+                observer = new org.bukkit.event.Listener() { };
+                getServer().getPluginManager().registerEvent(
+                        org.bukkit.event.entity.EntityDamageEvent.class, observer,
+                        org.bukkit.event.EventPriority.MONITOR,
+                        (listener, event) -> {
+                            var damage = (org.bukkit.event.entity.EntityDamageEvent) event;
+                            for (var entry : victims.entrySet()) {
+                                if (entry.getValue().getUniqueId().equals(damage.getEntity().getUniqueId())) {
+                                    observed.put(entry.getKey(), damage.getDamage());
+                                    observedCauses.put(entry.getKey(), damage.getCause());
+                                }
+                            }
+                        }, this, false);
+                Location origin = world.getSpawnLocation().clone().add(90, 4, 90);
+                origin.getChunk().load();
+                attacker = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Zombie.class);
+                attacker.setAI(false);
+                for (var entry : profiles.entrySet()) {
+                    Location spawnLocation = origin.clone().add(entry.getKey().equals("add") ? 0
+                            : entry.getKey().equals("mismatch") ? 4 : 8, 0, 0);
+                    spawnLocation.getChunk().load();
+                    MobSpawn spawn = spawnMobCore(mobIds.get(entry.getKey()), "example/emberling",
+                            spawnLocation, false, null);
+                    int id = spawn == null ? -1 : spawn.instanceId();
+                    ids.add(id);
+                    var instance = id > 0 ? instances().impl(id) : null;
+                    var entity = instance == null ? null : instance.baseEntity().orElse(null);
+                    if (!(entity instanceof org.bukkit.entity.LivingEntity victim)) {
+                        throw new IllegalStateException("modify-damage victim spawn failed");
+                    }
+                    victim.setInvulnerable(false);
+                    victim.setNoDamageTicks(0);
+                    victim.setHealth(victim.getMaxHealth());
+                    manager.attach(instance, entry.getValue());
+                    victims.put(entry.getKey(), victim);
+                }
+                for (var entry : victims.entrySet()) {
+                    entry.getValue().setNoDamageTicks(0);
+                    entry.getValue().damage(4.0, attacker);
+                }
+                boolean attackAdd = Math.abs(observed.getOrDefault("add", Double.NaN) - 6.0) < 0.001
+                        && observedCauses.get("add") == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK;
+                boolean typeMismatch = Math.abs(observed.getOrDefault("mismatch", Double.NaN) - 4.0) < 0.001;
+                boolean allSetter = Math.abs(observed.getOrDefault("all", Double.NaN) - 3.0) < 0.001;
+                boolean passed = imported && invalidPreserved && warnings && attackAdd && typeMismatch && allSetter;
+                getLogger().info("[自检] modify-damage imported=" + imported
+                        + " invalid-preserved=" + invalidPreserved + " warnings=" + warnings
+                        + " attack-add=" + attackAdd + " type-mismatch=" + typeMismatch
+                        + " all-setter=" + allSetter + " attack-damage=" + observed.get("add")
+                        + " mismatch-damage=" + observed.get("mismatch") + " all-damage=" + observed.get("all")
+                        + " passed=" + passed);
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] modify-damage imported=false invalid-preserved=false warnings=false"
+                        + " attack-add=false type-mismatch=false all-setter=false passed=false error="
+                        + failure.getClass().getSimpleName() + ":" + failure.getMessage());
+            } finally {
+                org.bukkit.event.HandlerList.unregisterAll(observer);
+                if (attacker != null) attacker.remove();
+                for (Integer id : ids) if (id != null && id > 0 && instances() != null) instances().despawn(id);
+                cleanupImportedMobProbe(root, outputDirectory, outputDirectoryExisted, mobFiles, List.of());
             }
         }, Math.max(1, delay));
     }

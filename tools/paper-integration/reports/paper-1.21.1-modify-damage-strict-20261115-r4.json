@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-15T20:18:13.2609668Z",
+  "fixtureDirectory": "srv-paper-modify-damage-strict-20261115-r4",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "fbd06de3b38abee6e1c994e3435cccdbb18cf2320c68b9df55542ff0a3d8f9d7",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "modifyDamageRuntime"
+  ],
+  "probes": [
+    {
+      "id": "modifyDamageRuntime",
+      "status": "passed",
+      "observations": [
+        "modify-damage imported=true invalid-preserved=true warnings=true attack-add=true type-mismatch=true all-setter=true attack-damage=6.0 mismatch-damage=4.0 all-damage=3.0 passed=true"
+      ]
+    }
+  ]
+}

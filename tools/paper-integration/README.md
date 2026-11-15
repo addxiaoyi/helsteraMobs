@@ -24,6 +24,17 @@ pwsh -NoProfile -File tools/paper-integration/run-nested-skill-cooldown-fixture.
 
 The runner pins Paper 1.21.1-133, imports three valid nested `skill{s=...;cooldown=5t}` lines and three malformed/conflicting lines into a fresh server, then exercises the production skill runtime against a real Zombie. The probe verifies one child execution per cooldown window, immediate blocking, reopening after five ticks, and preservation plus warnings for invalid values. Fixture `srv-paper-nested-skill-cooldown-strict-20261115-r3` passed. This is exploratory feature evidence and does not complete the full Skills importer or Mechanics catalog.
 
+## Focused modifyDamage fixture
+
+Build the plugin and run the isolated Paper 1.21.1 production-runtime probe:
+
+```powershell
+./mvnw -B -pl helstera-plugin -am package -DskipTests
+pwsh -NoProfile -File tools/paper-integration/run-modify-damage-fixture.ps1 -EvidenceRevision rN
+```
+
+The runner pins Paper 1.21.1-133, converts three Mythic mob skill inputs into temporary production mob files, and exercises `modifyDamage`/`modDamage` against real Paper damage events. The probe verifies matching `ENTITY_ATTACK` additive mutation, non-matching `FIRE` no-op behavior, `ALL` setter behavior, and preservation plus warnings for malformed lines. Fixture `srv-paper-modify-damage-strict-20261115-r4` passed. This is exploratory feature evidence and does not complete the full Skills or Mechanics catalog.
+
 ## Focused MythicMobs pack-condition fixture
 
 Run the exact MythicMobs 5.7.2/Paper 1.21.1 condition probe after packaging the plugin:

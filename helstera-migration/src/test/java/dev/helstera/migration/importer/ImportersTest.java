@@ -1162,6 +1162,41 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic modifydamage maps event modifiers and preserves malformed input")
+    void mythicMapsModifyDamageMechanic(@TempDir Path root) throws Exception {
+        Path f = write(root, "Skills/modify-damage.yml", """
+                skills:
+                  damage_gate:
+                    Skills:
+                      - modifyDamage{amount=2;damagetype=ENTITY_ATTACK;action=ADDITIVE}
+                      - modDamage{a=-1;dt=FIRE;mod=SETTER}
+                      - modify-damage 0.5 ALL COMPOUND_MULTIPLIER
+                      - modifyDamage{amount=NaN}
+                      - modifyDamage{type=NOT_A_DAMAGE}
+                      - modifyDamage{action=NOPE}
+                      - modifyDamage{sync=false}
+                      - modifyDamage{amount=1;amount=2}
+                """);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(String.valueOf(plan(new MythicMobsImporter().convert(f)).get().get("content"))));
+        assertEquals(List.of(
+                "modify-damage 2 ENTITY_ATTACK ADDITIVE",
+                "modify-damage -1 FIRE SETTER",
+                "modify-damage 0.5 ALL COMPOUND_MULTIPLIER"),
+                target.getStringList("skills.damage_gate.on-decision"));
+        assertEquals(List.of(
+                "modifyDamage{amount=NaN}",
+                "modifyDamage{type=NOT_A_DAMAGE}",
+                "modifyDamage{action=NOPE}",
+                "modifyDamage{sync=false}",
+                "modifyDamage{amount=1;amount=2}"),
+                target.getStringList("skills.damage_gate.unsupported"));
+        assertTrue(new MythicMobsImporter().convert(f).stream().anyMatch(entry ->
+                "unsupported".equals(entry.get("status"))
+                        && String.valueOf(entry.get("note")).contains("modifydamage")));
+    }
+
+    @Test
     @DisplayName("Mythic mechanic targeter, chance, and inline condition survive conversion")
     void mythicPreservesMechanicExecutionContext(@TempDir Path root) throws Exception {
         Path f = write(root, "Skills/context.yml", """

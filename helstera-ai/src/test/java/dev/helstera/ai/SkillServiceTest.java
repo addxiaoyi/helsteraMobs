@@ -2507,6 +2507,50 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("modify-damage changes only the matching live damage event")
+    void modifyDamageUsesEventCauseAndModifier() {
+        var svc = service();
+        var event = mock(org.bukkit.event.entity.EntityDamageEvent.class);
+        when(event.getCause()).thenReturn(org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK);
+        when(event.getDamage()).thenReturn(4.0);
+        var context = BehaviorContext.continueExecution(null, (Player) null,
+                1.0, -1, 0, "damage", null, null, List.of(), null,
+                new dev.helstera.api.behavior.SkillTreeContext(null, List.of(), null),
+                event, org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK);
+
+        String add = svc.bindAction("modifyDamage{amount=2;damagetype=ENTITY_ATTACK;action=ADD;sync=true}");
+        assertNotNull(add, svc.warnings().toString());
+        assertTrue(registry.runAction(add, context));
+        verify(event).setDamage(6.0);
+
+        String mismatch = svc.bindAction("modify-damage 2 FIRE ADD");
+        assertNotNull(mismatch, svc.warnings().toString());
+        assertTrue(registry.runAction(mismatch, context));
+        verify(event, org.mockito.Mockito.times(1)).setDamage(6.0);
+
+        String multiplied = svc.bindAction("modify-damage 0.5 ALL COMPOUND_MULTIPLIER");
+        assertNotNull(multiplied);
+        assertTrue(registry.runAction(multiplied, context));
+        verify(event).setDamage(2.0);
+    }
+
+    @Test
+    @DisplayName("modify-damage rejects invalid arguments and fails closed without an event")
+    void modifyDamageRejectsInvalidArguments() {
+        var svc = service();
+        assertNull(svc.bindAction("modifyDamage{amount=NaN}"));
+        assertNull(svc.bindAction("modifyDamage{damagetype=NOT_A_DAMAGE}"));
+        assertNull(svc.bindAction("modifyDamage{action=NOPE}"));
+        assertNull(svc.bindAction("modifyDamage{sync=false}"));
+        assertFalse(svc.warnings().isEmpty());
+
+        String action = svc.bindAction("modify-damage 2 ALL SETTER");
+        assertNotNull(action);
+        assertTrue(registry.runAction(action, BehaviorContext.of(null, (Player) null,
+                1.0, -1, 0, "IDLE")));
+    }
+
+    @Test
     @DisplayName("is-cancelled reads the same cancellable event context")
     void isCancelledReadsContextEvent() {
         var svc = service();

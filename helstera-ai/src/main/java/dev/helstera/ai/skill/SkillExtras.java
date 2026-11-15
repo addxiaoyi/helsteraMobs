@@ -6209,6 +6209,7 @@ public final class SkillExtras {
 
                 // ---- 伤害变体 ----
 
+                Map.entry("modify-damage", (SkillCatalog.ActionFactory) SkillExtras::modifyDamageAction),
                 Map.entry("damage-percent", (SkillCatalog.ActionFactory) a -> {
                     var pct = dynamicNum(a, 0, 10);
                     return ctx -> {
@@ -8819,6 +8820,144 @@ public final class SkillExtras {
         } catch (Throwable ignored) {
             SkillFaults.swallow("SkillExtras#damage");
         }
+    }
+
+    /**
+     * Modifies the live Bukkit damage event that caused the current skill.
+     * Mythic's mechanic is event-scoped: without an EntityDamageEvent it is a
+     * deliberate no-op rather than a synthetic damage call.
+     */
+    private static java.util.function.Consumer<BehaviorContext> modifyDamageAction(List<String> args) {
+        validateModifyDamageArgs(args);
+        String amountRaw = keyedArg(args, "amount", "a");
+        if (amountRaw == null) amountRaw = positionalArg(args, 0);
+        String typeRaw = keyedArg(args, "damagetype", "damage-type", "type", "dt", "t");
+        if (typeRaw == null) typeRaw = positionalArg(args, 1);
+        String actionRaw = keyedArg(args, "action", "mod", "m");
+        if (actionRaw == null) actionRaw = positionalArg(args, 2);
+        var amount = dynamicNum(amountRaw == null ? List.of() : List.of(amountRaw), 0, 1.0);
+        String damageType = normalizeModifyDamageType(typeRaw == null ? "ALL" : typeRaw);
+        String operation = normalizeModifyDamageAction(actionRaw == null ? "ADD" : actionRaw);
+        return ctx -> {
+            if (ctx == null) return;
+            var event = ctx.cancellableEvent().orElse(null);
+            if (!(event instanceof org.bukkit.event.entity.EntityDamageEvent damage)
+                    || !matchesModifyDamageType(damageType, damage.getCause())) return;
+            double modifier = amount.applyAsDouble(ctx);
+            double current;
+            try {
+                current = damage.getDamage();
+            } catch (RuntimeException ignored) {
+                SkillFaults.swallow("SkillExtras#modifyDamageRead");
+                return;
+            }
+            if (!Double.isFinite(modifier) || !Double.isFinite(current)) return;
+            double next = switch (operation) {
+                case "ADDITIVE" -> current + modifier;
+                case "ADDITIVE_MULTIPLIER" -> current * (1.0 + modifier);
+                case "COMPOUND_MULTIPLIER" -> current * modifier;
+                case "SETTER" -> modifier;
+                default -> Double.NaN;
+            };
+            if (!Double.isFinite(next)) return;
+            try {
+                damage.setDamage(Math.max(0.0, next));
+            } catch (RuntimeException ignored) {
+                SkillFaults.swallow("SkillExtras#modifyDamageWrite");
+            }
+        };
+    }
+
+    private static void validateModifyDamageArgs(List<String> args) {
+        int positional = 0;
+        Set<String> seen = new java.util.HashSet<>();
+        for (String raw : args == null ? List.<String>of() : args) {
+            if (raw == null || raw.isBlank()) throw new IllegalArgumentException("modify-damage has a blank argument");
+            int equals = raw.indexOf('=');
+            if (equals <= 0) {
+                if (++positional > 3) throw new IllegalArgumentException("modify-damage accepts amount, damage type, and action");
+                continue;
+            }
+            String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = raw.substring(equals + 1).trim();
+            String canonical = switch (key) {
+                case "amount", "a" -> "amount";
+                case "damagetype", "damage-type", "type", "dt", "t" -> "damagetype";
+                case "action", "mod", "m" -> "action";
+                case "sync" -> "sync";
+                default -> null;
+            };
+            if (canonical == null || !seen.add(canonical) || value.isBlank()) {
+                throw new IllegalArgumentException("unknown or duplicate modify-damage argument: " + raw);
+            }
+            if (canonical.equals("sync") && !Set.of("true", "yes", "on", "1")
+                    .contains(value.toLowerCase(Locale.ROOT))) {
+                throw new IllegalArgumentException("modify-damage requires sync=true");
+            }
+        }
+    }
+
+    private static String positionalArg(List<String> args, int index) {
+        if (args == null || index < 0) return null;
+        int current = 0;
+        for (String raw : args) {
+            if (raw == null || raw.isBlank() || raw.contains("=")) continue;
+            if (current++ == index) return raw.trim();
+        }
+        return null;
+    }
+
+    private static String normalizeModifyDamageType(String value) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("modify-damage type is required");
+        String normalized = value.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+        if (Set.of("ALL", "MELEE", "PHYSICAL", "PROJECTILE", "MAGIC", "FIRE").contains(normalized)) {
+            return normalized;
+        }
+        try {
+            return org.bukkit.event.entity.EntityDamageEvent.DamageCause.valueOf(normalized).name();
+        } catch (IllegalArgumentException ignored) {
+            throw new IllegalArgumentException("unknown modify-damage type: " + value);
+        }
+    }
+
+    private static String normalizeModifyDamageAction(String value) {
+        if (value == null || value.isBlank()) throw new IllegalArgumentException("modify-damage action is required");
+        return switch (value.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_')) {
+            case "ADD", "ADDITIVE" -> "ADDITIVE";
+            case "ADDITIVE_MULTIPLIER", "ADDITIVEMULTIPLIER" -> "ADDITIVE_MULTIPLIER";
+            case "COMPOUND_MULTIPLIER", "COMPOUNDMULTIPLIER", "MULTIPLY", "MULTIPLIER" ->
+                    "COMPOUND_MULTIPLIER";
+            case "SET", "SETTER" -> "SETTER";
+            default -> throw new IllegalArgumentException("unknown modify-damage action: " + value);
+        };
+    }
+
+    private static boolean matchesModifyDamageType(String wanted,
+                                                    org.bukkit.event.entity.EntityDamageEvent.DamageCause actual) {
+        if (actual == null) return false;
+        return switch (wanted) {
+            case "ALL" -> true;
+            case "MELEE" -> actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK;
+            case "PHYSICAL" -> actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_ATTACK
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.ENTITY_SWEEP_ATTACK
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALL
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.FLY_INTO_WALL
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.FALLING_BLOCK;
+            case "PROJECTILE" -> actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.PROJECTILE;
+            case "MAGIC" -> actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.MAGIC
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.POISON
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.WITHER
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.DRAGON_BREATH
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.SONIC_BOOM;
+            case "FIRE" -> actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.FIRE_TICK
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.HOT_FLOOR
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.LAVA
+                    || actual == org.bukkit.event.entity.EntityDamageEvent.DamageCause.CAMPFIRE;
+            default -> actual.name().equals(wanted);
+        };
     }
 
     /** Builds a bounded Mythic-style DoT while retaining the legacy infinite form. */

@@ -1860,6 +1860,14 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "unsupported", "Invalid mechanic execution options; original line preserved.", "WARN");
             return;
         }
+        if (Set.of("modifydamage", "moddamage", "modify-damage").contains(mechanic)
+                && !validModifyDamageMechanic(raw)) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid modifydamage amount, damage type, action, sync flag, or duplicate/unknown argument; original line preserved.", "WARN");
+            return;
+        }
         if ((mechanic.equals("skill") || mechanic.equals("skillmechanic"))
                 && MythicSpec.skillRef(raw) == null) {
             scan.unsupported.add(raw);
@@ -2439,7 +2447,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "set-owner", "remove-owner", "set-parent", "remove-parent", "eject-passenger",
                     "add-tag", "remove-tag", "score-set", "score-add", "mythic-aura",
                     "mythic-aura-remove", "add-to-audience", "remove-from-audience",
-                    "unset-audience", "teleport-mythic" -> true;
+                    "unset-audience", "teleport-mythic", "modify-damage" -> true;
             default -> false;
         };
     }
@@ -2552,6 +2560,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                         + " " + (damage == null ? "3" : damage);
             }
             case "damagepercent" -> "damage-percent " + (amount == null ? "0" : amount);
+            case "modifydamage", "moddamage", "modify-damage" -> modifyDamageMechanic(trimmed);
             case "damagemelee", "damage-melee", "meleedamage" -> {
                 String radius = firstArg(trimmed, "radius", "r");
                 if (radius == null) radius = positionalArg(trimmed, 1);
@@ -2875,6 +2884,133 @@ public final class MythicMobsImporter implements MigrationImporter {
             case 2 -> "false";
             case 3, 4 -> "preserve";
             default -> "";
+        };
+    }
+
+    /** Validates the synchronous event mutation mechanic before emitting a runtime action. */
+    private static boolean validModifyDamageMechanic(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String amount = modifyDamageArgument(raw, 0, "amount", "a");
+        String damageType = modifyDamageArgument(raw, 1, "damagetype", "damage-type", "type", "dt", "t");
+        String action = modifyDamageArgument(raw, 2, "action", "mod", "m");
+        if (amount != null && !finiteOrPlaceholder(amount)) return false;
+        if (damageType != null && !validModifyDamageType(damageType)) return false;
+        if (action != null && normalizeModifyDamageAction(action) == null) return false;
+
+        Set<String> seen = new java.util.HashSet<>();
+        boolean hasNamedArguments = MythicSpec.keyedArguments(raw).stream()
+                .anyMatch(argument -> argument.contains("="));
+        int positionalInBraces = 0;
+        for (String argument : MythicSpec.keyedArguments(raw)) {
+            int equals = argument.indexOf('=');
+            if (equals < 0) {
+                if (hasNamedArguments || ++positionalInBraces > 3 || argument.isBlank()) return false;
+                continue;
+            }
+            if (equals == 0 || equals == argument.length() - 1) return false;
+            String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = argument.substring(equals + 1).trim();
+            String canonical = switch (key) {
+                case "amount", "a" -> "amount";
+                case "damagetype", "damage-type", "type", "dt", "t" -> "damagetype";
+                case "action", "mod", "m" -> "action";
+                case "sync" -> "sync";
+                case "delay", "repeat", "repeatinterval", "repeat-interval" ->
+                        key.equals("repeat-interval") ? "repeatinterval" : key;
+                default -> null;
+            };
+            if (canonical == null || !seen.add(canonical) || value.isBlank()) return false;
+            if (canonical.equals("amount") && !finiteOrPlaceholder(value)) return false;
+            if (canonical.equals("damagetype") && !validModifyDamageType(value)) return false;
+            if (canonical.equals("action") && normalizeModifyDamageAction(value) == null) return false;
+            if (canonical.equals("sync") && !validBoolean(value) || canonical.equals("sync")
+                    && !value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("yes")
+                    && !value.equalsIgnoreCase("on") && !value.equals("1")) return false;
+        }
+
+        int open = MythicSpec.mechanicOpen(raw);
+        int close = mechanicClose(raw, open);
+        if (open >= 0 && close < 0) return false;
+        String suffix;
+        if (open < 0) {
+            String tail = raw.substring(raw.indexOf(' ') < 0 ? raw.length() : raw.indexOf(' ') + 1).trim();
+            String[] tokens = tail.isBlank() ? new String[0] : tail.split("\\s+");
+            int consumed = 0;
+            StringBuilder rest = new StringBuilder();
+            for (String token : tokens) {
+                boolean suffixToken = token.startsWith("@") || token.startsWith("?")
+                        || token.startsWith("~") || token.endsWith("%") || token.equals(">");
+                if (!suffixToken && consumed < 3) {
+                    consumed++;
+                } else {
+                    if (!rest.isEmpty()) rest.append(' ');
+                    rest.append(token);
+                }
+            }
+            suffix = rest.toString();
+        } else {
+            suffix = raw.substring(close + 1);
+        }
+        for (String token : suffix.trim().split("\\s+")) {
+            if (token.isBlank() || token.startsWith("@") || token.startsWith("?")
+                    || token.startsWith("~") || token.endsWith("%") || token.equals(">")) continue;
+            return false;
+        }
+        return true;
+    }
+
+    private static String modifyDamageMechanic(String raw) {
+        if (!validModifyDamageMechanic(raw)) return null;
+        String amount = modifyDamageArgument(raw, 0, "amount", "a");
+        String damageType = modifyDamageArgument(raw, 1, "damagetype", "damage-type", "type", "dt", "t");
+        String action = modifyDamageArgument(raw, 2, "action", "mod", "m");
+        return "modify-damage " + (amount == null ? "1" : escape(amount)) + " "
+                + (damageType == null ? "ALL" : escape(damageType)) + " "
+                + (action == null ? "ADD" : escape(action));
+    }
+
+    private static String modifyDamageArgument(String raw, int index, String... keys) {
+        String value = firstArg(raw, keys);
+        if (value != null) return value;
+        int open = MythicSpec.mechanicOpen(raw);
+        if (open >= 0 && MythicSpec.keyedArguments(raw).stream().noneMatch(argument -> argument.contains("="))) {
+            value = MythicSpec.argAt(raw, index);
+            if (value != null && !value.contains("=")) return value;
+        }
+        return raw.indexOf('{') < 0 ? positionalArg(raw, index) : null;
+    }
+
+    private static boolean finiteOrPlaceholder(String value) {
+        if (value == null || value.isBlank()) return false;
+        if (value.contains("<")) return true;
+        try {
+            return Double.isFinite(Double.parseDouble(value.trim()));
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean validModifyDamageType(String value) {
+        if (value == null || value.isBlank()) return false;
+        String normalized = value.trim().toUpperCase(Locale.ROOT).replace('-', '_');
+        if (Set.of("ALL", "MELEE", "PHYSICAL", "PROJECTILE", "MAGIC", "FIRE").contains(normalized)) return true;
+        try {
+            org.bukkit.event.entity.EntityDamageEvent.DamageCause.valueOf(normalized);
+            return true;
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
+    }
+
+    private static String normalizeModifyDamageAction(String value) {
+        if (value == null || value.isBlank()) return null;
+        return switch (value.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_')) {
+            case "ADD", "ADDITIVE" -> "ADDITIVE";
+            case "ADDITIVE_MULTIPLIER", "ADDITIVEMULTIPLIER" -> "ADDITIVE_MULTIPLIER";
+            case "COMPOUND_MULTIPLIER", "COMPOUNDMULTIPLIER", "MULTIPLY", "MULTIPLIER" ->
+                    "COMPOUND_MULTIPLIER";
+            case "SET", "SETTER" -> "SETTER";
+            default -> null;
         };
     }
 
