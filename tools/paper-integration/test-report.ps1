@@ -115,7 +115,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-spyglass-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true inactive-rejected=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-survival-mode-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true negative=true alias-negative=true non-player-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-plugin-condition primary-mapped=true plugin-exists-mapped=true has-plugin-mapped=true enabled=true plugin-exists-enabled=true has-plugin-enabled=true missing-rejected=true default-mapped=true default-absent=true invalid-preserved=true duplicate-preserved=true passed=true',
-        '[Server thread/INFO]: [helsteraMobs] imported-free-inventory-slot primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true',
+        '[Server thread/INFO]: [helsteraMobs] imported-free-inventory-slot official-mapped=true official-positive=true official-negative=true official-invalid-preserved=true primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-name-condition primary-mapped=true alias-mapped=true positive=true alias-positive=true default-name-rejected=true fallback=true custom-name-rejected=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-server-conditions paper-primary=true paper-alias=true exact=true exact-negative=true after-inclusive=true after-exclusive-rejected=true after-higher-rejected=true before-inclusive=true before-exclusive-rejected=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] imported-coordinate-difference-condition primary-mapped=true alias-mapped=true x-positive=true y-positive=true z-positive=true out-of-range-rejected=true invalid-preserved=true result=true',
@@ -145,7 +145,7 @@ try {
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true time-weather=true custom-item=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true world-biome=true condition-composition=true time-weather=true custom-item=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true world-biome=true world-biome-reject=true condition-composition=true time-weather=true custom-item=true',
-        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true food-saturation=true free-inventory-slot=true has-item=true has-item-loose-metadata-match=true has-item-strict-metadata-reject=true has-item-strict-positive=true has-item-range-inclusive=true has-item-range-negative=true has-item-tag-positive=true has-item-qualified-tag-positive=true has-item-missing-tag-rejected=true has-item-wildcard-positive=true has-item-wildcard-negative=true imported-has-item-tag-positive=true imported-target-has-item-wildcard-positive=true imported-has-item-positive=true imported-target-has-item-positive=true imported-has-item-invalid-preserved=true has-item-restored=true air-level=true custom-item=true target-state-conditions=true state-blocking=true',
+        '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true food-saturation=true free-inventory-slot=true has-inventory-space-condition=true has-item=true has-item-loose-metadata-match=true has-item-strict-metadata-reject=true has-item-strict-positive=true has-item-range-inclusive=true has-item-range-negative=true has-item-tag-positive=true has-item-qualified-tag-positive=true has-item-missing-tag-rejected=true has-item-wildcard-positive=true has-item-wildcard-negative=true imported-has-item-tag-positive=true imported-target-has-item-wildcard-positive=true imported-has-item-positive=true imported-target-has-item-positive=true imported-has-item-invalid-preserved=true has-item-restored=true air-level=true custom-item=true target-state-conditions=true state-blocking=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true spyglass-condition=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true name-condition=true',
         '[Server thread/INFO]: [自检] skill-trigger damage=true attack=true attacked=false teleport=true teleport-before=false bukkit-damage=true damage-cause-default-condition=true damage-cause-condition=true damage-amount-condition=true damage-tag-condition=true bow-tension-condition=true bukkit-attacked=true cancelled-condition=true cancelled-before=false cancelled-after=true entity-valid=true',
@@ -1242,6 +1242,10 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogFreeInventory = @($fullCatalogReport.probes | Where-Object id -eq 'freeInventorySlotCondition')
+    if ($fullCatalogFreeInventory.Count -ne 1) { throw 'Synthetic full catalog report must contain freeInventorySlotCondition.' }
+    $fullCatalogFreeInventory[0].observations = @(
+        'skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true condition-composition=true caster-permission=true food-level=true food-saturation=true free-inventory-slot=true has-inventory-space-condition=true')
     $fullCatalogReport.expectedProbeIds += 'altitudeCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'altitudeCondition'; status = 'passed'; observations = @('altitude-condition result=true local-floor=true overhang-ignores-highest=true max-height-boundary=true imported=true imported-alias=true duplicate-preserved=true blocks-restored=true entity-removed=true')
@@ -1761,7 +1765,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'importedFreeInventorySlotCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'importedFreeInventorySlotCondition'; status = 'passed'; observations = @('imported-free-inventory-slot primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true')
+        id = 'importedFreeInventorySlotCondition'; status = 'passed'; observations = @('imported-free-inventory-slot official-mapped=true official-positive=true official-negative=true official-invalid-preserved=true primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedNameCondition'
     $fullCatalogReport.probes += [pscustomobject]@{

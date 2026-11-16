@@ -181,27 +181,29 @@ async function runInteractableClientProbe() {
     await new Promise(resolve => setTimeout(resolve, 100));
   }
 
-  const interactWithMainHand = async (entityId, label, offsetZ) => {
+  const interactWithMainHand = async (entityId, label) => {
     // The strict fixture deliberately runs a high-volume server self-test
-    // beside this protocol check. Mineflayer can lose the entity map while
-    // decoding those packets even though its connection remains usable and
-    // Paper has already sent the probe entity to this player. The server
-    // message carries the authoritative id, so issue the real use_entity
-    // packet after a short settling window instead of treating the optional
-    // client-side cache as a prerequisite for the interaction.
+    // beside this protocol check. Mineflayer can lose its entity map and
+    // decoder state while those packets arrive. The server message carries
+    // the authoritative id, so write the real use_entity packet directly and
+    // do not make the optional client-side entity cache a prerequisite.
+    // This is the same wire-level interaction a client sends; the server-side
+    // PlayerInteractEntityEvent remains the only assertion of success.
     await new Promise(resolve => setTimeout(resolve, 250));
-    // Use Mineflayer's supported entity activation path with a synthetic
-    // position. The entity map may be incomplete under the concurrent
-    // self-test load, but the packet encoder still needs a valid interaction
-    // hand and the server-side probe owns the authoritative entity id.
-    await client.activateEntity({
-      id: entityId,
-      position: client.entity.position.offset(2, 0, offsetZ)
-    });
-    const observation = await waitFor(value => {
+    const observationPromise = waitFor(value => {
       const text = value?.toString?.() || '';
       return text.includes(`PAPER_INTERACTABLE_${label}_OBSERVED cancelled=`) ? text : false;
     }, `${label} interaction result`, client);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      client._client.write('use_entity', {
+        target: entityId,
+        mouse: 0,
+        hand: 1,
+        sneaking: false
+      });
+      await new Promise(resolve => setTimeout(resolve, 350));
+    }
+    const observation = await observationPromise;
     const observedText = observation?.toString?.() || String(observation);
     const cancellation = observedText.match(/cancelled=(true|false)$/);
     if (!cancellation) {
@@ -210,8 +212,8 @@ async function runInteractableClientProbe() {
     return cancellation[1] === 'true';
   };
 
-  const blockedCancelled = await interactWithMainHand(blockedId, 'BLOCKED', 1);
-  const allowedCancelled = await interactWithMainHand(allowedId, 'ALLOWED', -1);
+  const blockedCancelled = await interactWithMainHand(blockedId, 'BLOCKED');
+  const allowedCancelled = await interactWithMainHand(allowedId, 'ALLOWED');
   const report = {
     status: blockedCancelled && !allowedCancelled ? 'passed' : 'failed',
     blockedEntityId: blockedId,
@@ -254,7 +256,10 @@ async function runSpawningDistanceWalk(client) {
       `outside-signal=${spawningDistanceWalkOutside}`;
     if (reportPath) fs.appendFileSync(reportPath, `${line}\n`, 'utf8');
     console.log(line);
-    if (displacement <= 8) {
+    // The server-side marker is authoritative: Paper can observe the player
+    // outside the configured radius before Mineflayer's local position sample
+    // advances past the same numeric boundary.
+    if (displacement <= 8 && !spawningDistanceWalkOutside) {
       if (reportPath) fs.appendFileSync(reportPath,
         'PAPER_SPAWNING_DISTANCE_WALK_ERROR client movement stayed inside radius\n', 'utf8');
       process.exitCode = 1;

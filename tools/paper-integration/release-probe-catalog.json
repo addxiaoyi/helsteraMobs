@@ -931,7 +931,8 @@
     },
     {
       "id": "freeInventorySlotCondition",
-      "status": "passed"
+      "status": "passed",
+      "requiredObservationPattern": "skill-actions .*free-inventory-slot=true .*has-inventory-space-condition=true"
     },
     {
       "id": "frozenCondition",
@@ -985,7 +986,7 @@
     {
       "id": "importedFreeInventorySlotCondition",
       "status": "passed",
-      "requiredObservation": "imported-free-inventory-slot primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true"
+      "requiredObservation": "imported-free-inventory-slot official-mapped=true official-positive=true official-negative=true official-invalid-preserved=true primary-mapped=true alias-mapped=true positive=true negative=true invalid-preserved=true result=true"
     },
     {
       "id": "importedNameCondition",

@@ -10662,6 +10662,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             private boolean allowedObserved;
             private boolean allowedCancelled;
             private org.bukkit.scheduler.BukkitTask timeout;
+            private org.bukkit.scheduler.BukkitTask keepNearPlayer;
             private boolean finished;
 
             @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
@@ -10684,6 +10685,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 if (finished) return;
                 finished = true;
                 if (timeout != null) timeout.cancel();
+                if (keepNearPlayer != null) keepNearPlayer.cancel();
                 org.bukkit.event.HandlerList.unregisterAll(this);
                 boolean passed = blockedObserved && blockedCancelled && allowedObserved && !allowedCancelled;
                 getLogger().info("[自检] interactable-client result=" + passed
@@ -10695,6 +10697,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         };
         getServer().getPluginManager().registerEvents(probe, this);
+        // The full Paper fixture moves the same player through several
+        // unrelated self-tests before the Mineflayer client sends its real
+        // use_entity packets. Keep the two temporary targets within normal
+        // interaction range so Paper's distance validation does not discard a
+        // valid packet merely because another self-test teleported the player.
+        probe.keepNearPlayer = getServer().getScheduler().runTaskTimer(this, () -> {
+            if (probe.finished || !player.isOnline() || player.isDead()) return;
+            var current = player.getLocation();
+            if (current.getWorld() == null) return;
+            var blockedLocation = current.clone().add(2, 0, 1);
+            var allowedLocation = current.clone().add(2, 0, -1);
+            if (!current.getWorld().equals(blocked.getWorld())
+                    || blocked.getLocation().distanceSquared(blockedLocation) > 4.0) {
+                blocked.teleport(blockedLocation);
+            }
+            if (!current.getWorld().equals(allowed.getWorld())
+                    || allowed.getLocation().distanceSquared(allowedLocation) > 4.0) {
+                allowed.teleport(allowedLocation);
+            }
+        }, 1L, 2L);
         // The strict Paper client workflow intentionally runs the menu and
         // player self-tests before sending entity-use packets. Keep the
         // managed entities alive through that delayed client phase while
@@ -15549,6 +15571,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean foodLevelCondition = false;
             boolean foodSaturationCondition = false;
             boolean freeInventorySlotCondition = false;
+            boolean hasInventorySpaceCondition = false;
                 boolean hasItemCondition = false;
                 HasItemConditionEvidence hasItemEvidence = HasItemConditionEvidence.failed();
                 boolean airLevelCondition = false;
@@ -16162,38 +16185,62 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             skills.bindCondition("targets{a=>1;targeter=@targets}"), stateContext);
                     permissionProbe.getInventory().setStorageContents(new org.bukkit.inventory.ItemStack[
                             permissionProbe.getInventory().getStorageContents().length]);
+                    var importedInventorySpace = dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasInventorySpace");
                     var importedFreeSlot = dev.helstera.migration.importer.MmConditions.translate(
                             "?hasFreeInventorySlot");
                     var importedFreeSlotAlias = dev.helstera.migration.importer.MmConditions.translate(
                             "?hasFreeSlot");
+                    var importedInventorySpaceInvalid = dev.helstera.migration.importer.MmConditions.translate(
+                            "?hasInventorySpace{slot=0}");
                     var importedFreeSlotInvalid = dev.helstera.migration.importer.MmConditions.translate(
                             "?hasFreeSlot{unknown=true}");
+                    String importedInventorySpaceKey = importedInventorySpace.translated()
+                            ? skills.bindCondition(importedInventorySpace.condition()) : null;
                     String importedFreeSlotKey = importedFreeSlot.translated()
                             ? skills.bindCondition(importedFreeSlot.condition()) : null;
                     String importedFreeSlotAliasKey = importedFreeSlotAlias.translated()
                             ? skills.bindCondition(importedFreeSlotAlias.condition()) : null;
+                    boolean inventorySpacePositive = importedInventorySpaceKey != null
+                            && behaviors.testCondition(importedInventorySpaceKey, stateContext);
                     boolean freeSlotPositive = importedFreeSlotKey != null
                             && importedFreeSlotAliasKey != null
                             && behaviors.testCondition(importedFreeSlotKey, stateContext)
                             && behaviors.testCondition(importedFreeSlotAliasKey, stateContext);
+                    hasInventorySpaceCondition = inventorySpacePositive;
                     var filledStorage = new org.bukkit.inventory.ItemStack[
                             permissionProbe.getInventory().getStorageContents().length];
                     for (int slot = 0; slot < filledStorage.length; slot++) {
                         filledStorage[slot] = new org.bukkit.inventory.ItemStack(org.bukkit.Material.DIRT, 64);
                     }
                     permissionProbe.getInventory().setStorageContents(filledStorage);
+                    boolean inventorySpaceNegative = importedInventorySpaceKey != null
+                            && !behaviors.testCondition(importedInventorySpaceKey, stateContext);
                     boolean freeSlotNegative = importedFreeSlotKey != null
                             && importedFreeSlotAliasKey != null
                             && !behaviors.testCondition(importedFreeSlotKey, stateContext)
                             && !behaviors.testCondition(importedFreeSlotAliasKey, stateContext);
-                    freeInventorySlotCondition = freeSlotPositive && freeSlotNegative;
+                    hasInventorySpaceCondition = hasInventorySpaceCondition && inventorySpaceNegative;
+                    freeInventorySlotCondition = freeSlotPositive && freeSlotNegative
+                            && hasInventorySpaceCondition;
                     boolean importedFreeInventorySlotCondition = freeInventorySlotCondition
+                            && importedInventorySpace.translated()
                             && importedFreeSlot.translated() && importedFreeSlotAlias.translated()
+                            && "has-inventory-space".equals(importedInventorySpace.condition())
                             && "has-free-inventory-slot".equals(importedFreeSlot.condition())
                             && "has-free-inventory-slot".equals(importedFreeSlotAlias.condition())
+                            && !importedInventorySpaceInvalid.translated()
                             && !importedFreeSlotInvalid.translated()
+                            && skills.bindCondition(importedInventorySpaceInvalid.condition()) == null
                             && skills.bindCondition(importedFreeSlotInvalid.condition()) == null;
-                    getLogger().info("imported-free-inventory-slot primary-mapped="
+                    getLogger().info("imported-free-inventory-slot official-mapped="
+                            + (importedInventorySpace.translated()
+                            && "has-inventory-space".equals(importedInventorySpace.condition()))
+                            + " official-positive=" + inventorySpacePositive
+                            + " official-negative=" + inventorySpaceNegative
+                            + " official-invalid-preserved=" + (!importedInventorySpaceInvalid.translated()
+                            && skills.bindCondition(importedInventorySpaceInvalid.condition()) == null)
+                            + " primary-mapped="
                             + (importedFreeSlot.translated()
                             && "has-free-inventory-slot".equals(importedFreeSlot.condition()))
                             + " alias-mapped=" + (importedFreeSlotAlias.translated()
@@ -16692,6 +16739,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " food-level=" + foodLevelCondition
                         + " food-saturation=" + foodSaturationCondition
                         + " free-inventory-slot=" + freeInventorySlotCondition
+                        + " has-inventory-space-condition=" + hasInventorySpaceCondition
                         + " has-item=" + hasItemCondition
                         + " has-item-loose-metadata-match=" + hasItemEvidence.looseMetadataMatch()
                         + " has-item-strict-metadata-reject=" + hasItemEvidence.strictMetadataReject()
@@ -22165,6 +22213,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean borderOutsideProbe = candidate.equals("border_outside_fail");
                     boolean regionOutsideProbe = candidate.equals("region_probe_outside");
                     boolean playerGateFailProbe = candidate.equals("player_gate_fail");
+                    Location playerLimitLocation = safeLocation;
                     Location playerGateLocation = null;
                     if (playerGateFailProbe) {
                         playerGateLocation = safeLocation.clone().add(4096, 0, 4096);
@@ -22240,12 +22289,29 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             }
                         }
                     }
-                    if (candidate.equals("player_limit_probe")
-                            && !sp.playerOwnerPresent(candidate, safeLocation)) {
-                        getLogger().info("spawner-player-limits id=" + candidate
-                                + " observed=false reason=no nearby online player"
-                                + " player-limit=" + sp.get(candidate).maxPerPlayer());
-                        continue;
+                    if (candidate.equals("player_limit_probe")) {
+                        var owner = getServer().getOnlinePlayers().stream()
+                                .filter(player -> player != null && player.isOnline() && !player.isDead()
+                                        && player.getGameMode() != org.bukkit.GameMode.SPECTATOR
+                                        && player.getGameMode() != org.bukkit.GameMode.CREATIVE)
+                                .findFirst().orElse(null);
+                        if (owner == null) {
+                            getLogger().info("spawner-player-limits id=" + candidate
+                                    + " observed=false reason=no eligible online player"
+                                    + " player-limit=" + sp.get(candidate).maxPerPlayer());
+                            continue;
+                        }
+                        // The fixture may move the player away from the server
+                        // spawn before this probe runs. Use that real player
+                        // position so the scoped owner is unambiguous.
+                        playerLimitLocation = owner.getLocation().clone().add(2.0, 0.0, 0.0);
+                        playerLimitLocation.getChunk().load();
+                        if (!sp.playerOwnerPresent(candidate, playerLimitLocation)) {
+                            getLogger().info("spawner-player-limits id=" + candidate
+                                    + " observed=false reason=owner-location-not-near-player"
+                                    + " player-limit=" + sp.get(candidate).maxPerPlayer());
+                            continue;
+                        }
                     }
                     if (failedCooldownProbe) {
                         var failedSpawner = sp.get(candidate);
@@ -22275,7 +22341,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                         : playerGateFailProbe ? playerGateLocation
                                         : regionOutsideProbe ? safeLocation.clone().add(2000, 0, 2000)
                                         : lightFailClosedProbe && configuredProbeLocation != null
-                                        ? configuredProbeLocation : safeLocation);
+                                        ? configuredProbeLocation
+                                        : candidate.equals("player_limit_probe") ? playerLimitLocation
+                                        : safeLocation);
                         borderInsideAttempts++;
                     } while (borderInsideProbe && !accepted && borderInsideAttempts < 8
                             && "no valid spawn location".equals(sp.forceSpawnFailure(candidate)));
@@ -25951,7 +26019,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 int controlFireTicks = controlZombie.getFireTicks();
                 int protectedAgeTicks = protectedZombie.getTicksLived();
                 int controlAgeTicks = controlZombie.getTicksLived();
-                boolean complete = elapsedTicks[0] >= 40
+                // The fixture can run behind wall-clock time when the full Paper
+                // catalog is active. Wait for both entities to reach the same
+                // minimum age that the assertion reports instead of treating a
+                // scheduler delay as a PreventSunburn failure.
+                boolean mature = protectedAgeTicks >= 40 && controlAgeTicks >= 40;
+                boolean complete = elapsedTicks[0] >= 40 && mature
                         && protectedEvents[0] > 0 && controlEvents[0] > 0;
                 boolean timedOut = elapsedTicks[0] >= 1200;
                 if (!complete && !timedOut) return;
