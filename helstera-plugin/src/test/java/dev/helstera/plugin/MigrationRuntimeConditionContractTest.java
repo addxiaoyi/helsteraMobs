@@ -166,6 +166,36 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Mythic factionSame alias reaches the exact same-faction runtime")
+    void importedFactionSameAliasReachesRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var instance = mock(org.bukkit.entity.Entity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        var model = mock(dev.helstera.api.instance.ModelInstance.class);
+        var table = mock(dev.helstera.api.behavior.FactionTable.class);
+        when(model.isValid()).thenReturn(true);
+        when(model.baseEntity()).thenReturn(java.util.Optional.of(instance));
+        when(instance.isValid()).thenReturn(true);
+        when(table.factionOf(instance)).thenReturn("guards");
+        when(table.factionOf(target)).thenReturn("guards");
+        dev.helstera.api.behavior.Factions.install(table);
+        try {
+            var imported = dev.helstera.migration.importer.MmConditions.translate("?factionSame");
+            assertTrue(imported.translated());
+            assertEquals("same-faction", imported.condition());
+            String key = service.bindCondition(imported.condition());
+            assertNotNull(key, service.warnings().toString());
+            var context = dev.helstera.api.behavior.BehaviorContext.of(
+                    model, target,
+                    1.0, -1, 0, "IDLE");
+            assertTrue(registry.testCondition(key, context));
+        } finally {
+            dev.helstera.api.behavior.Factions.install(null);
+        }
+    }
+
+    @Test
     @DisplayName("imported Mythic UUID compares the selected entity and evaluates trigger UUID placeholders")
     void importedUuidConditionReachesRuntime() {
         var registry = new BehaviorRegistryImpl();

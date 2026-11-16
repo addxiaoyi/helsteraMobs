@@ -2135,11 +2135,13 @@ target-state probe. Mythic `targetHasAuras{aura=...}` maps to the named Aura
 registry and checks only the explicit target; this is distinct from the
 historical internal PotionEffect-backed `target-has-auras` condition.
 
-Faction condition update: Mythic `faction`, `targetfaction`, `samefaction`, and
-`differentfaction` now map to caster/target exact faction evaluators. Exact
-identity is deliberately separate from the existing allied/hostile faction
-relations; unit, migration, and exploratory Paper 1.21.11 r32 evidence cover
-same, different, and no-target fail-closed paths.
+Faction condition update: Mythic `faction`, `targetfaction`, `samefaction`,
+the official `factionsame` alias, and `differentfaction` now map to
+caster/target exact faction evaluators. Exact identity is deliberately separate
+from the existing allied/hostile faction relations; unit, migration, and
+exploratory Paper 1.21.11 r32 evidence cover same, different, and no-target
+fail-closed paths. The alias closes an importer/runtime naming gap and does not
+add new Paper evidence.
 
 Owner condition update: Mythic `ownerIsPlayer` now checks both Bukkit
 Tameable owners and Helstera PDC-backed custom owners; migration, unit, and

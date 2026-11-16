@@ -2536,7 +2536,7 @@ public final class SkillService {
             case "ownerisonline", "owner-is-online" -> "owner-is-online";
             case "owner", "isowner", "is-owner" -> "is-owner";
             case "children", "children-count", "child-count" -> "children";
-            case "samefaction", "same-faction" -> "same-faction";
+            case "samefaction", "factionsame", "same-faction" -> "same-faction";
             case "differentfaction", "different-faction" -> "different-faction";
             case "stance", "stanceis" -> "stance-is";
             case "target", "target-exists", "targetexists", "hastarget" -> "has-target";

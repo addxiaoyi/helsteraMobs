@@ -27,7 +27,7 @@ public final class ConditionListParser {
             "target-not-within", "permission", "target-has-permission", "has-target",
             "target-has-target", "has-item", "target-has-item", "has-aura", "has-auras",
             "has-potion-effect", "damage-cause", "damage-amount", "faction", "targetfaction",
-            "samefaction", "differentfaction", "incombat", "randomchance", "chance",
+            "samefaction", "factionsame", "differentfaction", "incombat", "randomchance", "chance",
             "is-on-ground", "on-ground", "in-water", "in-lava", "in-air", "is-blocked",
             "stand-on", "daylight", "is-alive", "is-dead", "is-valid", "is-player",
             "is-living", "is-mob", "is-monster", "is-animal", "is-undead", "is-creature",

@@ -135,6 +135,10 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   or unknown arguments, and invalid values fail closed; importer, AI, and
   cross-module tests cover the contract. No new Paper evidence is claimed for
   this context-variable slice.
+- Official MythicMobs 5.7.2 `factionsame` now joins `samefaction` as an alias
+  for the exact `same-faction` evaluator. Importer, runtime, and cross-module
+  tests cover the alias and reject supplied arguments. This closes a naming gap
+  only; the existing exploratory Paper evidence remains the evidence boundary.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

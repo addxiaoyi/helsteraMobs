@@ -184,7 +184,7 @@ public final class MmConditions {
             "ownerisonline", "owner", "isowner", "targethasowner", "targetownerisplayer", "targetownerisonline",
             "hasparent", "isparent", "parent", "isparentalive", "parentalive", "issibling", "sibling",
             "inclaim",
-            "targetisop", "targetisoperator", "samefaction", "differentfaction", "lineofsight", "haslineofsight",
+            "targetisop", "targetisoperator", "samefaction", "factionsame", "differentfaction", "lineofsight", "haslineofsight",
             "targetinlineofsight", "targetnotinlineofsight", "lineofsightfromorigin", "inlineofsightfromorigin",
             "inside", "outside", "targetisundead", "targetiscreature", "targetiscollidable", "targetisblocked",
             "targetisvehicle", "targethaspassenger", "targethaspassengers",
@@ -1552,7 +1552,9 @@ public final class MmConditions {
             return faction == null ? new Mapped(s, false)
                     : new Mapped("target-faction-is " + faction, true);
         }
-        if ("samefaction".equals(name)) return new Mapped("same-faction", true);
+        if ("samefaction".equals(name) || "factionsame".equals(name)) {
+            return new Mapped("same-faction", true);
+        }
         if ("differentfaction".equals(name)) return new Mapped("different-faction", true);
         if ("lineofsight".equals(name) || "haslineofsight".equals(name)
                 || "targetinlineofsight".equals(name)) {

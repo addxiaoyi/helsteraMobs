@@ -1899,7 +1899,9 @@ class MmConditionsTest {
         assertEquals("caster-faction-is guards", t("?faction{faction=guards}"));
         assertEquals("target-faction-is guards", t("?targetFaction{faction=guards}"));
         assertEquals("same-faction", t("?sameFaction"));
+        assertEquals("same-faction", t("?factionSame"));
         assertEquals("different-faction", t("?differentFaction"));
+        assertFalse(translated("?factionSame{unknown=true}"));
         assertEquals("owner-is-player", t("?ownerIsPlayer"));
         assertEquals("owner-is-online", t("?ownerIsOnline"));
         assertEquals("target-has-owner", t("?targetHasOwner"));

@@ -3134,6 +3134,7 @@ class SkillServiceTest {
             assertTrue(registry.testCondition(svc.bindCondition("caster-faction-is guards"), context));
             assertTrue(registry.testCondition(svc.bindCondition("target-faction-is guards"), context));
             assertTrue(registry.testCondition(svc.bindCondition("same-faction"), context));
+            assertTrue(registry.testCondition(svc.bindCondition("factionsame"), context));
             assertFalse(registry.testCondition(svc.bindCondition("different-faction"), context));
 
             when(table.factionOf(target)).thenReturn("undead");

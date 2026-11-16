@@ -41,6 +41,8 @@ class ConditionListParserTest {
     void scalarConditionsPreserveRangeArguments() {
         assertEquals(List.of("day", "!raining", "time-between=0,12000", "night"),
                 ConditionListParser.parse("day, !raining | time-between=0,12000,night"));
+        assertEquals(List.of("factionsame", "night"),
+                ConditionListParser.parse("factionsame,night"));
     }
 
     @Test
