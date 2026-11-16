@@ -1282,6 +1282,15 @@ class TargeterOrderingTest {
             assertEquals(List.of(high), Targeters.select(
                     "@nearest_conditional_target{c=[health-above 0.5];limit=1}",
                     context, candidates, List.of()));
+            assertEquals(List.of(high), Targeters.select(
+                    "@nearestconditional{cond=[ - health-above 0.5 true ]}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(high), Targeters.select(
+                    "@nearestif{targetconditions=[ - health-above 0.5 true ];i=0;ms=false;mr=false}",
+                    context, candidates, List.of()));
+            assertEquals(List.of(low), Targeters.select(
+                    "@nearestif{targetconditions=[ - health-above 0.5 false ]}",
+                    context, candidates, List.of()));
             assertEquals(List.of(), Targeters.select(
                     "@nearestConditionalTarget{conditions=[health-above 0.5];radius=NaN}",
                     context, candidates, List.of()));
@@ -1289,7 +1298,12 @@ class TargeterOrderingTest {
                     "@nearestConditionalTarget{conditions=[health-above 0.5];unknown=true}",
                     "@nearestConditionalTarget{conditions=[health-above 0.5];c=[health-above 0.5]}",
                     "@nearestConditionalTarget{conditions=[]}",
-                    "@nearestConditionalTarget{conditions=}")) {
+                    "@nearestConditionalTarget{conditions=}",
+                    "@nearestConditionalTarget{conditions=[eligible;;other]}",
+                    "@nearestConditionalTarget{conditions=[ - health-above 0.5 true ];i=1}",
+                    "@nearestConditionalTarget{conditions=[ - health-above 0.5 true ];mr=true}",
+                    "@nearestConditionalTarget{conditions=[ - health-above 0.5 true - ]}",
+                    "@nearestConditionalTarget{conditions=[ - health-above{value=[0.5} true ]}")) {
                 assertEquals(List.of(), Targeters.select(invalid, context, candidates, List.of()), invalid);
             }
         } finally {
@@ -1342,7 +1356,7 @@ class TargeterOrderingTest {
                     "skill", null, null, candidates,
                     new org.bukkit.Location(null, 0, 0, 0), null);
             assertEquals(List.of(player), Targeters.select(
-                    "@nearestConditionalPlayer{conditions=[has-target false];count=1}",
+                    "@nearestConditionalPlayer{conditions=[has-target];count=1}",
                     context, candidates, List.of()));
         } finally {
             Targeters.conditionProvider(null);

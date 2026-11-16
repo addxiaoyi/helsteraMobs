@@ -196,4 +196,46 @@ class SelectorPlanTest {
                 SelectorPlan.targetConditions(plan.targets().get(0)));
         assertTrue(plan.unsupported().isEmpty(), plan.unsupported().toString());
     }
+
+    @Test
+    @DisplayName("conditional target aliases preserve false result flags")
+    void conditionalTargetAliasesAndResultFlagsAreParsed() {
+        AiProfile profile = new AiProfile("conditional-alias");
+        profile.targets.add("0 nearestif{targetconditions=[ - has-aura false  - is-player true ]}");
+
+        SelectorPlan plan = SelectorPlan.compile(profile);
+
+        assertEquals(SelectorPlan.TargetKind.CONDITIONAL,
+                SelectorPlan.targetKind(plan.targets().get(0)));
+        assertEquals(List.of(
+                new SelectorPlan.TargetCondition("has-aura", false),
+                new SelectorPlan.TargetCondition("is-player", true)),
+                SelectorPlan.targetConditionSpecs(plan.targets().get(0)));
+        assertTrue(plan.unsupported().isEmpty(), plan.unsupported().toString());
+        assertTrue(SelectorPlan.validConditionalTargeter(plan.targets().get(0)));
+        assertTrue(SelectorPlan.conditionalMustSee(plan.targets().get(0)));
+    }
+
+    @Test
+    @DisplayName("conditional AI targeters reject unsupported, duplicate, and empty options")
+    void conditionalTargetArgumentsFailClosed() {
+        for (String raw : List.of(
+                "0 nearestif{conditions=[]}",
+                "0 nearestif{conditions=[ - has-aura true ;; - is-player true ]}",
+                "0 nearestif{conditions=[ - has-aura true ];unknown=true}",
+                "0 nearestif{conditions=[ - has-aura true ];c=[ - is-player true ]}",
+                "0 nearestif{conditions=[ - has-aura true ];interval=2}",
+                "0 nearestif{conditions=[ - has-aura true ];mustreach=true}")) {
+            AiProfile profile = new AiProfile("invalid-conditional");
+            profile.targets.add(raw);
+            SelectorPlan.Rule rule = SelectorPlan.compile(profile).targets().get(0);
+            assertFalse(SelectorPlan.validConditionalTargeter(rule), raw);
+        }
+
+        AiProfile profile = new AiProfile("conditional-must-see");
+        profile.targets.add("0 nearestif{conditions=[ - has-aura true ];ms=false}");
+        SelectorPlan.Rule noSight = SelectorPlan.compile(profile).targets().get(0);
+        assertTrue(SelectorPlan.validConditionalTargeter(noSight));
+        assertFalse(SelectorPlan.conditionalMustSee(noSight));
+    }
 }

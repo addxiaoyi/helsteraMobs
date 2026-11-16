@@ -685,8 +685,9 @@ public final class AiController {
             // silently reject valid targets unless the world happens to be
             // empty between the entities.  Authors can request line of sight
             // explicitly through the shared condition catalog.
-            if (distance < 0 || distance > bestDistance
-                    || (kind != SelectorPlan.TargetKind.CONDITIONAL && !visible)) continue;
+            boolean mustSee = kind != SelectorPlan.TargetKind.CONDITIONAL
+                    || SelectorPlan.conditionalMustSee(rule);
+            if (distance < 0 || distance > bestDistance || mustSee && !visible) continue;
             best = living;
             bestDistance = distance;
         }
@@ -697,7 +698,8 @@ public final class AiController {
                                           SelectorPlan.Rule rule, Location origin) {
         if (entity == null) return false;
         if (kind == SelectorPlan.TargetKind.CONDITIONAL) {
-            String token = rule == null ? "" : rule.token();
+            if (!SelectorPlan.validConditionalTargeter(rule)) return false;
+            String token = rule.token();
             if (token.contains("player") && !(entity instanceof Player)) return false;
             return selectorConditionsPass(entity, origin, rule);
         }
@@ -740,20 +742,21 @@ public final class AiController {
     /** Evaluates conditional target selectors through the shared condition catalog. */
     private boolean selectorConditionsPass(LivingEntity entity, Location origin,
                                            SelectorPlan.Rule rule) {
-        List<String> conditions = SelectorPlan.targetConditions(rule);
-        if (conditions.isEmpty()) return true;
+        List<SelectorPlan.TargetCondition> conditions = SelectorPlan.targetConditionSpecs(rule);
+        if (conditions.isEmpty() || !SelectorPlan.validConditionalTargeter(rule)) return false;
         if (behaviors == null) return false;
         double ratio = entity.getMaxHealth() > 0 ? entity.getHealth() / entity.getMaxHealth() : 0;
         double distance = safeDistance(origin, entity.getLocation());
         var context = dev.helstera.api.behavior.BehaviorContext.of(
                 inst, entity, ratio, distance, decisions, state.name());
-        for (String raw : conditions) {
+        for (SelectorPlan.TargetCondition condition : conditions) {
+            String raw = condition.expression();
             try {
                 String key = conditionBinder == null ? raw : conditionBinder.apply(raw);
                 boolean passed = key != null && !key.isBlank() && behaviors.testCondition(key, context);
                 lastSelectorConditionDiagnostic = raw + "=>" + key
                         + " entity=" + entity.getType() + " passed=" + passed;
-                if (!passed) return false;
+                if (passed != condition.expected()) return false;
             } catch (RuntimeException failure) {
                 warnSelector("conditional-target", failure.getClass().getSimpleName());
                 lastSelectorConditionDiagnostic = raw + "=>error:" + failure.getClass().getSimpleName();

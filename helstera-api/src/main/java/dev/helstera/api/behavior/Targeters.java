@@ -519,7 +519,7 @@ public final class Targeters {
         if (provider == null) return List.of();
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!parsed.valid()) return List.of();
-        List<String> conditions = conditionalConditions(parsed.args());
+        List<ConditionalCondition> conditions = conditionalConditions(parsed.args());
         if (conditions.isEmpty()) return List.of();
 
         Collection<? extends LivingEntity> scoped = candidates == null ? List.of() : candidates;
@@ -547,8 +547,8 @@ public final class Targeters {
                     context.skillTree().orElse(null), context.cancellableEvent().orElse(null),
                     context.damageCause().orElse(null));
             boolean accepted = true;
-            for (String condition : conditions) {
-                if (!provider.test(condition, candidateContext)) {
+            for (ConditionalCondition condition : conditions) {
+                if (provider.test(condition.expression(), candidateContext) != condition.expected()) {
                     accepted = false;
                     break;
                 }
@@ -560,20 +560,148 @@ public final class Targeters {
         return applySkipAndLimit(selected, parsed);
     }
 
-    private static List<String> conditionalConditions(List<String> args) {
+    private record ConditionalCondition(String expression, boolean expected) {
+    }
+
+    private static List<ConditionalCondition> conditionalConditions(List<String> args) {
         for (String raw : args) {
             int equals = raw.indexOf('=');
             if (equals < 0) continue;
             String key = raw.substring(0, equals).trim();
-            if (!key.equalsIgnoreCase("conditions") && !key.equalsIgnoreCase("condition")
-                    && !key.equalsIgnoreCase("c")) continue;
+            if (!isConditionalArgument(key)) continue;
             String value = raw.substring(equals + 1).trim();
             if (value.startsWith("[") && value.endsWith("]")) {
                 value = value.substring(1, value.length() - 1).trim();
             }
-            return splitNestedArguments(value, ';', ',');
+            return parseConditionalConditions(value);
         }
         return List.of();
+    }
+
+    private static boolean isConditionalArgument(String key) {
+        return key.equalsIgnoreCase("conditions") || key.equalsIgnoreCase("condition")
+                || key.equalsIgnoreCase("targetconditions") || key.equalsIgnoreCase("cond")
+                || key.equalsIgnoreCase("c");
+    }
+
+    /** Parses legacy delimited values and Mythic's inline target-condition list syntax. */
+    private static List<ConditionalCondition> parseConditionalConditions(String raw) {
+        if (raw == null || raw.isBlank()) return List.of();
+        List<String> entries = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        List<Character> nesting = new ArrayList<>();
+        char quote = 0;
+        boolean escaped = false;
+        boolean listSyntax = false;
+        for (int i = 0; i < raw.length(); i++) {
+            char c = raw.charAt(i);
+            if (quote != 0) {
+                current.append(c);
+                if (escaped) escaped = false;
+                else if (c == '\\') escaped = true;
+                else if (c == quote) quote = 0;
+                continue;
+            }
+            if (c == '\'' || c == '"') {
+                quote = c;
+                current.append(c);
+                continue;
+            }
+            if (c == '{' || c == '(' || c == '[') {
+                nesting.add(c);
+                current.append(c);
+                continue;
+            }
+            if (c == '}' || c == ')' || c == ']') {
+                if (nesting.isEmpty() || !matchesDelimiter(nesting.remove(nesting.size() - 1), c)) {
+                    return List.of();
+                }
+                current.append(c);
+                continue;
+            }
+            if (nesting.isEmpty() && (c == ';' || c == ',')) {
+                if (!appendConditionalEntry(entries, current)) return List.of();
+                continue;
+            }
+            if (nesting.isEmpty() && c == '-' && i + 1 < raw.length()
+                    && Character.isWhitespace(raw.charAt(i + 1))) {
+                boolean startsEntry = current.toString().isBlank()
+                        || Character.isWhitespace(current.charAt(current.length() - 1))
+                        && endsWithBooleanResult(current.toString());
+                if (startsEntry) {
+                    listSyntax = true;
+                    if (!current.toString().isBlank() && !appendConditionalEntry(entries, current)) {
+                        return List.of();
+                    }
+                    while (i + 1 < raw.length() && Character.isWhitespace(raw.charAt(i + 1))) i++;
+                    continue;
+                }
+            }
+            current.append(c);
+        }
+        if (quote != 0 || escaped || !nesting.isEmpty() || !appendConditionalEntry(entries, current)) {
+            return List.of();
+        }
+
+        List<ConditionalCondition> parsed = new ArrayList<>(entries.size());
+        for (String entry : entries) {
+            String expression = entry.trim();
+            boolean expected = true;
+            int lastSpace = listSyntax ? lastTopLevelWhitespace(expression) : -1;
+            if (lastSpace >= 0) {
+                String result = expression.substring(lastSpace).trim();
+                if (result.equalsIgnoreCase("true") || result.equalsIgnoreCase("false")) {
+                    expected = Boolean.parseBoolean(result);
+                    expression = expression.substring(0, lastSpace).trim();
+                }
+            }
+            if (expression.isBlank()) return List.of();
+            parsed.add(new ConditionalCondition(expression, expected));
+        }
+        return List.copyOf(parsed);
+    }
+
+    private static boolean appendConditionalEntry(List<String> entries, StringBuilder current) {
+        String entry = current.toString().trim();
+        current.setLength(0);
+        if (entry.isEmpty()) return false;
+        entries.add(entry);
+        return true;
+    }
+
+    private static boolean endsWithBooleanResult(String value) {
+        String trimmed = value.trim();
+        int space = trimmed.lastIndexOf(' ');
+        if (space < 0) return false;
+        String result = trimmed.substring(space + 1);
+        return result.equalsIgnoreCase("true") || result.equalsIgnoreCase("false");
+    }
+
+    private static int lastTopLevelWhitespace(String value) {
+        List<Character> nesting = new ArrayList<>();
+        char quote = 0;
+        boolean escaped = false;
+        int last = -1;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (quote != 0) {
+                if (escaped) escaped = false;
+                else if (c == '\\') escaped = true;
+                else if (c == quote) quote = 0;
+                continue;
+            }
+            if (c == '\'' || c == '"') quote = c;
+            else if (c == '{' || c == '(' || c == '[') nesting.add(c);
+            else if (c == '}' || c == ')' || c == ']') {
+                if (nesting.isEmpty() || !matchesDelimiter(nesting.remove(nesting.size() - 1), c)) return -1;
+            } else if (nesting.isEmpty() && Character.isWhitespace(c)) last = i;
+        }
+        return quote == 0 && nesting.isEmpty() ? last : -1;
+    }
+
+    private static boolean matchesDelimiter(char opening, char closing) {
+        return opening == '{' && closing == '}' || opening == '(' && closing == ')'
+                || opening == '[' && closing == ']';
     }
 
     /**
@@ -586,18 +714,47 @@ public final class Targeters {
      */
     private static boolean validConditionalTargeterArguments(ParsedSpec parsed) {
         boolean conditionSeen = false;
+        java.util.Set<String> seen = new java.util.HashSet<>();
         for (String raw : parsed.args()) {
             if (raw == null || raw.isBlank()) return false;
             int equals = raw.indexOf('=');
             if (equals <= 0 || equals == raw.length() - 1) return false;
             String key = raw.substring(0, equals).trim();
-            if (!key.equalsIgnoreCase("conditions") && !key.equalsIgnoreCase("condition")
-                    && !key.equalsIgnoreCase("c")) return false;
-            if (conditionSeen) return false;
-            conditionSeen = true;
-            if (conditionalConditions(List.of(raw)).isEmpty()) return false;
+            String value = raw.substring(equals + 1).trim();
+            String canonical = conditionalArgumentName(key);
+            if (canonical == null || !seen.add(canonical) || value.isBlank()) return false;
+            switch (canonical) {
+                case "conditions" -> {
+                    conditionSeen = true;
+                    if (conditionalConditions(List.of(raw)).isEmpty()) return false;
+                }
+                case "interval" -> {
+                    try {
+                        if (Integer.parseInt(value) != 0) return false;
+                    } catch (NumberFormatException invalid) {
+                        return false;
+                    }
+                }
+                case "mustsee" -> {
+                    if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return false;
+                }
+                case "mustreach" -> {
+                    if (!value.equalsIgnoreCase("false")) return false;
+                }
+                default -> { }
+            }
         }
         return conditionSeen;
+    }
+
+    private static String conditionalArgumentName(String key) {
+        return switch (key.toLowerCase(Locale.ROOT)) {
+            case "conditions", "condition", "targetconditions", "cond", "c" -> "conditions";
+            case "interval", "int", "i" -> "interval";
+            case "mustsee", "ms" -> "mustsee";
+            case "mustreach", "mr" -> "mustreach";
+            default -> null;
+        };
     }
 
     private static List<String> splitNestedArguments(String raw, char primary, char secondary) {
@@ -1562,6 +1719,7 @@ public final class Targeters {
                         "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld",
                         "playersonserver", "targetoftarget", "lastdamager",
                         "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer" -> compact;
+                case "nearestconditional", "nearestif" -> "nearestconditionaltarget";
                 case "server", "everyone" -> "playersonserver";
                 default -> normalized;
             };

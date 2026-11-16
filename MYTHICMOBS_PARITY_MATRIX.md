@@ -31,6 +31,22 @@ cross-module contract coverage, including valid positional compatibility. This
 adds no Paper evidence; the complete Conditions catalog remains
 `mapped-unverified`.
 
+Conditional targeter update (2026-11-16): the shared API and AI selector now
+accept official `cond` and `targetconditions` aliases alongside `conditions`,
+`condition`, and `c`. `nearestconditional` and `nearestif` are recognized as
+aliases for `nearestconditionaltarget`. Inline list entries support Mythic's
+`- <condition> true|false` form, while legacy semicolon/comma entries retain
+their default-true behavior; malformed, empty, duplicate, and unknown private
+arguments fail closed. API, AI, and importer tests cover positive/negative
+entries, nested condition arguments, alias preservation, and old syntax. No
+new Paper evidence was added, so the broader Context targeters row remains
+`mapped-unverified`. Syntax references: [Targeters](https://wiki.mythiccraft.io/mythicmobs/Skills/Targeters),
+[NearestConditionalTarget](https://wiki.mythiccraft.io/mythicmobs/Mobs/ai/targets/nearestconditionaltarget),
+and [Inline Conditions](https://wiki.mythiccraft.io/mythicmobs/Skills/Inline-Conditions).
+For AI selector rules, `mustsee`/`ms` follows the documented default and can be
+disabled explicitly; non-zero `interval` and `mustreach=true` fail closed until
+their scheduling/path-reach behavior is implemented.
+
 Conditions alias update (2026-11-16): `environment` joins `dimension` for
 `dimension-is`, `inregion` joins `region`, and singular
 `playerinradius` joins `playersinradius`. The list parser also recognizes

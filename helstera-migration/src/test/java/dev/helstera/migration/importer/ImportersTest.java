@@ -1327,6 +1327,7 @@ class ImportersTest {
                       - message{m=Server} @PlayersOnServer{targetself=true}
                       - message{m=Everyone} @everyone
                       - message{m=Chain} @Players_In_World{limit=2} > @Nearest_Mob
+                      - message{m=Conditional} @nearestif{targetconditions=[ - isPlayer true ]}
                 """);
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(
@@ -1344,6 +1345,8 @@ class ImportersTest {
         assertTrue(actions.contains("message-target \"Server\" @playersonserver{targetself=true}"), actions.toString());
         assertTrue(actions.contains("message-target \"Everyone\" @playersonserver"), actions.toString());
         assertTrue(actions.contains("message-target \"Chain\" @playersinworld{limit=2} > @nearestmob"), actions.toString());
+        assertTrue(actions.contains("message-target \"Conditional\" @nearestconditionaltarget{targetconditions=[ - isPlayer true ]}"),
+                actions.toString());
     }
 
     @Test
@@ -6693,6 +6696,7 @@ class ImportersTest {
                       - 0 clear
                       - 1 players
                       - 2 nearestConditionalTarget{conditions=[isPlayer;health-above 0.5]}
+                      - 3 nearestif{targetconditions=[ - isPlayer true ]}
                 """);
         var entries = new MythicMobsImporter().convert(file);
         var plan = entries.stream().filter(e -> e.containsKey("target-file")).findFirst().orElseThrow();
@@ -6700,7 +6704,8 @@ class ImportersTest {
                 new java.io.StringReader(String.valueOf(plan.get("content"))));
         assertEquals(List.of("0 clear", "1 meleeattack"), target.getStringList("ai.goals"));
         assertEquals(List.of("0 clear", "1 players",
-                "2 nearestConditionalTarget{conditions=[isPlayer;health-above 0.5]}"),
+                "2 nearestConditionalTarget{conditions=[isPlayer;health-above 0.5]}",
+                "3 nearestif{targetconditions=[ - isPlayer true ]}"),
                 target.getStringList("ai.targets"));
         assertFalse(entries.stream().anyMatch(e -> "unsupported".equals(e.get("status"))
                 && (String.valueOf(e.get("source-key")).contains("AIGoalSelectors")

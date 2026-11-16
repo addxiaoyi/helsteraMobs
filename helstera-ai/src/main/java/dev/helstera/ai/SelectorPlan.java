@@ -485,6 +485,7 @@ final class SelectorPlan {
                     "allied_to_faction", "nearestconditionaltarget", "nearest_conditional_target",
                     "nearestconditionalentity", "nearest_conditional_entity",
                     "nearestconditionalplayer", "nearest_conditional_player",
+                    "nearestconditional", "nearest_conditional", "nearest_if", "nearestif",
                     "insultedtargets", "insulted_targets", "insultedtarget",
                     "cleartarget", "cleartargets", "clear_target", "clear_targets",
                     "clear", "reset" -> true;
@@ -523,7 +524,8 @@ final class SelectorPlan {
                     "allied_to_faction" -> TargetKind.SPECIFIC_FACTION;
             case "nearestconditionaltarget", "nearest_conditional_target",
                     "nearestconditionalentity", "nearest_conditional_entity",
-                    "nearestconditionalplayer", "nearest_conditional_player" -> TargetKind.CONDITIONAL;
+                    "nearestconditionalplayer", "nearest_conditional_player",
+                    "nearestconditional", "nearest_conditional", "nearest_if", "nearestif" -> TargetKind.CONDITIONAL;
             default -> TargetKind.NONE;
         };
     }
@@ -537,38 +539,221 @@ final class SelectorPlan {
         return colon < 0 ? "" : token.substring(colon + 1).trim();
     }
 
+    record TargetCondition(String expression, boolean expected) {
+    }
+
     /** Extracts conditions from Mythic's conditions=[a;b] selector argument. */
     static List<String> targetConditions(Rule rule) {
+        return targetConditionSpecs(rule).stream().map(TargetCondition::expression).toList();
+    }
+
+    /** Parses Mythic's inline list entries, including the optional trailing result flag. */
+    static List<TargetCondition> targetConditionSpecs(Rule rule) {
         if (rule == null) return List.of();
         String value = targetArgument(rule);
         if (value.isBlank()) return List.of();
-        String lower = value.toLowerCase(Locale.ROOT);
-        for (String prefix : List.of("conditions=", "condition=")) {
-            if (lower.startsWith(prefix)) {
-                value = value.substring(prefix.length()).trim();
-                break;
+        String conditionValue = null;
+        List<String> arguments = splitTargetArguments(value);
+        if (arguments == null) return List.of();
+        for (String argument : arguments) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0) continue;
+            String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (List.of("conditions", "condition", "targetconditions", "cond", "c").contains(key)) {
+                if (conditionValue != null) return List.of();
+                conditionValue = argument.substring(equals + 1).trim();
             }
         }
+        if (conditionValue != null) value = conditionValue;
         if (value.startsWith("[") && value.endsWith("]")) {
             value = value.substring(1, value.length() - 1).trim();
         }
         if (value.isBlank()) return List.of();
-        char delimiter = value.indexOf(';') >= 0 ? ';' : ',';
         List<String> out = new ArrayList<>();
-        int start = 0;
-        int depth = 0;
+        StringBuilder current = new StringBuilder();
+        List<Character> nesting = new ArrayList<>();
+        char quote = 0;
+        boolean escaped = false;
+        boolean listSyntax = false;
         for (int i = 0; i < value.length(); i++) {
-            char current = value.charAt(i);
-            if (current == '[' || current == '{' || current == '(') depth++;
-            else if (current == ']' || current == '}' || current == ')') depth = Math.max(0, depth - 1);
-            else if (current == delimiter && depth == 0) {
-                String condition = value.substring(start, i).trim();
-                if (!condition.isBlank()) out.add(condition);
-                start = i + 1;
+            char currentChar = value.charAt(i);
+            if (quote != 0) {
+                current.append(currentChar);
+                if (escaped) escaped = false;
+                else if (currentChar == '\\') escaped = true;
+                else if (currentChar == quote) quote = 0;
+                continue;
+            }
+            if (currentChar == '\'' || currentChar == '"') {
+                quote = currentChar;
+                current.append(currentChar);
+                continue;
+            }
+            if (currentChar == '{' || currentChar == '(' || currentChar == '[') {
+                nesting.add(currentChar);
+                current.append(currentChar);
+                continue;
+            }
+            if (currentChar == '}' || currentChar == ')' || currentChar == ']') {
+                if (nesting.isEmpty() || !matchesDelimiter(nesting.remove(nesting.size() - 1), currentChar)) {
+                    return List.of();
+                }
+                current.append(currentChar);
+                continue;
+            }
+            if (nesting.isEmpty() && (currentChar == ',' || currentChar == ';')) {
+                String entry = current.toString().trim();
+                if (entry.isBlank()) return List.of();
+                out.add(entry);
+                current.setLength(0);
+                continue;
+            }
+            if (nesting.isEmpty() && currentChar == '-' && i + 1 < value.length()
+                    && Character.isWhitespace(value.charAt(i + 1))
+                    && (current.toString().isBlank()
+                    || Character.isWhitespace(current.charAt(current.length() - 1))
+                    && endsWithBooleanResult(current.toString()))) {
+                listSyntax = true;
+                if (!current.toString().isBlank()) {
+                    out.add(current.toString().trim());
+                    current.setLength(0);
+                }
+                while (i + 1 < value.length() && Character.isWhitespace(value.charAt(i + 1))) i++;
+                continue;
+            }
+            current.append(currentChar);
+        }
+        if (quote != 0 || !nesting.isEmpty()) return List.of();
+        String tail = current.toString().trim();
+        if (tail.isBlank()) return List.of();
+        out.add(tail);
+        List<TargetCondition> parsed = new ArrayList<>();
+        for (String entry : out) {
+            String expression = entry.trim();
+            boolean expected = true;
+            int split = listSyntax ? expression.lastIndexOf(' ') : -1;
+            if (split >= 0) {
+                String result = expression.substring(split + 1).trim();
+                if (result.equalsIgnoreCase("true") || result.equalsIgnoreCase("false")) {
+                    expected = Boolean.parseBoolean(result);
+                    expression = expression.substring(0, split).trim();
+                }
+            }
+            if (expression.isBlank()) return List.of();
+            parsed.add(new TargetCondition(expression, expected));
+        }
+        return List.copyOf(parsed);
+    }
+
+    /** Validates the subset of Mythic's AI target attributes implemented by this adapter. */
+    static boolean validConditionalTargeter(Rule rule) {
+        if (rule == null) return false;
+        List<String> arguments = splitTargetArguments(targetArgument(rule));
+        if (arguments == null || arguments.isEmpty()) return false;
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        boolean conditionsSeen = false;
+        for (String argument : arguments) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0 || equals == argument.length() - 1) return false;
+            String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = argument.substring(equals + 1).trim();
+            String canonical = switch (key) {
+                case "c", "cond", "condition", "conditions", "targetconditions" -> "conditions";
+                case "i", "int", "interval" -> "interval";
+                case "ms", "mustsee" -> "mustsee";
+                case "mr", "mustreach" -> "mustreach";
+                default -> null;
+            };
+            if (canonical == null || !seen.add(canonical) || value.isBlank()) return false;
+            switch (canonical) {
+                case "conditions" -> {
+                    conditionsSeen = true;
+                    if (targetConditionSpecs(rule).isEmpty()) return false;
+                }
+                // Runtime evaluates selectors each decision; non-zero interval
+                // scheduling and path-reach checks have no equivalent yet.
+                case "interval" -> {
+                    try {
+                        if (Integer.parseInt(value) != 0) return false;
+                    } catch (NumberFormatException invalid) {
+                        return false;
+                    }
+                }
+                case "mustsee" -> {
+                    if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return false;
+                }
+                case "mustreach" -> {
+                    if (!value.equalsIgnoreCase("false")) return false;
+                }
+                default -> { }
             }
         }
-        String tail = value.substring(start).trim();
-        if (!tail.isBlank()) out.add(tail);
-        return List.copyOf(out);
+        return conditionsSeen;
+    }
+
+    static boolean conditionalMustSee(Rule rule) {
+        if (rule == null) return true;
+        List<String> arguments = splitTargetArguments(targetArgument(rule));
+        if (arguments == null) return true;
+        for (String argument : arguments) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0) continue;
+            String key = argument.substring(0, equals).trim();
+            if (key.equalsIgnoreCase("mustsee") || key.equalsIgnoreCase("ms")) {
+                return Boolean.parseBoolean(argument.substring(equals + 1).trim());
+            }
+        }
+        return true;
+    }
+
+    private static List<String> splitTargetArguments(String value) {
+        if (value == null || value.isBlank()) return null;
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        List<Character> nesting = new ArrayList<>();
+        char quote = 0;
+        boolean escaped = false;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            if (quote != 0) {
+                current.append(c);
+                if (escaped) escaped = false;
+                else if (c == '\\') escaped = true;
+                else if (c == quote) quote = 0;
+                continue;
+            }
+            if (c == '\'' || c == '"') {
+                quote = c;
+                current.append(c);
+            } else if (c == '{' || c == '[' || c == '(') {
+                nesting.add(c);
+                current.append(c);
+            } else if (c == '}' || c == ']' || c == ')') {
+                if (nesting.isEmpty() || !matchesDelimiter(nesting.remove(nesting.size() - 1), c)) {
+                    return List.of();
+                }
+                current.append(c);
+            } else if (nesting.isEmpty() && c == ';') {
+                if (current.toString().isBlank()) return null;
+                parts.add(current.toString().trim());
+                current.setLength(0);
+            } else current.append(c);
+        }
+        if (quote != 0 || !nesting.isEmpty() || current.toString().isBlank()) return null;
+        parts.add(current.toString().trim());
+        return List.copyOf(parts);
+    }
+
+    private static boolean matchesDelimiter(char opening, char closing) {
+        return opening == '{' && closing == '}' || opening == '[' && closing == ']'
+                || opening == '(' && closing == ')';
+    }
+
+    private static boolean endsWithBooleanResult(String value) {
+        String trimmed = value.trim();
+        int split = trimmed.lastIndexOf(' ');
+        if (split < 0) return false;
+        String result = trimmed.substring(split + 1);
+        return result.equalsIgnoreCase("true") || result.equalsIgnoreCase("false");
     }
 }

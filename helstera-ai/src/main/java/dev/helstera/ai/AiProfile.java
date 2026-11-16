@@ -522,7 +522,8 @@ public final class AiProfile {
                 }
                 case "nearestconditionaltarget", "nearest_conditional_target",
                         "nearestconditionalentity", "nearest_conditional_entity",
-                        "nearestconditionalplayer", "nearest_conditional_player" -> {
+                        "nearestconditionalplayer", "nearest_conditional_player",
+                        "nearestconditional", "nearest_if", "nearestif" -> {
                     playerTargets = token.endsWith("player");
                     targetMode = playerTargets ? TargetMode.PLAYERS : TargetMode.LIVING;
                 }

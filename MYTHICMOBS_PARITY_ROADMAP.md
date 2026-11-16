@@ -222,6 +222,15 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   before runtime factory creation; this adds no Paper evidence.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
+- Conditional targeter syntax now covers the official `cond`/
+  `targetconditions` parameter aliases, `nearestconditional`/`nearestif`
+  targeter aliases, and inline `- condition true|false` list entries. Legacy
+  delimited entries remain default-true, and malformed or duplicate private
+  arguments fail closed. AI selector `mustsee` is honored; non-zero `interval`
+  and `mustreach=true` fail closed until their runtime semantics are supported.
+  This is covered by API, AI, and importer tests; no new Paper evidence is
+  claimed, so the complete Context Targeters catalog remains `mapped-unverified`.
+
 **Exit:** every condition in the declared catalog has a verified implementation,
 an explicit preserved/unsupported explanation, or a documented external/version
 block; no unexplained condition gap remains.
