@@ -489,6 +489,81 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("health mechanics accept Mythic named amount aliases for self and targets")
+    void healthMechanicsSupportNamedAmountAliases() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var casterAttribute = org.mockito.Mockito.mock(org.bukkit.attribute.AttributeInstance.class);
+        var targetAttribute = org.mockito.Mockito.mock(org.bukkit.attribute.AttributeInstance.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        org.mockito.Mockito.when(caster.getHealth()).thenReturn(5.0);
+        org.mockito.Mockito.when(caster.getMaxHealth()).thenReturn(20.0);
+        org.mockito.Mockito.when(target.getHealth()).thenReturn(5.0);
+        org.mockito.Mockito.when(target.getMaxHealth()).thenReturn(20.0);
+        org.mockito.Mockito.when(caster.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH))
+                .thenReturn(casterAttribute);
+        org.mockito.Mockito.when(target.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH))
+                .thenReturn(targetAttribute);
+        org.mockito.Mockito.when(casterAttribute.getBaseValue()).thenReturn(20.0);
+        org.mockito.Mockito.when(targetAttribute.getBaseValue()).thenReturn(20.0);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0, "IDLE", null,
+                target, List.of(target), null, null);
+        var selfContext = BehaviorContext.of(instance, caster, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-health").create(List.of("amount=11")).accept(selfContext);
+        SkillExtras.actions().get("modify-health").create(List.of("a=2")).accept(selfContext);
+        SkillExtras.actions().get("set-max-health").create(List.of("value=40")).accept(selfContext);
+        SkillExtras.actions().get("modify-max-health").create(List.of("health=5")).accept(selfContext);
+        SkillExtras.actions().get("set-health-targets").create(List.of("amount=9")).accept(context);
+        SkillExtras.actions().get("modify-health-targets").create(List.of("a=3")).accept(context);
+        SkillExtras.actions().get("set-max-health-targets").create(List.of("value=30")).accept(context);
+        SkillExtras.actions().get("modify-max-health-targets").create(List.of("health=4")).accept(context);
+
+        verify(caster).setHealth(11.0);
+        verify(caster).setHealth(7.0);
+        verify(casterAttribute).setBaseValue(40.0);
+        verify(casterAttribute).setBaseValue(25.0);
+        verify(target).setHealth(9.0);
+        verify(target).setHealth(8.0);
+        verify(targetAttribute).setBaseValue(30.0);
+        verify(targetAttribute).setBaseValue(24.0);
+    }
+
+    @Test
+    @DisplayName("health mechanics keep positional arguments and resolve named placeholders at execution time")
+    void healthMechanicsKeepPositionalAndPlaceholderArguments() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        org.mockito.Mockito.when(caster.getMaxHealth()).thenReturn(20.0);
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        org.mockito.Mockito.when(target.getHealth()).thenReturn(7.0);
+        org.mockito.Mockito.when(target.getMaxHealth()).thenReturn(20.0);
+        var context = BehaviorContext.continueExecution(instance, target, 1.0, -1, 0, "IDLE", null,
+                target, List.of(target), null, null);
+
+        SkillExtras.actions().get("set-health").create(List.of("<target.hp.raw>")).accept(context);
+        SkillExtras.actions().get("set-health-targets")
+                .create(List.of("amount=<target.hp.raw>")).accept(context);
+
+        verify(caster).setHealth(7.0);
+        verify(target).setHealth(7.0);
+    }
+
+    @Test
+    @DisplayName("health mechanics reject non-finite named numbers")
+    void healthMechanicsRejectNonFiniteNamedNumbers() {
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("set-health").create(List.of("amount=NaN")));
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("modify-health-targets")
+                        .create(List.of("value=Infinity")));
+    }
+
+    @Test
     @DisplayName("fire mechanics set and clear caster fire ticks")
     void fireActionsSetAndClearTicks() {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);

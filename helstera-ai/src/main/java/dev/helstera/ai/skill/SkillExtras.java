@@ -6022,7 +6022,7 @@ public final class SkillExtras {
                 // ---- 数值修改 ----
 
                 Map.entry("set-health", (SkillCatalog.ActionFactory) a -> {
-                    var v = dynamicNum(a, 0, 0);
+                    var v = dynamicKeyedNum(a, 0, 0, "amount", "a", "value", "health");
                     return ctx -> selfLiving(ctx).ifPresent(e -> {
                         try {
                             double value = v.applyAsDouble(ctx);
@@ -6033,7 +6033,7 @@ public final class SkillExtras {
                     });
                 }),
                 Map.entry("set-health-targets", (SkillCatalog.ActionFactory) a -> {
-                    var value = dynamicNum(a, 0, 0);
+                    var value = dynamicKeyedNum(a, 0, 0, "amount", "a", "value", "health");
                     return ctx -> {
                         double health = value.applyAsDouble(ctx);
                         for (LivingEntity target : targetEntities(ctx)) {
@@ -6043,7 +6043,7 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("set-max-health", (SkillCatalog.ActionFactory) a -> {
-                    var v = dynamicNum(a, 0, 20);
+                    var v = dynamicKeyedNum(a, 0, 20, "amount", "a", "value", "health");
                     return ctx -> selfLiving(ctx).ifPresent(entity -> {
                         try {
                             var attribute = entity.getAttribute(
@@ -6058,7 +6058,7 @@ public final class SkillExtras {
                     });
                 }),
                 Map.entry("set-max-health-targets", (SkillCatalog.ActionFactory) a -> {
-                    var value = dynamicNum(a, 0, 20);
+                    var value = dynamicKeyedNum(a, 0, 20, "amount", "a", "value", "health");
                     return ctx -> {
                         double maximum = Math.max(0.1, value.applyAsDouble(ctx));
                         for (LivingEntity target : targetEntities(ctx)) {
@@ -6072,7 +6072,7 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("modify-max-health", (SkillCatalog.ActionFactory) a -> {
-                    var v = dynamicNum(a, 0, 0);
+                    var v = dynamicKeyedNum(a, 0, 0, "amount", "a", "value", "health");
                     return ctx -> selfLiving(ctx).ifPresent(entity -> {
                         try {
                             var attribute = entity.getAttribute(
@@ -6087,7 +6087,7 @@ public final class SkillExtras {
                     });
                 }),
                 Map.entry("modify-max-health-targets", (SkillCatalog.ActionFactory) a -> {
-                    var delta = dynamicNum(a, 0, 0);
+                    var delta = dynamicKeyedNum(a, 0, 0, "amount", "a", "value", "health");
                     return ctx -> {
                         double change = delta.applyAsDouble(ctx);
                         for (LivingEntity target : targetEntities(ctx)) {
@@ -6102,7 +6102,7 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("modify-health", (SkillCatalog.ActionFactory) a -> {
-                    var delta = dynamicNum(a, 0, 0);
+                    var delta = dynamicKeyedNum(a, 0, 0, "amount", "a", "value", "health");
                     return ctx -> selfLiving(ctx).ifPresent(e -> {
                         try {
                             double value = delta.applyAsDouble(ctx);
@@ -6114,7 +6114,7 @@ public final class SkillExtras {
                     });
                 }),
                 Map.entry("modify-health-targets", (SkillCatalog.ActionFactory) a -> {
-                    var delta = dynamicNum(a, 0, 0);
+                    var delta = dynamicKeyedNum(a, 0, 0, "amount", "a", "value", "health");
                     return ctx -> {
                         double change = delta.applyAsDouble(ctx);
                         for (LivingEntity target : targetEntities(ctx)) {
