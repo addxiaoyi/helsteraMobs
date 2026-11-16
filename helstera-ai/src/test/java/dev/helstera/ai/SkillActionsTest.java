@@ -511,9 +511,36 @@ class SkillActionsTest {
         var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
         var context = BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE");
 
-        SkillExtras.actions().get("freeze").create(List.of("80")).accept(context);
+        SkillExtras.actions().get("freeze").create(List.of("duration=80")).accept(context);
 
         verify(target).setFreezeTicks(80);
+    }
+
+    @Test
+    @DisplayName("state duration mechanics clamp negative named values")
+    void stateDurationMechanicsClampNegativeNamedValues() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(Optional.of(player));
+        var context = BehaviorContext.of(instance, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-no-damage-ticks").create(List.of("ticks=-4")).accept(context);
+        SkillExtras.actions().get("set-maximum-no-damage-ticks").create(List.of("duration=-4")).accept(context);
+        SkillExtras.actions().get("set-fire").create(List.of("time=-4")).accept(context);
+
+        verify(player).setNoDamageTicks(0);
+        verify(player).setMaximumNoDamageTicks(0);
+        verify(player).setFireTicks(0);
+    }
+
+    @Test
+    @DisplayName("state duration mechanics reject non-finite named values")
+    void stateDurationMechanicsRejectNonFiniteNamedValues() {
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("set-fire").create(List.of("ticks=NaN")));
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("freeze").create(List.of("duration=Infinity")));
     }
 
     @Test

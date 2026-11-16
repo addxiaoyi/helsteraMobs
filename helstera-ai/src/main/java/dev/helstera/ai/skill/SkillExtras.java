@@ -6367,14 +6367,14 @@ public final class SkillExtras {
                     });
                 }),
                 Map.entry("set-no-damage-ticks", (SkillCatalog.ActionFactory) a -> {
-                    var ticks = dynamicNum(a, 0, 0);
+                    var ticks = dynamicKeyedNum(a, 0, 0, "ticks", "duration", "time", "t");
                     return ctx -> selfLiving(ctx).ifPresent(entity -> {
                         try { entity.setNoDamageTicks(Math.max(0, (int) ticks.applyAsDouble(ctx))); }
                         catch (Throwable ignored) { SkillFaults.swallow("SkillExtras#setNoDamageTicks"); }
                     });
                 }),
                 Map.entry("set-no-damage-ticks-targets", (SkillCatalog.ActionFactory) a -> {
-                    var ticks = dynamicNum(a, 0, 0);
+                    var ticks = dynamicKeyedNum(a, 0, 0, "ticks", "duration", "time", "t");
                     return ctx -> {
                         int value = Math.max(0, (int) ticks.applyAsDouble(ctx));
                         targetEntities(ctx).forEach(entity -> {
@@ -6384,14 +6384,14 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("set-maximum-no-damage-ticks", (SkillCatalog.ActionFactory) a -> {
-                    var ticks = dynamicNum(a, 0, 20);
+                    var ticks = dynamicKeyedNum(a, 0, 20, "ticks", "duration", "time", "t");
                     return ctx -> selfLiving(ctx).ifPresent(entity -> {
                         try { entity.setMaximumNoDamageTicks(Math.max(0, (int) ticks.applyAsDouble(ctx))); }
                         catch (Throwable ignored) { SkillFaults.swallow("SkillExtras#setMaximumNoDamageTicks"); }
                     });
                 }),
                 Map.entry("set-maximum-no-damage-ticks-targets", (SkillCatalog.ActionFactory) a -> {
-                    var ticks = dynamicNum(a, 0, 20);
+                    var ticks = dynamicKeyedNum(a, 0, 20, "ticks", "duration", "time", "t");
                     return ctx -> {
                         int value = Math.max(0, (int) ticks.applyAsDouble(ctx));
                         targetEntities(ctx).forEach(entity -> {
@@ -6423,14 +6423,14 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("set-fire", (SkillCatalog.ActionFactory) a -> {
-                    var ticks = dynamicNum(a, 0, 40);
+                    var ticks = dynamicKeyedNum(a, 0, 40, "ticks", "duration", "time", "t");
                     return ctx -> selfLiving(ctx).ifPresent(e -> {
                         try { e.setFireTicks(Math.max(0, (int) ticks.applyAsDouble(ctx))); }
                         catch (Throwable ignored) { SkillFaults.swallow("SkillExtras#514"); }
                     });
                 }),
                 Map.entry("set-fire-targets", (SkillCatalog.ActionFactory) a -> {
-                    var ticks = dynamicNum(a, 0, 40);
+                    var ticks = dynamicKeyedNum(a, 0, 40, "ticks", "duration", "time", "t");
                     return ctx -> {
                         int value = Math.max(0, (int) ticks.applyAsDouble(ctx));
                         targetEntities(ctx).forEach(entity -> {
@@ -6448,7 +6448,7 @@ public final class SkillExtras {
                             try { entity.setFireTicks(0); } catch (Throwable ignored) { SkillFaults.swallow("SkillExtras#clearFireTargets"); }
                         })),
                 Map.entry("freeze", (SkillCatalog.ActionFactory) a -> {
-                    var ticks = dynamicNum(a, 0, 140);
+                    var ticks = dynamicKeyedNum(a, 0, 140, "duration", "ticks", "time", "t");
                     return ctx -> {
                         int value = Math.max(0, (int) Math.round(ticks.applyAsDouble(ctx)));
                         for (LivingEntity entity : itemTargets(ctx)) {
