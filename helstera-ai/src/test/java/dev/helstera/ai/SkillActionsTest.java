@@ -451,6 +451,44 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("walk speed accepts Mythic named arguments, clamps Bukkit bounds, and targets players only")
+    void walkSpeedSupportsNamedBoundsAndTargets() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var player = org.mockito.Mockito.mock(org.bukkit.entity.Player.class);
+        var mob = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(Optional.of(player));
+        var context = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
+                null, List.of(player, mob), null);
+        var selfContext = BehaviorContext.of(instance, player, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("set-walk-speed").create(List.of("speed=0.4")).accept(selfContext);
+        org.mockito.Mockito.verify(player).setWalkSpeed(0.4f);
+
+        org.mockito.Mockito.clearInvocations(player);
+        SkillExtras.actions().get("set-walk-speed").create(List.of("2")).accept(selfContext);
+        org.mockito.Mockito.verify(player).setWalkSpeed(1.0f);
+
+        org.mockito.Mockito.clearInvocations(player);
+        SkillExtras.actions().get("set-walk-speed").create(List.of("-2")).accept(selfContext);
+        org.mockito.Mockito.verify(player).setWalkSpeed(-1.0f);
+
+        org.mockito.Mockito.clearInvocations(player);
+        SkillExtras.actions().get("set-walk-speed-targets").create(List.of("value=0.6")).accept(context);
+        org.mockito.Mockito.verify(player).setWalkSpeed(0.6f);
+        org.mockito.Mockito.verifyNoMoreInteractions(player);
+    }
+
+    @Test
+    @DisplayName("walk speed rejects non-finite and malformed numeric arguments at bind time")
+    void walkSpeedRejectsMalformedNumbers() {
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("set-walk-speed").create(List.of("speed=NaN")));
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("set-walk-speed-targets").create(List.of("Infinity")));
+    }
+
+    @Test
     @DisplayName("fire mechanics set and clear caster fire ticks")
     void fireActionsSetAndClearTicks() {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);

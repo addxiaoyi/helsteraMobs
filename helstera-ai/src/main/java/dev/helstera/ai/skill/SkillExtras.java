@@ -6401,7 +6401,7 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("set-walk-speed", (SkillCatalog.ActionFactory) a -> {
-                    var speed = dynamicNum(a, 0, 0.2);
+                    var speed = dynamicKeyedNum(a, 0, 0.2, "speed", "s", "amount", "value", "v");
                     return ctx -> selfLiving(ctx).filter(Player.class::isInstance).map(Player.class::cast)
                             .ifPresent(player -> {
                                 try {
@@ -6411,7 +6411,7 @@ public final class SkillExtras {
                             });
                 }),
                 Map.entry("set-walk-speed-targets", (SkillCatalog.ActionFactory) a -> {
-                    var speed = dynamicNum(a, 0, 0.2);
+                    var speed = dynamicKeyedNum(a, 0, 0.2, "speed", "s", "amount", "value", "v");
                     return ctx -> {
                         float value = (float) Math.max(-1.0,
                                 Math.min(1.0, speed.applyAsDouble(ctx)));
