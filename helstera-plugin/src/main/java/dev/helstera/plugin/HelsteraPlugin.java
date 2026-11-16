@@ -6437,6 +6437,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         int[] probeTicks = {0};
         org.bukkit.event.Listener attackListener = null;
         boolean[] cleanupDeferred = {false};
+        org.bukkit.Location observerOriginalLocation = observer.getLocation().clone();
+        boolean[] observerRelocated = {false};
         try {
             String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
             sourceRoot = Files.createTempDirectory("helstera-bee-stinger-import-");
@@ -6484,10 +6486,20 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 throw new IllegalStateException("Mythic Bee stinger options were not imported for both probe mobs");
             }
             // Paper's native entity activation requires a nearby player. The
-            // integration server connects its observer after plugin startup,
-            // so wait above and keep the native AI probe in that player's area.
-            Location probeOrigin = observer.getLocation().clone();
+            // full client workflow may leave its second observer in an air
+            // position (it is deliberately teleported away for audience
+            // negative checks), where Bee navigation cannot produce an attack.
+            // Use a stable ground position for this native-AI probe and put the
+            // observer back when the asynchronous check is complete.
+            Location probeOrigin = origin.clone();
+            int surfaceY = probeOrigin.getWorld().getHighestBlockAt(
+                    probeOrigin.getBlockX(), probeOrigin.getBlockZ()).getY();
+            probeOrigin.setY(surfaceY + 1.0);
             probeOrigin.getChunk().load();
+            if (observer.getLocation().distanceSquared(probeOrigin) > 4.0) {
+                observer.teleport(probeOrigin.clone());
+                observerRelocated[0] = true;
+            }
             MobSpawn protectedSpawn = spawnMobCore(protectedTargetId, "example/emberling", probeOrigin,
                     false, null);
             MobSpawn controlSpawn = spawnMobCore(controlTargetId, "example/emberling",
@@ -6589,12 +6601,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (observer.isValid() && !observer.isDead()
                             && observer.getWorld().equals(target.getWorld())
                             && observer.getLocation().distanceSquared(target.getLocation()) > 64.0) {
-                        Location activeOrigin = observer.getLocation().clone().add(4, 0, 0);
-                        target.teleport(activeOrigin);
-                        protectedBee.teleport(activeOrigin.clone().add(-2, 1, 0));
-                        controlBee.teleport(activeOrigin.clone().add(2, 1, 0));
-                        protectedBee.setTarget(target);
-                        controlBee.setTarget(target);
+                        // Keep the activation observer beside the fixed ground
+                        // probe. Following a client that was intentionally
+                        // moved for another workflow can put the target in
+                        // unloaded or airborne terrain and invalidate native
+                        // Bee navigation.
+                        observer.teleport(probeOrigin.clone());
                     }
                     if (target.isValid() && !target.isDead()) {
                         target.setInvulnerable(false);
@@ -6695,6 +6707,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             try {
                                 if (target.isValid()) target.remove();
                             } finally {
+                                if (observerRelocated[0] && observer.isValid()
+                                        && !observer.isDead()) {
+                                    observer.teleport(observerOriginalLocation);
+                                }
                                 cleanupImportedMobProbe(cleanupSourceRoot, outputDirectory,
                                         cleanupOutputDirectoryExisted, cleanupMobFiles, cleanupInstanceIds);
                             }
@@ -6710,6 +6726,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 try {
                     if (attackListener != null) org.bukkit.event.HandlerList.unregisterAll(attackListener);
                     if (probeTarget[0] != null && probeTarget[0].isValid()) probeTarget[0].remove();
+                    if (observerRelocated[0] && observer.isValid() && !observer.isDead()) {
+                        observer.teleport(observerOriginalLocation);
+                    }
                 } finally {
                     cleanupImportedMobProbe(sourceRoot, outputDirectory,
                             outputDirectoryExisted, mobFiles, instanceIds);
@@ -10626,6 +10645,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
 
         var origin = player.getLocation();
+        // Keep the temporary probe at the same height as the player. This is
+        // the placement used by the successful Paper client evidence and
+        // keeps both entities inside the client's normal interaction ray.
         var blocked = origin.getWorld().spawn(origin.clone().add(2, 0, 1), org.bukkit.entity.Pig.class);
         var allowed = origin.getWorld().spawn(origin.clone().add(2, 0, -1), org.bukkit.entity.Pig.class);
         blocked.setAI(false);
@@ -10673,7 +10695,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         };
         getServer().getPluginManager().registerEvents(probe, this);
-        probe.timeout = getServer().getScheduler().runTaskLater(this, () -> probe.finish(), 400L);
+        // The strict Paper client workflow intentionally runs the menu and
+        // player self-tests before sending entity-use packets. Keep the
+        // managed entities alive through that delayed client phase while
+        // retaining a bounded cleanup timeout for a disconnected client.
+        probe.timeout = getServer().getScheduler().runTaskLater(this, () -> probe.finish(), 1200L);
         player.sendMessage("PAPER_INTERACTABLE_READY " + blocked.getEntityId() + " " + allowed.getEntityId());
     }
 
@@ -10841,6 +10867,69 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }, 1L);
     }
 
+    private boolean runMoistureConditionSelfTest(
+            org.bukkit.block.Block utilityBody,
+            org.bukkit.block.BlockState utilityBodyState,
+            dev.helstera.api.behavior.BehaviorContext conditionContext,
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+        boolean hydrated = false;
+        boolean hydratedRange = false;
+        boolean partial = false;
+        boolean partialRange = false;
+        boolean dry = false;
+        boolean nonFarmland = false;
+        boolean imported = false;
+        boolean importedAlias = false;
+        boolean importedRange = false;
+        boolean restored = false;
+        try {
+            var farmlandData = org.bukkit.Material.FARMLAND.createBlockData();
+            if (!(farmlandData instanceof org.bukkit.block.data.type.Farmland farmland)) {
+                throw new IllegalStateException("FARMLAND did not expose Farmland BlockData");
+            }
+            farmland.setMoisture(farmland.getMaximumMoisture());
+            utilityBody.setBlockData(farmland, false);
+            hydrated = behaviors.testCondition(skills.bindCondition("isMoist"), conditionContext);
+            hydratedRange = behaviors.testCondition(
+                    skills.bindCondition("moistureness{l=1to7}"), conditionContext);
+            farmland.setMoisture(3);
+            utilityBody.setBlockData(farmland, false);
+            partial = !behaviors.testCondition(skills.bindCondition("moist"), conditionContext);
+            partialRange = behaviors.testCondition(
+                    skills.bindCondition("moistureLevel{l=3}"), conditionContext);
+            farmland.setMoisture(0);
+            utilityBody.setBlockData(farmland, false);
+            dry = !behaviors.testCondition(skills.bindCondition("moist"), conditionContext)
+                    && behaviors.testCondition(
+                    skills.bindCondition("moistureLevel{l=0}"), conditionContext);
+            utilityBody.setType(org.bukkit.Material.STONE, false);
+            nonFarmland = !behaviors.testCondition(skills.bindCondition("moist"), conditionContext)
+                    && !behaviors.testCondition(
+                    skills.bindCondition("moisture-level 3"), conditionContext);
+            var mapped = dev.helstera.migration.importer.MmConditions.translate("?moist");
+            var alias = dev.helstera.migration.importer.MmConditions.translate("?isMoist");
+            var range = dev.helstera.migration.importer.MmConditions.translate(
+                    "?moistureness{l=3}");
+            imported = mapped.translated() && "moist".equals(mapped.condition());
+            importedAlias = alias.translated() && "moist".equals(alias.condition());
+            importedRange = range.translated() && "moisture-level 3".equals(range.condition());
+        } finally {
+            utilityBodyState.update(true, false);
+            restored = utilityBody.getType() == utilityBodyState.getType()
+                    && utilityBody.getBlockData().equals(utilityBodyState.getBlockData());
+        }
+        boolean passed = hydrated && hydratedRange && partial && partialRange && dry
+                && nonFarmland && imported && importedAlias && importedRange && restored;
+        getLogger().info("moisture-condition-details hydrated=" + hydrated
+                + " hydrated-range=" + hydratedRange + " partial=" + partial
+                + " partial-range=" + partialRange + " dry=" + dry
+                + " non-farmland=" + nonFarmland + " imported=" + imported
+                + " imported-alias=" + importedAlias + " imported-range=" + importedRange
+                + " restored=" + restored + " passed=" + passed);
+        return passed;
+    }
+
     private void runItemEffectsSelfTest() {
         getServer().getScheduler().runTaskLater(this, () -> {
             var world = getServer().getWorlds().isEmpty() ? null : getServer().getWorlds().get(0);
@@ -10926,6 +11015,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean targetKillMechanic = false;
             boolean damageMeleeMechanic = false;
             boolean conditionUtilityAliases = false;
+            boolean altitudeCondition = false;
             boolean importedPluginCondition = false;
             boolean importedPopulationConditions = false;
             boolean localDifficultyCondition = false;
@@ -12935,6 +13025,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills, behaviors, modelInstance, conditionContext);
                 serverNmsVersionCondition = runServerNmsVersionConditionSelfTest(
                         skills, behaviors, modelInstance, conditionContext);
+                altitudeCondition = runAltitudeConditionSelfTest(world, location, skills, behaviors);
                 var originalForcePullVelocity = conditionTarget.getVelocity().clone();
                 try {
                     boolean forcePullDispatched = runIntegrationAction(skills, behaviors,
@@ -13607,26 +13698,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             + " yaw=" + conditionTarget.getLocation().getYaw()
                             + " below=" + utilityGround.getType());
 
-                    var farmlandData = org.bukkit.Material.FARMLAND.createBlockData();
-                    if (!(farmlandData instanceof org.bukkit.block.data.type.Farmland farmland)) {
-                        throw new IllegalStateException("FARMLAND did not expose Farmland BlockData");
-                    }
-                    farmland.setMoisture(farmland.getMaximumMoisture());
-                    utilityBody.setBlockData(farmland, false);
-                    boolean hydrated = behaviors.testCondition(
-                            skills.bindCondition("isMoist"), conditionContext);
-                    boolean hydratedRange = behaviors.testCondition(
-                            skills.bindCondition("moistureness{l=1to7}"), conditionContext);
-                    farmland.setMoisture(0);
-                    utilityBody.setBlockData(farmland, false);
-                    boolean dry = !behaviors.testCondition(
-                            skills.bindCondition("moist"), conditionContext)
-                            && behaviors.testCondition(
-                            skills.bindCondition("moistureLevel{l=0}"), conditionContext);
-                    moistureConditions = hydrated && hydratedRange && dry;
-                    getLogger().info("moisture-condition-details hydrated=" + hydrated
-                            + " hydrated-range=" + hydratedRange + " dry=" + dry
-                            + " max=" + farmland.getMaximumMoisture());
+                    moistureConditions = runMoistureConditionSelfTest(
+                            utilityBody, utilityBodyState, conditionContext, skills, behaviors);
                 } finally {
                     conditionTarget.setRotation(utilityYaw, utilityPitch);
                     utilityBodyState.update(true, false);
@@ -15322,8 +15395,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean movingImported = movingProbe.imported();
                 boolean movingRestored = movingProbe.restored();
                 boolean movingNow = movingProbe.passed();
-                boolean inlineConditionScopes = runInlineConditionScopeProbe(
+                InlineConditionProbe inlineConditionProbe = runInlineConditionScopeProbe(
                         world, skills, behaviors, modelInstance, zombie, conditionTarget);
+                boolean inlineConditionScopes = inlineConditionProbe.passed();
                 boolean conditionMobility = unmountedBefore && noPassengerBefore
                         && mountedNow && hasPassengerNow && movingNow;
                 int previousCasterAir = zombie.getRemainingAir();
@@ -16494,6 +16568,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " moving-imported=" + movingImported
                         + " moving-restored=" + movingRestored
                         + " inline-condition-scopes=" + inlineConditionScopes
+                        + " inline-target-filter=" + inlineConditionProbe.targetFilter()
+                        + " inline-target-negation=" + inlineConditionProbe.targetNegation()
+                        + " inline-empty-target-rejected=" + inlineConditionProbe.emptyTargetRejected()
+                        + " inline-conditions-restored=" + inlineConditionProbe.restored()
                         + " drowning-condition=" + drowningCondition
                         + " leashed-condition=" + leashedCondition
                         + " has-owner-condition=" + hasOwnerCondition
@@ -16526,6 +16604,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " target-kill=" + targetKillMechanic
                         + " damage-melee=" + damageMeleeMechanic
                         + " condition-utility=" + conditionUtilityAliases
+                        + " altitude-condition=" + altitudeCondition
                         + " in-combat-condition=" + utilityInCombat
                         + " mobs-in-chunk-condition=" + mobsInChunkCondition
                         + " player-radius-conditions=" + playerRadiusConditions
@@ -18133,6 +18212,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private record InlineConditionProbe(boolean casterAndTriggerScopes,
+                                        boolean targetFilter,
+                                        boolean targetNegation,
+                                        boolean emptyTargetRejected,
+                                        boolean restored) {
+        private boolean passed() {
+            return casterAndTriggerScopes && targetFilter && targetNegation
+                    && emptyTargetRejected && restored;
+        }
+    }
+
     private static MovingConditionProbe runMovingConditionProbe(
             org.bukkit.World world,
             SkillService skills,
@@ -18220,7 +18310,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 invalidArguments, imported, restored);
     }
 
-    private static boolean runInlineConditionScopeProbe(
+    private static InlineConditionProbe runInlineConditionScopeProbe(
             org.bukkit.World world,
             SkillService skills,
             BehaviorRegistry behaviors,
@@ -18229,11 +18319,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             LivingEntity trigger) {
         if (world == null || skills == null || behaviors == null || instance == null
                 || caster == null || trigger == null
-                || caster.getEquipment() == null || trigger.getEquipment() == null) return false;
+                || caster.getEquipment() == null || trigger.getEquipment() == null) {
+            return new InlineConditionProbe(false, false, false, false, false);
+        }
         var casterMainHand = caster.getEquipment().getItemInMainHand().clone();
         var triggerMainHand = trigger.getEquipment().getItemInMainHand().clone();
         var actionRuns = new java.util.concurrent.atomic.AtomicInteger();
+        var targetActionRuns = new java.util.concurrent.atomic.AtomicInteger();
+        var selectedTarget = new java.util.concurrent.atomic.AtomicReference<LivingEntity>();
+        var selectedTargets = new java.util.concurrent.atomic.AtomicReference<List<LivingEntity>>(List.of());
         org.bukkit.entity.Item nonLivingTrigger = null;
+        boolean casterAndTriggerScopes = false;
+        boolean targetFilter = false;
+        boolean targetNegation = false;
+        boolean emptyTargetRejected = false;
+        boolean restored = false;
         try {
             caster.getEquipment().setItemInMainHand(
                     new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
@@ -18241,7 +18341,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     new org.bukkit.inventory.ItemStack(org.bukkit.Material.WOODEN_SWORD));
             behaviors.registerAction("paper-inline-condition-capture", ignored -> actionRuns.incrementAndGet());
             String action = skills.bindAction(
-                    "paper-inline-condition-capture ?holding{m=SHIELD} ?~holding{m=WOODEN_SWORD}");
+                    "paper-inline-condition-capture ?holding{m=SHIELD} "
+                            + "?!holding{m=DIAMOND_SWORD} ?~holding{m=WOODEN_SWORD} "
+                            + "?~!holding{m=DIAMOND_SWORD}");
             var triggerContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                     instance, trigger, healthRatio(trigger), 3.0, 0, "integration", null,
                     trigger, java.util.List.of(trigger), trigger.getLocation(), null);
@@ -18275,13 +18377,50 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     nonLivingTrigger, java.util.List.of(trigger), trigger.getLocation(), null);
             boolean nonLivingTriggerRejected = action != null
                     && behaviors.runAction(action, nonLivingContext) && actionRuns.get() == 1;
-            return positive && casterMismatchRejected && triggerMismatchRejected
+
+            behaviors.registerAction("paper-inline-target-capture", context -> {
+                targetActionRuns.incrementAndGet();
+                selectedTarget.set(context.targetEntity().orElse(null));
+                selectedTargets.set(context.targets());
+            });
+            var targetContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    instance, trigger, healthRatio(trigger), 3.0, 0, "integration", null,
+                    trigger, java.util.List.of(trigger, caster), trigger.getLocation(), null);
+            String targetFilterAction = skills.bindAction(
+                    "paper-inline-target-capture @targets ?@holding{m=SHIELD}");
+            targetFilter = targetFilterAction != null
+                    && behaviors.runAction(targetFilterAction, targetContext)
+                    && targetActionRuns.get() == 1
+                    && selectedTarget.get() == caster
+                    && selectedTargets.get().equals(java.util.List.of(caster));
+
+            String targetNegationAction = skills.bindAction(
+                    "paper-inline-target-capture @targets ?@!holding{m=SHIELD}");
+            targetNegation = targetNegationAction != null
+                    && behaviors.runAction(targetNegationAction, targetContext)
+                    && targetActionRuns.get() == 2
+                    && selectedTarget.get() == trigger
+                    && selectedTargets.get().equals(java.util.List.of(trigger));
+
+            trigger.getEquipment().setItemInMainHand(
+                    new org.bukkit.inventory.ItemStack(org.bukkit.Material.SHIELD));
+            var noMatchingTargetContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                    instance, trigger, healthRatio(trigger), 3.0, 0, "integration", null,
+                    trigger, java.util.List.of(trigger, caster), trigger.getLocation(), null);
+            emptyTargetRejected = targetNegationAction != null
+                    && behaviors.runAction(targetNegationAction, noMatchingTargetContext)
+                    && targetActionRuns.get() == 2;
+            casterAndTriggerScopes = positive && casterMismatchRejected && triggerMismatchRejected
                     && missingTriggerRejected && nonLivingTriggerRejected;
         } finally {
             caster.getEquipment().setItemInMainHand(casterMainHand);
             trigger.getEquipment().setItemInMainHand(triggerMainHand);
+            restored = caster.getEquipment().getItemInMainHand().equals(casterMainHand)
+                    && trigger.getEquipment().getItemInMainHand().equals(triggerMainHand);
             if (nonLivingTrigger != null) nonLivingTrigger.remove();
         }
+        return new InlineConditionProbe(casterAndTriggerScopes, targetFilter,
+                targetNegation, emptyTargetRejected, restored);
     }
 
     private static double healthRatio(LivingEntity entity) {
@@ -18679,6 +18818,137 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                                  dev.helstera.api.behavior.BehaviorContext context) {
         String key = skills.bindAction(spec);
         return key != null && behaviors.runAction(key, context);
+    }
+
+    /**
+     * Verifies MythicMobs 5.7.2 Altitude against a live Paper world.
+     *
+     * <p>The fixture deliberately puts a roof above the entity while leaving a
+     * different local floor below it. A highest-block-column implementation
+     * would see the roof and return a negative altitude; MythicMobs scans down
+     * from the entity block and returns the local floor distance instead. A
+     * second column stops before its real floor to exercise maxHeight.</p>
+     */
+    private boolean runAltitudeConditionSelfTest(
+            org.bukkit.World world,
+            Location origin,
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+        if (world == null || origin == null || skills == null || behaviors == null) {
+            getLogger().info("[自检] altitude-condition result=false reason=missing-runtime");
+            return false;
+        }
+        var originalStates = new java.util.ArrayList<org.bukkit.block.BlockState>();
+        org.bukkit.entity.Zombie target = null;
+        boolean localFloor = false;
+        boolean overhangIgnoresHighest = false;
+        boolean maxHeightBoundary = false;
+        boolean imported = false;
+        boolean importedAlias = false;
+        boolean duplicatePreserved = false;
+        boolean restored = false;
+        boolean entityRemoved = false;
+        try {
+            int x = origin.getBlockX() + 48;
+            int z = origin.getBlockZ() + 48;
+            int boundaryX = x + 3;
+            int baseY = Math.max(world.getMinHeight() + 10,
+                    Math.max(origin.getBlockY() + 4,
+                            Math.max(world.getHighestBlockYAt(x, z),
+                                    world.getHighestBlockYAt(boundaryX, z)) + 8));
+            if (baseY + 4 >= world.getMaxHeight() - 1) {
+                throw new IllegalStateException("no vertical headroom for altitude probe");
+            }
+            world.getChunkAt(x >> 4, z >> 4);
+            world.getChunkAt(boundaryX >> 4, z >> 4);
+
+            for (int columnX : new int[] {x, boundaryX}) {
+                for (int y = baseY - 5; y <= baseY + 3; y++) {
+                    originalStates.add(world.getBlockAt(columnX, y, z).getState());
+                }
+            }
+            for (int columnX : new int[] {x, boundaryX}) {
+                for (int y = baseY - 5; y <= baseY + 3; y++) {
+                    world.getBlockAt(columnX, y, z).setType(org.bukkit.Material.AIR, false);
+                }
+            }
+            // Local floor at baseY-1, with a higher overhang at baseY+3.
+            world.getBlockAt(x, baseY - 1, z).setType(org.bukkit.Material.STONE, false);
+            world.getBlockAt(x, baseY + 3, z).setType(org.bukkit.Material.STONE, false);
+            // The second column's real floor is below the maxHeight boundary.
+            world.getBlockAt(boundaryX, baseY - 5, z).setType(org.bukkit.Material.STONE, false);
+
+            Location targetLocation = new Location(world, x + 0.5, baseY + 0.25, z + 0.5);
+            target = world.spawn(targetLocation, org.bukkit.entity.Zombie.class);
+            target.setAI(false);
+            target.setGravity(false);
+            target.setInvulnerable(true);
+            var context = dev.helstera.api.behavior.BehaviorContext.of(
+                    null, target, 1.0, -1, 0, "altitude-paper");
+
+            var localCondition = skills.bindCondition("altitude 1.25 30");
+            var negativeHighestCondition = skills.bindCondition("altitude -2.75 30");
+            localFloor = localCondition != null && behaviors.testCondition(localCondition, context);
+            overhangIgnoresHighest = negativeHighestCondition != null
+                    && !behaviors.testCondition(negativeHighestCondition, context);
+
+            target.teleport(new Location(world, boundaryX + 0.5, baseY + 0.25, z + 0.5));
+            var boundaryContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    null, target, 1.0, -1, 0, "altitude-paper");
+            var boundaryAtThree = skills.bindCondition("altitude 3.25 3");
+            var boundaryAtTwo = skills.bindCondition("altitude 3.25 2");
+            var boundaryAtTwoPointTwoFive = skills.bindCondition("altitude 2.25 2");
+            maxHeightBoundary = boundaryAtThree != null && boundaryAtTwo != null
+                    && boundaryAtTwoPointTwoFive != null
+                    && behaviors.testCondition(boundaryAtThree, boundaryContext)
+                    && !behaviors.testCondition(boundaryAtTwo, boundaryContext)
+                    && behaviors.testCondition(boundaryAtTwoPointTwoFive, boundaryContext);
+
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(
+                    "?altitude{h=1.25;maxHeight=30}");
+            var mappedAlias = dev.helstera.migration.importer.MmConditions.translate(
+                    "?heightFromSurface{a=1.25;mH=30}");
+            var duplicate = dev.helstera.migration.importer.MmConditions.translate(
+                    "?altitude{h=1.25;h=2}");
+            var mappedKey = mapped.translated() ? skills.bindCondition(mapped.condition()) : null;
+            var mappedAliasKey = mappedAlias.translated()
+                    ? skills.bindCondition(mappedAlias.condition()) : null;
+            target.teleport(targetLocation);
+            var importedContext = dev.helstera.api.behavior.BehaviorContext.of(
+                    null, target, 1.0, -1, 0, "altitude-paper");
+            imported = mapped.translated() && mappedKey != null
+                    && behaviors.testCondition(mappedKey, importedContext);
+            importedAlias = mappedAlias.translated() && mappedAliasKey != null
+                    && behaviors.testCondition(mappedAliasKey, importedContext);
+            duplicatePreserved = !duplicate.translated()
+                    && "?altitude{h=1.25;h=2}".equals(duplicate.condition());
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] altitude-condition 异常: " + failure);
+        } finally {
+            if (target != null && target.isValid()) target.remove();
+            entityRemoved = target == null || !target.isValid();
+            for (var state : originalStates) {
+                try {
+                    state.update(true, false);
+                } catch (Throwable ignored) {
+                    // The result below remains false when restoration is incomplete.
+                }
+            }
+            restored = originalStates.stream().allMatch(state ->
+                    state.getBlock().getType() == state.getType());
+        }
+        boolean result = localFloor && overhangIgnoresHighest && maxHeightBoundary
+                && imported && importedAlias && duplicatePreserved && restored && entityRemoved;
+        getLogger().info("[自检] altitude-condition result=" + result
+                + " local-floor=" + localFloor
+                + " overhang-ignores-highest=" + overhangIgnoresHighest
+                + " max-height-boundary=" + maxHeightBoundary
+                + " imported=" + imported
+                + " imported-alias=" + importedAlias
+                + " duplicate-preserved=" + duplicatePreserved
+                + " blocks-restored=" + restored
+                + " entity-removed=" + entityRemoved);
+        return result;
     }
 
     private static boolean dispatchLocationTargeter(
@@ -27451,9 +27721,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 conditional.targets.add("0 nearestConditionalTarget{conditions=[is-player]}");
                 manager.attach(instance, conditional);
                 controller = manager.controllerById(instanceId);
+                // Earlier two-player workflows can move the selected holder
+                // while this delayed self-test is running. Co-locate the test
+                // mob so its default must-see check does not depend on terrain
+                // or the client's previous position.
+                boolean conditionalOriginStable = mob.teleport(holder.getLocation().clone());
+                mob.setVelocity(new org.bukkit.util.Vector());
                 controller.setCombatTarget(monster);
                 controller.tick();
-                boolean conditionalTarget = controller.targetEntity() == holder
+                boolean conditionalTarget = conditionalOriginStable
+                        && mob.getLocation().distance(holder.getLocation()) <= 3.0
+                        && controller.targetEntity() == holder
                         && mob.getTarget() == holder;
 
                 boolean setTargetMechanic = false;

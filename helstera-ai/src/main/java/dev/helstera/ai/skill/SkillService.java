@@ -350,7 +350,13 @@ public final class SkillService {
             return null;
         }
         String normalized;
-        if (conditionSpec.indexOf('{') >= 0 && isNamedEnvironmentCondition(rawCanonicalName)) {
+        if (conditionSpec.indexOf('{') >= 0 && "altitude".equals(rawCanonicalName)) {
+            normalized = normalizeNamedAltitudeCondition(conditionSpec);
+            if (normalized == null) {
+                warn("高度条件参数无效 \"" + spec + "\"");
+                return null;
+            }
+        } else if (conditionSpec.indexOf('{') >= 0 && isNamedEnvironmentCondition(rawCanonicalName)) {
             normalized = normalizeNamedEnvironmentCondition(conditionSpec, rawCanonicalName);
             if (normalized == null) {
                 warn("环境条件参数无效 \"" + spec + "\"");
@@ -519,6 +525,47 @@ public final class SkillService {
 
     private static boolean isNamedEnvironmentCondition(String name) {
         return Set.of("world-is", "biome-is", "weather-is", "time-is", "dimension-is").contains(name);
+    }
+
+    private static String normalizeNamedAltitudeCondition(String spec) {
+        MythicSkillSpec parsed;
+        try {
+            parsed = MythicSkillSpec.parse(spec);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+        if (parsed.targeter() != null || parsed.trigger() != null || parsed.chance() != null
+                || !parsed.inlineConditions().isEmpty() || !parsed.targetConditions().isEmpty()
+                || parsed.arguments().size() + parsed.positional().size() != SpecSyntax.argCount(spec)
+                || (!parsed.arguments().isEmpty() && !parsed.positional().isEmpty())) return null;
+
+        String height = null;
+        String maxHeight = null;
+        if (!parsed.arguments().isEmpty()) {
+            for (var entry : parsed.arguments().entrySet()) {
+                String key = entry.getKey().toLowerCase(Locale.ROOT);
+                String value = entry.getValue();
+                if (value == null || value.isBlank()) return null;
+                if (Set.of("height", "h", "altitude", "a").contains(key)) {
+                    if (height != null) return null;
+                    height = value;
+                } else if (Set.of("maxheight", "mh").contains(key)) {
+                    if (maxHeight != null) return null;
+                    maxHeight = value;
+                } else {
+                    return null;
+                }
+            }
+        } else {
+            if (parsed.positional().isEmpty() || parsed.positional().size() > 2
+                    || parsed.positional().stream().anyMatch(String::isBlank)) return null;
+            height = parsed.positional().get(0);
+            if (parsed.positional().size() == 2) maxHeight = parsed.positional().get(1);
+        }
+        if (!validFiniteNumberRange(height)) return null;
+        if (maxHeight == null) maxHeight = "30";
+        if (!finiteNumber(maxHeight) || Double.parseDouble(maxHeight) < 0) return null;
+        return "altitude " + height + " " + maxHeight;
     }
 
     private static boolean isNamedPhaseCondition(String name) {
@@ -3021,7 +3068,7 @@ public final class SkillService {
             case "velocity" -> "velocity";
             case "moving", "ismoving", "is-moving" -> "moving";
             case "height", "height-is" -> "height";
-            case "altitude", "height-from-surface" -> "altitude";
+            case "altitude", "height-from-surface", "heightfromsurface" -> "altitude";
             case "heightabove", "height-above" -> "height-above";
             case "heightbelow", "height-below" -> "height-below";
             case "pitch" -> "pitch";

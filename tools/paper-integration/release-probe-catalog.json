@@ -226,6 +226,11 @@
       "requiredObservation": "inside-outside-condition-details inside-positive=true inside-negative=true outside-positive=true outside-negative=true restored=true"
     },
     {
+      "id": "moistCondition",
+      "status": "passed",
+      "requiredObservation": "moisture-condition-details hydrated=true hydrated-range=true partial=true partial-range=true dry=true non-farmland=true imported=true imported-alias=true imported-range=true restored=true passed=true"
+    },
+    {
       "id": "contextTargeterChain",
       "status": "passed"
     },
@@ -392,7 +397,7 @@
     {
       "id": "inlineConditionScopes",
       "status": "passed",
-      "requiredObservationPattern": "skill-actions .*inline-condition-scopes=true"
+      "requiredObservationPattern": "skill-actions .*inline-condition-scopes=true .*inline-target-filter=true .*inline-target-negation=true .*inline-empty-target-rejected=true .*inline-conditions-restored=true"
     },
     {
       "id": "conditionMobilityStates",
@@ -407,6 +412,11 @@
     {
       "id": "conditionUtilityAliases",
       "status": "passed"
+    },
+    {
+      "id": "altitudeCondition",
+      "status": "passed",
+      "requiredObservationPattern": "altitude-condition result=true local-floor=true overhang-ignores-highest=true max-height-boundary=true imported=true imported-alias=true duplicate-preserved=true blocks-restored=true entity-removed=true"
     },
     {
       "id": "templateTypeImported",

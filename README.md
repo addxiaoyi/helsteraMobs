@@ -1,4 +1,8 @@
-Latest full-catalog strict fixture `srv-paper-context-targeter-inactive-strict-20261115-r1` completed all 462 probes on Paper 1.21.1-133: 443 passed, 19 expected rejections, zero failed or incomplete. It adds real Paper lifecycle evidence for inactive `@target`, `@targets`, `@trigger`, and `@attacker` entities, including projectile shooter removal and fail-closed filtering; the same run retains the imported runtime catalog and client workflows. Plugin SHA-256: `cf47341951771fafa34cfc2824b5a6b402645f3340a5cd0b05607b428da995a6`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions and Context Targeters catalogs remain incomplete.
+Latest full-catalog strict fixture `srv-paper-moist-condition-strict-20261116-r13` completed all 464 probes on Paper 1.21.1-133: 445 passed, 19 expected rejections, zero failed or incomplete. Its `moistCondition` probe verifies hydrated, partial, dry, non-farmland, imported, alias, range, and restoration paths. The same catalog retains strict `Inline Conditions` and `Altitude` coverage, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, and the full runtime/client workflows. Plugin SHA-256: `ff8c23fbc23800c585d30235ee69d00b4a3eddb2bdd5b1e649d1af7e0505d349`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-moist-condition-strict-20261116-r13.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions and Context Targeters catalogs remain incomplete.
+
+Conditions parity update (2026-11-16): official MythicMobs 5.7.2 `Altitude` scans down from the active target block to the first non-passable block, bounded by `maxHeight`, matching the audited upstream bytecode for caves and overhangs. Runtime, importer, and direct `SkillService` tests cover local surfaces, scan boundary, aliases, and malformed/duplicate arguments. Strict Paper fixture `srv-paper-altitude-strict-20261116-r4` now verifies the imported and runtime paths, restoration, and cleanup in the 464-probe release catalog; the full Conditions catalog remains `mapped-unverified`.
+
+Inline Conditions parity update (2026-11-16): caster `?condition`, living-trigger `?~condition`, and per-target `?@condition` are covered, including `?!`, `?~!`, and `?@!` negation, target filtering, rejection when no target matches, imported syntax preservation, and restoration. Strict Paper fixture `srv-paper-moist-condition-strict-20261116-r13` verifies this slice in the complete 464-probe release catalog. The full Inline Conditions and Conditions catalogs remain `mapped-unverified`.
 
 Conditions argument update (2026-11-16): canonical environment conditions now
 accept validated named arguments at the direct runtime boundary. `world-is`
@@ -1442,7 +1446,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-context-targeter-inactive-strict-20261115-r1` has 462 probes (443 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-moist-condition-strict-20261116-r13` has 464 probes (445 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1453,12 +1457,12 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 This is a partial parity release. The matrix currently has `33`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-15). The ordered work packages,
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-16). The ordered work packages,
 all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 462 probes, zero incomplete (443 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-context-targeter-inactive-strict-20261115-r1`; its `contextTargeterInactive` coverage includes live target/trigger/attacker resolution, inactive-entity filtering, projectile-shooter removal rejection, and invalid-argument rejection, while retaining the full runtime catalog and client workflows.
+Latest strict report has 464 probes, zero incomplete (445 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-moist-condition-strict-20261116-r13`; its `moistCondition` observation verifies hydrated, partial, dry, non-farmland, imported aliases, and restoration. The report also retains inline-condition and Altitude coverage, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, and the full runtime/client workflows.
 
 Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
 
@@ -1467,7 +1471,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 628 cited IDs; 535 report files; 4 directories without reports; 89 missing directories; 312 archived release reports. The
+   Current fixture inventory: 630 cited IDs; 537 report files; 4 directories without reports; 89 missing directories; 315 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1641,7 +1645,7 @@ the entire MythicMobs feature catalog.
 - Context targeters now reject inactive relation entities and support `@Passenger` (first passenger), `@Passengers` (all living passengers), `@Vehicle`/`@Mount`, and location-valued `@OwnerLocation`/`@ParentLocation`. Unit tests cover ordering, invalid entity state, and relation cleanup; strict Paper fixture `srv-paper-context-relations-strict-20261108-r2` verifies the complete relation probe in the 401-probe release catalog.
 - Official `EnderDragonPhase` now matches Bukkit `EnderDragon.Phase` lists; exploratory Paper r78 verifies a real `CIRCLING` phase.
 - Strict Paper fixture `srv-paper-ender-dragon-phase-strict-20261101-r3` verifies `EnderDragonPhase` against a real dragon, including a phase list, a negative match, fail-closed rejection of `CIRCLING,INVALID`, and restoration. All 260 registered probes pass their release outcomes with zero incomplete.
-- Official `Altitude` now measures target height above the Bukkit highest-block surface with Mythic range and `maxHeight` handling; exploratory Paper r79 keeps the utility probe passed.
+- Official `Altitude` scans downward from the active target block to the first non-passable block, bounded by Mythic's `maxHeight`. Strict Paper fixture `srv-paper-altitude-strict-20261116-r4` verifies cave/overhang surfaces, the scan boundary, imported aliases, restoration, and cleanup; exploratory Paper r79 covers only the superseded highest-block-column implementation.
 - Official `WorldTime`, `SkyLightLevel`, and `LightLevelFromBlocks` conditions now use Bukkit world time and block light-source APIs; exploratory Paper r65 keeps the live `conditionUtilityAliases` probe passed.
 - Official `Moist` now matches only fully hydrated Bukkit `Farmland` (`moisture=7`), while `MoistureLevel` keeps its explicit `l` range; partial/dry farmland and non-farmland fail the `Moist` check. Exploratory Paper r81 verifies hydrated, dry, and range paths with restoration; the partial-moisture correction has unit coverage only.
 - Official `MobSize` now reads Bukkit size APIs for `Slime`, `MagmaCube`, and `Phantom`, with Mythic numeric ranges and strict non-size-entity rejection; exploratory Paper r82 verifies a real Slime size transition.

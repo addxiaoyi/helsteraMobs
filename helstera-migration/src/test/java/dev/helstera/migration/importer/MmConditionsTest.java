@@ -1766,6 +1766,11 @@ class MmConditionsTest {
         assertEquals("altitude 3-5 30", t("?altitude{h=3-5}"));
         assertEquals("altitude >=0 20", t("?heightFromSurface{a=>=0;mH=20}"));
         assertTrue(translated("?altitude{h=0to5}"));
+        for (String invalid : List.of("?altitude{h=NaN}", "?altitude{h=1;h=2}",
+                "?altitude{h=1;unknown=true}", "?altitude{h=1;maxHeight=NaN}",
+                "?altitude{h=1;maxHeight=-1}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test

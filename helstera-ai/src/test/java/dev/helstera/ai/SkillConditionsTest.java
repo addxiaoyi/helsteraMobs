@@ -2453,8 +2453,49 @@ class SkillConditionsTest {
     }
 
     @Test
+    @DisplayName("altitude condition measures the first solid block below the target")
+    void officialAltitudeConditionUsesLocalSurface() {
+        var world = mock(World.class);
+        var target = mock(LivingEntity.class);
+        var entityLocation = new Location(world, 0, 65.25, 0);
+        when(target.getLocation()).thenReturn(entityLocation);
+        when(world.getMinHeight()).thenReturn(-64);
+        when(world.getBlockAt(any(Location.class))).thenAnswer(invocation -> {
+            Location requested = invocation.getArgument(0);
+            var block = mock(Block.class);
+            int y = requested.getBlockY();
+            when(block.getX()).thenReturn(requested.getBlockX());
+            when(block.getY()).thenReturn(y);
+            when(block.getZ()).thenReturn(requested.getBlockZ());
+            when(block.isPassable()).thenReturn(y >= 65);
+            return block;
+        });
+        when(world.getBlockAt(any(Integer.class), any(Integer.class), any(Integer.class)))
+                .thenAnswer(invocation -> {
+                    int x = invocation.getArgument(0);
+                    int y = invocation.getArgument(1);
+                    int z = invocation.getArgument(2);
+                    var block = mock(Block.class);
+                    when(block.getX()).thenReturn(x);
+                    when(block.getY()).thenReturn(y);
+                    when(block.getZ()).thenReturn(z);
+                    when(block.isPassable()).thenReturn(y >= 65);
+                    return block;
+                });
+
+        var condition = extraFactory("altitude").create(List.of("1.25", "30"));
+        assertTrue(condition.test(BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE")));
+        assertFalse(extraFactory("altitude").create(List.of("30", "30"))
+                .test(BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE")));
+        // maxHeight bounds downward scanning; a whole block step may carry the
+        // measured block distance past the configured threshold.
+        assertTrue(extraFactory("altitude").create(List.of("1.25", "1"))
+                .test(BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE")));
+    }
+
+    @Test
     @DisplayName("altitude condition fails closed without a world location")
-    void officialAltitudeConditionIsRegistered() {
+    void officialAltitudeConditionNeedsWorldLocation() {
         assertFalse(extraFactory("altitude").create(List.of(">=0", "30")).test(ctx()));
     }
 

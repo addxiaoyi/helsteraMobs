@@ -1204,11 +1204,15 @@ class ImportersTest {
                   blast:
                     Skills:
                       - damage{amount=10} @PIR{r=8} 50% ?onGround
+                      - damage{amount=11} @PIR{r=8} ?onGround ?!night ?~holding{m=WOODEN_SWORD} ?~!isSneaking ?@health{h=>10} ?@!isInAudience
                 """);
         YamlConfiguration target = YamlConfiguration.loadConfiguration(
                 new java.io.StringReader(String.valueOf(plan(new MythicMobsImporter().convert(f)).get().get("content"))));
-        String action = target.getStringList("skills.blast.on-decision").get(0);
-        assertEquals("damage-target 10 @playersinradius{r=8} 50% ?onGround", action);
+        assertEquals(List.of(
+                "damage-target 10 @playersinradius{r=8} 50% ?onGround",
+                "damage-target 11 @playersinradius{r=8} ?onGround ?!night "
+                        + "?~holding{m=WOODEN_SWORD} ?~!isSneaking ?@health{h=>10} ?@!isinaudience"),
+                target.getStringList("skills.blast.on-decision"));
     }
 
     @Test

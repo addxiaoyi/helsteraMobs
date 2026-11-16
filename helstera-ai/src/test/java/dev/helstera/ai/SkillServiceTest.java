@@ -3201,6 +3201,7 @@ class SkillServiceTest {
                 "playersonline >=1", "playersinworld >=1", "mobsinworld >=1",
                 "playerwithin 10", "playernotwithin 10",
                 "motionx <1", "motiony >=-1", "motionz =0", "velocity <=3",
+                "altitude{h=0to5}", "heightFromSurface{a=>=0;mH=20}",
                 "targethealthbelow 50", "gamemode survival", "potionactive speed", "owner", "isOwner",
                 "blockTypeInRadius{type=STONE;amount=>0;radius=3}", "children{a=>1}", "inside", "outside",
                 "fallSpeed{s=>0}", "enchantingLevel{l=>=1}", "enchantingExperience{a=>=0.1}",
@@ -3286,7 +3287,10 @@ class SkillServiceTest {
         assertNotNull(svc.bindCondition("field-of-view{a=90;r=15}"));
         assertNotNull(svc.bindCondition("looking-at{b=STONE;d=5}"));
         assertNotNull(svc.bindCondition("has-potion-effect{effect=ANY;level=1to2;duration=80to100}"));
+        assertNotNull(svc.bindCondition("altitude{height=1to5;maxHeight=20}"));
         for (String invalid : List.of(
+                "altitude{h=1;height=2}", "altitude{height=1;unknown=true}",
+                "altitude{height=1;maxHeight=NaN}", "altitude{height=1;maxHeight=-1}",
                 "field-of-view{unknown=90}", "field-of-view{angle=90;a=45}",
                 "field-of-view{angle=181}", "field-of-view{angle=90;0}",
                 "looking-at{b=STONE;entity=COW}", "looking-at{b=STONE;d=0}",

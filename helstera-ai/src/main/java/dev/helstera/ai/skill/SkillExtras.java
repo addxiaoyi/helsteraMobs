@@ -3015,10 +3015,21 @@ public final class SkillExtras {
                         if (range == null || location == null || location.getWorld() == null
                                 || !Double.isFinite(maxHeight) || maxHeight < 0) return false;
                         try {
-                            int surfaceY = location.getWorld().getHighestBlockAt(
-                                    location.getBlockX(), location.getBlockZ()).getY();
-                            double altitude = location.getY() - (surfaceY + 1.0);
-                            return altitude <= maxHeight && range.contains(altitude);
+                            // MythicMobs measures from the first non-passable block below
+                            // the entity, bounded by maxHeight. It deliberately does not
+                            // use the world's highest block: caves and overhangs have their
+                            // own local altitude.
+                            org.bukkit.block.Block block = location.getBlock();
+                            double entityY = location.getY();
+                            int steps = 0;
+                            while (block.isPassable() && entityY - block.getY() < maxHeight) {
+                                if (block.getY() <= location.getWorld().getMinHeight()) break;
+                                block = location.getWorld().getBlockAt(
+                                        block.getX(), block.getY() - 1, block.getZ());
+                                if (++steps > Math.ceil(maxHeight) + 1) break;
+                            }
+                            double altitude = entityY - block.getY();
+                            return range.contains(altitude);
                         } catch (Throwable ignored) {
                             return false;
                         }

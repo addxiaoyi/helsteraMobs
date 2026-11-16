@@ -106,6 +106,9 @@ public final class MmConditions {
             "version", "version", "sv", "version", "v", "version");
     private static final Map<String, String> LOCAL_DIFFICULTY_ARGUMENTS = Map.of(
             "difficulty", "difficulty", "diff", "difficulty", "d", "difficulty");
+    private static final Map<String, String> ALTITUDE_ARGUMENTS = Map.of(
+            "height", "height", "h", "height", "altitude", "height", "a", "height",
+            "maxheight", "max-height", "mh", "max-height");
     private static final Map<String, String> PLUGIN_ARGUMENTS = Map.of(
             "plugin", "plugin", "pl", "plugin", "p", "plugin");
     private static final Map<String, String> SERVER_VERSION_BOUND_ARGUMENTS = Map.of(
@@ -777,12 +780,9 @@ public final class MmConditions {
             return rangeCondition(body, "height", s, "height", "h");
         }
         if ("altitude".equals(name) || "heightfromsurface".equals(name)) {
-            String range = firstArgument(body, "height", "altitude", "a", "h");
-            String maxHeight = keyedArgument(body, "maxheight", "mh");
-            if (range == null) range = normalizeScalar(body);
-            if (range == null || !validNumberRange(range)) return new Mapped(s, false);
-            return new Mapped("altitude " + range + " "
-                    + (maxHeight == null ? "30" : maxHeight), true);
+            String[] arguments = altitudeArguments(body);
+            if (arguments == null) return new Mapped(s, false);
+            return new Mapped("altitude " + arguments[0] + " " + arguments[1], true);
         }
         if ("heightabove".equals(name)) {
             return scalarCondition(body, "height-above", s, "height", "h");
@@ -2185,6 +2185,53 @@ public final class MmConditions {
         return value == null || !validNumberRange(value)
                 ? new Mapped(original, false)
                 : new Mapped(runtimeName + " " + value, true);
+    }
+
+    /** Parses Altitude's range plus maxHeight without silently accepting duplicates. */
+    private static String[] altitudeArguments(String body) {
+        if (body == null || body.isBlank()) return null;
+        String range = null;
+        String maxHeight = null;
+        List<String> positional = new ArrayList<>();
+        boolean named = false;
+        for (String raw : body.split("[;,]", -1)) {
+            String part = raw.trim();
+            if (part.isBlank()) return null;
+            int equals = part.indexOf('=');
+            boolean namedArgument = equals > 0
+                    && part.substring(0, equals).trim().matches("[A-Za-z][A-Za-z0-9_-]*");
+            if (namedArgument) {
+                if (!positional.isEmpty()) return null;
+                named = true;
+                String alias = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                String canonical = ALTITUDE_ARGUMENTS.get(alias);
+                String value = part.substring(equals + 1).trim();
+                if (canonical == null || value.isBlank()) return null;
+                if ("height".equals(canonical)) {
+                    if (range != null) return null;
+                    range = value;
+                } else {
+                    if (maxHeight != null) return null;
+                    maxHeight = value;
+                }
+            } else {
+                if (named || positional.size() >= 2) return null;
+                positional.add(part);
+            }
+        }
+        if (!positional.isEmpty()) {
+            range = positional.get(0);
+            if (positional.size() == 2) maxHeight = positional.get(1);
+        }
+        if (range == null || !validNumberRange(range)) return null;
+        if (maxHeight == null) maxHeight = "30";
+        if (!validFiniteNumber(maxHeight)) return null;
+        try {
+            if (Double.parseDouble(maxHeight) < 0) return null;
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+        return new String[]{range, maxHeight};
     }
 
     private static boolean validNumberRange(String raw) {

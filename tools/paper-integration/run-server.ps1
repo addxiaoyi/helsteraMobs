@@ -547,6 +547,24 @@ try {
             if (-not (Select-String -LiteralPath $logPath -Pattern 'AudienceGuest joined the game' -Quiet)) {
                 throw 'Audience guest did not join Paper before timeout'
             }
+            $menuReadyDeadline = [DateTime]::UtcNow.AddSeconds(90)
+            while ([DateTime]::UtcNow -lt $menuReadyDeadline -and -not $client.HasExited) {
+                if (Select-String -LiteralPath $logPath `
+                        -Pattern '\[helsteraMobs\] \[自检\] skill-actions .*player-experience-mechanics=true' -Quiet) {
+                    # The menu client and the delayed player self-tests share
+                    # HelsteraTester. Wait until the self-test's deliberate
+                    # close-inventory action has completed before opening the
+                    # menu, otherwise a valid menu assertion can race with it.
+                    $process.StandardInput.WriteLine('say PAPER_MENU_READY')
+                    $process.StandardInput.Flush()
+                    break
+                }
+                Start-Sleep -Milliseconds 250
+            }
+            if (-not (Select-String -LiteralPath $logPath `
+                    -Pattern '\[helsteraMobs\] \[自检\] skill-actions .*player-experience-mechanics=true' -Quiet)) {
+                throw 'Paper player self-tests did not finish before the menu workflow'
+            }
             $adminWindowDeadline = [DateTime]::UtcNow.AddSeconds(90)
             while ([DateTime]::UtcNow -lt $adminWindowDeadline -and -not $client.HasExited) {
                 if (Select-String -LiteralPath $logPath -Pattern 'MENU_PAGE_ONE_READY' -Quiet) {

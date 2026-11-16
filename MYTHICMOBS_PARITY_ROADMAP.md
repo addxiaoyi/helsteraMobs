@@ -17,16 +17,7 @@ Audited against the matrix on 2026-11-16:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-context-targeter-inactive-strict-20261115-r1` on Paper 1.21.1-133, with 462
-probes: 443 passed, 19 expected rejections, and zero failed or incomplete. It
-adds production lifecycle evidence for live and removed `@target`, `@targets`,
-`@trigger`, and `@attacker` contexts, including projectile-shooter rejection
-and fail-closed invalid arguments. The same catalog retains the full runtime
-and client workflow coverage. MythicMobs 5.7.2 has separate focused evidence;
-the full release fixture does not load MythicMobs. See the [release evidence
-index](tools/paper-integration/release-evidence.json), [Paper
-evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version
-matrix](tools/paper-integration/version-matrix.json).
+The latest full release fixture is `srv-paper-moist-condition-strict-20261116-r13` on Paper 1.21.1-133, with 464 probes: 445 passed, 19 expected rejections, and zero failed or incomplete. Its strict production evidence covers MythicMobs 5.7.2 `Moist` semantics across hydrated, partial, dry, non-farmland, imported alias, range, and restoration paths, while the catalog also retains Inline Conditions and Altitude evidence, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, and the full runtime/client workflows. MythicMobs 5.7.2 has separate focused evidence; the full release fixture does not load MythicMobs. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json).
 
 The next targeter contract slice is now implemented in the shared API: spatial
 targeters reject malformed, negative, non-finite, duplicate, and unknown private
@@ -227,6 +218,15 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   explicit range behavior. Unit coverage includes fully hydrated, partial, dry,
   and non-farmland states. Existing exploratory Paper evidence covers levels 7
   and 0 only; this semantic correction has no new Paper evidence yet.
+- Official MythicMobs 5.7.2 `Altitude` walks downward from the target's
+  current block until a non-passable block or the `maxHeight` scan boundary;
+  using `World#getHighestBlockAt` changes cave/overhang behavior and produces a
+  one-block offset. Runtime, importer, and direct-binding tests now pin the
+  local block surface, scan boundary, aliases, and malformed/duplicate
+  arguments. Strict Paper fixture `srv-paper-altitude-strict-20261116-r4` now verifies the imported and direct runtime
+  paths, local cave/overhang surface selection, the scan boundary, duplicate
+  preservation, block restoration, and temporary-entity cleanup. Exploratory r79
+  remains historical evidence for the superseded highest-block-column behavior.
 
 - Conditional targeter syntax now covers the official `cond`/
   `targetconditions` parameter aliases, `nearestconditional`/`nearestif`

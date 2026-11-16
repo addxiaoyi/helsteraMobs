@@ -1,5 +1,43 @@
 [
   {
+    "fixtureId": "srv-paper-moist-condition-strict-20261116-r13",
+    "reportFixtureDirectory": "srv-paper-moist-condition-strict-20261116-r13",
+    "report": "tools/paper-integration/reports/paper-1.21.1-moist-condition-strict-20261116-r13.json",
+    "reportSha256": "808f42ca7a5f67e97504178f18b31b22ef416ceea9083516c87f8d75b1878b35",
+    "log": "tools/paper-integration/reports/paper-1.21.1-moist-condition-strict-20261116-r13.log.gz",
+    "logSha256": "38383eb4373779275dc79e89d260866ad99c2a7f888675869d685fa569d6a1df",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-moist-condition-strict-20261116-r13-client-logs.tar.gz",
+    "clientLogSha256": "17102790a1bd657c67c3806cef472e84daca1b3404bfaf039f7a04a310ca84c2",
+    "pluginSha256": "ff8c23fbc23800c585d30235ee69d00b4a3eddb2bdd5b1e649d1af7e0505d349",
+    "fullReleaseCatalog": true
+  },
+  {
+    "fixtureId": "srv-paper-inline-condition-strict-20261116-r1",
+    "reportFixtureDirectory": "srv-paper-inline-condition-strict-20261116-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-inline-condition-strict-20261116-r1.json",
+    "reportSha256": "c5101018c553762a266cc4b922b891052672b193469704f04e9a3bab8134318f",
+    "log": "tools/paper-integration/reports/paper-1.21.1-inline-condition-strict-20261116-r1.log.gz",
+    "logSha256": "35450af90eb518004ed1676138400877349605d53ba3c8fcc77e04eefafdbdc7",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-inline-condition-strict-20261116-r1-client-logs.tar.gz",
+    "clientLogSha256": "f9926a95502f069b50b1fbdf82376a35cb91e87f101f3814bc5f3d4147d634c7",
+    "pluginSha256": "a4602dd8d6dd17a2902cd8817b6910a4213fc109b9bb5eb16695f823880418be",
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-moist-condition-strict-20261116-r13"
+  },
+  {
+    "fixtureId": "srv-paper-altitude-strict-20261116-r4",
+    "reportFixtureDirectory": "srv-paper-altitude-strict-20261116-r4",
+    "report": "tools/paper-integration/reports/paper-1.21.1-altitude-condition-strict-20261116-r4.json",
+    "reportSha256": "7e705cfc9781d4b6bfd6a9ee069195751e1df84afda5a27b9a18258cb5f42bc0",
+    "log": "tools/paper-integration/reports/paper-1.21.1-altitude-condition-strict-20261116-r4.log.gz",
+    "logSha256": "e47e96c264f1be5aedd900858c8a36dbcf457a17bfe468fba91fbeca10baacc4",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-altitude-condition-strict-20261116-r4-client-logs.tar.gz",
+    "clientLogSha256": "861028383c3afc5b5f04e39faa0842b6451717a0e55679216131b2090cc8f972",
+    "pluginSha256": "709716a3f58683c55a9deabcb3d1f67714b88f04e507ef1cd07e1e79a46bb18f",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-context-targeter-inactive-strict-20261115-r1",
     "reportFixtureDirectory": "srv-paper-context-targeter-inactive-strict-20261115-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1.json",

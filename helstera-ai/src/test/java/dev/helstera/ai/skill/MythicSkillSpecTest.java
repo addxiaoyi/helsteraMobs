@@ -26,10 +26,13 @@ class MythicSkillSpecTest {
     @Test
     void preservesCasterAndTriggerInlineConditionScopes() {
         MythicSkillSpec spec = MythicSkillSpec.parse(
-                "message{m=hello} @trigger ~onDamaged ?raining ?~holding{m=WOODEN_SWORD} ?~!is-sneaking");
+                "message{m=hello} @trigger ~onDamaged ?raining ?!night "
+                        + "?~holding{m=WOODEN_SWORD} ?~!is-sneaking "
+                        + "?@health{h=>10} ?@!isInAudience");
 
-        assertEquals(List.of("raining", "~holding{m=WOODEN_SWORD}", "~!is-sneaking"),
+        assertEquals(List.of("raining", "!night", "~holding{m=WOODEN_SWORD}", "~!is-sneaking"),
                 spec.inlineConditions());
+        assertEquals(List.of("health{h=>10}", "!isInAudience"), spec.targetConditions());
         assertThrows(IllegalArgumentException.class, () -> MythicSkillSpec.parse("message ?~"));
     }
 

@@ -125,6 +125,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] target-fluids-delayed imported=true water=true lava=true in-liquid-water=true in-liquid-lava=true in-liquid-waterlogged=true in-liquid-dry=true invalid-preserved=true restored=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] imported-mobs-in-chunk-condition default-zero=true range-positive=true zero-negative=true invalid-preserved=true passed=true',
         '[Server thread/INFO]: in-combat-condition managed-path=bukkit-mob-target managed-positive=true managed-no-target-rejected=true managed-restored=true native-positive=true native-no-target-rejected=true native-restored=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] altitude-condition result=true local-floor=true overhang-ignores-highest=true max-height-boundary=true imported=true imported-alias=true duplicate-preserved=true blocks-restored=true entity-removed=true',
         '[Server thread/INFO]: skill-actions equipment=true potion=true drop-item=true teleport=true conditions=true target-categories=true target-health=true faction-conditions=true faction-mechanic=true level-mechanic=true weather-mechanic=true time-mechanic=true lightning-mechanic=true signal-mechanics=true target-kill=true damage-melee=true condition-utility=true in-combat-condition=true mobs-in-chunk-condition=true block-type-radius-condition=true biome-condition=true player-radius-conditions=true cooldown-mechanics=true last-damage-cause=true motion-conditions=true directional-velocity-condition=true fall-speed-condition=true target-environment=true target-fluids=true target-blocked=true',
         '[Server thread/INFO]: condition-utility-details .*spawn-distance-exact=true .*spawn-distance-over-rejected=true .*mobs-chunk=true .*mobs-chunk-high-rejected=true .*mobs-chunk-zero=true .*mobs-chunk-occupied=true .*mobs-chunk-adjacent-excluded=true .*mobs-chunk-boundaries=true .*mobs-in-chunk-condition=true .*chance-100=true .*chance-0-rejected=true .*chance-invalid-rejected=true',
         '[Server thread/INFO]: spatial-condition-details biome-exact=true biome-partial=true biome-reject=true biome-type-category=true',
@@ -189,6 +190,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true',
         '[Server thread/INFO]: absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true',
         '[Server thread/INFO]: radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-excluded=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true',
+        '[Server thread/INFO]: moisture-condition-details hydrated=true hydrated-range=true partial=true partial-range=true dry=true non-farmland=true imported=true imported-alias=true imported-range=true restored=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-invalid-fields null-immunity=true null-modifier-field=true unknown-modifier-field=true invalid-immune=true null-immune=true',
@@ -755,6 +757,9 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'radiusConditions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'radiusConditions').observations[0] -ceq
         'radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-excluded=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true') 'Paper radius condition probe'
+    Assert-True (($report.probes | Where-Object id -eq 'moistCondition').status -eq 'passed' -and
+        ($report.probes | Where-Object id -eq 'moistCondition').observations[0] -ceq
+        'moisture-condition-details hydrated=true hydrated-range=true partial=true partial-range=true dry=true non-farmland=true imported=true imported-alias=true imported-range=true restored=true passed=true') 'Paper Moist condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityImported').status -eq 'passed') 'imported immunity probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityNativeInvalid').status -eq 'passed') 'invalid native immunity probe'
     Assert-True (($report.probes | Where-Object id -eq 'immunityInvalidFields').status -eq 'passed') 'invalid immunity fields probe'
@@ -997,6 +1002,7 @@ try {
     Assert-True (($report.probes | Where-Object id -eq 'damageMeleeMechanic').status -eq 'passed') 'damage melee mechanic probe'
     Assert-True (($report.probes | Where-Object id -eq 'inCombatCondition').status -eq 'passed') 'in-combat condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'conditionUtilityAliases').status -eq 'passed') 'condition utility alias probe'
+    Assert-True (($report.probes | Where-Object id -eq 'altitudeCondition').status -eq 'passed') 'altitude condition Paper probe'
     Assert-True (($report.probes | Where-Object id -eq 'importedPluginCondition').status -eq 'passed') 'imported plugin condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'invulnerableCondition').status -eq 'passed') 'imported invulnerability condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'survivalModeCondition').status -eq 'passed') 'survival mode condition Paper probe'
@@ -1236,6 +1242,10 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    $fullCatalogReport.expectedProbeIds += 'altitudeCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'altitudeCondition'; status = 'passed'; observations = @('altitude-condition result=true local-floor=true overhang-ignores-highest=true max-height-boundary=true imported=true imported-alias=true duplicate-preserved=true blocks-restored=true entity-removed=true')
+    }
     $fullCatalogHasItem = @($fullCatalogReport.probes | Where-Object id -eq 'hasItemCondition')
     Assert-True ($fullCatalogHasItem.Count -eq 1) 'synthetic full catalog contains the HasItem condition probe'
     $fullCatalogHasItem[0].observations = @(
@@ -1264,7 +1274,7 @@ try {
     })
     $fullCatalogReport.expectedProbeIds += 'inlineConditionScopes'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'inlineConditionScopes'; status = 'passed'; observations = @('skill-actions inline-condition-scopes=true')
+        id = 'inlineConditionScopes'; status = 'passed'; observations = @('skill-actions inline-condition-scopes=true inline-target-filter=true inline-target-negation=true inline-empty-target-rejected=true inline-conditions-restored=true')
     }
     $fullCatalogSkillTrigger = @($fullCatalogReport.probes | Where-Object id -eq 'skillTrigger')
     Assert-True ($fullCatalogSkillTrigger.Count -eq 1) 'synthetic full catalog contains the skill trigger probe'
@@ -1838,6 +1848,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'insideOutsideCondition'; status = 'passed'; observations = @('inside-outside-condition-details inside-positive=true inside-negative=true outside-positive=true outside-negative=true restored=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'moistCondition'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'moistCondition'; status = 'passed'; observations = @('moisture-condition-details hydrated=true hydrated-range=true partial=true partial-range=true dry=true non-farmland=true imported=true imported-alias=true imported-range=true restored=true passed=true')
+    }
     $fullCatalogReport.expectedProbeIds += 'visibilityStateArguments'
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'visibilityStateArguments'; status = 'passed'; observations = @('visibility-state-arguments valid=true rejected=true preserved=true warnings=true')
@@ -2049,6 +2063,32 @@ try {
     }
     Assert-True $disabledPluginRejected 'full release catalog alone rejects a disabled plugin'
     $fullCatalogReport.pluginEnabled = $originalPluginEnabled
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $altitudeProbe = @($fullCatalogReport.probes | Where-Object id -eq 'altitudeCondition')
+    Assert-True ($altitudeProbe.Count -eq 1) 'synthetic full catalog contains the Altitude condition probe'
+    $altitudeObservations = $altitudeProbe[0].observations
+    $altitudeProbe[0].observations = @(
+        'altitude-condition result=true local-floor=true overhang-ignores-highest=true max-height-boundary=true imported=true imported-alias=true duplicate-preserved=true blocks-restored=false entity-removed=true')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badAltitudeRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badAltitudeRejected = $_.Exception.Message -match 'required observation for altitudeCondition' }
+    Assert-True $badAltitudeRejected 'full release gate rejects Altitude evidence without block restoration'
+    $altitudeProbe[0].observations = $altitudeObservations
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'altitudeCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'altitudeCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingAltitudeRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingAltitudeRejected = $_.Exception.Message -match 'altitudeCondition' }
+    Assert-True $missingAltitudeRejected 'full release gate rejects omitted Altitude condition evidence'
+    $fullCatalogReport.expectedProbeIds += 'altitudeCondition'
+    $fullCatalogReport.probes += $altitudeProbe[0]
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $audienceFilterObservations = $fullCatalogAudienceFilter[0].observations
     $fullCatalogAudienceFilter[0].observations = @('{"permissionNegativeTesterOmitted":true,"permissionNegativeGuestIncluded":false,"factionNegativeTesterIncluded":true,"factionNegativeGuestExcluded":true}')
@@ -3011,6 +3051,28 @@ try {
     Assert-True $missingInsideOutsideRejected 'full release gate rejects missing inside/outside evidence'
     $fullCatalogReport.expectedProbeIds += 'insideOutsideCondition'
     $fullCatalogReport.probes += $insideOutsideProbe
+    $moistProbe = $fullCatalogReport.probes | Where-Object id -eq 'moistCondition'
+    $moistObservations = $moistProbe.observations
+    $moistProbe.observations = @('moisture-condition-details hydrated=true hydrated-range=true partial=true partial-range=false dry=true non-farmland=true imported=true imported-alias=true imported-range=true restored=true passed=false')
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $badMoistRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $badMoistRejected = $_.Exception.Message -match 'required observation for moistCondition' }
+    Assert-True $badMoistRejected 'full release gate rejects incomplete Moist evidence'
+    $moistProbe.observations = $moistObservations
+    $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'moistCondition' })
+    $fullCatalogReport.probes = @($fullCatalogReport.probes | Where-Object { $_.id -ne 'moistCondition' })
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    $missingMoistRejected = $false
+    try {
+        & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+            -RequireTargetPaperVersion -RequireFullReleaseCatalog
+    } catch { $missingMoistRejected = $_.Exception.Message -match 'moistCondition' }
+    Assert-True $missingMoistRejected 'full release gate rejects missing Moist evidence'
+    $fullCatalogReport.expectedProbeIds += 'moistCondition'
+    $fullCatalogReport.probes += $moistProbe
     $visibilityProbe = $fullCatalogReport.probes | Where-Object id -eq 'visibilityStateArguments'
     $visibilityObservations = $visibilityProbe.observations
     $visibilityProbe.observations = @('visibility-state-arguments valid=true')

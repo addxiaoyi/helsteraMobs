@@ -1,5 +1,5 @@
 # Paper Startup Evidence
-Latest full-catalog fixture `srv-paper-context-targeter-inactive-strict-20261115-r1` passed the full strict gate on Paper 1.21.1-133: 462 registered probes, 443 passed, 19 expected rejections, zero failed or incomplete. Its `contextTargeterInactive` evidence covers live `@target`, `@targets`, `@trigger`, and `@attacker` resolution, inactive-entity filtering, projectile-shooter removal rejection, and invalid-argument rejection; the same run retains the full runtime catalog and client workflows. Plugin SHA-256: `cf47341951771fafa34cfc2824b5a6b402645f3340a5cd0b05607b428da995a6`. Report: [paper-1.21.1-context-targeter-inactive-strict-20261115-r1.json](reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1.json), SHA-256 `57470bbaf53365e9c238b055a3ed8c67fffaae44d3dec4355fe77eefb5edc2ab`. Compressed token-redacted server log: [paper-1.21.1-context-targeter-inactive-strict-20261115-r1.log.gz](reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1.log.gz), SHA-256 `0939e219b879300952225fbee28835e436e5de71fe273782c1de959b9bbc1086`; client log archive: [paper-1.21.1-context-targeter-inactive-strict-20261115-r1-client-logs.tar.gz](reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1-client-logs.tar.gz), SHA-256 `2efb2995e56ac466f2b69faea8393a1a37ae2800e49efce628c22106c2952b55`.
+Latest full-catalog fixture `srv-paper-moist-condition-strict-20261116-r13` passed the full strict gate on Paper 1.21.1-133: 464 registered probes, 445 passed, 19 expected rejections, zero failed or incomplete. Its `moistCondition` observation verifies hydrated, partial, dry, non-farmland, imported aliases, ranges, and restoration; the catalog also retains Inline Conditions and Altitude evidence, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, and full client workflows. Plugin SHA-256: `ff8c23fbc23800c585d30235ee69d00b4a3eddb2bdd5b1e649d1af7e0505d349`. Report: [paper-1.21.1-moist-condition-strict-20261116-r13.json](reports/paper-1.21.1-moist-condition-strict-20261116-r13.json), SHA-256 `808f42ca7a5f67e97504178f18b31b22ef416ceea9083516c87f8d75b1878b35`. Compressed token-redacted server log: [paper-1.21.1-moist-condition-strict-20261116-r13.log.gz](reports/paper-1.21.1-moist-condition-strict-20261116-r13.log.gz), SHA-256 `38383eb4373779275dc79e89d260866ad99c2a7f888675869d685fa569d6a1df`; client log archive: [paper-1.21.1-moist-condition-strict-20261116-r13-client-logs.tar.gz](reports/paper-1.21.1-moist-condition-strict-20261116-r13-client-logs.tar.gz), SHA-256 `17102790a1bd657c67c3806cef472e84daca1b3404bfaf039f7a04a310ca84c2`.
 
 Focused exploratory fixture `srv-paper-targeter-context-alias-strict-20261115-r3` ran the production plugin on Paper 1.21.1-133 with two real Mineflayer players. The `context-targeter-chain` self-test verifies `@nearestConditionalTarget` hyphen and underscore aliases, the Mythic `condition`/`c` argument aliases, chained condition filtering, and fail-closed rejection of unknown, duplicate, empty, and malformed private arguments. The report records 454 probes: 434 passed, 19 observed expected rejections, and one unrelated `not-observed` probe. This is focused exploratory evidence, not a full-catalog release run, so the Context Targeters row and complete Conditions catalog remain `mapped-unverified`. Plugin SHA-256: `3e30ff137249d0361cb8d796b791da8b9ac757dcc99935210f604abb2a95fc67`. Report: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.json](reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.json), SHA-256 `7fea79bd34a2cd6f6a1d339f00c85ee51a7b9f4e781549c62948470da49826dc`. Compressed token-redacted server log: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz](reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz), SHA-256 `df05235cd9e9da01e0f396311805e29679ffac6f744ebb99de4a4016718ac883`.
 
@@ -3262,8 +3262,15 @@ malformed arguments. The strict report and its logs are listed in
 Fixture `srv-paper-integration-exploratory-1.21.11-r79` extends the passing
 `conditionUtilityAliases` probe with `Altitude`, evaluating the real target's
 height above the Bukkit highest-block surface under the configured maximum.
-This is exploratory Paper 1.21.11 evidence; the Paper 1.21.1 release target
-remains open.
+This is exploratory Paper 1.21.11 evidence for the superseded highest-block-column
+implementation. Strict Paper 1.21.1-133 fixture `srv-paper-altitude-strict-20261116-r4`
+now verifies the corrected local downward scan.
+
+That historical probe ran before the 2026-11-16 Altitude parity correction. Its
+highest-block-surface assertion covers the superseded implementation and must
+not be cited for MythicMobs 5.7.2 local downward-scan semantics. Strict fixture
+`srv-paper-altitude-strict-20261116-r4` now verifies the corrected runtime and
+imported paths, scan boundary, block restoration, and temporary-entity cleanup.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r80` keeps the utility probe
 passed with caster-only `VehicleIsDead`; the live self-test confirms the
@@ -3451,8 +3458,9 @@ The final report is retained at
 Fixture `srv-paper-integration-exploratory-1.21.11-r79` extends the passing
 `conditionUtilityAliases` probe with `Altitude`, evaluating the real target's
 height above the Bukkit highest-block surface under the configured maximum.
-This is exploratory Paper 1.21.11 evidence; the Paper 1.21.1 release target
-remains open.
+This historical Paper 1.21.11 evidence covers only the superseded highest-block-column
+implementation; strict Paper 1.21.1-133 fixture `srv-paper-altitude-strict-20261116-r4`
+verifies the corrected local downward scan.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r72` extends the passing
 `conditionUtilityAliases` probe with exact, after-or-equal, and before server

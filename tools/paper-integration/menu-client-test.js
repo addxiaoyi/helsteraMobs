@@ -170,14 +170,33 @@ async function runInteractableClientProbe() {
   await waitFor(() => interactableProbeReady, 'Interactable client probe readiness', [bot, guest]);
   const { blockedId, allowedId, client } = interactableProbeReady;
   if (blockedId === allowedId) throw new Error('Interactable probe reused an entity id');
+  // The shield workflow is intentionally kept alive for the server-side
+  // blocking self-test. Once the interactable probe is ready, release that
+  // use window so the entity-use packets are not competing with an active
+  // main-hand item interaction.
+  if (client === bot && shieldTimer) {
+    clearInterval(shieldTimer);
+    shieldTimer = null;
+    bot.deactivateItem();
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
 
-  const interactWithOffhand = async (entityId, label) => {
-    await waitFor(() => client.entities[entityId], `${label} entity spawn`, client);
-    client._client.write('use_entity', {
-      target: entityId,
-      mouse: 0,
-      hand: 1,
-      sneaking: false
+  const interactWithMainHand = async (entityId, label, offsetZ) => {
+    // The strict fixture deliberately runs a high-volume server self-test
+    // beside this protocol check. Mineflayer can lose the entity map while
+    // decoding those packets even though its connection remains usable and
+    // Paper has already sent the probe entity to this player. The server
+    // message carries the authoritative id, so issue the real use_entity
+    // packet after a short settling window instead of treating the optional
+    // client-side cache as a prerequisite for the interaction.
+    await new Promise(resolve => setTimeout(resolve, 250));
+    // Use Mineflayer's supported entity activation path with a synthetic
+    // position. The entity map may be incomplete under the concurrent
+    // self-test load, but the packet encoder still needs a valid interaction
+    // hand and the server-side probe owns the authoritative entity id.
+    await client.activateEntity({
+      id: entityId,
+      position: client.entity.position.offset(2, 0, offsetZ)
     });
     const observation = await waitFor(value => {
       const text = value?.toString?.() || '';
@@ -191,8 +210,8 @@ async function runInteractableClientProbe() {
     return cancellation[1] === 'true';
   };
 
-  const blockedCancelled = await interactWithOffhand(blockedId, 'BLOCKED');
-  const allowedCancelled = await interactWithOffhand(allowedId, 'ALLOWED');
+  const blockedCancelled = await interactWithMainHand(blockedId, 'BLOCKED', 1);
+  const allowedCancelled = await interactWithMainHand(allowedId, 'ALLOWED', -1);
   const report = {
     status: blockedCancelled && !allowedCancelled ? 'passed' : 'failed',
     blockedEntityId: blockedId,
@@ -252,6 +271,13 @@ async function runSpawningDistanceWalk(client) {
 
 async function run() {
   await waitFor(() => bot.entity != null, 'client spawn');
+  // Run this immediately after the primary client has spawned. The strict
+  // server starts high-volume self-tests as soon as both clients are online;
+  // those packets can disturb Mineflayer's entity tracking before the real
+  // use_entity packets reach Paper.
+  if (process.env.PAPER_INTERACTABLE_WORKFLOW === 'true') {
+    await runInteractableClientProbe();
+  }
   await new Promise((resolve, reject) => {
     const deadline = setTimeout(() => reject(new Error('Timed out waiting for guest spawn')), timeoutMs);
     let timer;
@@ -267,6 +293,13 @@ async function run() {
     if (guest.entity) clearInterval(timer);
   });
   await new Promise(resolve => setTimeout(resolve, 1500));
+  // The integration server runs a large set of player mechanics against the
+  // same online player. One of those checks intentionally executes
+  // close-inventory; opening the menu before that check completes makes the
+  // real client observe an unrelated close during the permission assertion.
+  // The server emits this marker only after those player-state checks finish.
+  await waitFor(value => value?.toString?.().includes('PAPER_MENU_READY'),
+    'menu player self-test readiness', [bot, guest]);
   // 开菜单偶发失败（服务端刚加载完、玩家数据还没就绪时会静默吞掉命令），
   // 在这里重试一次而不是让整条工作流报废——重试只影响「命令是否送达」，
   // 不改变任何断言语义。
@@ -338,13 +371,11 @@ async function run() {
   if (reportPath) fs.appendFileSync(reportPath, line, 'utf8');
   console.log(line.trim());
 
-  // Run the high-volume client probes after the menu protocol has completed.
-  // Mineflayer's 1.21.1 component decoder can lose framing while entity and
-  // inventory packets arrive together; the menu assertions need a stable
-  // window sequence before those probes start sending movement/click traffic.
-  if (process.env.PAPER_INTERACTABLE_WORKFLOW === 'true') {
-    await runInteractableClientProbe();
-  }
+  // Keep the movement probe after the menu and interactable protocols have
+  // completed. Mineflayer's
+  // 1.21.1 component decoder can lose framing while inventory packets arrive
+  // together; the menu assertions need a stable window sequence before this
+  // probe starts sending movement traffic.
   if (process.env.PAPER_SPAWNING_DISTANCE_WALK_WORKFLOW === 'true') {
     await waitFor(() => spawningDistanceWalkReady
       && targeterArgumentValidationComplete

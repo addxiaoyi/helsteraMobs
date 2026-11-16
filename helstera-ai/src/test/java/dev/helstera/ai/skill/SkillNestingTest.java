@@ -928,6 +928,43 @@ class SkillNestingTest {
         assertEquals(List.of(accepted), context.skillTree().orElseThrow().targets());
     }
 
+    @Test
+    void inlineTargetConditionsFilterEachTargetAndNegationDoesNotPassAnEmptySelection() {
+        var rejected = livingPlayerProxy();
+        var accepted = livingPlayerProxy();
+        var evaluated = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
+        var executed = new java.util.ArrayList<BehaviorContext>();
+        registry.registerCondition("accept-second-target", context -> {
+            var target = context.targetEntity().orElseThrow();
+            evaluated.add(target);
+            return target == accepted;
+        });
+        registry.registerCondition("reject-every-target", ignored -> false);
+        registry.registerAction("capture-targets", executed::add);
+
+        var svc = service();
+        var context = BehaviorContext.execution(null, rejected, 0.5, 4, 0,
+                "skill", null, null, List.of(rejected, accepted), null);
+        String filtered = svc.bindAction("capture-targets @targets ?@accept-second-target");
+        assertNotNull(filtered, svc.warnings().toString());
+        assertTrue(registry.runAction(filtered, context));
+        assertEquals(List.of(rejected, accepted), evaluated);
+        assertEquals(1, executed.size());
+        assertEquals(List.of(accepted), executed.get(0).targets());
+        assertSame(accepted, executed.get(0).targetEntity().orElseThrow());
+
+        String negated = svc.bindAction("capture-targets @targets ?@!reject-every-target");
+        assertNotNull(negated, svc.warnings().toString());
+        assertTrue(registry.runAction(negated, context));
+        assertEquals(2, executed.size());
+        assertEquals(List.of(rejected, accepted), executed.get(1).targets());
+
+        var emptyContext = BehaviorContext.of(null, null, 1.0, -1, 0, "skill");
+        assertTrue(registry.runAction(negated, emptyContext));
+        assertEquals(2, executed.size(), "negation cannot make a missing target pass");
+        assertNull(svc.bindAction("capture-targets @targets ?@!"));
+    }
+
     private static org.bukkit.entity.Player livingPlayerProxy() {
         return (org.bukkit.entity.Player) Proxy.newProxyInstance(
                 org.bukkit.entity.Player.class.getClassLoader(),
