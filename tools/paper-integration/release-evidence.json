@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-directional-velocity-strict-20261116-r1",
+    "reportFixtureDirectory": "srv-paper-directional-velocity-strict-20261116-r1",
+    "report": "tools/paper-integration/reports/paper-1.21.1-directional-velocity-strict-20261116-r1.json",
+    "reportSha256": "513d11381a20cc6382d11e3d1cb12d595c48a25b79b5d534f735c29628073d29",
+    "log": "tools/paper-integration/reports/paper-1.21.1-directional-velocity-strict-20261116-r1.log.gz",
+    "logSha256": "69e1362e6d47746a7990062ed04e95acb6b993ef6e6df09dccff61c1fa0a072b",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-directional-velocity-strict-20261116-r1-client-logs.tar.gz",
+    "clientLogSha256": "6a60847bc9a9b437b1a4ec8cf7c4766b88471e1cb0f0e21697fb60c5c702d456",
+    "pluginSha256": "cc50507ce75b3365152f6c0897787acdff8682b65bae0337770ced1853496916",
+    "fullReleaseCatalog": true
+  },
+  {
     "fixtureId": "srv-paper-velocity-strict-20261116-r1",
     "reportFixtureDirectory": "srv-paper-velocity-strict-20261116-r1",
     "report": "tools/paper-integration/reports/paper-1.21.1-velocity-strict-20261116-r1.json",
@@ -9,7 +21,9 @@
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-velocity-strict-20261116-r1-client-logs.tar.gz",
     "clientLogSha256": "cf69a639a042f9f63779f3e9cc9ae4dbb6e6a48e7a855ceed449284d1e45de11",
     "pluginSha256": "46c8ba1fecbc90cb1ee983b31d65144c3a5d8d8bf88cdbf5399a11eafa0f24c8",
-    "fullReleaseCatalog": true
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-directional-velocity-strict-20261116-r1"
   },
   {
     "fixtureId": "srv-paper-has-inventory-space-strict-20261116-r22",

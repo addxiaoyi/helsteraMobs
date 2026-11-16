@@ -801,6 +801,24 @@ public final class SkillCatalog {
                          }
                      };
                  }),
+                 java.util.Map.entry("directional-velocity-targets", (ActionFactory) a -> {
+                     var yaw = dynamicNum(a, 0, 0);
+                     var pitch = dynamicNum(a, 1, 0);
+                     var velocity = dynamicNum(a, 2, 0);
+                     String mode = str(a, 3, "SET").toUpperCase(Locale.ROOT);
+                     if (!java.util.Set.of("SET", "ADD", "MULTIPLY", "REMOVE", "DIVIDE", "MINIMUM")
+                             .contains(mode)) {
+                         throw new IllegalArgumentException(
+                                 "directional-velocity-targets mode must be SET, ADD, MULTIPLY, REMOVE, DIVIDE or MINIMUM");
+                     }
+                     return ctx -> {
+                         Vector desired = directionalVelocity(
+                                 yaw.applyAsDouble(ctx), pitch.applyAsDouble(ctx), velocity.applyAsDouble(ctx));
+                         for (LivingEntity target : activeTargets(ctx)) {
+                             applyDirectionalVelocity(target, desired, mode);
+                         }
+                     };
+                 }),
                  java.util.Map.entry("shoot-projectile", (ActionFactory) a -> {
                      String type = str(a, 0, "ARROW");
                      var speed = dynamicNum(a, 1, 1.6);
@@ -1278,6 +1296,41 @@ public final class SkillCatalog {
             result = right.multiply(result.getX()).add(up.multiply(result.getY())).add(forward.multiply(result.getZ()));
         }
         target.setVelocity(finiteVelocity(result));
+    }
+
+    /** Builds the world-space vector used by MythicMobs DirectionalVelocity. */
+    private static Vector directionalVelocity(double yaw, double pitch, double velocity) {
+        if (!Double.isFinite(yaw) || !Double.isFinite(pitch) || !Double.isFinite(velocity)) {
+            return new Vector();
+        }
+        double yawRadians = Math.toRadians(yaw);
+        double pitchRadians = Math.toRadians(pitch);
+        double horizontal = Math.cos(pitchRadians);
+        return finiteVelocity(new Vector(
+                -Math.sin(yawRadians) * horizontal,
+                -Math.sin(pitchRadians),
+                Math.cos(yawRadians) * horizontal).multiply(velocity));
+    }
+
+    /**
+     * Applies DirectionalVelocity modes. The public MythicMobs reference lists
+     * MINIMUM but does not publish its formula; this implementation guarantees
+     * the requested projection along the direction while preserving lateral motion.
+     */
+    private static void applyDirectionalVelocity(LivingEntity target, Vector desired, String mode) {
+        if (target == null || desired == null) return;
+        if (!"MINIMUM".equals(mode)) {
+            applyVelocity(target, desired, mode, false);
+            return;
+        }
+        double requested = desired.length();
+        if (!Double.isFinite(requested) || requested <= 1.0e-12) return;
+        Vector direction = finiteUnit(desired);
+        if (direction == null) return;
+        Vector current = finiteVelocity(target.getVelocity());
+        double projection = current.dot(direction);
+        if (!Double.isFinite(projection) || projection >= requested) return;
+        target.setVelocity(finiteVelocity(current.add(direction.multiply(requested - projection))));
     }
 
     private static Vector divideVelocity(Vector current, Vector delta) {

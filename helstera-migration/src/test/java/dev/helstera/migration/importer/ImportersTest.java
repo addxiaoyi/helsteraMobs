@@ -2462,6 +2462,57 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic DirectionalVelocity maps official aliases, arguments and modes")
+    void mythicDirectionalVelocityMapsOfficialArguments(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/directional-velocity.yml", """
+                skills:
+                  motion:
+                    Skills:
+                      - directionalvelocity{yaw=90;pitch=-10;v=2;m=MINIMUM} @target
+                      - dvelocity{90;-10;2;ADD} @target
+                      - directional-velocity 0 15 1 DIVIDE @target
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertEquals(List.of("directional-velocity-targets 90 -10 2 MINIMUM @target",
+                        "directional-velocity-targets 90 -10 2 ADD @target",
+                        "directional-velocity-targets 0 15 1 DIVIDE @target"),
+                target.getStringList("skills.motion.on-decision"));
+        assertTrue(target.getStringList("skills.motion.unsupported").isEmpty());
+    }
+
+    @Test
+    void mythicDirectionalVelocityPreservesMalformedArguments(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/directional-velocity-invalid.yml", """
+                skills:
+                  motion:
+                    Skills:
+                      - directionalvelocity{yaw=NaN;v=1} @target
+                      - directionalvelocity{yaw=1;v=2;v=3} @target
+                      - directionalvelocity{yaw=1;v=2;unknown=3} @target
+                      - directionalvelocity{yaw=1;v=2;m=BOUNCE} @target
+                      - directionalvelocity{1;2;3;SET;extra} @target
+                      - dvelocity{yaw=} @target
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertTrue(target.getStringList("skills.motion.on-decision").isEmpty());
+        assertEquals(List.of("directionalvelocity{yaw=NaN;v=1} @target",
+                        "directionalvelocity{yaw=1;v=2;v=3} @target",
+                        "directionalvelocity{yaw=1;v=2;unknown=3} @target",
+                        "directionalvelocity{yaw=1;v=2;m=BOUNCE} @target",
+                        "directionalvelocity{1;2;3;SET;extra} @target",
+                        "dvelocity{yaw=} @target"),
+                target.getStringList("skills.motion.unsupported"));
+        assertEquals(6, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid directional velocity")).count());
+    }
+
+    @Test
     void mythicBlockMechanicPreservesLocationTargeter(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/location.yml", """
                 skills:

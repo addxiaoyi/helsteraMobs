@@ -1133,6 +1133,14 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("directional velocity aliases bind to the target action")
+    void directionalVelocityAliasesBindToTargetAction() {
+        var svc = service();
+        assertNotNull(svc.bindAction("dvelocity 0 0 1 MINIMUM"));
+        assertNotNull(svc.bindAction("directional-velocity-targets 0 0 1 SET @target"));
+    }
+
+    @Test
     @DisplayName("target-count condition counts the active single target")
     void targetCountUsesActiveSingleTarget() {
         var svc = service();

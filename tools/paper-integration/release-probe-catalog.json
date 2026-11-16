@@ -400,6 +400,11 @@
       "requiredObservationPattern": "skill-actions .*velocity-mechanic=true .*imported-velocity=true .*velocity-restored=true"
     },
     {
+      "id": "directionalVelocityMechanic",
+      "status": "passed",
+      "requiredObservationPattern": "skill-actions .*directional-velocity-mechanic=true .*imported-directional-velocity=true .*directional-velocity-invalid-preserved=true .*directional-velocity-restored=true"
+    },
+    {
       "id": "inlineConditionScopes",
       "status": "passed",
       "requiredObservationPattern": "skill-actions .*inline-condition-scopes=true .*inline-target-filter=true .*inline-target-negation=true .*inline-empty-target-rejected=true .*inline-conditions-restored=true"

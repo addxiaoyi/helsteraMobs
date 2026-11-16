@@ -108,6 +108,57 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("DirectionalVelocity supports vector modes and minimum projection")
+    void directionalVelocitySupportsAllModes() {
+        var target = mock(LivingEntity.class);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1.0, 1.0, 0, "directional-velocity-test", null, target,
+                List.of(target), null, null);
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(8, 12, 20));
+
+        for (var entry : List.of(
+                List.of("SET", new org.bukkit.util.Vector(0, 0, 2)),
+                List.of("ADD", new org.bukkit.util.Vector(8, 12, 22)),
+                List.of("MULTIPLY", new org.bukkit.util.Vector(0, 0, 40)),
+                List.of("REMOVE", new org.bukkit.util.Vector(8, 12, 18)),
+                List.of("DIVIDE", new org.bukkit.util.Vector(0, 0, 10)))) {
+            clearInvocations(target);
+            SkillCatalog.actions().get("directional-velocity-targets")
+                    .create(List.of("0", "0", "2", String.valueOf(entry.get(0))))
+                    .accept(context);
+            var captured = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+            verify(target).setVelocity(captured.capture());
+            var result = captured.getValue();
+            var expected = (org.bukkit.util.Vector) entry.get(1);
+            org.junit.jupiter.api.Assertions.assertEquals(expected.getX(), result.getX(), 1.0e-9,
+                    String.valueOf(entry.get(0)));
+            org.junit.jupiter.api.Assertions.assertEquals(expected.getY(), result.getY(), 1.0e-9,
+                    String.valueOf(entry.get(0)));
+            org.junit.jupiter.api.Assertions.assertEquals(expected.getZ(), result.getZ(), 1.0e-9,
+                    String.valueOf(entry.get(0)));
+        }
+
+        clearInvocations(target);
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(0, 0, 0));
+        SkillCatalog.actions().get("directional-velocity-targets")
+                .create(List.of("0", "0", "2", "MINIMUM"))
+                .accept(context);
+        var captured = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+        verify(target).setVelocity(captured.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(0, captured.getValue().getX(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(0, captured.getValue().getY(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(2, captured.getValue().getZ(), 1.0e-9);
+    }
+
+    @Test
+    @DisplayName("DirectionalVelocity rejects unknown modes at bind time")
+    void directionalVelocityRejectsUnknownMode() {
+        assertThrows(IllegalArgumentException.class, () ->
+                SkillCatalog.actions().get("directional-velocity-targets")
+                        .create(List.of("0", "0", "1", "BOUNCE")));
+    }
+
+    @Test
     @DisplayName("relative Velocity uses the target's local orientation")
     void relativeVelocityUsesTargetOrientation() {
         var target = mock(LivingEntity.class);

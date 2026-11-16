@@ -109,6 +109,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean remove, boolean divide, boolean relative, boolean imported,
             boolean restored) { }
 
+    private record DirectionalVelocityEvidence(boolean directSet, boolean add, boolean multiply,
+            boolean remove, boolean divide, boolean minimum, boolean alias, boolean imported,
+            boolean invalidPreserved, boolean restored) { }
+
     private HelsteraEventBus bus;
     private ModelValidator validator;
     private ModelRegistryImpl registry;          // 核心模块，始终存在
@@ -11039,6 +11043,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean velocityMechanic = false;
             boolean importedVelocity = false;
             boolean velocityRestored = false;
+            boolean directionalVelocityMechanic = false;
+            boolean importedDirectionalVelocity = false;
+            boolean directionalVelocityInvalidPreserved = false;
+            boolean directionalVelocityRestored = false;
             boolean factionConditions = false;
             boolean signalMechanics = false;
             boolean targetKillMechanic = false;
@@ -13405,6 +13413,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         && velocityEvidence.divide() && velocityEvidence.relative();
                 importedVelocity = velocityEvidence.imported();
                 velocityRestored = velocityEvidence.restored();
+                DirectionalVelocityEvidence directionalVelocityEvidence = runDirectionalVelocitySelfTest(
+                        conditionTarget, conditionContext, skills, behaviors);
+                directionalVelocityMechanic = directionalVelocityEvidence.directSet()
+                        && directionalVelocityEvidence.add() && directionalVelocityEvidence.multiply()
+                        && directionalVelocityEvidence.remove() && directionalVelocityEvidence.divide()
+                        && directionalVelocityEvidence.minimum() && directionalVelocityEvidence.alias();
+                importedDirectionalVelocity = directionalVelocityEvidence.imported();
+                directionalVelocityInvalidPreserved = directionalVelocityEvidence.invalidPreserved();
+                directionalVelocityRestored = directionalVelocityEvidence.restored();
                 Location originalFovTargetLocation = conditionTarget.getLocation().clone();
                 Location originalFovCasterLocation = zombie.getLocation().clone();
                 try {
@@ -16790,6 +16807,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " velocity-mechanic=" + velocityMechanic
                         + " imported-velocity=" + importedVelocity
                         + " velocity-restored=" + velocityRestored
+                        + " directional-velocity-mechanic=" + directionalVelocityMechanic
+                        + " imported-directional-velocity=" + importedDirectionalVelocity
+                        + " directional-velocity-invalid-preserved=" + directionalVelocityInvalidPreserved
+                        + " directional-velocity-restored=" + directionalVelocityRestored
                         + " dynamic-placeholder=" + dynamicPlaceholderAction
                         + " gameplay-placeholders=" + gameplayPlaceholders
                         + " jump-mechanic=" + jumpMechanic
@@ -18976,6 +18997,112 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " result=" + (set && add && multiply && remove && divide && relative
                 && imported && restored));
         return new VelocityEvidence(set, add, multiply, remove, divide, relative, imported, restored);
+    }
+
+    /**
+     * Verifies MythicMobs DirectionalVelocity against a live Paper entity.
+     * The published reference documents the six modes but does not define the
+     * MINIMUM formula; the runtime contract tested here is minimum projection
+     * along the requested world-space vector.
+     */
+    private DirectionalVelocityEvidence runDirectionalVelocitySelfTest(
+            org.bukkit.entity.LivingEntity target,
+            dev.helstera.api.behavior.BehaviorContext context,
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+        if (target == null || context == null || skills == null || behaviors == null) {
+            return new DirectionalVelocityEvidence(false, false, false, false, false,
+                    false, false, false, false, false);
+        }
+        org.bukkit.util.Vector original = target.getVelocity().clone();
+        boolean set = false;
+        boolean add = false;
+        boolean multiply = false;
+        boolean remove = false;
+        boolean divide = false;
+        boolean minimum = false;
+        boolean alias = false;
+        boolean imported = false;
+        boolean invalidPreserved = false;
+        try {
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            set = runIntegrationAction(skills, behaviors,
+                    "directional-velocity-targets 0 0 2 SET", context)
+                    && velocityNear(target.getVelocity(), 0, 0, 2);
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            add = runIntegrationAction(skills, behaviors,
+                    "directional-velocity-targets 0 0 2 ADD", context)
+                    && velocityNear(target.getVelocity(), 8, 12, 22);
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            multiply = runIntegrationAction(skills, behaviors,
+                    "directional-velocity-targets 0 0 2 MULTIPLY", context)
+                    && velocityNear(target.getVelocity(), 0, 0, 40);
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            remove = runIntegrationAction(skills, behaviors,
+                    "directional-velocity-targets 0 0 2 REMOVE", context)
+                    && velocityNear(target.getVelocity(), 8, 12, 18);
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            divide = runIntegrationAction(skills, behaviors,
+                    "directional-velocity-targets 0 0 2 DIVIDE", context)
+                    && velocityNear(target.getVelocity(), 0, 0, 10);
+            target.setVelocity(new org.bukkit.util.Vector(0, 0, 0));
+            minimum = runIntegrationAction(skills, behaviors,
+                    "directional-velocity-targets 0 0 2 MINIMUM", context)
+                    && velocityNear(target.getVelocity(), 0, 0, 2);
+            target.setVelocity(new org.bukkit.util.Vector(0, 0, 0));
+            alias = runIntegrationAction(skills, behaviors, "dvelocity 0 0 2 SET", context)
+                    && velocityNear(target.getVelocity(), 0, 0, 2);
+
+            Path root = null;
+            try {
+                root = Files.createTempDirectory("helstera-directional-velocity-import-");
+                Path source = Files.createDirectories(root.resolve("Skills")).resolve("probe.yml");
+                Files.writeString(source, """
+                        skills:
+                          directional_velocity_probe:
+                            Skills:
+                              - directionalvelocity{yaw=0;pitch=0;v=2;m=ADD} @target
+                              - dvelocity{yaw=NaN;v=2} @target
+                        """);
+                var entries = new MythicMobsImporter().convert(source);
+                var plan = entries.stream().filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow();
+                var yaml = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(plan.get("content"))));
+                var actions = yaml.getStringList("skills.directional_velocity_probe.on-decision");
+                var unsupported = yaml.getStringList("skills.directional_velocity_probe.unsupported");
+                boolean shape = actions.equals(List.of(
+                        "directional-velocity-targets 0 0 2 ADD @target"));
+                boolean preserved = unsupported.equals(List.of("dvelocity{yaw=NaN;v=2} @target"));
+                boolean warning = entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                        && String.valueOf(entry.get("note")).contains("Invalid directional velocity"));
+                invalidPreserved = preserved && warning;
+                target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+                String action = shape ? skills.bindAction(actions.get(0)) : null;
+                imported = shape && invalidPreserved && action != null
+                        && skills.runAction(action, context)
+                        && velocityNear(target.getVelocity(), 8, 12, 22);
+            } finally {
+                if (root != null) {
+                    Files.deleteIfExists(root.resolve("Skills/probe.yml"));
+                    Files.deleteIfExists(root.resolve("Skills"));
+                    Files.deleteIfExists(root);
+                }
+            }
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] directional-velocity-mechanic exception=" + failure);
+        } finally {
+            target.setVelocity(original);
+        }
+        boolean restored = velocityNear(target.getVelocity(), original.getX(), original.getY(), original.getZ());
+        getLogger().info("[自检] directional-velocity-mechanic direct-set=" + set
+                + " add=" + add + " multiply=" + multiply + " remove=" + remove
+                + " divide=" + divide + " minimum=" + minimum + " alias=" + alias
+                + " imported=" + imported + " invalid-preserved=" + invalidPreserved
+                + " restored=" + restored + " result=" + (set && add && multiply && remove
+                && divide && minimum && alias && imported && invalidPreserved && restored));
+        return new DirectionalVelocityEvidence(set, add, multiply, remove, divide, minimum,
+                alias, imported, invalidPreserved, restored);
     }
 
     /**

@@ -1860,6 +1860,7 @@ public final class SkillService {
             case "teleport" -> "teleport-targets";
             case "teleport-mythic" -> "teleport-mythic";
             case "velocity" -> "velocity-targets";
+            case "directional-velocity", "directional-velocity-targets" -> "directional-velocity-targets";
             case "set-name" -> "set-name-targets";
             case "invisible" -> "invisible-targets";
             case "glowing" -> "glowing-targets";
@@ -3281,6 +3282,7 @@ public final class SkillService {
             case "settarget", "target" -> "set-target";
             case "cleartarget", "untarget" -> "clear-target";
             case "setvelocity", "velocity" -> "velocity-targets";
+            case "directionalvelocity", "dvelocity", "directional-velocity" -> "directional-velocity-targets";
             case "setscale" -> "set-scale";
             case "setintent" -> "set-intent";
             case "settickspeed", "set-tick-speed" -> "set-tick-speed";

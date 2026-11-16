@@ -278,6 +278,7 @@ $probeSpecs = [ordered]@{
     lastDamageCauseCondition = 'skill-actions .*last-damage-cause=true'
     motionConditions = 'skill-actions .*motion-conditions=true .*directional-velocity-condition=true .*fall-speed-condition=true'
     velocityMechanic = 'skill-actions .*velocity-mechanic=true .*imported-velocity=true .*velocity-restored=true'
+    directionalVelocityMechanic = 'skill-actions .*directional-velocity-mechanic=true .*imported-directional-velocity=true .*directional-velocity-invalid-preserved=true .*directional-velocity-restored=true'
     nameCondition = 'skill-actions .*name-condition=true'
     dotMechanic = 'skill-dot damage-observed=true bounded=true expired=true'
     projectileHasEndedCondition = 'projectile-has-ended=true observed=true'

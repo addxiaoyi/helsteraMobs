@@ -1254,6 +1254,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'velocityMechanic'; status = 'passed'; observations = @('skill-actions velocity-mechanic=true imported-velocity=true velocity-restored=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'directionalVelocityMechanic'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'directionalVelocityMechanic'; status = 'passed'; observations = @('skill-actions directional-velocity-mechanic=true imported-directional-velocity=true directional-velocity-invalid-preserved=true directional-velocity-restored=true')
+    }
     $fullCatalogHasItem = @($fullCatalogReport.probes | Where-Object id -eq 'hasItemCondition')
     Assert-True ($fullCatalogHasItem.Count -eq 1) 'synthetic full catalog contains the HasItem condition probe'
     $fullCatalogHasItem[0].observations = @(
