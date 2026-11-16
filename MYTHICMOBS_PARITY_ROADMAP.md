@@ -144,6 +144,12 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   Importer, list-parser, runtime, and cross-module tests cover the alias and
   reject supplied arguments. Existing charged-state Paper evidence remains the
   evidence boundary.
+- Official MythicMobs 5.7.2 `isNaturalBlock` now maps to `is-natural-block`.
+  The audited upstream implementation only adapts the location and returns
+  `true`; Helstera matches that behavior for a valid location and fails closed
+  when location context is missing. Importer, list-parser, runtime, and
+  cross-module tests cover the mapping and invalid arguments. No new Paper
+  evidence is claimed for this upstream behavior boundary.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

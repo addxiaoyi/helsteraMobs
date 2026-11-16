@@ -177,7 +177,7 @@ public final class MmConditions {
             "falling", "isfalling", "mounted", "ismounted", "isriding", "riding", "moist", "ismoist",
             "enderdragonalive", "isdragonalive", "dragonalive",
             "israiderpatrolleader", "ispatrolleader", "serverispaper", "ispaper", "ismythicmob", "ismm",
-            "iscreeperprimed", "hasdialogopen", "dialogopen", "isincinematic", "incinematic",
+            "iscreeperprimed", "isnaturalblock", "hasdialogopen", "dialogopen", "isincinematic", "incinematic",
             "itemrecharging", "recharging", "hasinventoryspace", "hasfreeinventoryslot", "hasfreeslot",
             "vehicleisdead", "isvehicle", "vehicle", "moving", "ismoving", "haspassenger", "haspassengers",
             "isleashed", "leashed", "targetisleashed", "targetleashed", "hasowner", "ownerisplayer",
@@ -1153,6 +1153,9 @@ public final class MmConditions {
         }
         if ("iscreeperprimed".equals(name)) {
             return new Mapped("is-creeper-primed", true);
+        }
+        if ("isnaturalblock".equals(name)) {
+            return new Mapped("is-natural-block", true);
         }
         if ("boundingboxesoverlap".equals(name) || "bbsoverlap".equals(name)) {
             String offset = keyedArgument(body, "shiftforward", "so", "forwardoffset", "fo", "forward", "f");

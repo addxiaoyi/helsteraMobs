@@ -568,6 +568,8 @@ class MmConditionsTest {
         assertEquals("is-powered", t("?isCharged"));
         assertEquals("is-powered", t("?creeperCharged"));
         assertFalse(translated("?creeperCharged{unknown=true}"));
+        assertEquals("is-natural-block", t("?isNaturalBlock"));
+        assertFalse(translated("?isNaturalBlock{unknown=true}"));
         assertEquals("is-op", t("?isOp"));
         assertEquals("has-ai", t("?hasAI"));
         assertEquals("has-gravity", t("?hasGravity"));

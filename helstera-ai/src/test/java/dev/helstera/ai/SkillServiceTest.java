@@ -1349,6 +1349,13 @@ class SkillServiceTest {
 
         String worldCondition = svc.bindCondition("world-is integration-world");
         assertTrue(registry.testCondition(worldCondition, context));
+
+        String naturalBlock = svc.bindCondition("isNaturalBlock");
+        assertNotNull(naturalBlock, svc.warnings().toString());
+        assertTrue(registry.testCondition(naturalBlock, context));
+        assertNull(svc.bindCondition("isNaturalBlock{unknown=true}"));
+        assertFalse(registry.testCondition(naturalBlock,
+                BehaviorContext.of(null, (LivingEntity) null, 1.0, -1, 0, "IDLE")));
     }
 
     @Test

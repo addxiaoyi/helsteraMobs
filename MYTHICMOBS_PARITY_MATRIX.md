@@ -1443,6 +1443,15 @@ both states on a real Creeper, restores its ignited state, and requires the
 dedicated `creeperPrimedCondition` report probe. The complete Conditions
 catalog remains `mapped-unverified`.
 
+Incremental condition update: official `IsNaturalBlock` maps to
+`is-natural-block`. MythicMobs 5.7.2's `IsNaturalBlockCondition` adapts the
+location and returns `true` without inspecting block provenance, so the runtime
+matches that declared-version behavior when a valid location exists and fails
+closed without one. Importer, runtime, list-parser, and migration-to-runtime
+tests cover the mapping and malformed arguments. No new Paper evidence is
+claimed; this records the upstream implementation boundary rather than a
+semantic natural-generation guarantee.
+
 Incremental vehicle-trigger update: the Paper self-test now uses an independent
 managed ArmorStand passenger instead of the online player, so player death and
 rebinding from adjacent probes cannot invalidate the delayed vehicle workflow.

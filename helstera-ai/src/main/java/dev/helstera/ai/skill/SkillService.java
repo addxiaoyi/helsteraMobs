@@ -399,6 +399,7 @@ public final class SkillService {
                 "thunderstorm", "is-living",
                 "is-player", "is-mob", "is-monster", "is-animal", "is-villager", "is-tameable", "is-raider",
                 "is-baby", "is-child", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
+                "is-natural-block",
                 "target-is-baby", "target-is-adult", "target-is-tamed", "target-is-sheared",
                 "target-is-saddled", "target-is-powered", "is-sneaking", "is-sprinting", "is-flying",
                 "is-climbing", "is-invisible", "is-glowing", "falling", "target-is-climbing",
@@ -2456,6 +2457,7 @@ public final class SkillService {
             case "issheared", "sheared" -> "is-sheared";
             case "issaddled", "saddled" -> "is-saddled";
             case "ispowered", "powered", "ischarged", "charged", "creepercharged" -> "is-powered";
+            case "isnaturalblock", "is-natural-block" -> "is-natural-block";
             case "iscollidable", "is-collidable", "collidable" -> "is-collidable";
             case "hasoffhand", "has-offhand", "offhand" -> "has-offhand";
             case "isop", "is-op", "isoperator", "is-operator" -> "is-op";

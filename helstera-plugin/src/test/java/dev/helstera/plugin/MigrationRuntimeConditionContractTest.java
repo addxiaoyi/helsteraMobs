@@ -215,6 +215,26 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Mythic isNaturalBlock follows the verified 5.7.2 location behavior")
+    void importedIsNaturalBlockReachesRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var world = mock(org.bukkit.World.class);
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                null, null, 1.0, -1, 0, "condition", null, null, List.of(), origin);
+        var imported = dev.helstera.migration.importer.MmConditions.translate("?isNaturalBlock");
+        assertTrue(imported.translated());
+        assertEquals("is-natural-block", imported.condition());
+        String key = service.bindCondition(imported.condition());
+        assertNotNull(key, service.warnings().toString());
+        assertTrue(registry.testCondition(key, context));
+        assertFalse(registry.testCondition(key,
+                dev.helstera.api.behavior.BehaviorContext.of(null,
+                        (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE")));
+    }
+
+    @Test
     @DisplayName("imported Mythic UUID compares the selected entity and evaluates trigger UUID placeholders")
     void importedUuidConditionReachesRuntime() {
         var registry = new BehaviorRegistryImpl();

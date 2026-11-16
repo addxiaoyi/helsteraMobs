@@ -3013,6 +3013,17 @@ public final class SkillExtras {
                 Map.entry("is-powered", noArgumentCondition("is-powered",
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Creeper creeper
                                 && creeper.isPowered())),
+                Map.entry("is-natural-block", (SkillCatalog.ConditionFactory) a -> {
+                    if (a != null && !a.isEmpty()) {
+                        throw new IllegalArgumentException("is-natural-block takes no arguments");
+                    }
+                    return ctx -> {
+                        if (ctx == null) return false;
+                        Location location = ctx.targetLocation().orElse(null);
+                        if (location == null) location = conditionLocation(ctx);
+                        return location != null && location.getWorld() != null;
+                    };
+                }),
                 Map.entry("is-collidable", noArgumentCondition("is-collidable",
                         ctx -> conditionEntity(ctx) != null && conditionEntity(ctx).isCollidable())),
                 Map.entry("has-offhand", (SkillCatalog.ConditionFactory) a -> {
