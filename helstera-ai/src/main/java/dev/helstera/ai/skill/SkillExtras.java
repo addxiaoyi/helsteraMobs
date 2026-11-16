@@ -6126,7 +6126,8 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("heal-percent", (SkillCatalog.ActionFactory) a -> {
-                    var pct = dynamicNum(a, 0, 10);
+                    var pct = dynamicKeyedNum(a, 0, 10,
+                            "amount", "a", "percent", "p", "value", "health", "damage");
                     return ctx -> selfLiving(ctx).ifPresent(e -> {
                         try {
                             double heal = e.getMaxHealth() * pct.applyAsDouble(ctx) / 100.0;
@@ -6137,7 +6138,8 @@ public final class SkillExtras {
                     });
                 }),
                 Map.entry("heal-percent-targets", (SkillCatalog.ActionFactory) a -> {
-                    var pct = dynamicNum(a, 0, 10);
+                    var pct = dynamicKeyedNum(a, 0, 10,
+                            "amount", "a", "percent", "p", "value", "health", "damage");
                     return ctx -> {
                         double percent = pct.applyAsDouble(ctx);
                         for (LivingEntity target : targetEntities(ctx)) {
@@ -6587,7 +6589,8 @@ public final class SkillExtras {
 
                 Map.entry("modify-damage", (SkillCatalog.ActionFactory) SkillExtras::modifyDamageAction),
                 Map.entry("damage-percent", (SkillCatalog.ActionFactory) a -> {
-                    var pct = dynamicNum(a, 0, 10);
+                    var pct = dynamicKeyedNum(a, 0, 10,
+                            "amount", "a", "percent", "p", "value", "health", "damage");
                     return ctx -> {
                         LivingEntity t = ctx.targetEntity().orElse(null);
                         double percent = pct.applyAsDouble(ctx);
@@ -6596,7 +6599,8 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("damage-percent-targets", (SkillCatalog.ActionFactory) a -> {
-                    var pct = dynamicNum(a, 0, 10);
+                    var pct = dynamicKeyedNum(a, 0, 10,
+                            "amount", "a", "percent", "p", "value", "health", "damage");
                     return ctx -> {
                         double percent = pct.applyAsDouble(ctx);
                         if (percent <= 0) return;

@@ -619,6 +619,74 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("damage and heal mechanics accept named numeric aliases at the direct runtime boundary")
+    void damageAndHealMechanicsSupportNamedNumericAliases() {
+        World world = mock(World.class);
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getWorld()).thenReturn(world);
+        when(target.getHealth()).thenReturn(5.0);
+        when(target.getMaxHealth()).thenReturn(20.0);
+        var origin = new Location(world, 0, 64, 0);
+        var targetContext = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "IDLE", null, null, List.of(target), origin, null);
+
+        for (String argument : List.of("amount=3", "a=3", "damage=3", "value=3")) {
+            org.mockito.Mockito.clearInvocations(target);
+            SkillCatalog.actions().get("damage-target").create(List.of(argument)).accept(targetContext);
+            verify(target).damage(3.0, (Entity) null);
+        }
+        for (String argument : List.of("amount=3", "a=3", "heal=3", "health=3", "value=3", "damage=3")) {
+            org.mockito.Mockito.clearInvocations(target);
+            SkillCatalog.actions().get("heal-targets").create(List.of(argument)).accept(targetContext);
+            verify(target).setHealth(8.0);
+        }
+
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(caster.getHealth()).thenReturn(5.0);
+        when(caster.getMaxHealth()).thenReturn(20.0);
+        var selfContext = BehaviorContext.of(instance, caster, 1.0, -1, 0, "IDLE");
+
+        SkillCatalog.actions().get("heal-self").create(List.of("health=3")).accept(selfContext);
+        verify(caster).setHealth(8.0);
+    }
+
+    @Test
+    @DisplayName("percentage damage and healing accept named aliases, placeholders, and reject non-finite values")
+    void percentageDamageAndHealingSupportNamedArguments() {
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getHealth()).thenReturn(5.0);
+        when(target.getMaxHealth()).thenReturn(20.0);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "IDLE", null, null, List.of(target), null, null);
+
+        for (String argument : List.of("amount=25", "a=25", "percent=25", "p=25",
+                "value=25", "health=25", "damage=25")) {
+            org.mockito.Mockito.clearInvocations(target);
+            SkillExtras.actions().get("heal-percent-targets").create(List.of(argument)).accept(context);
+            verify(target).setHealth(10.0);
+        }
+
+        org.mockito.Mockito.clearInvocations(target);
+        SkillExtras.actions().get("damage-percent-targets")
+                .create(List.of("amount=<target.hp.raw>")).accept(context);
+        verify(target).damage(1.0, (Entity) null);
+
+        org.mockito.Mockito.clearInvocations(target);
+        SkillExtras.actions().get("damage-percent-targets")
+                .create(List.of("percent=25")).accept(context);
+        verify(target).damage(5.0, (Entity) null);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("heal-percent").create(List.of("percent=NaN")));
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("damage-percent-targets")
+                        .create(List.of("amount=Infinity")));
+    }
+
+    @Test
     @DisplayName("fire mechanics set and clear caster fire ticks")
     void fireActionsSetAndClearTicks() {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);

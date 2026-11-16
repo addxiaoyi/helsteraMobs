@@ -272,6 +272,27 @@ public final class SkillCatalog {
         return ctx -> parsed;
     }
 
+    /** Reads a Mythic named numeric argument while retaining positional compatibility. */
+    private static java.util.function.ToDoubleFunction<BehaviorContext> dynamicKeyedNum(
+            List<String> args, int index, double def, String... names) {
+        String keyed = keyedArg(args, names);
+        return keyed == null ? dynamicNum(args, index, def) : dynamicNum(List.of(keyed), 0, def);
+    }
+
+    private static String keyedArg(List<String> args, String... names) {
+        if (args == null) return null;
+        for (String raw : args) {
+            if (raw == null) continue;
+            int equals = raw.indexOf('=');
+            if (equals <= 0) continue;
+            String key = raw.substring(0, equals).trim();
+            for (String wanted : names) {
+                if (key.equalsIgnoreCase(wanted)) return raw.substring(equals + 1).trim();
+            }
+        }
+        return null;
+    }
+
     private static String str(List<String> args, int i, String def) {
         return args.size() > i && !args.get(i).isBlank() ? args.get(i).trim() : def;
     }
@@ -719,7 +740,7 @@ public final class SkillCatalog {
                     };
                 }),
                 java.util.Map.entry("damage-target", (ActionFactory) a -> {
-                    var dmg = dynamicNum(a, 0, 0.0);
+                    var dmg = dynamicKeyedNum(a, 0, 0.0, "amount", "a", "damage", "value");
                     var tags = damageTags(a);
                     return ctx -> {
                         double amount = dmg.applyAsDouble(ctx);
@@ -874,7 +895,8 @@ public final class SkillCatalog {
                      };
                  }),
                 java.util.Map.entry("heal-targets", (ActionFactory) a -> {
-                    var amount = dynamicNum(a, 0, 0);
+                    var amount = dynamicKeyedNum(a, 0, 0,
+                            "amount", "a", "heal", "health", "value", "damage");
                     return ctx -> {
                         double value = amount.applyAsDouble(ctx);
                         if (value <= 0) return;
@@ -1000,7 +1022,8 @@ public final class SkillCatalog {
                     };
                 }),
                 java.util.Map.entry("heal-self", (ActionFactory) a -> {
-                    var amount = dynamicNum(a, 0, 0.0);
+                    var amount = dynamicKeyedNum(a, 0, 0.0,
+                            "amount", "a", "heal", "health", "value", "damage");
                     return ctx -> {
                         double value = amount.applyAsDouble(ctx);
                         if (value <= 0 || !ctx.instanceValid()) return;
