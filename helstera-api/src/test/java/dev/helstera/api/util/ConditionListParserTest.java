@@ -45,6 +45,8 @@ class ConditionListParserTest {
                 ConditionListParser.parse("factionsame,night"));
         assertEquals(List.of("issunny", "stormy", "isstormy", "night"),
                 ConditionListParser.parse("issunny,stormy,isstormy,night"));
+        assertEquals(List.of("sneaking", "iscrouching", "iswearing{item=IRON_HELMET}", "night"),
+                ConditionListParser.parse("sneaking,iscrouching,iswearing{item=IRON_HELMET},night"));
     }
 
     @Test

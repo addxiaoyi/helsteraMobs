@@ -285,6 +285,45 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Mythic crouching and wearing aliases reach their runtime conditions")
+    void importedCrouchingAndWearingAliasesReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var player = mock(org.bukkit.entity.Player.class);
+        when(player.isSneaking()).thenReturn(true);
+        var equipment = mock(org.bukkit.inventory.EntityEquipment.class);
+        var helmet = mock(org.bukkit.inventory.ItemStack.class);
+        when(helmet.getType()).thenReturn(org.bukkit.Material.IRON_HELMET);
+        when(equipment.getHelmet()).thenReturn(helmet);
+        when(player.getEquipment()).thenReturn(equipment);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(player));
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, player, 1.0, -1, 0, "IDLE");
+
+        for (String source : List.of("?sneaking", "?isCrouching")) {
+            var imported = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(imported.translated(), source);
+            String key = service.bindCondition(imported.condition());
+            assertNotNull(key, service.warnings().toString());
+            assertTrue(registry.testCondition(key, context), source);
+        }
+        for (String source : List.of(
+                "?isWearing{item=IRON_HELMET}",
+                "?wielding{item=IRON_HELMET}",
+                "?isWielding{item=IRON_HELMET}")) {
+            var imported = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(imported.translated(), source);
+            String key = service.bindCondition(imported.condition());
+            assertNotNull(key, service.warnings().toString());
+            assertTrue(registry.testCondition(key, context), source);
+        }
+        assertFalse(dev.helstera.migration.importer.MmConditions
+                .translate("?isWearing{unknown=IRON_HELMET}").translated());
+    }
+
+    @Test
     @DisplayName("imported Mythic UUID compares the selected entity and evaluates trigger UUID placeholders")
     void importedUuidConditionReachesRuntime() {
         var registry = new BehaviorRegistryImpl();

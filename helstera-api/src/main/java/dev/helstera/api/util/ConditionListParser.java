@@ -44,7 +44,9 @@ public final class ConditionListParser {
             "target-is-saddled", "target-is-powered", "target-is-collidable",
             "target-has-offhand", "target-on-fire", "target-in-air", "target-in-water",
             "target-in-lava", "target-is-sneaking", "target-is-sprinting", "target-is-flying",
-            "target-is-gliding", "target-is-swimming", "target-is-blocking"
+            "target-is-gliding", "target-is-swimming", "target-is-blocking",
+            "crouching", "sneaking", "iscrouching", "is-sneaking",
+            "wearing", "iswearing", "wielding", "iswielding"
     );
 
     private ConditionListParser() {

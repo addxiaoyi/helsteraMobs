@@ -2534,6 +2534,7 @@ public final class SkillService {
                     "target-has-potion-effect";
             case "targetholding", "target-holding" -> "target-holding";
             case "targetwearing", "target-wearing" -> "target-wearing";
+            case "wearing", "iswearing", "wielding", "iswielding" -> "wearing";
             case "ownerisplayer", "owner-is-player" -> "owner-is-player";
             case "ownerisonline", "owner-is-online" -> "owner-is-online";
             case "owner", "isowner", "is-owner" -> "is-owner";
@@ -2548,7 +2549,7 @@ public final class SkillService {
             case "targettype", "target-type", "targettypeis", "target-type-is" -> "target-is";
             case "lineofsight", "haslineofsight",
                     "target-line-of-sight" -> "has-line-of-sight";
-            case "sneaking", "issneaking", "sneakingis" -> "is-sneaking";
+            case "crouching", "sneaking", "issneaking", "iscrouching", "sneakingis" -> "is-sneaking";
             case "sprinting", "issprinting", "sprintingis" -> "is-sprinting";
             case "glowing", "isglowing", "glowingis" -> "is-glowing";
             case "invisible", "isinvisible", "invisibleis" -> "is-invisible";

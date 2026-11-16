@@ -3248,7 +3248,7 @@ class SkillServiceTest {
         for (String alias : List.of("damageAmount >=1", "damage-amount >1", "amount >1", "a >1")) {
             assertNotNull(svc.bindCondition(alias), alias);
         }
-        for (String alias : List.of("sneaking", "issneaking", "sprinting", "issprinting",
+        for (String alias : List.of("crouching", "sneaking", "issneaking", "iscrouching", "sprinting", "issprinting",
                 "glowing", "isglowing", "swimming", "isswimming", "climbing", "isclimbing",
                 "inair", "airborne", "gliding", "isgliding", "flying", "isflying",
                 "blocking", "isblocking", "facingtarget", "targetinlineofsight",
@@ -3257,6 +3257,9 @@ class SkillServiceTest {
                 "targetIsVehicle", "targetNotWithin <=8", "targetInLineOfSight",
                 "targetNotInLineOfSight", "hasFreeInventorySlot")) {
             assertNotNull(svc.bindCondition(alias), alias);
+        }
+        for (String alias : List.of("wearing", "isWearing", "wielding", "isWielding")) {
+            assertNotNull(svc.bindCondition(alias + "{item=IRON_HELMET}"), alias);
         }
         for (String alias : List.of("moist", "isMoist", "moistureLevel{l=3}",
                 "moistureness{l=1to6}", "moistness{l=>=1}", "mobSize{s=>3}",

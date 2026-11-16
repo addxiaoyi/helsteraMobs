@@ -181,7 +181,8 @@ class MmConditionsTest {
                 "isPlayer", "isMob", "isMonster", "isAnimal", "isVillager", "isTameable", "isRaider",
                 "isBaby", "isChild", "isAdult", "isTamed", "isSheared", "isSaddled", "isPowered", "isCharged",
                 "targetIsBaby", "targetIsChild", "targetIsAdult", "targetIsTamed", "targetIsSheared",
-                "targetIsSaddled", "targetIsPowered", "targetIsCharged", "isSneaking", "crouching",
+                "targetIsSaddled", "targetIsPowered", "targetIsCharged", "isSneaking", "sneaking",
+                "isCrouching", "crouching",
                 "isSprinting", "sprinting", "isFlying", "flying", "isBlocking", "blocking", "isGliding",
                 "gliding", "isSwimming", "swimming", "inWater", "inLava", "onFire", "isBurning",
                 "burning", "inAir", "airborne", "targetIsSneaking", "targetIsSprinting", "targetIsFlying",
@@ -591,6 +592,8 @@ class MmConditionsTest {
         assertEquals("on-fire", t("?onFire"));
         assertEquals("in-air", t("?inAir"));
         assertEquals("is-sneaking", t("?isSneaking"));
+        assertEquals("is-sneaking", t("?sneaking"));
+        assertEquals("is-sneaking", t("?isCrouching"));
         assertEquals("is-sprinting", t("?isSprinting"));
         assertEquals("is-flying", t("?isFlying"));
         assertEquals("is-blocking", t("?isBlocking"));
@@ -1908,6 +1911,9 @@ class MmConditionsTest {
         assertFalse(translated("?targetHasAuras{aura=FURY;name=FURY}"));
         assertEquals("holding DIAMOND", t("?holding{item=DIAMOND}"));
         assertEquals("wearing IRON_HELMET", t("?wearing{item=IRON_HELMET}"));
+        assertEquals("wearing IRON_HELMET", t("?isWearing{item=IRON_HELMET}"));
+        assertEquals("wearing IRON_HELMET", t("?wielding{item=IRON_HELMET}"));
+        assertEquals("wearing IRON_HELMET", t("?isWielding{item=IRON_HELMET}"));
         assertEquals("target-holding DIAMOND", t("?targetHolding{item=DIAMOND}"));
         assertEquals("target-wearing IRON_HELMET", t("?targetWearing{item=IRON_HELMET}"));
         assertEquals("caster-faction-is guards", t("?faction{faction=guards}"));

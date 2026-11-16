@@ -162,6 +162,14 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   fail closed; migration, API, AI, and plugin cross-module tests cover the
   alias paths and clear/thunder runtime states. No new Paper evidence is
   claimed, and the complete Conditions catalog remains `mapped-unverified`.
+- Official MythicMobs 5.7.2 `sneaking`/`isCrouching`/`isSneaking` and
+  `isWearing`/`wielding`/`isWielding` aliases now map through the importer,
+  `SkillService`, and condition-list parser. Existing `is-sneaking` and
+  `wearing` runtime evaluators are reused; wearing item arguments are strict,
+  with unknown, duplicate, and empty values preserved and rejected. Migration,
+  API, AI, and plugin cross-module tests cover Player sneaking, helmet matching,
+  and alias preservation. No new Paper evidence is claimed, and the complete
+  Conditions catalog remains `mapped-unverified`.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

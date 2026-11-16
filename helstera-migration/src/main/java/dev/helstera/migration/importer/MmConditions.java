@@ -194,7 +194,7 @@ public final class MmConditions {
             "targetisfrozen", "targetfrozen",
             "targetisbaby", "targetischild", "targetisadult", "targetistamed", "targetissheared",
             "targetissaddled", "targetispowered", "targetischarged",
-            "issneaking", "crouching", "issprinting", "sprinting", "isflying", "flying",
+            "issneaking", "sneaking", "iscrouching", "crouching", "issprinting", "sprinting", "isflying", "flying",
             "isblocking", "blocking", "isgliding", "gliding", "isswimming", "swimming",
             "inwater", "inlava", "inliquid", "onfire", "isburning", "burning", "inair", "airborne",
             "targetissneaking", "targetissprinting", "targetisflying", "targetisblocking",
@@ -927,7 +927,9 @@ public final class MmConditions {
         if ("inair".equals(name) || "airborne".equals(name)) {
             return new Mapped("in-air", true);
         }
-        if ("issneaking".equals(name)) return new Mapped("is-sneaking", true);
+        if ("issneaking".equals(name) || "sneaking".equals(name) || "iscrouching".equals(name)) {
+            return new Mapped("is-sneaking", true);
+        }
         if ("issprinting".equals(name)) return new Mapped("is-sprinting", true);
         if ("isflying".equals(name)) return new Mapped("is-flying", true);
         if ("isblocking".equals(name)) return new Mapped("is-blocking", true);
@@ -1553,17 +1555,16 @@ public final class MmConditions {
             String item = normalizeScalar(body);
             return item == null ? new Mapped(s, false) : new Mapped("holding " + item, true);
         }
-        if ("wearing".equals(name)) {
-            String item = normalizeScalar(body);
-            return item == null ? new Mapped(s, false) : new Mapped("wearing " + item, true);
+        if ("wearing".equals(name) || "iswearing".equals(name)
+                || "wielding".equals(name) || "iswielding".equals(name)) {
+            return equipmentCondition(body, "wearing", s);
         }
         if ("targetholding".equals(name)) {
             String item = normalizeScalar(body);
             return item == null ? new Mapped(s, false) : new Mapped("target-holding " + item, true);
         }
         if ("targetwearing".equals(name)) {
-            String item = normalizeScalar(body);
-            return item == null ? new Mapped(s, false) : new Mapped("target-wearing " + item, true);
+            return equipmentCondition(body, "target-wearing", s);
         }
         if ("faction".equals(name)) {
             String faction = firstArgument(body, "faction", "name", "f");
@@ -2556,6 +2557,17 @@ public final class MmConditions {
             }
         }
         return Map.copyOf(parsed);
+    }
+
+    private static Mapped equipmentCondition(String body, String runtimeName, String original) {
+        Map<String, String> arguments = strictValueArguments(body, Map.ofEntries(
+                Map.entry("item", "item"), Map.entry("material", "item"),
+                Map.entry("mat", "item"), Map.entry("m", "item"),
+                Map.entry("mythicmobsitem", "item"), Map.entry("mmitem", "item"),
+                Map.entry("mmi", "item")), "item");
+        String item = arguments == null ? null : arguments.get("item");
+        return item == null || item.isBlank()
+                ? new Mapped(original, false) : new Mapped(runtimeName + " " + item, true);
     }
 
     /** Parses MetaskillCondition's skill reference and arbitrary skill-scoped parameters. */
