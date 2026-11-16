@@ -2287,6 +2287,14 @@ fixture `srv-paper-drowning-strict-20261102-r2` requires and passes the
 
 Exploratory Paper 1.21.11 r47 also records `foodSaturationCondition=true`.
 
+Food condition alias update: official Mythic `food`, `hunger`, and
+`hungerlevel` now join `foodlevel`/`foodLevelIs` and map to the Player-only
+`food-level` evaluator. The importer preserves official `amount`/`a` and
+`food`/`f` argument forms, defaults a missing value to `0` as in MythicMobs
+5.7.2, and rejects unknown or duplicate arguments. Migration, runtime, and
+cross-module tests cover aliases, defaults, comparisons, and malformed input;
+no new Paper evidence is claimed.
+
 Last-damage-cause parity update: official Mythic `LastDamageCause` now has a
 separate entity-state evaluator reading `Entity#getLastDamageCause`, distinct
 from the current event-context `damage-cause`; importer, unit, and strict Paper

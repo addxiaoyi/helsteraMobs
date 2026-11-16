@@ -940,9 +940,25 @@ public final class MmConditions {
                 || "cancelled".equals(name) || "canceled".equals(name)) {
             return new Mapped("is-cancelled", true);
         }
-        if ("foodlevel".equals(name) || "foodlevelis".equals(name)) {
-            return body == null || body.isBlank()
-                    ? new Mapped(s, false) : new Mapped("food-level " + body, true);
+        if ("foodlevel".equals(name) || "foodlevelis".equals(name)
+                || "food".equals(name) || "hunger".equals(name)
+                || "hungerlevel".equals(name)) {
+            String value;
+            if (body == null || body.isBlank()) {
+                value = "0";
+            } else if (body.indexOf('=') >= 0) {
+                Map<String, String> arguments = strictValueArguments(body, Map.ofEntries(
+                        Map.entry("amount", "amount"), Map.entry("a", "amount"),
+                        Map.entry("food", "amount"), Map.entry("f", "amount"),
+                        Map.entry("level", "amount"), Map.entry("value", "amount"),
+                        Map.entry("v", "amount"), Map.entry("h", "amount")), "amount");
+                if (arguments == null || arguments.get("amount") == null) return new Mapped(s, false);
+                value = arguments.get("amount");
+            } else {
+                value = normalizeScalar(body);
+            }
+            return value == null || !validNumberRange(value)
+                    ? new Mapped(s, false) : new Mapped("food-level " + value, true);
         }
         if ("foodsaturation".equals(name) || "hungersaturation".equals(name)) {
             String value = firstArgument(body, "amount", "a", "food", "f", "saturation", "s");

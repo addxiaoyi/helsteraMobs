@@ -2658,7 +2658,8 @@ public final class SkillService {
             case "fieldofview", "field-of-view", "fov", "infieldofview" -> "field-of-view";
             case "isinsurvivalmode", "in-survival-mode", "insurvivalmode" -> "is-in-survival-mode";
             case "isusingspyglass", "is-using-spyglass", "isscoping" -> "is-using-spyglass";
-            case "foodlevel", "food-level", "foodlevelis", "food-level-is" -> "food-level";
+            case "foodlevel", "food-level", "foodlevelis", "food-level-is",
+                    "food", "hunger", "hungerlevel" -> "food-level";
             case "enchantinglevel", "enchanting-level" -> "enchanting-level";
             case "enchantingexperience", "enchanting-experience", "enchantingexp",
                     "enchanting-exp", "enchantexperience", "enchant-exp" -> "enchanting-experience";

@@ -235,6 +235,28 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Mythic Food aliases reach the Player food-level runtime")
+    void importedFoodAliasesReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var player = mock(org.bukkit.entity.Player.class);
+        when(player.getFoodLevel()).thenReturn(14);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, player, 1.0, -1, 0, "IDLE");
+        for (String source : List.of(
+                "?food{amount=14}", "?hunger{a=14}", "?hungerlevel{f=14}", "?food")) {
+            var imported = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(imported.translated(), source);
+            assertTrue(imported.condition().startsWith("food-level "), source);
+            String key = service.bindCondition(imported.condition());
+            assertNotNull(key, service.warnings().toString());
+            assertTrue(registry.testCondition(key, context), source);
+        }
+        assertFalse(dev.helstera.migration.importer.MmConditions
+                .translate("?food{unknown=14}").translated());
+    }
+
+    @Test
     @DisplayName("imported Mythic UUID compares the selected entity and evaluates trigger UUID placeholders")
     void importedUuidConditionReachesRuntime() {
         var registry = new BehaviorRegistryImpl();

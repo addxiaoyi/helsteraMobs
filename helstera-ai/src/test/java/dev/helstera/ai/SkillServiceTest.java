@@ -442,6 +442,8 @@ class SkillServiceTest {
         String key = svc.bindCondition("food-level <= 14");
         assertNotNull(key, svc.warnings().toString());
         assertTrue(registry.testCondition(key, context));
+        assertTrue(registry.testCondition(svc.bindCondition("food"), context));
+        assertTrue(registry.testCondition(svc.bindCondition("hungerlevel 14"), context));
         when(player.getFoodLevel()).thenReturn(15);
         assertFalse(registry.testCondition(key, context));
         assertFalse(registry.testCondition(key, ctx(1.0, 0)));

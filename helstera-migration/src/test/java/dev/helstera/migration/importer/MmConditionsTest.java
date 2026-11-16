@@ -608,8 +608,14 @@ class MmConditionsTest {
     void foodLevelConditionMapsWithItsComparator() {
         assertEquals("food-level <14", t("?foodLevel{<14}"));
         assertEquals("food-level 14", t("?foodLevelIs{14}"));
+        assertEquals("food-level 14", t("?food{amount=14}"));
+        assertEquals("food-level 14", t("?hunger{a=14}"));
+        assertEquals("food-level 14", t("?hungerLevel{f=14}"));
+        assertEquals("food-level 0", t("?food"));
         assertTrue(translated("?foodLevel{<14}"));
-        assertFalse(translated("?foodLevel"));
+        assertTrue(translated("?foodLevel"));
+        assertFalse(translated("?food{unknown=14}"));
+        assertFalse(translated("?food{amount=14;food=15}"));
     }
 
     @Test

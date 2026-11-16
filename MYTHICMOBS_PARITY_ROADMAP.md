@@ -150,6 +150,11 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   when location context is missing. Importer, list-parser, runtime, and
   cross-module tests cover the mapping and invalid arguments. No new Paper
   evidence is claimed for this upstream behavior boundary.
+- Official MythicMobs 5.7.2 `food`, `hunger`, and `hungerlevel` now join the
+  existing `foodlevel`/`foodLevelIs` mappings. The importer accepts the
+  official `amount`/`a` and `food`/`f` forms, uses the upstream default `0`,
+  and rejects unknown or duplicate arguments; runtime and cross-module tests
+  cover Player-only evaluation. No new Paper evidence is claimed.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

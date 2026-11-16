@@ -3862,7 +3862,8 @@ public final class SkillExtras {
                             && compare(shoot.getForce(), comparison);
                 }),
                 Map.entry("food-level", (SkillCatalog.ConditionFactory) a -> {
-                    Comparison comparison = comparison(a, 0, ">=");
+                    Comparison comparison = a == null || a.isEmpty()
+                            ? new Comparison(">=", 0.0) : comparison(a, 0, ">=");
                     return ctx -> ctx.target().map(player ->
                             compare(player.getFoodLevel(), comparison)).orElse(false);
                 }),
