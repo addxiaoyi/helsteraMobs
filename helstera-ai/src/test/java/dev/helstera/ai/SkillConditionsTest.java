@@ -650,6 +650,11 @@ class SkillConditionsTest {
         assertTrue(extraFactory("moisture-level").create(List.of("1to7")).test(context));
         assertFalse(extraFactory("moisture-level").create(List.of("0")).test(context));
 
+        when(farmland.getMoisture()).thenReturn(3);
+        assertFalse(extraFactory("moist").create(List.of()).test(context),
+                "Moist 只匹配完全湿润的 farmland（moisture=7）");
+        assertTrue(extraFactory("moisture-level").create(List.of("3")).test(context));
+
         when(farmland.getMoisture()).thenReturn(0);
         assertFalse(extraFactory("moist").create(List.of()).test(context));
         assertTrue(extraFactory("moisture-level").create(List.of("0")).test(context));

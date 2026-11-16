@@ -222,6 +222,11 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   burning, and global-cooldown conditions. Unknown arguments are rejected
   before runtime factory creation; this adds no Paper evidence.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
+- The official MythicMobs 5.7.2 `Moist` check requires farmland moisture exactly
+  `7`; the runtime now distinguishes it from `MoistureLevel`, which retains its
+  explicit range behavior. Unit coverage includes fully hydrated, partial, dry,
+  and non-farmland states. Existing exploratory Paper evidence covers levels 7
+  and 0 only; this semantic correction has no new Paper evidence yet.
 
 - Conditional targeter syntax now covers the official `cond`/
   `targetconditions` parameter aliases, `nearestconditional`/`nearestif`

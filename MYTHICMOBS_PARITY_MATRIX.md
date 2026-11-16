@@ -1962,8 +1962,11 @@ unit coverage share the same canonical names.
 Incremental farmland condition update: official `Moist`/`MoistureLevel` now
 map to strict Bukkit `Farmland` BlockData checks, with `ismoist`,
 `moistureness`, and `moistness` aliases, `l` range migration, and fail-closed
-non-farmland behavior. Exploratory Paper 1.21.11 r81 verifies hydrated moisture
-7, dry moisture 0, range matching, and BlockState restoration.
+non-farmland behavior. The runtime `Moist` evaluator now requires the official
+fully hydrated value `moisture=7`; partially hydrated farmland remains false,
+while `MoistureLevel` continues to evaluate its explicit range. Exploratory
+Paper 1.21.11 r81 verifies hydrated moisture 7, dry moisture 0, range matching,
+and BlockState restoration; no new Paper evidence is claimed for this correction.
 
 Incremental entity condition update: official `MobSize` now maps to Bukkit
 `Slime#getSize()`/`Phantom#getSize()` (including MagmaCube through Slime), with

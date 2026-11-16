@@ -1643,7 +1643,7 @@ the entire MythicMobs feature catalog.
 - Strict Paper fixture `srv-paper-ender-dragon-phase-strict-20261101-r3` verifies `EnderDragonPhase` against a real dragon, including a phase list, a negative match, fail-closed rejection of `CIRCLING,INVALID`, and restoration. All 260 registered probes pass their release outcomes with zero incomplete.
 - Official `Altitude` now measures target height above the Bukkit highest-block surface with Mythic range and `maxHeight` handling; exploratory Paper r79 keeps the utility probe passed.
 - Official `WorldTime`, `SkyLightLevel`, and `LightLevelFromBlocks` conditions now use Bukkit world time and block light-source APIs; exploratory Paper r65 keeps the live `conditionUtilityAliases` probe passed.
-- Official `Moist`/`MoistureLevel` now read only Bukkit `Farmland` BlockData (`moisture > 0` or an `l` range); non-farmland blocks fail closed, and exploratory Paper r81 verifies hydrated, dry, and range paths with restoration.
+- Official `Moist` now matches only fully hydrated Bukkit `Farmland` (`moisture=7`), while `MoistureLevel` keeps its explicit `l` range; partial/dry farmland and non-farmland fail the `Moist` check. Exploratory Paper r81 verifies hydrated, dry, and range paths with restoration; the partial-moisture correction has unit coverage only.
 - Official `MobSize` now reads Bukkit size APIs for `Slime`, `MagmaCube`, and `Phantom`, with Mythic numeric ranges and strict non-size-entity rejection; exploratory Paper r82 verifies a real Slime size transition.
 - Official `BlockTypeInRadius` now counts exact Bukkit materials in a spherical block radius with Mythic amount/radius ranges; exploratory Paper r87 verifies positive STONE and negative DIRT paths with restoration.
 - Official `FallSpeed` now matches positive downward velocity ranges; exploratory Paper r91 extends the live motion condition probe.
@@ -2324,7 +2324,7 @@ spawners:
 | `?height` / `?heightAbove` / `?heightBelow` | `height` / `height-above` / `height-below` | 匹配实体 Y 坐标范围或上下阈值 |
 | `?pitch` / `?yaw` | `pitch` / `yaw` | 匹配实体俯仰角或偏航角范围 |
 | `?onBlock` | `on-block <方块列表>` | 匹配实体脚下的精确 Bukkit 方块材质 |
-| `?moist` / `?isMoist` | `moist` | 目标方块必须是 moisture 大于 0 的 Farmland |
+| `?moist` / `?isMoist` | `moist` | 目标方块必须是完全湿润的 Farmland（moisture=7） |
 | `?moisturelevel` / `?moistureness` / `?moistness` | `moisture-level <范围>` | 通过 `l` 参数匹配 Farmland moisture 等级（0–7） |
 | `?mobsize` / `?size` | `mob-size <范围>` | 匹配 Slime/MagmaCube/Phantom 的 Bukkit size，其他实体失败关闭 |
 | `?damageAmount` / `?amount` | `damage-amount <范围>` | 只在 damage event 上下文匹配 Bukkit final damage，默认 `>0` |

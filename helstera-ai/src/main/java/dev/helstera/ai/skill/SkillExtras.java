@@ -3064,7 +3064,9 @@ public final class SkillExtras {
                 Map.entry("moist", (SkillCatalog.ConditionFactory) a ->
                         ctx -> {
                             Farmland farmland = farmlandAt(conditionLocation(ctx));
-                            return farmland != null && farmland.getMoisture() > 0;
+                            // MythicMobs' Moist condition means fully hydrated farmland,
+                            // not merely farmland with a non-zero moisture value.
+                            return farmland != null && farmland.getMoisture() == 7;
                         }),
                 Map.entry("moisture-level", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange range = numberRange(a, 0);
