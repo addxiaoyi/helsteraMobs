@@ -23,6 +23,14 @@ Version-gated behavior:
 
 Evidence baseline: 2026-11-15, Paper API 1.21.1-R0.1-SNAPSHOT.
 
+Conditions alias update (2026-11-16): `environment` joins `dimension` for
+`dimension-is`, `inregion` joins `region`, and singular
+`playerinradius` joins `playersinradius`. The list parser also recognizes
+`hasplugin` and `mmtype` as condition starts so comma-delimited source lists
+remain lossless. Importer, AI, API, and plugin contract coverage is present;
+no new Paper evidence was added, so the full Conditions catalog remains
+`mapped-unverified`.
+
 Context targeter lifecycle update (2026-11-15): direct `@target`, `@targets`,
 `@trigger`, and `@attacker` paths now filter dead or invalid living entities,
 including projectile shooters, and fail closed when Bukkit state access throws.

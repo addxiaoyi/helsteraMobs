@@ -7,7 +7,7 @@ requires another plugin.
 
 ## Baseline
 
-Audited against the matrix on 2026-11-15:
+Audited against the matrix on 2026-11-16:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
@@ -170,6 +170,14 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   API, AI, and plugin cross-module tests cover Player sneaking, helmet matching,
   and alias preservation. No new Paper evidence is claimed, and the complete
   Conditions catalog remains `mapped-unverified`.
+- Official environment and region naming variants now join the same canonical
+  condition paths: `environment` maps to `dimension-is`, `inregion` maps
+  to `region`, and singular `playerinradius` maps to
+  `players-in-radius`. The list parser recognizes these aliases plus
+  `hasplugin` and `mmtype` as condition starts, preventing comma-delimited
+  source entries from being merged. Migration, API, AI, and plugin tests cover
+  the slice; no new Paper evidence is claimed, so the complete Conditions
+  catalog remains `mapped-unverified`.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

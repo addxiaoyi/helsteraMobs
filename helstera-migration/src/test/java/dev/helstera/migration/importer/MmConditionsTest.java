@@ -780,6 +780,8 @@ class MmConditionsTest {
         assertEquals("mobs-in-chunk 1to5", t("?mobsInChunk{amount=1to5}"));
         assertEquals("mobs-in-chunk <5", t("?mobsInChunk{a=<5}"));
         assertEquals("dimension-is NETHER", t("?dimension{d=NETHER}"));
+        assertEquals("dimension-is NETHER", t("?environment{env=NETHER}"));
+        assertEquals("dimension-is THE_END", t("?environment THE_END"));
         assertTrue(translated("?mobsInChunk{a=>=1}"));
         for (String invalid : List.of(
                 "?mobsInChunk{amount=5to1}",
@@ -1962,12 +1964,15 @@ class MmConditionsTest {
     void regionConditionsMapStrictly() {
         assertEquals("region arena", t("?Region{r=arena}"));
         assertEquals("region arena", t("?region{region=arena}"));
+        assertEquals("region arena", t("?InRegion{r=arena}"));
+        assertEquals("region arena", t("?in-region arena"));
         assertEquals("region arena", t("?region arena"));
         assertEquals("not-in-region arena", t("?NotInRegion{r=arena}"));
         assertEquals("not-in-region arena", t("?not-in-region{region=arena}"));
         for (String invalid : List.of(
                 "?region", "?region{}", "?region{r=}", "?region{unknown=arena}",
                 "?region{r=arena;region=other}", "?region{r=arena,other}",
+                "?inRegion", "?inRegion{}", "?inRegion{unknown=arena}",
                 "?notInRegion{r=arena;bad=true}")) {
             assertUntranslatedPreserved(invalid);
         }

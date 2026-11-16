@@ -47,6 +47,9 @@ class ConditionListParserTest {
                 ConditionListParser.parse("issunny,stormy,isstormy,night"));
         assertEquals(List.of("sneaking", "iscrouching", "iswearing{item=IRON_HELMET}", "night"),
                 ConditionListParser.parse("sneaking,iscrouching,iswearing{item=IRON_HELMET},night"));
+        assertEquals(List.of("environment NETHER", "inregion arena", "playerinradius 1 8",
+                        "hasplugin", "mmtype ZOMBIE", "night"),
+                ConditionListParser.parse("environment NETHER,inregion arena,playerinradius 1 8,hasplugin,mmtype ZOMBIE,night"));
     }
 
     @Test

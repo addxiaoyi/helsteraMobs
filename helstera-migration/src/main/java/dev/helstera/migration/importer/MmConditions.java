@@ -412,10 +412,10 @@ public final class MmConditions {
                     : name.startsWith("weather") ? "weather-is" : "time-is";
             return new Mapped(runtime + " " + value, true);
         }
-        if ("region".equals(name) || "notinregion".equals(name)) {
+        if ("region".equals(name) || "inregion".equals(name) || "notinregion".equals(name)) {
             String region = strictRegionArgument(body);
             if (region == null) return new Mapped(s, false);
-            return new Mapped(("region".equals(name) ? "region " : "not-in-region ") + region, true);
+            return new Mapped(("notinregion".equals(name) ? "not-in-region " : "region ") + region, true);
         }
         if ("inclaim".equals(name)) {
             return body == null || body.isBlank()
@@ -561,7 +561,7 @@ public final class MmConditions {
             if (!validNonNegativeCountRange(amount)) return new Mapped(s, false);
             return new Mapped("mobs-in-chunk " + amount.trim(), true);
         }
-        if ("dimension".equals(name)) {
+        if ("dimension".equals(name) || "environment".equals(name)) {
             String value = firstArgument(body, "dimension", "d", "environment", "env");
             if (value == null) value = normalizeScalar(body);
             return value == null ? new Mapped(s, false)

@@ -2569,13 +2569,14 @@ public final class SkillService {
             case "isblocked", "is-blocked", "blocked" -> "is-blocked";
             case "standon", "stand-on", "standingon", "standing-on" -> "stand-on";
             case "daylight", "isdaylight", "is-daylight" -> "daylight";
-            case "playersinradius" -> "players-in-radius";
+            case "playersinradius", "playerinradius" -> "players-in-radius";
             case "entitiesinradius" -> "entities-in-radius";
             case "mobsinradius" -> "mobs-in-radius";
             case "mobsnearorigin", "mobs-near-origin" -> "mobs-near-origin";
             case "livinginradius", "living-in-radius" -> "living-in-radius";
             case "mobsinchunk", "mobs-in-chunk" -> "mobs-in-chunk";
-            case "dimension", "dimension-is" -> "dimension-is";
+            case "dimension", "dimension-is", "environment" -> "dimension-is";
+            case "region", "inregion" -> "region";
             case "enderdragonalive", "isdragonalive", "dragonalive", "ender-dragon-alive" ->
                     "ender-dragon-alive";
             case "enderdragonphase", "ender-dragon-phase", "edragonphase" -> "ender-dragon-phase";

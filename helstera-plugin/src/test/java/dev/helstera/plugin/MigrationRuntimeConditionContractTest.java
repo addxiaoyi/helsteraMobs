@@ -261,11 +261,13 @@ class MigrationRuntimeConditionContractTest {
     void importedWeatherAliasesReachRuntime() {
         var registry = new BehaviorRegistryImpl();
         var service = new SkillService(registry, null);
-        for (String source : List.of("?isSunny", "?stormy", "?isStormy")) {
+        for (String source : List.of("?sunny", "?isSunny", "?thundering", "?isThundering",
+                "?stormy", "?isStormy")) {
             var imported = dev.helstera.migration.importer.MmConditions.translate(source);
             assertTrue(imported.translated(), source);
             var world = mock(org.bukkit.World.class);
-            boolean thunder = !source.equals("?isSunny");
+            boolean thunder = source.toLowerCase(java.util.Locale.ROOT).contains("thunder")
+                    || source.toLowerCase(java.util.Locale.ROOT).contains("storm");
             when(world.hasStorm()).thenReturn(thunder);
             when(world.isThundering()).thenReturn(thunder);
             var location = new org.bukkit.Location(world, 0, 64, 0);
@@ -302,7 +304,7 @@ class MigrationRuntimeConditionContractTest {
         var context = dev.helstera.api.behavior.BehaviorContext.of(
                 instance, player, 1.0, -1, 0, "IDLE");
 
-        for (String source : List.of("?sneaking", "?isCrouching")) {
+        for (String source : List.of("?sneaking", "?isCrouching", "?isSneaking")) {
             var imported = dev.helstera.migration.importer.MmConditions.translate(source);
             assertTrue(imported.translated(), source);
             String key = service.bindCondition(imported.condition());

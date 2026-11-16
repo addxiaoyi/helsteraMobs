@@ -21,7 +21,8 @@ public final class ConditionListParser {
             "all", "any", "not", "day", "night", "raining", "thundering", "sunny",
             "issunny", "stormy", "isstormy",
             "dawn", "dusk", "world-is", "biome-is", "time-between", "lunar-phase-is",
-            "moon-phase-is", "region", "entities-at-least", "mobs-at-least",
+            "moon-phase-is", "region", "inregion", "dimension", "environment",
+            "entities-at-least", "mobs-at-least",
             "players-at-most", "players-at-least", "health", "health-above", "health-below",
             "health-percent", "target-health", "target-health-above", "target-health-below",
             "distance", "distance-above", "distance-below", "target-within",
@@ -45,6 +46,7 @@ public final class ConditionListParser {
             "target-has-offhand", "target-on-fire", "target-in-air", "target-in-water",
             "target-in-lava", "target-is-sneaking", "target-is-sprinting", "target-is-flying",
             "target-is-gliding", "target-is-swimming", "target-is-blocking",
+            "playersinradius", "playerinradius", "players-in-radius", "mmtype", "hasplugin",
             "crouching", "sneaking", "iscrouching", "is-sneaking",
             "wearing", "iswearing", "wielding", "iswielding"
     );
