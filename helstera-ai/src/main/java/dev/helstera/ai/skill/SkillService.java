@@ -2720,6 +2720,7 @@ public final class SkillService {
             case "raining", "israining", "rain" -> "raining";
             case "sunny", "issunny" -> "sunny";
             case "thundering", "isthundering", "thunder", "stormy", "isstormy" -> "thundering";
+            case "snowing", "issnowing", "is-snowing" -> "snowing";
             case "falling", "isfalling" -> "falling";
             case "drowning", "isdrowning" -> "drowning";
             case "hasauras", "has-auras", "haspotion", "has-potion" -> "has-auras";

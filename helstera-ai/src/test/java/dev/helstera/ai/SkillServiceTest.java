@@ -4517,7 +4517,7 @@ class SkillServiceTest {
         SkillService service = service();
         for (String name : List.of("day", "daytime", "dawn", "dusk", "sunset", "morning", "noon",
                 "midnight", "clear", "sun", "sunny", "isSunny", "rain", "storm", "stormy", "isStormy",
-                "thunder", "thunderstorm")) {
+                "thunder", "thunderstorm", "snowing", "isSnowing", "is-snowing")) {
             assertNotNull(service.bindCondition(name), name);
             assertNull(service.bindCondition(name + "{unknown=true}"), name);
             assertNull(service.bindCondition(name + " unknown=true"), name);

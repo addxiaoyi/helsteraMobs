@@ -18,8 +18,10 @@ public final class ConditionListParser {
     public static final String INVALID_CONDITION = "__helstera_invalid_condition__";
 
     private static final Set<String> CONDITION_STARTS = Set.of(
-            "all", "any", "not", "day", "night", "raining", "thundering", "sunny",
-            "issunny", "stormy", "isstormy",
+            "all", "any", "not", "day", "daytime", "night", "nighttime", "raining", "israining",
+            "rain", "thundering", "isthundering", "sunny", "snowing",
+            "issunny", "clear", "sun", "storm", "stormy", "isstormy", "thunder", "thunderstorm",
+            "issnowing", "is-snowing",
             "dawn", "dusk", "world-is", "biome-is", "time-between", "lunar-phase-is",
             "moon-phase-is", "region", "inregion", "dimension", "environment",
             "entities-at-least", "mobs-at-least",

@@ -31,6 +31,11 @@ remain lossless. Importer, AI, API, and plugin contract coverage is present;
 no new Paper evidence was added, so the full Conditions catalog remains
 `mapped-unverified`.
 
+The same parser slice recognizes the existing `snowing`/`isSnowing` and
+weather/time aliases for direct `SkillService` binding and comma-delimited
+lists. This is alias and parser coverage only; it does not add Paper evidence
+or change the full Conditions status.
+
 Context targeter lifecycle update (2026-11-15): direct `@target`, `@targets`,
 `@trigger`, and `@attacker` paths now filter dead or invalid living entities,
 including projectile shooters, and fail closed when Bukkit state access throws.

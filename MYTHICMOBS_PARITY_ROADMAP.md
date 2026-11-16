@@ -178,6 +178,11 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   source entries from being merged. Migration, API, AI, and plugin tests cover
   the slice; no new Paper evidence is claimed, so the complete Conditions
   catalog remains `mapped-unverified`.
+- The existing `snowing`/`isSnowing` aliases now bind directly through
+  `SkillService`, and the condition-list parser recognizes the remaining
+  weather/time aliases such as `isRaining`, `isThundering`, `daytime`,
+  and `nighttime`. API and AI tests cover direct binding and malformed
+  argument rejection; no new Paper evidence is claimed.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,
