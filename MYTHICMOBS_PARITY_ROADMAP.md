@@ -155,6 +155,13 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   official `amount`/`a` and `food`/`f` forms, uses the upstream default `0`,
   and rejects unknown or duplicate arguments; runtime and cross-module tests
   cover Player-only evaluation. No new Paper evidence is claimed.
+- Official MythicMobs 5.7.2 `sunny`/`isSunny` and
+  `thundering`/`isThundering`/`stormy`/`isStormy` aliases now map through the
+  importer, `SkillService`, and condition-list parser to the clear and thunder
+  weather evaluators. Unknown and duplicate arguments remain preserved and
+  fail closed; migration, API, AI, and plugin cross-module tests cover the
+  alias paths and clear/thunder runtime states. No new Paper evidence is
+  claimed, and the complete Conditions catalog remains `mapped-unverified`.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

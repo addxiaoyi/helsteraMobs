@@ -257,6 +257,34 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Mythic weather aliases reach the canonical runtime conditions")
+    void importedWeatherAliasesReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        for (String source : List.of("?isSunny", "?stormy", "?isStormy")) {
+            var imported = dev.helstera.migration.importer.MmConditions.translate(source);
+            assertTrue(imported.translated(), source);
+            var world = mock(org.bukkit.World.class);
+            boolean thunder = !source.equals("?isSunny");
+            when(world.hasStorm()).thenReturn(thunder);
+            when(world.isThundering()).thenReturn(thunder);
+            var location = new org.bukkit.Location(world, 0, 64, 0);
+            var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+            when(instance.isValid()).thenReturn(true);
+            when(instance.location()).thenReturn(location);
+            var context = dev.helstera.api.behavior.BehaviorContext.of(
+                    instance, null, 1.0, -1, 0, "IDLE");
+            String key = service.bindCondition(imported.condition());
+            assertNotNull(key, service.warnings().toString());
+            assertTrue(registry.testCondition(key, context), source);
+        }
+        assertFalse(dev.helstera.migration.importer.MmConditions
+                .translate("?isSunny{unknown=true}").translated());
+        assertFalse(dev.helstera.migration.importer.MmConditions
+                .translate("?stormy{unknown=true}").translated());
+    }
+
+    @Test
     @DisplayName("imported Mythic UUID compares the selected entity and evaluates trigger UUID placeholders")
     void importedUuidConditionReachesRuntime() {
         var registry = new BehaviorRegistryImpl();

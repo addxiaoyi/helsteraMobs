@@ -19,6 +19,7 @@ public final class ConditionListParser {
 
     private static final Set<String> CONDITION_STARTS = Set.of(
             "all", "any", "not", "day", "night", "raining", "thundering", "sunny",
+            "issunny", "stormy", "isstormy",
             "dawn", "dusk", "world-is", "biome-is", "time-between", "lunar-phase-is",
             "moon-phase-is", "region", "entities-at-least", "mobs-at-least",
             "players-at-most", "players-at-least", "health", "health-above", "health-below",
@@ -180,7 +181,7 @@ public final class ConditionListParser {
         int end = start;
         while (end < value.length()) {
             char c = value.charAt(end);
-            if (Character.isWhitespace(c) || c == '=' || c == '{' || c == '(') break;
+            if (Character.isWhitespace(c) || c == '=' || c == '{' || c == '(' || c == ',') break;
             end++;
         }
         return value.substring(start, end).toLowerCase(Locale.ROOT);
@@ -246,7 +247,7 @@ public final class ConditionListParser {
         int end = 0;
         while (end < normalized.length()) {
             char c = normalized.charAt(end);
-            if (Character.isWhitespace(c) || c == '=' || c == '{' || c == '(') break;
+            if (Character.isWhitespace(c) || c == '=' || c == '{' || c == '(' || c == ',') break;
             end++;
         }
         String token = normalized.substring(0, end).toLowerCase(Locale.ROOT);

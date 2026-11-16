@@ -43,6 +43,8 @@ class ConditionListParserTest {
                 ConditionListParser.parse("day, !raining | time-between=0,12000,night"));
         assertEquals(List.of("factionsame", "night"),
                 ConditionListParser.parse("factionsame,night"));
+        assertEquals(List.of("issunny", "stormy", "isstormy", "night"),
+                ConditionListParser.parse("issunny,stormy,isstormy,night"));
     }
 
     @Test

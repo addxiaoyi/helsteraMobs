@@ -4511,7 +4511,8 @@ class SkillServiceTest {
     void parameterlessTimeAndWeatherAliasesRejectArguments() {
         SkillService service = service();
         for (String name : List.of("day", "daytime", "dawn", "dusk", "sunset", "morning", "noon",
-                "midnight", "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm")) {
+                "midnight", "clear", "sun", "sunny", "isSunny", "rain", "storm", "stormy", "isStormy",
+                "thunder", "thunderstorm")) {
             assertNotNull(service.bindCondition(name), name);
             assertNull(service.bindCondition(name + "{unknown=true}"), name);
             assertNull(service.bindCondition(name + " unknown=true"), name);

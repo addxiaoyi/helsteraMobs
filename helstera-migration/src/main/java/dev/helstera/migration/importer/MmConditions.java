@@ -161,6 +161,7 @@ public final class MmConditions {
             "hastarget", "incombat", "offgcd", "offglobalcooldown",
             "isinaudience", "inaudience", "audiencecontains",
             "night", "nighttime", "raining", "israining", "thundering", "isthundering",
+            "stormy", "isstormy", "issunny",
             "snowing", "issnowing",
             "angry", "isangry", "pollinated", "ispollinated", "hasnectar",
             "day", "daytime", "dawn", "dusk", "sunset", "morning", "noon", "midnight",
@@ -470,7 +471,8 @@ public final class MmConditions {
         if ("morning".equals(name)) return new Mapped("time-is morning", true);
         if ("noon".equals(name)) return new Mapped("time-is noon", true);
         if ("midnight".equals(name)) return new Mapped("time-is midnight", true);
-        if ("clear".equals(name) || "sun".equals(name) || "sunny".equals(name)) {
+        if ("clear".equals(name) || "sun".equals(name) || "sunny".equals(name)
+                || "issunny".equals(name)) {
             return new Mapped("weather-is clear", true);
         }
         if ("rain".equals(name)) {
@@ -479,7 +481,8 @@ public final class MmConditions {
         if ("raining".equals(name) || "israining".equals(name)) {
             return new Mapped("raining", true);
         }
-        if ("storm".equals(name) || "thunder".equals(name) || "thunderstorm".equals(name)) {
+        if ("storm".equals(name) || "thunder".equals(name) || "thunderstorm".equals(name)
+                || "stormy".equals(name) || "isstormy".equals(name)) {
             return new Mapped("weather-is thunder", true);
         }
         if ("thundering".equals(name) || "isthundering".equals(name)) {

@@ -2716,7 +2716,8 @@ public final class SkillService {
             case "worldtime", "world-time" -> "world-time";
             case "night", "nighttime" -> "night";
             case "raining", "israining", "rain" -> "raining";
-            case "thundering", "isthundering", "thunder" -> "thundering";
+            case "sunny", "issunny" -> "sunny";
+            case "thundering", "isthundering", "thunder", "stormy", "isstormy" -> "thundering";
             case "falling", "isfalling" -> "falling";
             case "drowning", "isdrowning" -> "drowning";
             case "hasauras", "has-auras", "haspotion", "has-potion" -> "has-auras";

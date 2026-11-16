@@ -172,7 +172,8 @@ class MmConditionsTest {
         for (String name : List.of("hasTarget", "night", "isRaining", "isThundering", "isLiving",
                 "snowing", "isSnowing",
                 "day", "daytime", "dawn", "dusk", "sunset", "morning", "noon", "midnight",
-                "clear", "sun", "sunny", "rain", "storm", "thunder", "thunderstorm",
+                "clear", "sun", "sunny", "isSunny", "rain", "storm", "stormy", "isStormy",
+                "thunder", "thunderstorm",
                 "charged", "climbing", "isClimbing", "invisible", "isInvisible", "glowing", "isGlowing",
                 "falling", "isFalling", "targetIsClimbing", "targetIsInvisible", "targetIsGlowing",
                 "isUsingSpyglass", "isScoping",
@@ -398,6 +399,9 @@ class MmConditionsTest {
         assertEquals("time-is dawn", t("?dawn"));
         assertEquals("time-is dusk", t("?dusk"));
         assertEquals("weather-is clear", t("?sunny"));
+        assertEquals("weather-is clear", t("?isSunny"));
+        assertEquals("weather-is thunder", t("?stormy"));
+        assertEquals("weather-is thunder", t("?isStormy"));
         assertEquals("on-fire", t("?burning"));
         assertEquals("is-blocking", t("?blocking"));
         assertEquals("is-powered", t("?charged"));
