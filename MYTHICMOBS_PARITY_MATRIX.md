@@ -36,6 +36,12 @@ weather/time aliases for direct `SkillService` binding and comma-delimited
 lists. This is alias and parser coverage only; it does not add Paper evidence
 or change the full Conditions status.
 
+The direct-binding audit also closes migrated relationship/state aliases for
+mounted, leash, owner, parent, sibling, claim, patrol-leader, invulnerable,
+burning, and global-cooldown conditions. Unknown arguments fail before the
+runtime factory is created. This remains alias/runtime contract coverage only;
+the full Conditions catalog remains `mapped-unverified`.
+
 Context targeter lifecycle update (2026-11-15): direct `@target`, `@targets`,
 `@trigger`, and `@attacker` paths now filter dead or invalid living entities,
 including projectile shooters, and fail closed when Bukkit state access throws.

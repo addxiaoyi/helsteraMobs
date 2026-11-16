@@ -4513,6 +4513,21 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("all migrated relationship and state aliases bind directly")
+    void migratedRelationshipAliasesBindDirectly() {
+        SkillService service = service();
+        for (String alias : List.of(
+                "offGlobalCooldown", "grounded", "isInvincible", "isMounted", "isPatrolLeader",
+                "isLeashed", "leashed", "targetIsLeashed", "targetLeashed", "hasOwner",
+                "targetHasOwner", "targetOwnerIsPlayer", "targetOwnerIsOnline", "hasParent",
+                "isParent", "parent", "isParentAlive", "parentAlive", "isSibling", "sibling",
+                "inClaim", "targetIsInvulnerable", "burning")) {
+            assertNotNull(service.bindCondition(alias), alias);
+            assertNull(service.bindCondition(alias + "{unknown=true}"), alias);
+        }
+    }
+
+    @Test
     void parameterlessTimeAndWeatherAliasesRejectArguments() {
         SkillService service = service();
         for (String name : List.of("day", "daytime", "dawn", "dusk", "sunset", "morning", "noon",

@@ -394,12 +394,12 @@ public final class SkillService {
                 }
             }
         }
-        if (!args.isEmpty() && Set.of("night", "raining", "thundering", "day", "daytime", "dawn",
+        if (!args.isEmpty() && Set.of("offgcd", "night", "raining", "thundering", "day", "daytime", "dawn",
                 "dusk", "sunset", "morning", "noon", "midnight", "clear", "sun", "sunny", "storm",
                 "thunderstorm", "is-living",
                 "is-player", "is-mob", "is-monster", "is-animal", "is-villager", "is-tameable", "is-raider",
                 "is-baby", "is-child", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
-                "is-natural-block",
+                "is-natural-block", "is-invulnerable",
                 "target-is-baby", "target-is-adult", "target-is-tamed", "target-is-sheared",
                 "target-is-saddled", "target-is-powered", "is-sneaking", "is-sprinting", "is-flying",
                 "is-climbing", "is-invisible", "is-glowing", "falling", "target-is-climbing",
@@ -2444,7 +2444,7 @@ public final class SkillService {
             case "aerial", "isaerial", "is-aerial" -> "aerial";
             case "isenderman", "enderman", "is-enderman" -> "is-enderman";
             case "israider", "raider" -> "is-raider";
-            case "israiderpatrolleader", "is-patrol-leader" -> "is-raider-patrol-leader";
+            case "israiderpatrolleader", "ispatrolleader", "is-patrol-leader" -> "is-raider-patrol-leader";
             case "isundead", "undead" -> "is-undead";
             case "iscreature", "creature" -> "is-creature";
             case "isbaby", "baby" -> "is-baby";
@@ -2535,6 +2535,14 @@ public final class SkillService {
             case "targetholding", "target-holding" -> "target-holding";
             case "targetwearing", "target-wearing" -> "target-wearing";
             case "wearing", "iswearing", "wielding", "iswielding" -> "wearing";
+            case "hasowner", "has-owner" -> "has-owner";
+            case "targethasowner", "target-has-owner" -> "target-has-owner";
+            case "targetownerisplayer", "target-owner-is-player" -> "target-owner-is-player";
+            case "targetownerisonline", "target-owner-is-online" -> "target-owner-is-online";
+            case "hasparent", "has-parent" -> "has-parent";
+            case "isparent", "parent", "is-parent" -> "is-parent";
+            case "isparentalive", "parentalive", "is-parent-alive" -> "is-parent-alive";
+            case "issibling", "sibling", "is-sibling" -> "is-sibling";
             case "ownerisplayer", "owner-is-player" -> "owner-is-player";
             case "ownerisonline", "owner-is-online" -> "owner-is-online";
             case "owner", "isowner", "is-owner" -> "is-owner";
@@ -2553,7 +2561,7 @@ public final class SkillService {
             case "sprinting", "issprinting", "sprintingis" -> "is-sprinting";
             case "glowing", "isglowing", "glowingis" -> "is-glowing";
             case "invisible", "isinvisible", "invisibleis" -> "is-invisible";
-            case "invulnerable", "isinvulnerable", "invulnerableis" -> "is-invulnerable";
+            case "invulnerable", "isinvulnerable", "isinvincible", "invulnerableis" -> "is-invulnerable";
             case "swimming", "isswimming", "swimmingis" -> "is-swimming";
             case "climbing", "isclimbing", "climbingis" -> "is-climbing";
             case "inair", "isinair", "is-in-air", "airborne", "isairborne" -> "in-air";
@@ -2561,11 +2569,11 @@ public final class SkillService {
             case "flying", "isflying", "flyingis" -> "is-flying";
             case "blocking", "isblocking", "blockingis" -> "is-blocking";
             case "facingtarget", "facing-target" -> "facing-target";
-            case "onground", "isonground", "is-on-ground" -> "on-ground";
+            case "onground", "isonground", "grounded", "is-on-ground" -> "on-ground";
             case "inliquid", "in-liquid", "is-in-liquid" -> "in-liquid";
             case "inwater", "isinwater", "is-in-water" -> "in-water";
             case "inlava", "isinlava", "is-in-lava" -> "in-lava";
-            case "onfire", "isonfire", "is-on-fire", "isburning" -> "on-fire";
+            case "onfire", "isonfire", "is-on-fire", "isburning", "burning" -> "on-fire";
             case "isblocked", "is-blocked", "blocked" -> "is-blocked";
             case "standon", "stand-on", "standingon", "standing-on" -> "stand-on";
             case "daylight", "isdaylight", "is-daylight" -> "daylight";
@@ -2577,6 +2585,7 @@ public final class SkillService {
             case "mobsinchunk", "mobs-in-chunk" -> "mobs-in-chunk";
             case "dimension", "dimension-is", "environment" -> "dimension-is";
             case "region", "inregion" -> "region";
+            case "inclaim", "in-claim" -> "in-claim";
             case "enderdragonalive", "isdragonalive", "dragonalive", "ender-dragon-alive" ->
                     "ender-dragon-alive";
             case "enderdragonphase", "ender-dragon-phase", "edragonphase" -> "ender-dragon-phase";
@@ -2628,7 +2637,8 @@ public final class SkillService {
             case "targethealthabove" -> "target-health-above";
             case "targethealthpercent", "targethealthpercentage" -> "target-health-percent";
             case "targethealth" -> "target-health";
-            case "targetinvulnerable", "target-is-invulnerable", "targetinvulnerableis" -> "target-invulnerable";
+            case "targetinvulnerable", "targetisinvulnerable", "target-is-invulnerable", "targetinvulnerableis" ->
+                    "target-invulnerable";
             case "gamemode", "gamemodeis" -> "game-mode-is";
             case "serverispaper", "is-paper", "ispaper" -> "server-is-paper";
             case "servernmsversion", "server-nms-version", "servernms", "nmsversion" ->
@@ -2697,8 +2707,10 @@ public final class SkillService {
             case "isvehicle", "is-vehicle", "vehicle" -> "is-vehicle";
             case "targethaspassenger", "target-has-passenger", "targethaspassengers" -> "target-has-passenger";
             case "targetisvehicle", "target-is-vehicle" -> "target-is-vehicle";
+            case "isleashed", "leashed", "is-leashed" -> "is-leashed";
+            case "targetisleashed", "targetleashed", "target-is-leashed" -> "target-is-leashed";
             case "randomchance" -> "random-chance";
-            case "offgcd", "off-global-cooldown" -> "offgcd";
+            case "offgcd", "offglobalcooldown", "off-global-cooldown" -> "offgcd";
             case "healthbelow" -> "health-below";
             case "healthabove" -> "health-above";
             case "healthpercent", "health-percentage" -> "health-percent";
@@ -2732,7 +2744,7 @@ public final class SkillService {
                     "mythic-has-aura-stacks";
             case "hasauratype", "has-aura-type", "hasbufftype", "has-buff-type",
                     "hasdebufftype", "has-debuff-type" -> "mythic-has-aura-type";
-            case "isriding", "riding", "is-mounted" -> "mounted";
+            case "ismounted", "isriding", "riding", "is-mounted" -> "mounted";
             case "vehicleisdead", "vehicle-is-dead" -> "vehicle-is-dead";
             case "targetwithin", "target-within" -> "target-within";
             case "targetnotwithin", "target-not-within" -> "target-not-within";

@@ -183,6 +183,10 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   weather/time aliases such as `isRaining`, `isThundering`, `daytime`,
   and `nighttime`. API and AI tests cover direct binding and malformed
   argument rejection; no new Paper evidence is claimed.
+- A direct-binding audit closed migrated relationship/state aliases for
+  mounted, leash, owner, parent, sibling, claim, patrol-leader, invulnerable,
+  burning, and global-cooldown conditions. Unknown arguments are rejected
+  before runtime factory creation; this adds no Paper evidence.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,
