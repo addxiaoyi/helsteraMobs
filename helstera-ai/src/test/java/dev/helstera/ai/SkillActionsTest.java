@@ -687,6 +687,67 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("impact and displacement mechanics accept imported named numeric arguments")
+    void impactAndDisplacementMechanicsSupportNamedArguments() {
+        World world = mock(World.class);
+        LivingEntity target = mock(LivingEntity.class);
+        Location origin = new Location(world, 0, 64, 0);
+        when(target.getWorld()).thenReturn(world);
+        when(target.isValid()).thenReturn(true);
+        when(target.getLocation()).thenReturn(new Location(world, 1, 64, 0));
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector());
+        var targetContext = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,
+                "IDLE", null, null, List.of(target), origin, null);
+
+        SkillCatalog.actions().get("ignite-targets")
+                .create(List.of("duration=80")).accept(targetContext);
+        verify(target).setFireTicks(80);
+
+        SkillCatalog.actions().get("knockback-targets")
+                .create(List.of("power=2", "vertical=0.5")).accept(targetContext);
+        var knockback = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+        verify(target).setVelocity(knockback.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(2.0, knockback.getValue().getX(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(0.5, knockback.getValue().getY(), 1.0e-9);
+
+        org.mockito.Mockito.clearInvocations(target);
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        LivingEntity caster = mock(LivingEntity.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(instance.location()).thenReturn(origin);
+        when(caster.isValid()).thenReturn(true);
+        when(caster.getVelocity()).thenReturn(new org.bukkit.util.Vector(0, 0.1, 0));
+        when(world.getNearbyEntities(org.mockito.ArgumentMatchers.any(Location.class),
+                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyDouble())).thenReturn(List.of(caster, target));
+        var selfContext = BehaviorContext.of(instance, (LivingEntity) null, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("pull")
+                .create(List.of("radius=6", "power=2")).accept(selfContext);
+        verify(target).setVelocity(org.mockito.ArgumentMatchers.any(org.bukkit.util.Vector.class));
+
+        org.mockito.Mockito.clearInvocations(caster);
+        SkillExtras.actions().get("leap")
+                .create(List.of("amount=0.8")).accept(selfContext);
+        var leap = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+        verify(caster).setVelocity(leap.capture());
+        org.junit.jupiter.api.Assertions.assertEquals(0.8, leap.getValue().getY(), 1.0e-9);
+
+        org.mockito.Mockito.clearInvocations(target);
+        SkillExtras.actions().get("damage-melee")
+                .create(List.of("damage=4", "radius=3.5")).accept(selfContext);
+        verify(target).damage(4.0, caster);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillCatalog.actions().get("ignite-targets")
+                        .create(List.of("duration=Infinity")));
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("damage-melee")
+                        .create(List.of("radius=NaN")));
+    }
+
+    @Test
     @DisplayName("fire mechanics set and clear caster fire ticks")
     void fireActionsSetAndClearTicks() {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);

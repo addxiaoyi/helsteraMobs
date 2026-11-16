@@ -6470,8 +6470,9 @@ public final class SkillExtras {
                 Map.entry("jump-targets", (SkillCatalog.ActionFactory) SkillExtras::jumpTargetsAction),
 
                 Map.entry("pull", (SkillCatalog.ActionFactory) a -> {
-                    var radius = dynamicNum(a, 0, 6);
-                    var power = dynamicNum(a, 1, 1.0);
+                    var radius = dynamicKeyedNum(a, 0, 6, "radius", "r");
+                    var power = dynamicKeyedNum(a, 1, 1.0,
+                            "power", "velocity", "strength", "amount", "value");
                     return ctx -> {
                         Location me = selfLoc(ctx);
                         if (me == null) return;
@@ -6495,7 +6496,8 @@ public final class SkillExtras {
                 Map.entry("force-pull", (SkillCatalog.ActionFactory) SkillExtras::forcePullAction),
                 Map.entry("force-pull-targets", (SkillCatalog.ActionFactory) SkillExtras::forcePullAction),
                 Map.entry("leap", (SkillCatalog.ActionFactory) a -> {
-                    var power = dynamicNum(a, 0, 1.2);
+                    var power = dynamicKeyedNum(a, 0, 1.2,
+                            "velocity", "power", "amount", "strength", "value");
                     return ctx -> selfLiving(ctx).ifPresent(e -> {
                         try {
                             e.setVelocity(e.getVelocity().setY(power.applyAsDouble(ctx)));
@@ -6505,7 +6507,8 @@ public final class SkillExtras {
                     });
                 }),
                 Map.entry("leap-targets", (SkillCatalog.ActionFactory) a -> {
-                    var power = dynamicNum(a, 0, 1.2);
+                    var power = dynamicKeyedNum(a, 0, 1.2,
+                            "velocity", "power", "amount", "strength", "value");
                     return ctx -> {
                         double value = power.applyAsDouble(ctx);
                         targetEntities(ctx).forEach(entity -> {
@@ -6610,14 +6613,16 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("damage-melee", (SkillCatalog.ActionFactory) a -> {
-                    var dmg = dynamicNum(a, 0, 3);
-                    double radius = num(a, 1, 2.5);
+                    var dmg = dynamicKeyedNum(a, 0, 3,
+                            "amount", "a", "damage", "value");
+                    var radius = dynamicKeyedNum(a, 1, 2.5, "radius", "r");
                     return ctx -> {
                         Location me = selfLoc(ctx);
                         double amount = dmg.applyAsDouble(ctx);
-                        if (me == null || amount <= 0) return;
+                        double range = radius.applyAsDouble(ctx);
+                        if (me == null || amount <= 0 || range < 0) return;
                         var src = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
-                        for (LivingEntity e : nearby(me, radius, src)) {
+                        for (LivingEntity e : nearby(me, range, src)) {
                             try {
                                 applyDamage(ctx, e, amount, "ENTITY_ATTACK");
                             } catch (Throwable ignored) {

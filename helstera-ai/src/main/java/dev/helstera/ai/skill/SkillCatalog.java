@@ -907,15 +907,18 @@ public final class SkillCatalog {
                     };
                 }),
                 java.util.Map.entry("ignite-targets", (ActionFactory) a -> {
-                    var ticks = dynamicNum(a, 0, 40);
+                    var ticks = dynamicKeyedNum(a, 0, 40,
+                            "ticks", "duration", "time", "t");
                     return ctx -> {
                         int value = (int) ticks.applyAsDouble(ctx);
                         if (value > 0) activeTargets(ctx).forEach(target -> target.setFireTicks(value));
                     };
                 }),
                 java.util.Map.entry("knockback-targets", (ActionFactory) a -> {
-                    var power = dynamicNum(a, 0, 1);
-                    var up = dynamicNum(a, 1, 0.4);
+                    var power = dynamicKeyedNum(a, 0, 1,
+                            "power", "strength", "amount", "value");
+                    var up = dynamicKeyedNum(a, 1, 0.4,
+                            "vertical", "up", "y");
                     return ctx -> {
                         double strength = power.applyAsDouble(ctx);
                         double vertical = up.applyAsDouble(ctx);
