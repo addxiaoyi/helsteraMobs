@@ -6154,13 +6154,15 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("modify-speed", (SkillCatalog.ActionFactory) a -> {
-                    var factor = dynamicNum(a, 0, 1.0);
+                    var factor = dynamicKeyedNum(a, 0, 1.0,
+                            "amount", "a", "speed", "factor", "value");
                     return ctx -> selfLiving(ctx).ifPresent(e ->
                             scaleAttribute(e, org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED,
                                     factor.applyAsDouble(ctx)));
                 }),
                 Map.entry("modify-speed-targets", (SkillCatalog.ActionFactory) a -> {
-                    var factor = dynamicNum(a, 0, 1.0);
+                    var factor = dynamicKeyedNum(a, 0, 1.0,
+                            "amount", "a", "speed", "factor", "value");
                     return ctx -> {
                         double value = factor.applyAsDouble(ctx);
                         targetEntities(ctx).forEach(entity -> scaleAttribute(entity,
@@ -6168,13 +6170,15 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("set-tick-speed", (SkillCatalog.ActionFactory) a -> {
-                    var factor = dynamicNum(a, 0, 1.0);
+                    var factor = dynamicKeyedNum(a, 0, 1.0,
+                            "amount", "a", "speed", "factor", "value");
                     return ctx -> selfLiving(ctx).ifPresent(e ->
                             scaleAttribute(e, org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED,
                                     factor.applyAsDouble(ctx)));
                 }),
                 Map.entry("set-tick-speed-targets", (SkillCatalog.ActionFactory) a -> {
-                    var factor = dynamicNum(a, 0, 1.0);
+                    var factor = dynamicKeyedNum(a, 0, 1.0,
+                            "amount", "a", "speed", "factor", "value");
                     return ctx -> {
                         double value = factor.applyAsDouble(ctx);
                         targetEntities(ctx).forEach(entity -> scaleAttribute(entity,

@@ -564,6 +564,61 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("movement speed mechanics accept named factors for self and targets")
+    void movementSpeedMechanicsSupportNamedFactors() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var casterAttribute = org.mockito.Mockito.mock(org.bukkit.attribute.AttributeInstance.class);
+        var targetAttribute = org.mockito.Mockito.mock(org.bukkit.attribute.AttributeInstance.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        org.mockito.Mockito.when(caster.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED))
+                .thenReturn(casterAttribute);
+        org.mockito.Mockito.when(target.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED))
+                .thenReturn(targetAttribute);
+        org.mockito.Mockito.when(casterAttribute.getBaseValue()).thenReturn(0.1);
+        org.mockito.Mockito.when(targetAttribute.getBaseValue()).thenReturn(0.1);
+        var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0, "IDLE", null,
+                target, List.of(target), null, null);
+        var selfContext = BehaviorContext.of(instance, caster, 1.0, -1, 0, "IDLE");
+
+        SkillExtras.actions().get("modify-speed").create(List.of("speed=2")).accept(selfContext);
+        SkillExtras.actions().get("set-tick-speed").create(List.of("factor=3")).accept(selfContext);
+        SkillExtras.actions().get("modify-speed-targets").create(List.of("amount=4")).accept(context);
+        SkillExtras.actions().get("set-tick-speed-targets").create(List.of("value=5")).accept(context);
+
+        verify(casterAttribute).setBaseValue(0.2);
+        verify(casterAttribute).setBaseValue(0.30000000000000004);
+        verify(targetAttribute).setBaseValue(0.4);
+        verify(targetAttribute).setBaseValue(0.5);
+    }
+
+    @Test
+    @DisplayName("movement speed mechanics retain positional placeholders and reject non-finite named values")
+    void movementSpeedMechanicsKeepPlaceholdersAndRejectNonFiniteValues() {
+        var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
+        var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        var attribute = org.mockito.Mockito.mock(org.bukkit.attribute.AttributeInstance.class);
+        org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
+        org.mockito.Mockito.when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        org.mockito.Mockito.when(target.getHealth()).thenReturn(4.0);
+        org.mockito.Mockito.when(target.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED))
+                .thenReturn(attribute);
+        org.mockito.Mockito.when(attribute.getBaseValue()).thenReturn(0.1);
+        var context = BehaviorContext.continueExecution(instance, target, 1.0, -1, 0, "IDLE", null,
+                target, List.of(target), null, null);
+
+        SkillExtras.actions().get("modify-speed-targets")
+                .create(List.of("speed=<target.hp.raw>")).accept(context);
+
+        verify(attribute).setBaseValue(0.4);
+        assertThrows(IllegalArgumentException.class,
+                () -> SkillExtras.actions().get("set-tick-speed").create(List.of("factor=NaN")));
+    }
+
+    @Test
     @DisplayName("fire mechanics set and clear caster fire ticks")
     void fireActionsSetAndClearTicks() {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
