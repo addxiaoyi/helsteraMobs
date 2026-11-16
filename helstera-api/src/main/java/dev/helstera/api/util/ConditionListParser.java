@@ -31,7 +31,7 @@ public final class ConditionListParser {
             "is-on-ground", "on-ground", "in-water", "in-lava", "in-air", "is-blocked",
             "stand-on", "daylight", "is-alive", "is-dead", "is-valid", "is-player",
             "is-living", "is-mob", "is-monster", "is-animal", "is-undead", "is-creature",
-            "is-baby", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered",
+            "is-baby", "is-adult", "is-tamed", "is-sheared", "is-saddled", "is-powered", "creepercharged",
             "is-collidable", "has-offhand", "variable", "variable-equals", "variable-contains",
             "score", "global-score", "plugin", "plugin-exists", "is-skill", "spawn-reason",
             "item-type", "entity-item-type", "block-type", "structure", "frozen", "is-frozen",

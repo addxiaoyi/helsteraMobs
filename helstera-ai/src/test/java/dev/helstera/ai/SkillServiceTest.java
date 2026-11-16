@@ -4371,6 +4371,7 @@ class SkillServiceTest {
         when(creeper.isPowered()).thenReturn(true);
         BehaviorContext creeperContext = BehaviorContext.of(null, creeper, 1.0, -1, 0, "IDLE");
         assertTrue(registry.testCondition(service.bindCondition("charged"), creeperContext));
+        assertTrue(registry.testCondition(service.bindCondition("creeperCharged"), creeperContext));
     }
 
     @Test

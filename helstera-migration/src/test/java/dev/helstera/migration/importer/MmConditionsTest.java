@@ -566,6 +566,8 @@ class MmConditionsTest {
         assertEquals("is-sheared", t("?isSheared"));
         assertEquals("is-saddled", t("?isSaddled"));
         assertEquals("is-powered", t("?isCharged"));
+        assertEquals("is-powered", t("?creeperCharged"));
+        assertFalse(translated("?creeperCharged{unknown=true}"));
         assertEquals("is-op", t("?isOp"));
         assertEquals("has-ai", t("?hasAI"));
         assertEquals("has-gravity", t("?hasGravity"));

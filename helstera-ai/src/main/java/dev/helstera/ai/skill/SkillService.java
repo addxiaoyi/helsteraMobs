@@ -2455,7 +2455,7 @@ public final class SkillService {
             case "istamed", "tamed" -> "is-tamed";
             case "issheared", "sheared" -> "is-sheared";
             case "issaddled", "saddled" -> "is-saddled";
-            case "ispowered", "powered", "ischarged", "charged" -> "is-powered";
+            case "ispowered", "powered", "ischarged", "charged", "creepercharged" -> "is-powered";
             case "iscollidable", "is-collidable", "collidable" -> "is-collidable";
             case "hasoffhand", "has-offhand", "offhand" -> "has-offhand";
             case "isop", "is-op", "isoperator", "is-operator" -> "is-op";

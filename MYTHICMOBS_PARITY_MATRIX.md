@@ -2143,6 +2143,13 @@ exploratory Paper 1.21.11 r32 evidence cover same, different, and no-target
 fail-closed paths. The alias closes an importer/runtime naming gap and does not
 add new Paper evidence.
 
+Creeper charge condition update: official Mythic `charged`, `isCharged`, and
+`creeperCharged` aliases now share the existing `is-powered` evaluator, which
+reads Bukkit `Creeper#isPowered()` and fails closed for non-Creeper or missing
+entities. Importer, runtime, list-parser, and migration-to-runtime tests cover
+the alias and malformed arguments. This closes the missing official alias only;
+existing charged-state Paper evidence remains the evidence boundary.
+
 Owner condition update: Mythic `ownerIsPlayer` now checks both Bukkit
 Tameable owners and Helstera PDC-backed custom owners; migration, unit, and
 exploratory Paper 1.21.11 r33 custom-owner evidence cover the player-owner

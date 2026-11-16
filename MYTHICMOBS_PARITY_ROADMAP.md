@@ -139,6 +139,11 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   for the exact `same-faction` evaluator. Importer, runtime, and cross-module
   tests cover the alias and reject supplied arguments. This closes a naming gap
   only; the existing exploratory Paper evidence remains the evidence boundary.
+- Official MythicMobs 5.7.2 `creeperCharged` now joins `charged` and
+  `isCharged` as aliases for the Bukkit `Creeper#isPowered()` evaluator.
+  Importer, list-parser, runtime, and cross-module tests cover the alias and
+  reject supplied arguments. Existing charged-state Paper evidence remains the
+  evidence boundary.
 - Track Mythic-only or premium conditions separately from Bukkit-native ones.
 
 **Exit:** every condition in the declared catalog has a verified implementation,

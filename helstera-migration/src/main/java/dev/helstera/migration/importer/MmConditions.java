@@ -170,7 +170,7 @@ public final class MmConditions {
             "isundead", "iscreature", "child", "isop", "isoperator", "iscollidable", "onground", "grounded",
             "isinvulnerable", "isinvincible", "iscancelled", "iscanceled", "cancelled", "canceled",
             "isbaby", "ischild", "isadult", "istamed", "issheared", "issaddled", "ispowered", "ischarged",
-            "charged", "climbing", "isclimbing", "invisible", "isinvisible", "glowing", "isglowing",
+            "creepercharged", "charged", "climbing", "isclimbing", "invisible", "isinvisible", "glowing", "isglowing",
             "isinsurvivalmode", "insurvivalmode",
             "isusingspyglass", "isscoping",
             "premium", "ispremium", "iscool",
@@ -895,7 +895,8 @@ public final class MmConditions {
         if ("istamed".equals(name)) return new Mapped("is-tamed", true);
         if ("issheared".equals(name)) return new Mapped("is-sheared", true);
         if ("issaddled".equals(name)) return new Mapped("is-saddled", true);
-        if ("ispowered".equals(name) || "ischarged".equals(name)) {
+        if ("ispowered".equals(name) || "ischarged".equals(name)
+                || "creepercharged".equals(name)) {
             return new Mapped("is-powered", true);
         }
         if ("iscollidable".equals(name)) return new Mapped("is-collidable", true);

@@ -196,6 +196,25 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("imported Mythic creeperCharged alias reaches the powered Creeper runtime")
+    void importedCreeperChargedAliasReachesRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var creeper = mock(org.bukkit.entity.Creeper.class);
+        when(creeper.isPowered()).thenReturn(true);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                null, creeper, 1.0, -1, 0, "IDLE");
+        var imported = dev.helstera.migration.importer.MmConditions.translate("?creeperCharged");
+        assertTrue(imported.translated());
+        assertEquals("is-powered", imported.condition());
+        String key = service.bindCondition(imported.condition());
+        assertNotNull(key, service.warnings().toString());
+        assertTrue(registry.testCondition(key, context));
+        assertFalse(dev.helstera.migration.importer.MmConditions
+                .translate("?creeperCharged{unknown=true}").translated());
+    }
+
+    @Test
     @DisplayName("imported Mythic UUID compares the selected entity and evaluates trigger UUID placeholders")
     void importedUuidConditionReachesRuntime() {
         var registry = new BehaviorRegistryImpl();
