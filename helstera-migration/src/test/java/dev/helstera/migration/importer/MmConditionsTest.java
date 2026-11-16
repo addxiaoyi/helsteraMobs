@@ -1013,6 +1013,13 @@ class MmConditionsTest {
         assertEquals("field-of-view 90 15", t("?fov{a=90;r=15}"));
         assertTrue(translated("?infieldofview{angle=45}"));
         assertFalse(translated("?fieldOfView{angle=invalid}"));
+        for (String invalid : List.of(
+                "?fieldOfView{unknown=90}", "?fieldOfView{angle=90;a=45}",
+                "?fieldOfView{angle=90;rotation=0;extra=1}",
+                "?fieldOfView{angle=90;0}", "?fieldOfView{angle=181}",
+                "?fieldOfView{angle=NaN}")) {
+            assertUntranslatedPreserved(invalid);
+        }
     }
 
     @Test

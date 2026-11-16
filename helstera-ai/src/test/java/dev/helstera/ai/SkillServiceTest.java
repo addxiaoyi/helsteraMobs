@@ -3280,6 +3280,25 @@ class SkillServiceTest {
     }
 
     @Test
+    @DisplayName("view and potion conditions preserve named arguments at the direct binding boundary")
+    void viewAndPotionConditionsRejectSilentNamedArgumentLoss() {
+        var svc = service();
+        assertNotNull(svc.bindCondition("field-of-view{a=90;r=15}"));
+        assertNotNull(svc.bindCondition("looking-at{b=STONE;d=5}"));
+        assertNotNull(svc.bindCondition("has-potion-effect{effect=ANY;level=1to2;duration=80to100}"));
+        for (String invalid : List.of(
+                "field-of-view{unknown=90}", "field-of-view{angle=90;a=45}",
+                "field-of-view{angle=181}", "field-of-view{angle=90;0}",
+                "looking-at{b=STONE;entity=COW}", "looking-at{b=STONE;d=0}",
+                "looking-at{b=STONE;unknown=true}", "looking-at{STONE;d=5}",
+                "has-potion-effect{type=SPEED;effect=ANY}",
+                "has-potion-effect{type=SPEED;unknown=1}",
+                "has-potion-effect{type=SPEED;level=NaN}")) {
+            assertNull(svc.bindCondition(invalid), invalid);
+        }
+    }
+
+    @Test
     @DisplayName("nested composite conditions preserve braces and support negation")
     void nestedCompositeConditionsBind() {
         var svc = service();

@@ -1190,11 +1190,10 @@ public final class MmConditions {
             }
         }
         if ("fieldofview".equals(name) || "infieldofview".equals(name) || "fov".equals(name)) {
-            String angle = firstArgument(body, "angle", "a");
-            String rotation = firstArgument(body, "rotation", "r");
-            if (angle == null) angle = normalizeScalar(body);
-            if (angle == null) angle = "90";
-            if (rotation == null) rotation = "0";
+            Map<String, String> arguments = strictFieldOfViewArguments(body);
+            if (arguments == null) return new Mapped(s, false);
+            String angle = arguments.getOrDefault("angle", "90");
+            String rotation = arguments.getOrDefault("rotation", "0");
             try {
                 double parsedAngle = Double.parseDouble(angle);
                 double parsedRotation = Double.parseDouble(rotation);
@@ -1222,6 +1221,10 @@ public final class MmConditions {
             String duration = arguments.get("duration");
             if (level != null && !validNumberRange(level)) return new Mapped(s, false);
             if (duration != null && !validNumberRange(duration)) return new Mapped(s, false);
+            if (level == null && duration != null) {
+                return new Mapped("has-potion-effect type=" + conditionValue(effect)
+                        + " duration=" + duration, true);
+            }
             String mapped = "has-potion-effect " + effect;
             if (level != null) mapped += " " + level;
             if (duration != null) mapped += " " + duration;
@@ -2447,6 +2450,39 @@ public final class MmConditions {
         } catch (NumberFormatException ignored) {
             return false;
         }
+    }
+
+    private static Map<String, String> strictFieldOfViewArguments(String body) {
+        if (body == null || body.isBlank()) return Map.of();
+        Map<String, String> parsed = new LinkedHashMap<>();
+        List<String> positional = new ArrayList<>();
+        boolean namedSeen = false;
+        for (String raw : body.split("[;,]", -1)) {
+            String part = raw.trim();
+            if (part.isEmpty()) return null;
+            int equals = part.indexOf('=');
+            if (equals < 0) {
+                if (namedSeen) return null;
+                positional.add(part);
+                continue;
+            }
+            if (!positional.isEmpty() || equals == 0) return null;
+            namedSeen = true;
+            String alias = part.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String canonical = switch (alias) {
+                case "angle", "a" -> "angle";
+                case "rotation", "r" -> "rotation";
+                default -> null;
+            };
+            String value = part.substring(equals + 1).trim();
+            if (canonical == null || value.isEmpty() || parsed.putIfAbsent(canonical, value) != null) return null;
+        }
+        if (!positional.isEmpty()) {
+            if (positional.size() > 2) return null;
+            parsed.put("angle", positional.get(0));
+            if (positional.size() > 1) parsed.put("rotation", positional.get(1));
+        }
+        return Map.copyOf(parsed);
     }
 
     private static String firstArgument(String body, String... keys) {

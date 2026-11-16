@@ -829,6 +829,10 @@ public final class SkillExtras {
 
     private record ItemConditionOptions(String item, NumberRange amount, String slot, boolean strict) { }
 
+    private record LookingAtArguments(String wanted, double distance, boolean blockMode) { }
+
+    private record PotionEffectArguments(String wanted, NumberRange level, NumberRange duration) { }
+
     private record ItemConditionMatcher(ItemStack expected, Set<Material> materials,
                                         boolean vanilla, boolean strict) {
         boolean matches(ItemStack stack) {
@@ -973,6 +977,162 @@ public final class SkillExtras {
             throw new IllegalArgumentException("invalid " + label + " range");
         }
         return parsed;
+    }
+
+    private static double[] parseFieldOfViewArguments(List<String> args) {
+        Map<String, String> named = strictConditionValues(args, Map.of(
+                "angle", "angle", "a", "angle", "rotation", "rotation", "r", "rotation"),
+                "field-of-view");
+        String angleRaw = "90";
+        String rotationRaw = "0";
+        if (named != null) {
+            angleRaw = named.getOrDefault("angle", angleRaw);
+            rotationRaw = named.getOrDefault("rotation", rotationRaw);
+        } else {
+            if (args != null && args.size() > 2) {
+                throw new IllegalArgumentException("field-of-view accepts angle and rotation");
+            }
+            if (args != null && !args.isEmpty()) {
+                if (args.get(0) == null || args.get(0).isBlank()) {
+                    throw new IllegalArgumentException("field-of-view angle is required");
+                }
+                angleRaw = args.get(0).trim();
+            }
+            if (args != null && args.size() > 1) {
+                if (args.get(1) == null || args.get(1).isBlank()) {
+                    throw new IllegalArgumentException("field-of-view rotation is required");
+                }
+                rotationRaw = args.get(1).trim();
+            }
+        }
+        double angle = finiteDouble(angleRaw, "field-of-view angle");
+        double rotation = finiteDouble(rotationRaw, "field-of-view rotation");
+        if (angle < 0 || angle > 180) {
+            throw new IllegalArgumentException("field-of-view angle must be between 0 and 180");
+        }
+        return new double[]{angle, rotation};
+    }
+
+    private static LookingAtArguments parseLookingAtArguments(List<String> args) {
+        Map<String, String> named = strictConditionValues(args, Map.ofEntries(
+                Map.entry("type", "type"), Map.entry("t", "type"),
+                Map.entry("block", "block"), Map.entry("b", "block"),
+                Map.entry("entity", "entity"), Map.entry("e", "entity"),
+                Map.entry("distance", "distance"), Map.entry("d", "distance")), "looking-at");
+        String selector;
+        String wanted;
+        String distanceRaw;
+        if (named != null) {
+            int selectors = (named.containsKey("type") ? 1 : 0)
+                    + (named.containsKey("block") ? 1 : 0)
+                    + (named.containsKey("entity") ? 1 : 0);
+            if (selectors != 1) {
+                throw new IllegalArgumentException("looking-at requires exactly one type, block or entity selector");
+            }
+            selector = named.containsKey("block") ? "block"
+                    : named.containsKey("entity") ? "entity" : "type";
+            wanted = named.get(selector);
+            distanceRaw = named.getOrDefault("distance", "5");
+        } else {
+            if (args == null || args.isEmpty() || args.size() > 3
+                    || args.stream().anyMatch(value -> value == null || value.isBlank())) {
+                throw new IllegalArgumentException("looking-at requires a selector and optional distance");
+            }
+            String first = args.get(0).trim().toLowerCase(Locale.ROOT);
+            if (args.size() >= 2 && Set.of("type", "block", "entity").contains(first)) {
+                if (args.size() > 3) throw new IllegalArgumentException("too many looking-at arguments");
+                selector = first;
+                wanted = args.get(1).trim();
+                distanceRaw = args.size() > 2 ? args.get(2).trim() : "5";
+            } else {
+                if (args.size() > 2) throw new IllegalArgumentException("too many looking-at arguments");
+                wanted = args.get(0).trim();
+                distanceRaw = args.size() > 1 ? args.get(1).trim() : "5";
+                selector = Material.matchMaterial(wanted) == null ? "entity" : "block";
+            }
+        }
+        if (wanted == null || wanted.isBlank()) {
+            throw new IllegalArgumentException("looking-at selector value is required");
+        }
+        double distance = finiteDouble(distanceRaw, "looking-at distance");
+        if (distance <= 0) throw new IllegalArgumentException("looking-at distance must be positive");
+        boolean blockMode = selector.equals("block")
+                || selector.equals("type") && Material.matchMaterial(wanted) != null;
+        return new LookingAtArguments(wanted, distance, blockMode);
+    }
+
+    private static PotionEffectArguments parsePotionEffectArguments(List<String> args) {
+        Map<String, String> named = strictConditionValues(args, Map.ofEntries(
+                Map.entry("effect", "type"), Map.entry("potion", "type"),
+                Map.entry("type", "type"), Map.entry("t", "type"), Map.entry("e", "type"),
+                Map.entry("level", "level"), Map.entry("lvl", "level"), Map.entry("l", "level"),
+                Map.entry("duration", "duration"), Map.entry("d", "duration")), "has-potion-effect");
+        String wanted = "ANY";
+        String levelRaw = null;
+        String durationRaw = null;
+        if (named != null) {
+            wanted = named.getOrDefault("type", wanted);
+            levelRaw = named.get("level");
+            durationRaw = named.get("duration");
+        } else if (args != null) {
+            if (args.size() > 3 || args.stream().anyMatch(value -> value == null || value.isBlank())) {
+                throw new IllegalArgumentException("has-potion-effect accepts type, level and duration");
+            }
+            if (!args.isEmpty()) wanted = args.get(0).trim();
+            if (args.size() > 1) levelRaw = args.get(1).trim();
+            if (args.size() > 2) durationRaw = args.get(2).trim();
+        }
+        if (wanted.isBlank()) throw new IllegalArgumentException("potion effect type is required");
+        NumberRange level = potionRange(levelRaw, "potion amplifier");
+        NumberRange duration = potionRange(durationRaw, "potion duration");
+        return new PotionEffectArguments(wanted, level, duration);
+    }
+
+    private static NumberRange potionRange(String raw, String label) {
+        if (raw == null) return null;
+        NumberRange parsed = numberRange(List.of(raw), 0);
+        if (parsed == null || !finiteNumberRange(List.of(raw), 0)) {
+            throw new IllegalArgumentException("invalid " + label + " range");
+        }
+        return parsed;
+    }
+
+    /** Parses only known, unique named keys and rejects named/positional mixtures. */
+    private static Map<String, String> strictConditionValues(List<String> args,
+                                                              Map<String, String> aliases,
+                                                              String label) {
+        if (args == null || args.stream().noneMatch(SkillExtras::hasNamedAssignment)) return null;
+        Map<String, String> parsed = new LinkedHashMap<>();
+        for (String raw : args) {
+            if (raw == null) throw new IllegalArgumentException(label + " argument is null");
+            int equals = raw.indexOf('=');
+            if (!hasNamedAssignment(raw) || equals <= 0) {
+                throw new IllegalArgumentException(label + " cannot mix named and positional arguments");
+            }
+            String alias = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String canonical = aliases.get(alias);
+            String value = raw.substring(equals + 1).trim();
+            if (canonical == null || value.isBlank() || parsed.putIfAbsent(canonical, value) != null) {
+                throw new IllegalArgumentException("unknown, empty or duplicate " + label + " argument: " + alias);
+            }
+        }
+        return Map.copyOf(parsed);
+    }
+
+    private static boolean hasNamedAssignment(String raw) {
+        if (raw == null) return false;
+        int equals = raw.indexOf('=');
+        return equals > 0 && (equals == 0 || !"<>!".contains(String.valueOf(raw.charAt(equals - 1))));
+    }
+
+    private static double finiteDouble(String raw, String label) {
+        try {
+            double value = Double.parseDouble(raw);
+            if (Double.isFinite(value)) return value;
+        } catch (NumberFormatException ignored) {
+            // Report one consistent binding error below.
+        }
+        throw new IllegalArgumentException(label + " must be finite: " + raw);
     }
 
     private static boolean finiteNumberRange(List<String> args, int index) {
@@ -3854,24 +4014,10 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("looking-at", (SkillCatalog.ConditionFactory) a -> {
-                    String configuredMode = str(a, 0, "").toLowerCase(Locale.ROOT);
-                    boolean explicitMode = Set.of("block", "entity", "type").contains(configuredMode);
-                    String key = keyedArg(a, "type", "t", "block", "b", "entity", "e");
-                    String wanted = explicitMode ? str(a, 1, "")
-                            : key == null ? str(a, 0, "") : key;
-                    String blockKey = keyedArg(a, "block", "b");
-                    String entityKey = keyedArg(a, "entity", "e");
-                    String distanceRaw = keyedArg(a, "distance", "d");
-                    if (distanceRaw == null) distanceRaw = str(a, explicitMode ? 2 : 1, "5");
-                    boolean blockMode = "block".equals(configuredMode)
-                            || !"entity".equals(configuredMode) && (blockKey != null
-                            || entityKey == null && Material.matchMaterial(wanted) != null);
-                    double distance;
-                    try { distance = Double.parseDouble(distanceRaw); }
-                    catch (NumberFormatException ignored) { distance = Double.NaN; }
-                    final String expected = wanted;
-                    final double maxDistance = distance;
-                    final boolean blocks = blockMode;
+                    LookingAtArguments parsed = parseLookingAtArguments(a);
+                    final String expected = parsed.wanted();
+                    final double maxDistance = parsed.distance();
+                    final boolean blocks = parsed.blockMode();
                     return ctx -> lookingAt(ctx, expected, maxDistance, blocks);
                 }),
                 Map.entry("bow-tension", (SkillCatalog.ConditionFactory) a -> {
@@ -4010,13 +4156,10 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("has-potion-effect", (SkillCatalog.ConditionFactory) a -> {
-                    if (a != null && a.size() > 3) {
-                        throw new IllegalArgumentException("has-potion-effect accepts type, level and duration");
-                    }
-                    String wanted = str(a, 0, "ANY");
-                    if (wanted.isBlank()) throw new IllegalArgumentException("potion effect type is required");
-                    NumberRange level = potionEffectRange(a, 1, "potion amplifier");
-                    NumberRange duration = potionEffectRange(a, 2, "potion duration");
+                    PotionEffectArguments parsed = parsePotionEffectArguments(a);
+                    String wanted = parsed.wanted();
+                    NumberRange level = parsed.level();
+                    NumberRange duration = parsed.duration();
                     return ctx -> {
                         LivingEntity entity = conditionEntity(ctx);
                         if (entity == null) return false;
@@ -4334,8 +4477,9 @@ public final class SkillExtras {
                     return ctx -> boundingBoxesOverlap(ctx, offset);
                 }),
                 Map.entry("field-of-view", (SkillCatalog.ConditionFactory) a -> {
-                    double angle = num(a, 0, 90.0);
-                    double rotation = num(a, 1, 0.0);
+                    double[] parsed = parseFieldOfViewArguments(a);
+                    double angle = parsed[0];
+                    double rotation = parsed[1];
                     return ctx -> fieldOfView(ctx, angle, rotation);
                 }),
                 Map.entry("distance-from-location", (SkillCatalog.ConditionFactory) a -> {

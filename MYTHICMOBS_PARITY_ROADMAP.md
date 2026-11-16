@@ -81,6 +81,14 @@ empty, mixed, and invalid values fail closed, including the
 type matching and template lineage matching. No Paper evidence was added, so
 the Conditions catalog remains `mapped-unverified`.
 
+The direct `field-of-view`, `looking-at`, and `has-potion-effect` bindings now
+preserve named aliases before legacy positional factories receive them.
+Importer and runtime factories reject unknown, duplicate, empty, mixed,
+non-finite, and out-of-range values; valid positional forms remain compatible.
+AI, migration, and plugin tests cover direct binding and imported runtime
+paths. No Paper evidence was added, so the Conditions catalog remains
+`mapped-unverified`.
+
 ## Completion contract
 
 A capability can leave `mapped-unverified` only when all applicable checks below

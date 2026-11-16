@@ -647,6 +647,51 @@ class MigrationRuntimeConditionContractTest {
         assertFalse(registry.testCondition(blockPrimaryKey, nonPlayerContext));
         assertFalse(dev.helstera.migration.importer.MmConditions.translate(
                 "?lookingAt{b=STONE;d=0}").translated());
+        when(block.getType()).thenReturn(org.bukkit.Material.STONE);
+        String directlyBound = service.bindCondition("looking-at{block=STONE;distance=6}");
+        assertNotNull(directlyBound, service.warnings().toString());
+        assertTrue(registry.testCondition(directlyBound, context));
+        assertNull(service.bindCondition("looking-at{block=STONE;distance=6;unknown=true}"));
+    }
+
+    @Test
+    @DisplayName("canonical view and potion named arguments survive direct and imported binding")
+    void canonicalViewAndPotionArgumentsReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var caster = mock(org.bukkit.entity.LivingEntity.class);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        when(caster.getLocation()).thenReturn(new org.bukkit.Location(null, 0, 0, 0, 0, 0));
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(target.getLocation()).thenReturn(new org.bukkit.Location(null, 0, 0, 10));
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, target, 1.0, 10, 0, "IDLE");
+
+        var importedFov = dev.helstera.migration.importer.MmConditions.translate(
+                "?fieldOfView{angle=90;rotation=0}");
+        assertTrue(importedFov.translated());
+        String fov = service.bindCondition(importedFov.condition());
+        assertNotNull(fov, service.warnings().toString());
+        assertTrue(registry.testCondition(fov, context));
+        assertNotNull(service.bindCondition("field-of-view{a=90;r=15}"));
+        assertNull(service.bindCondition("field-of-view{angle=90;unknown=0}"));
+
+        var effect = mock(org.bukkit.potion.PotionEffect.class);
+        when(effect.getType()).thenReturn(null);
+        when(effect.getAmplifier()).thenReturn(1);
+        when(effect.getDuration()).thenReturn(80);
+        when(caster.getActivePotionEffects()).thenReturn(java.util.Set.of(effect));
+        var importedPotion = dev.helstera.migration.importer.MmConditions.translate(
+                "?hasPotionEffect{effect=ANY;level=1to2;duration=80to100}");
+        assertTrue(importedPotion.translated());
+        String potion = service.bindCondition(importedPotion.condition());
+        assertNotNull(potion, service.warnings().toString());
+        assertTrue(registry.testCondition(potion, dev.helstera.api.behavior.BehaviorContext.of(
+                instance, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0, "IDLE")));
+        assertNotNull(service.bindCondition("has-potion-effect{type=ANY;duration=>=80}"));
+        assertNull(service.bindCondition("has-potion-effect{type=ANY;level=NaN}"));
     }
 
     @Test

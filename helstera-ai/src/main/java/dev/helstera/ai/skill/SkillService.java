@@ -368,6 +368,13 @@ public final class SkillService {
                 warn("实体类型/模板条件参数无效 \"" + spec + "\"");
                 return null;
             }
+        } else if (conditionSpec.indexOf('{') >= 0
+                && isNamedViewOrPotionCondition(rawCanonicalName)) {
+            normalized = normalizeNamedViewOrPotionCondition(conditionSpec, rawCanonicalName);
+            if (normalized == null) {
+                warn("视野/视线/药水效果条件参数无效 \"" + spec + "\"");
+                return null;
+            }
         } else {
             normalized = conditionSpec.indexOf('{') >= 0
                     ? SpecSyntax.normalize(conditionSpec) : conditionSpec;
@@ -520,6 +527,10 @@ public final class SkillService {
 
     private static boolean isNamedIdentityCondition(String name) {
         return Set.of("mythic-mob-type", "template-type").contains(name);
+    }
+
+    private static boolean isNamedViewOrPotionCondition(String name) {
+        return Set.of("field-of-view", "looking-at", "has-potion-effect").contains(name);
     }
 
     /**
@@ -710,6 +721,166 @@ public final class SkillService {
         }
         return types == null ? null : condition + " " + quoteNormalizedConditionValue(types)
                 + " exactmatch=" + exact;
+    }
+
+    /** Preserves named view and potion arguments before legacy factories receive them. */
+    private static String normalizeNamedViewOrPotionCondition(String spec, String condition) {
+        MythicSkillSpec parsed;
+        try {
+            parsed = MythicSkillSpec.parse(spec);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+        if (parsed.targeter() != null || parsed.trigger() != null || parsed.chance() != null
+                || !parsed.inlineConditions().isEmpty() || !parsed.targetConditions().isEmpty()) return null;
+        if (parsed.arguments().size() + parsed.positional().size() != SpecSyntax.argCount(spec)) return null;
+        if (!parsed.arguments().isEmpty() && !parsed.positional().isEmpty()) return null;
+
+        if (condition.equals("field-of-view")) {
+            String angle = null;
+            String rotation = null;
+            if (!parsed.arguments().isEmpty()) {
+                for (var entry : parsed.arguments().entrySet()) {
+                    String key = entry.getKey().toLowerCase(Locale.ROOT);
+                    String value = entry.getValue();
+                    if (value == null || value.isBlank()) return null;
+                    if (Set.of("angle", "a").contains(key)) {
+                        if (angle != null) return null;
+                        angle = value;
+                    } else if (Set.of("rotation", "r").contains(key)) {
+                        if (rotation != null) return null;
+                        rotation = value;
+                    } else return null;
+                }
+            } else {
+                if (parsed.positional().size() > 2
+                        || parsed.positional().stream().anyMatch(String::isBlank)) return null;
+                if (!parsed.positional().isEmpty()) angle = parsed.positional().get(0);
+                if (parsed.positional().size() > 1) rotation = parsed.positional().get(1);
+            }
+            if (angle == null) angle = "90";
+            if (rotation == null) rotation = "0";
+            try {
+                double parsedAngle = Double.parseDouble(angle);
+                double parsedRotation = Double.parseDouble(rotation);
+                if (!Double.isFinite(parsedAngle) || parsedAngle < 0 || parsedAngle > 180
+                        || !Double.isFinite(parsedRotation)) return null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+            return "field-of-view " + angle + " " + rotation;
+        }
+
+        if (condition.equals("looking-at")) {
+            String selector = null;
+            String value = null;
+            String distance = null;
+            if (!parsed.arguments().isEmpty()) {
+                for (var entry : parsed.arguments().entrySet()) {
+                    String key = entry.getKey().toLowerCase(Locale.ROOT);
+                    String argument = entry.getValue();
+                    if (argument == null || argument.isBlank()) return null;
+                    if (Set.of("type", "t", "block", "b", "entity", "e").contains(key)) {
+                        String nextSelector = Set.of("block", "b").contains(key) ? "block"
+                                : Set.of("entity", "e").contains(key) ? "entity" : "type";
+                        if (selector != null) return null;
+                        selector = nextSelector;
+                        value = argument;
+                    } else if (Set.of("distance", "d").contains(key)) {
+                        if (distance != null) return null;
+                        distance = argument;
+                    } else return null;
+                }
+                if (selector == null) return null;
+            } else {
+                List<String> positional = parsed.positional();
+                if (positional.size() > 3 || positional.stream().anyMatch(String::isBlank)) return null;
+                if (positional.size() == 3
+                        && Set.of("type", "block", "entity").contains(
+                        positional.get(0).toLowerCase(Locale.ROOT))) {
+                    selector = positional.get(0).toLowerCase(Locale.ROOT);
+                    value = positional.get(1);
+                    distance = positional.get(2);
+                } else {
+                    if (positional.isEmpty()) return null;
+                    value = positional.get(0);
+                    if (positional.size() > 1) distance = positional.get(1);
+                }
+            }
+            if (distance == null) distance = "5";
+            try {
+                double parsedDistance = Double.parseDouble(distance);
+                if (!Double.isFinite(parsedDistance) || parsedDistance <= 0) return null;
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+            return "looking-at " + (selector == null ? "" : selector + " ")
+                    + quoteNormalizedConditionValue(value) + " " + distance;
+        }
+
+        Map<String, String> values = new LinkedHashMap<>();
+        if (!parsed.arguments().isEmpty()) {
+            for (var entry : parsed.arguments().entrySet()) {
+                String key = entry.getKey().toLowerCase(Locale.ROOT);
+                String canonical = switch (key) {
+                    case "effect", "potion", "type", "t", "e" -> "type";
+                    case "level", "lvl", "l" -> "level";
+                    case "duration", "d" -> "duration";
+                    default -> null;
+                };
+                String value = entry.getValue();
+                if (canonical == null || value == null || value.isBlank()
+                        || values.putIfAbsent(canonical, value) != null) return null;
+            }
+        } else {
+            if (parsed.positional().size() > 3
+                    || parsed.positional().stream().anyMatch(String::isBlank)) return null;
+            if (parsed.positional().size() > 0) values.put("type", parsed.positional().get(0));
+            if (parsed.positional().size() > 1) values.put("level", parsed.positional().get(1));
+            if (parsed.positional().size() > 2) values.put("duration", parsed.positional().get(2));
+        }
+        String type = values.getOrDefault("type", "ANY");
+        if (type.isBlank()) return null;
+        String level = values.get("level");
+        String duration = values.get("duration");
+        if ((level != null && !validFiniteNumberRange(level))
+                || (duration != null && !validFiniteNumberRange(duration))) return null;
+        StringBuilder normalized = new StringBuilder("has-potion-effect type=")
+                .append(quoteNormalizedConditionValue(type));
+        if (level != null) normalized.append(" level=").append(level);
+        if (duration != null) normalized.append(" duration=").append(duration);
+        return normalized.toString();
+    }
+
+    private static boolean validFiniteNumberRange(String raw) {
+        String value = raw == null ? "" : raw.trim();
+        if (value.isEmpty()) return false;
+        for (String operator : List.of(">=", "<=", ">", "<")) {
+            if (value.startsWith(operator)) value = value.substring(operator.length()).trim();
+        }
+        int to = value.toLowerCase(Locale.ROOT).indexOf("to");
+        if (to > 0) {
+            return finiteNumber(value.substring(0, to).trim())
+                    && finiteNumber(value.substring(to + 2).trim())
+                    && Double.parseDouble(value.substring(0, to).trim())
+                    <= Double.parseDouble(value.substring(to + 2).trim());
+        }
+        int separator = value.indexOf('-', 1);
+        if (separator > 0) {
+            return finiteNumber(value.substring(0, separator).trim())
+                    && finiteNumber(value.substring(separator + 1).trim())
+                    && Double.parseDouble(value.substring(0, separator).trim())
+                    <= Double.parseDouble(value.substring(separator + 1).trim());
+        }
+        return finiteNumber(value);
+    }
+
+    private static boolean finiteNumber(String value) {
+        try {
+            return Double.isFinite(Double.parseDouble(value));
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
     }
 
     private static String normalizeConditionBoolean(String raw) {

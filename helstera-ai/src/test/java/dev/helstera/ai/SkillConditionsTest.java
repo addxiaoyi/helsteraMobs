@@ -536,8 +536,15 @@ class SkillConditionsTest {
         var context = BehaviorContext.of(null, player, 1.0, -1, 0, "IDLE");
 
         assertTrue(extraFactory("looking-at").create(List.of("STONE", "5")).test(context));
+        assertTrue(extraFactory("looking-at").create(List.of("block=STONE", "d=5")).test(context));
         assertFalse(extraFactory("looking-at").create(List.of("DIRT", "5")).test(context));
         assertFalse(extraFactory("looking-at").create(List.of("STONE", "5")).test(ctx()));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("looking-at").create(List.of("block=STONE", "entity=COW")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("looking-at").create(List.of("block=STONE", "unknown=true")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("looking-at").create(List.of("block=STONE", "distance=0")));
     }
 
     @Test
@@ -1280,6 +1287,14 @@ class SkillConditionsTest {
                 .test(context));
         assertFalse(extraFactory("has-potion-effect").create(List.of("SPEED", ">3"))
                 .test(context));
+        assertTrue(extraFactory("has-potion-effect").create(
+                List.of("effect=ANY", "level=>=2", "duration=100to130")).test(context));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("has-potion-effect").create(List.of("type=SPEED", "effect=ANY")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("has-potion-effect").create(List.of("type=SPEED", "unknown=1")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("has-potion-effect").create(List.of("type=SPEED", "level=NaN")));
     }
 
     @Test
@@ -1537,6 +1552,13 @@ class SkillConditionsTest {
         when(target.getLocation()).thenReturn(new org.bukkit.Location(null, 10, 0, 0));
         assertFalse(extraFactory("field-of-view").create(List.of("90", "0")).test(context));
         assertTrue(extraFactory("field-of-view").create(List.of("90", "90")).test(context));
+        assertTrue(extraFactory("field-of-view").create(List.of("a=90", "r=90")).test(context));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("field-of-view").create(List.of("angle=90", "a=45")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("field-of-view").create(List.of("angle=181")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("field-of-view").create(List.of("angle=90", "unknown=0")));
     }
 
     @Test
