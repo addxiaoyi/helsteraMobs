@@ -105,6 +105,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean projectileShooter, boolean projectileRemovedRejected,
             boolean invalidRejected) { }
 
+    private record VelocityEvidence(boolean directSet, boolean add, boolean multiply,
+            boolean remove, boolean divide, boolean relative, boolean imported,
+            boolean restored) { }
+
     private HelsteraEventBus bus;
     private ModelValidator validator;
     private ModelRegistryImpl registry;          // 核心模块，始终存在
@@ -11032,6 +11036,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean lightningMechanic = false;
             boolean jumpMechanic = false;
             boolean forcePullMechanic = false;
+            boolean velocityMechanic = false;
+            boolean importedVelocity = false;
+            boolean velocityRestored = false;
             boolean factionConditions = false;
             boolean signalMechanics = false;
             boolean targetKillMechanic = false;
@@ -13391,6 +13398,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         skills.bindCondition("velocity >= 0.9"), conditionContext);
                 directionalVelocityCondition = behaviors.testCondition(
                         skills.bindCondition("directionalVelocity{x=>=0.2;y=<0;z=>=0.7}"), conditionContext);
+                VelocityEvidence velocityEvidence = runVelocitySelfTest(conditionTarget, conditionContext,
+                        skills, behaviors);
+                velocityMechanic = velocityEvidence.directSet() && velocityEvidence.add()
+                        && velocityEvidence.multiply() && velocityEvidence.remove()
+                        && velocityEvidence.divide() && velocityEvidence.relative();
+                importedVelocity = velocityEvidence.imported();
+                velocityRestored = velocityEvidence.restored();
                 Location originalFovTargetLocation = conditionTarget.getLocation().clone();
                 Location originalFovCasterLocation = zombie.getLocation().clone();
                 try {
@@ -16773,6 +16787,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         + " score-mechanics=" + scoreMechanics
                         + " global-score-condition=" + globalScoreCondition
                         + " score-condition=" + scoreboardScoreCondition
+                        + " velocity-mechanic=" + velocityMechanic
+                        + " imported-velocity=" + importedVelocity
+                        + " velocity-restored=" + velocityRestored
                         + " dynamic-placeholder=" + dynamicPlaceholderAction
                         + " gameplay-placeholders=" + gameplayPlaceholders
                         + " jump-mechanic=" + jumpMechanic
@@ -18866,6 +18883,99 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                                  dev.helstera.api.behavior.BehaviorContext context) {
         String key = skills.bindAction(spec);
         return key != null && behaviors.runAction(key, context);
+    }
+
+    private static boolean velocityNear(org.bukkit.util.Vector actual, double x, double y, double z) {
+        return actual != null && Double.isFinite(actual.getX()) && Double.isFinite(actual.getY())
+                && Double.isFinite(actual.getZ()) && Math.abs(actual.getX() - x) < 0.05
+                && Math.abs(actual.getY() - y) < 0.05 && Math.abs(actual.getZ() - z) < 0.05;
+    }
+
+    private VelocityEvidence runVelocitySelfTest(org.bukkit.entity.LivingEntity target,
+                                                  dev.helstera.api.behavior.BehaviorContext context,
+                                                  dev.helstera.ai.skill.SkillService skills,
+                                                  dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+        if (target == null || context == null || skills == null || behaviors == null) {
+            return new VelocityEvidence(false, false, false, false, false, false, false, false);
+        }
+        org.bukkit.util.Vector original = target.getVelocity().clone();
+        boolean set = false;
+        boolean add = false;
+        boolean multiply = false;
+        boolean remove = false;
+        boolean divide = false;
+        boolean relative = false;
+        boolean imported = false;
+        try {
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            set = runIntegrationAction(skills, behaviors, "velocity-targets 2 3 4 SET", context)
+                    && velocityNear(target.getVelocity(), 2, 3, 4);
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            add = runIntegrationAction(skills, behaviors, "velocity-targets 2 3 4 ADD", context)
+                    && velocityNear(target.getVelocity(), 10, 15, 24);
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            multiply = runIntegrationAction(skills, behaviors, "velocity-targets 2 3 4 MULTIPLY", context)
+                    && velocityNear(target.getVelocity(), 16, 36, 80);
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            remove = runIntegrationAction(skills, behaviors, "velocity-targets 2 3 4 REMOVE", context)
+                    && velocityNear(target.getVelocity(), 6, 9, 16);
+            target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+            divide = runIntegrationAction(skills, behaviors, "velocity-targets 2 3 4 DIVIDE", context)
+                    && velocityNear(target.getVelocity(), 4, 4, 5);
+
+            Location orientation = target.getLocation().clone();
+            target.setRotation(0, 0);
+            target.setVelocity(new org.bukkit.util.Vector());
+            relative = runIntegrationAction(skills, behaviors, "velocity-targets 2 3 4 SET true", context)
+                    && velocityNear(target.getVelocity(), -2, 3, 4);
+            target.teleport(orientation);
+
+            Path root = null;
+            try {
+                root = Files.createTempDirectory("helstera-velocity-import-");
+                Path source = Files.createDirectories(root.resolve("Skills")).resolve("probe.yml");
+                Files.writeString(source, """
+                        skills:
+                          velocity_probe:
+                            Skills:
+                              - velocity{velocityx=2;velocityy=3;velocityz=4;mode=ADD;relative=false} @target
+                              - velocity{x=NaN} @target
+                        """);
+                var entries = new MythicMobsImporter().convert(source);
+                var plan = entries.stream().filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                        .findFirst().orElseThrow();
+                var yaml = YamlConfiguration.loadConfiguration(
+                        new java.io.StringReader(String.valueOf(plan.get("content"))));
+                var actions = yaml.getStringList("skills.velocity_probe.on-decision");
+                var unsupported = yaml.getStringList("skills.velocity_probe.unsupported");
+                boolean shape = actions.equals(List.of("velocity-targets 2 3 4 ADD false @target"));
+                boolean preserved = unsupported.equals(List.of("velocity{x=NaN} @target"));
+                boolean warning = entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
+                        && String.valueOf(entry.get("note")).contains("Invalid velocity coordinates"));
+                target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
+                String action = shape ? skills.bindAction(actions.get(0)) : null;
+                imported = shape && preserved && warning && action != null
+                        && skills.runAction(action, context)
+                        && velocityNear(target.getVelocity(), 10, 15, 24);
+            } finally {
+                if (root != null) {
+                    Files.deleteIfExists(root.resolve("Skills/probe.yml"));
+                    Files.deleteIfExists(root.resolve("Skills"));
+                    Files.deleteIfExists(root);
+                }
+            }
+        } catch (Throwable failure) {
+            getLogger().warning("[自检] velocity-mechanic exception=" + failure);
+        } finally {
+            target.setVelocity(original);
+        }
+        boolean restored = velocityNear(target.getVelocity(), original.getX(), original.getY(), original.getZ());
+        getLogger().info("[自检] velocity-mechanic direct-set=" + set + " add=" + add
+                + " multiply=" + multiply + " remove=" + remove + " divide=" + divide
+                + " relative=" + relative + " imported=" + imported + " restored=" + restored
+                + " result=" + (set && add && multiply && remove && divide && relative
+                && imported && restored));
+        return new VelocityEvidence(set, add, multiply, remove, divide, relative, imported, restored);
     }
 
     /**

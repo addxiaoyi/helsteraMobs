@@ -80,6 +80,76 @@ class SkillActionsTest {
     }
 
     @Test
+    @DisplayName("Velocity supports all MythicMobs modes")
+    void velocitySupportsAllModes() {
+        var target = mock(LivingEntity.class);
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1.0, 1.0, 0, "velocity-test", null, target, List.of(target), null, null);
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(8, 12, 20));
+
+        for (var entry : List.of(
+                List.of("SET", new org.bukkit.util.Vector(2, 3, 4)),
+                List.of("ADD", new org.bukkit.util.Vector(10, 15, 24)),
+                List.of("MULTIPLY", new org.bukkit.util.Vector(16, 36, 80)),
+                List.of("REMOVE", new org.bukkit.util.Vector(6, 9, 16)),
+                List.of("DIVIDE", new org.bukkit.util.Vector(4, 4, 5)))) {
+            clearInvocations(target);
+            SkillCatalog.actions().get("velocity-targets")
+                    .create(List.of("2", "3", "4", String.valueOf(entry.get(0))))
+                    .accept(context);
+            var captured = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+            verify(target).setVelocity(captured.capture());
+            var result = captured.getValue();
+            var expected = (org.bukkit.util.Vector) entry.get(1);
+            org.junit.jupiter.api.Assertions.assertEquals(expected.getX(), result.getX(), 1.0e-9, String.valueOf(entry.get(0)));
+            org.junit.jupiter.api.Assertions.assertEquals(expected.getY(), result.getY(), 1.0e-9, String.valueOf(entry.get(0)));
+            org.junit.jupiter.api.Assertions.assertEquals(expected.getZ(), result.getZ(), 1.0e-9, String.valueOf(entry.get(0)));
+        }
+    }
+
+    @Test
+    @DisplayName("relative Velocity uses the target's local orientation")
+    void relativeVelocityUsesTargetOrientation() {
+        var target = mock(LivingEntity.class);
+        World world = mock(World.class);
+        when(target.getLocation()).thenReturn(new Location(world, 0, 64, 0, 0, 0));
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(0, 0, 0));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1.0, 1.0, 0, "velocity-test", null, target, List.of(target), null, null);
+
+        SkillCatalog.actions().get("velocity-targets")
+                .create(List.of("2", "3", "4", "SET", "true"))
+                .accept(context);
+
+        var captured = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+        verify(target).setVelocity(captured.capture());
+        var result = captured.getValue();
+        org.junit.jupiter.api.Assertions.assertEquals(-2, result.getX(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(3, result.getY(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(4, result.getZ(), 1.0e-9);
+    }
+
+    @Test
+    @DisplayName("Velocity sanitizes non-finite current velocity")
+    void velocitySanitizesNonFiniteCurrentVelocity() {
+        var target = mock(LivingEntity.class);
+        when(target.getVelocity()).thenReturn(new org.bukkit.util.Vector(Double.NaN, Double.POSITIVE_INFINITY, 2));
+        var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                null, target, 1.0, 1.0, 0, "velocity-test", null, target, List.of(target), null, null);
+
+        SkillCatalog.actions().get("velocity-targets")
+                .create(List.of("0", "0", "0", "ADD"))
+                .accept(context);
+
+        var captured = org.mockito.ArgumentCaptor.forClass(org.bukkit.util.Vector.class);
+        verify(target).setVelocity(captured.capture());
+        var result = captured.getValue();
+        org.junit.jupiter.api.Assertions.assertEquals(0, result.getX(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(0, result.getY(), 1.0e-9);
+        org.junit.jupiter.api.Assertions.assertEquals(2, result.getZ(), 1.0e-9);
+    }
+
+    @Test
     @DisplayName("force-pull moves the selected target toward the caster")
     void forcePullActionMovesTargetTowardCaster() {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);

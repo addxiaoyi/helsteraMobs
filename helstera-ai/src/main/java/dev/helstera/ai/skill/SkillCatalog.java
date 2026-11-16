@@ -788,11 +788,17 @@ public final class SkillCatalog {
                      var x = dynamicNum(a, 0, 0);
                      var y = dynamicNum(a, 1, 0);
                      var z = dynamicNum(a, 2, 0);
+                     String mode = str(a, 3, "SET").toUpperCase(Locale.ROOT);
+                     if (!java.util.Set.of("SET", "ADD", "MULTIPLY", "REMOVE", "DIVIDE").contains(mode)) {
+                         throw new IllegalArgumentException("velocity-targets mode must be SET, ADD, MULTIPLY, REMOVE or DIVIDE");
+                     }
+                     boolean relative = bool(a, 4, false);
                      return ctx -> {
-                         Vector velocity = new Vector(x.applyAsDouble(ctx), y.applyAsDouble(ctx), z.applyAsDouble(ctx));
-                         List<LivingEntity> targets = ctx.targets().isEmpty()
-                                 ? ctx.targetEntity().map(List::of).orElse(List.of()) : ctx.targets();
-                         targets.forEach(target -> target.setVelocity(velocity.clone()));
+                         Vector delta = finiteVelocity(new Vector(
+                                 x.applyAsDouble(ctx), y.applyAsDouble(ctx), z.applyAsDouble(ctx)));
+                         for (LivingEntity target : activeTargets(ctx)) {
+                             applyVelocity(target, delta, mode, relative);
+                         }
                      };
                  }),
                  java.util.Map.entry("shoot-projectile", (ActionFactory) a -> {
@@ -1233,6 +1239,68 @@ public final class SkillCatalog {
         if (ctx == null) return List.of();
         if (!ctx.targets().isEmpty()) return ctx.targets();
         return ctx.targetEntity().map(List::of).orElseGet(List::of);
+    }
+
+    /** Applies MythicMobs Velocity's mode and optional local-coordinate transform. */
+    private static void applyVelocity(LivingEntity target, Vector delta, String mode, boolean relative) {
+        if (target == null || delta == null) return;
+        Vector current = finiteVelocity(target.getVelocity());
+        if (relative) {
+            Location location = target.getLocation();
+            Vector forward = location == null ? null : finiteUnit(location.getDirection());
+            Vector right = forward == null ? null : finiteUnit(forward.clone().crossProduct(new Vector(0, 1, 0)));
+            Vector up = right == null ? null : finiteUnit(right.clone().crossProduct(forward));
+            if (forward == null || right == null || up == null) {
+                target.setVelocity(new Vector());
+                return;
+            }
+            current = new Vector(current.dot(right), current.dot(up), current.dot(forward));
+        }
+
+        Vector result = switch (mode) {
+            case "SET" -> delta.clone();
+            case "ADD" -> current.clone().add(delta);
+            case "MULTIPLY" -> current.clone().multiply(delta);
+            case "REMOVE" -> current.clone().subtract(delta);
+            case "DIVIDE" -> divideVelocity(current, delta);
+            default -> new Vector();
+        };
+        result = finiteVelocity(result);
+        if (relative) {
+            Location location = target.getLocation();
+            Vector forward = location == null ? null : finiteUnit(location.getDirection());
+            Vector right = forward == null ? null : finiteUnit(forward.clone().crossProduct(new Vector(0, 1, 0)));
+            Vector up = right == null ? null : finiteUnit(right.clone().crossProduct(forward));
+            if (forward == null || right == null || up == null) {
+                target.setVelocity(new Vector());
+                return;
+            }
+            result = right.multiply(result.getX()).add(up.multiply(result.getY())).add(forward.multiply(result.getZ()));
+        }
+        target.setVelocity(finiteVelocity(result));
+    }
+
+    private static Vector divideVelocity(Vector current, Vector delta) {
+        return new Vector(
+                current.getX() / delta.getX(),
+                current.getY() / delta.getY(),
+                current.getZ() / delta.getZ());
+    }
+
+    private static Vector finiteVelocity(Vector value) {
+        if (value == null) return new Vector();
+        return new Vector(finiteOrZero(value.getX()), finiteOrZero(value.getY()), finiteOrZero(value.getZ()));
+    }
+
+    private static Vector finiteUnit(Vector value) {
+        Vector finite = finiteVelocity(value);
+        double lengthSquared = finite.lengthSquared();
+        if (!Double.isFinite(lengthSquared) || lengthSquared < 1.0e-12) return null;
+        return finite.multiply(1.0 / Math.sqrt(lengthSquared));
+    }
+
+    private static double finiteOrZero(double value) {
+        return Double.isFinite(value) ? value : 0;
     }
 
     private static void playSound(Location location, Sound sound, BehaviorContext context,

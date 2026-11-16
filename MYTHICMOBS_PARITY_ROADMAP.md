@@ -11,13 +11,13 @@ Audited against the matrix on 2026-11-16:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
-| `implemented-runtime` | 115 | A runtime implementation exists; the row's evidence still limits the claim. |
+| `implemented-runtime` | 116 | A runtime implementation exists; the row's evidence still limits the claim. |
 | `mapped-unverified` | 33 | Mapping or partial runtime support exists, but the full stated behavior is not verified. |
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-has-inventory-space-strict-20261116-r22` on Paper 1.21.1-133, with 464 probes: 445 passed, 19 expected rejections, and zero failed or incomplete. Its strict production evidence covers MythicMobs 5.7.2 `HasInventorySpace` mapping, empty/full Player inventory behavior, invalid-argument preservation, and restoration, while the catalog also retains Inline Conditions and Altitude evidence, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and the full runtime/client workflows. MythicMobs 5.7.2 has separate focused evidence; the full release fixture does not load MythicMobs. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json).
+The latest full release fixture is `srv-paper-velocity-strict-20261116-r1` on Paper 1.21.1-133, with 465 probes: 446 passed, 19 expected rejections, and zero failed or incomplete. Its strict production evidence covers MythicMobs `Velocity` mechanic actions, relative application, aliases, invalid-argument preservation, and restoration, while the catalog also retains HasInventorySpace, Inline Conditions and Altitude evidence, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and the full runtime/client workflows. MythicMobs 5.7.2 has separate focused evidence; the full release fixture does not load MythicMobs. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json).
 
 The next targeter contract slice is now implemented in the shared API: spatial
 targeters reject malformed, negative, non-finite, duplicate, and unknown private

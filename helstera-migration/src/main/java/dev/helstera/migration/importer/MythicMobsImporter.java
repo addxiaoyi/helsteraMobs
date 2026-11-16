@@ -1944,6 +1944,14 @@ public final class MythicMobsImporter implements MigrationImporter {
                 return;
             }
         }
+        if (Set.of("velocity", "setvelocity", "set-velocity").contains(mechanic)
+                && !validVelocityMechanic(raw)) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid velocity coordinates, mode, relative flag, duplicate or unknown argument; original line preserved.", "WARN");
+            return;
+        }
 
         // Event suffixes must never fall through to the periodic decision list.
         List<Integer> eventPositions = eventTokens(raw);
@@ -2530,10 +2538,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     + firstArgOrPositional(trimmed, 0, "2", "power", "yield") + " "
                     + firstArgOrPositional(trimmed, 1, "false", "fire") + " "
                     + firstArgOrPositional(trimmed, 2, "false", "breakblocks", "break-blocks");
-            case "velocity" -> "velocity-targets "
-                    + firstArgOrPositional(trimmed, 0, "0", "x", "vx") + " "
-                    + firstArgOrPositional(trimmed, 1, "0", "y", "vy") + " "
-                    + firstArgOrPositional(trimmed, 2, "0", "z", "vz");
+            case "velocity", "setvelocity", "set-velocity" -> velocityMechanic(trimmed);
             case "settarget", "set-target" -> "set-target";
             case "cleartarget", "clear-target", "untarget" -> "clear-target";
             case "setscale" -> "set-scale " + firstArgOrPositional(trimmed, 0, "1", "scale");
@@ -2874,6 +2879,124 @@ public final class MythicMobsImporter implements MigrationImporter {
                 + teleportArgument(raw, 2, "unsafe") + " "
                 + teleportArgument(raw, 3, "yaw") + " "
                 + teleportArgument(raw, 4, "pitch");
+    }
+
+    /**
+     * Converts MythicMobs Velocity to the canonical runtime order
+     * {@code x y z mode relative}.  The explicit order matters because the
+     * runtime action is also reachable from hand-written Helstera skills.
+     */
+    private static String velocityMechanic(String raw) {
+        if (!validVelocityMechanic(raw)) return null;
+        return "velocity-targets "
+                + velocityArgument(raw, 0, "0", "velocityx", "vx", "x") + " "
+                + velocityArgument(raw, 1, "0", "velocityy", "vy", "y") + " "
+                + velocityArgument(raw, 2, "0", "velocityz", "vz", "z") + " "
+                + velocityArgument(raw, 3, "SET", "mode", "m") + " "
+                + velocityArgument(raw, 4, "false", "relative", "r");
+    }
+
+    private static String velocityArgument(String raw, int index, String fallback, String... keys) {
+        String value = firstArg(raw, keys);
+        if (value != null) return value;
+        int open = MythicSpec.mechanicOpen(raw);
+        if (open >= 0) value = MythicSpec.argAt(raw, index);
+        else {
+            List<String> positional = velocityPositionalArguments(raw);
+            value = index < positional.size() ? positional.get(index) : null;
+        }
+        if (value != null && index == 3) return value.toUpperCase(Locale.ROOT);
+        if (value != null && index == 4) return Boolean.toString(normalizeVelocityBoolean(value));
+        if (value != null) return value;
+        return fallback;
+    }
+
+    private static boolean normalizeVelocityBoolean(String raw) {
+        return Set.of("true", "yes", "on", "1").contains(raw.toLowerCase(Locale.ROOT));
+    }
+
+    /** Positional Velocity arguments before an optional Mythic targeter/chance suffix. */
+    private static List<String> velocityPositionalArguments(String raw) {
+        int firstSpace = raw.indexOf(' ');
+        if (firstSpace < 0) return List.of();
+        List<String> values = new ArrayList<>();
+        for (String token : raw.substring(firstSpace + 1).trim().split("\\s+")) {
+            if (token.isBlank() || token.startsWith("@") || token.startsWith("?")
+                    || token.startsWith("~") || token.endsWith("%") || token.equals(">")) continue;
+            values.add(token);
+        }
+        return values;
+    }
+
+    /** Validates official Velocity aliases and keeps malformed source fail-closed. */
+    private static boolean validVelocityMechanic(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        int open = MythicSpec.mechanicOpen(raw);
+        int close = mechanicClose(raw, open);
+        if (open >= 0 && close < 0) return false;
+
+        Set<String> seen = new java.util.HashSet<>();
+        List<String> arguments = MythicSpec.keyedArguments(raw);
+        boolean hasNamed = arguments.stream().anyMatch(argument -> argument.contains("="));
+        if (open >= 0 && !hasNamed) {
+            if (arguments.size() > 5) return false;
+            for (int index = 0; index < arguments.size(); index++) {
+                String argument = arguments.get(index);
+                if (argument == null || argument.isBlank()) return false;
+                if (index < 3 && !finiteOrPlaceholder(argument.trim())) return false;
+                if (index == 3 && !validVelocityMode(argument.trim())) return false;
+                if (index == 4 && !validBoolean(argument.trim())) return false;
+            }
+        }
+        for (String argument : arguments) {
+            if (argument == null || argument.isBlank()) return false;
+            int equals = argument.indexOf('=');
+            if (equals < 0) {
+                if (hasNamed) return false;
+                continue;
+            }
+            if (equals == 0 || equals == argument.length() - 1) return false;
+            String key = argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            String value = argument.substring(equals + 1).trim();
+            if (value.isBlank()) return false;
+            String canonical = switch (key) {
+                case "velocityx", "vx", "x" -> "x";
+                case "velocityy", "vy", "y" -> "y";
+                case "velocityz", "vz", "z" -> "z";
+                case "relative", "r" -> "relative";
+                case "mode", "m" -> "mode";
+                default -> null;
+            };
+            if (canonical == null || !seen.add(canonical)) return false;
+            if (Set.of("x", "y", "z").contains(canonical)) {
+                if (!finiteOrPlaceholder(value)) return false;
+            } else if (canonical.equals("relative")) {
+                if (!validBoolean(value)) return false;
+            } else if (!validVelocityMode(value)) return false;
+        }
+        if (open < 0) {
+            List<String> positionalValues = velocityPositionalArguments(raw);
+            if (positionalValues.size() > 5) return false;
+            for (int index = 0; index < positionalValues.size(); index++) {
+                String value = positionalValues.get(index);
+                if (index < 3 && !finiteOrPlaceholder(value)) return false;
+                if (index == 3 && !validVelocityMode(value)) return false;
+                if (index == 4 && !validBoolean(value)) return false;
+            }
+            return true;
+        }
+        String suffix = raw.substring(close + 1).trim();
+        for (String token : suffix.isBlank() ? new String[0] : suffix.split("\\s+")) {
+            if (token.startsWith("@") || token.startsWith("?") || token.startsWith("~")
+                    || token.endsWith("%") || token.equals(">")) continue;
+            return false;
+        }
+        return true;
+    }
+
+    private static boolean validVelocityMode(String raw) {
+        return raw != null && Set.of("SET", "ADD", "MULTIPLY", "REMOVE", "DIVIDE")
+                .contains(raw.toUpperCase(Locale.ROOT));
     }
 
     private static String teleportArgument(String raw, int index, String... names) {

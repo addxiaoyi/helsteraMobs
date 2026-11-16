@@ -1250,6 +1250,10 @@ try {
     $fullCatalogReport.probes += [pscustomobject]@{
         id = 'altitudeCondition'; status = 'passed'; observations = @('altitude-condition result=true local-floor=true overhang-ignores-highest=true max-height-boundary=true imported=true imported-alias=true duplicate-preserved=true blocks-restored=true entity-removed=true')
     }
+    $fullCatalogReport.expectedProbeIds += 'velocityMechanic'
+    $fullCatalogReport.probes += [pscustomobject]@{
+        id = 'velocityMechanic'; status = 'passed'; observations = @('skill-actions velocity-mechanic=true imported-velocity=true velocity-restored=true')
+    }
     $fullCatalogHasItem = @($fullCatalogReport.probes | Where-Object id -eq 'hasItemCondition')
     Assert-True ($fullCatalogHasItem.Count -eq 1) 'synthetic full catalog contains the HasItem condition probe'
     $fullCatalogHasItem[0].observations = @(

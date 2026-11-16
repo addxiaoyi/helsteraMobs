@@ -2414,6 +2414,54 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic Velocity maps official aliases, modes and relative flag")
+    void mythicVelocityMapsOfficialArguments(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/velocity.yml", """
+                skills:
+                  motion:
+                    Skills:
+                      - velocity{velocityx=1;vy=2;z=3;mode=ADD;relative=true} @target
+                      - setvelocity{1;2;3;REMOVE;yes} @target
+                      - velocity 4 5 6 @target
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertEquals(List.of("velocity-targets 1 2 3 ADD true @target",
+                        "velocity-targets 1 2 3 REMOVE true @target",
+                        "velocity-targets 4 5 6 SET false @target"),
+                target.getStringList("skills.motion.on-decision"));
+        assertTrue(target.getStringList("skills.motion.unsupported").isEmpty());
+    }
+
+    @Test
+    void mythicVelocityPreservesMalformedArguments(@TempDir Path root) throws Exception {
+        Path file = write(root, "Skills/velocity-invalid.yml", """
+                skills:
+                  motion:
+                    Skills:
+                      - velocity{x=NaN} @target
+                      - velocity{x=1;x=2} @target
+                      - velocity{unknown=1} @target
+                      - velocity{x=} @target
+                      - velocity{1;2;3;BOUNCE} @target
+                      - velocity{1;2;3;ADD;maybe} @target
+                """);
+        List<Map<String, Object>> entries = new MythicMobsImporter().convert(file);
+        YamlConfiguration target = YamlConfiguration.loadConfiguration(
+                new StringReader(String.valueOf(plan(entries).orElseThrow().get("content"))));
+
+        assertTrue(target.getStringList("skills.motion.on-decision").isEmpty());
+        assertEquals(List.of("velocity{x=NaN} @target", "velocity{x=1;x=2} @target",
+                        "velocity{unknown=1} @target", "velocity{x=} @target",
+                        "velocity{1;2;3;BOUNCE} @target", "velocity{1;2;3;ADD;maybe} @target"),
+                target.getStringList("skills.motion.unsupported"));
+        assertEquals(6, entries.stream().filter(entry -> "WARN".equals(entry.get("severity"))
+                && String.valueOf(entry.get("note")).contains("Invalid velocity coordinates")).count());
+    }
+
+    @Test
     void mythicBlockMechanicPreservesLocationTargeter(@TempDir Path root) throws Exception {
         Path file = write(root, "Skills/location.yml", """
                 skills:
