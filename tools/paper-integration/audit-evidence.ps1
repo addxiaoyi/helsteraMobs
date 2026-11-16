@@ -15,6 +15,7 @@ if ($ReleaseGate) {
 $documents = @(
     (Join-Path $Root 'README.md'),
     (Join-Path $Root 'MYTHICMOBS_PARITY_MATRIX.md'),
+    (Join-Path $Root 'MYTHICMOBS_PARITY_ROADMAP.md'),
     (Join-Path $Root 'tools/paper-integration/README.md'),
     (Join-Path $Root 'tools/paper-integration/STARTUP_EVIDENCE.md')
 )
@@ -71,8 +72,46 @@ if ([int]$inventoryMatch.Groups['total'].Value -ne $references.Count -or
 }
 
 $matrixText = Get-Content -LiteralPath (Join-Path $Root 'MYTHICMOBS_PARITY_MATRIX.md') -Raw -Encoding utf8
-$mappedRowPattern = '(?m)^\|[^|\r\n]+\|\s*mapped-unverified\s*\|'
-$mappedRowCount = [regex]::Matches($matrixText, $mappedRowPattern).Count
+$roadmapPath = Join-Path $Root 'MYTHICMOBS_PARITY_ROADMAP.md'
+if (-not (Test-Path -LiteralPath $roadmapPath -PathType Leaf)) {
+    throw 'Parity roadmap not found: MYTHICMOBS_PARITY_ROADMAP.md'
+}
+$roadmapText = Get-Content -LiteralPath $roadmapPath -Raw -Encoding utf8
+$statusNames = @(
+    'implemented-runtime',
+    'mapped-unverified',
+    'unsupported-preserved',
+    'missing',
+    'blocked-by-external-plugin'
+)
+$matrixStatusCounts = @{}
+foreach ($statusName in $statusNames) { $matrixStatusCounts[$statusName] = 0 }
+foreach ($line in ($matrixText -split "`r?`n")) {
+    if (-not $line.StartsWith('|')) { continue }
+    $cells = @($line.Trim('|').Split('|') | ForEach-Object { $_.Trim() })
+    if ($cells.Count -ge 3 -and $matrixStatusCounts.ContainsKey($cells[1])) {
+        $matrixStatusCounts[$cells[1]]++
+    }
+}
+$roadmapStatusCounts = @{}
+$roadmapStatusPattern = '(?m)^\|\s*`(?<status>implemented-runtime|mapped-unverified|unsupported-preserved|missing|blocked-by-external-plugin)`\s*\|\s*(?<count>\d+)\s*\|'
+foreach ($match in [regex]::Matches($roadmapText, $roadmapStatusPattern)) {
+    $statusName = $match.Groups['status'].Value
+    if ($roadmapStatusCounts.ContainsKey($statusName)) {
+        throw "Parity roadmap lists a status more than once: $statusName"
+    }
+    $roadmapStatusCounts[$statusName] = [int]$match.Groups['count'].Value
+}
+foreach ($statusName in $statusNames) {
+    if (-not $roadmapStatusCounts.ContainsKey($statusName)) {
+        throw "Parity roadmap baseline is missing a status count: $statusName"
+    }
+    if ($roadmapStatusCounts[$statusName] -ne $matrixStatusCounts[$statusName]) {
+        throw ('Parity roadmap status count is stale for {0}: documented {1}, actual {2}.' -f
+            $statusName, $roadmapStatusCounts[$statusName], $matrixStatusCounts[$statusName])
+    }
+}
+$mappedRowCount = $matrixStatusCounts['mapped-unverified']
 $mappedClaimPattern = 'matrix currently has\s+`(?<count>\d+)`\s+`mapped-unverified`\s+rows'
 $mappedClaim = [regex]::Match($readme, $mappedClaimPattern)
 if (-not $mappedClaim.Success) {

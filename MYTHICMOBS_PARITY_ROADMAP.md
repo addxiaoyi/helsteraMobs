@@ -11,9 +11,10 @@ Audited against the matrix on 2026-11-16:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
-| `implemented-runtime` | 112 | A runtime implementation exists; the row's evidence still limits the claim. |
+| `implemented-runtime` | 114 | A runtime implementation exists; the row's evidence still limits the claim. |
 | `mapped-unverified` | 33 | Mapping or partial runtime support exists, but the full stated behavior is not verified. |
 | `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
+| `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
 The latest full release fixture is `srv-paper-context-targeter-inactive-strict-20261115-r1` on Paper 1.21.1-133, with 462

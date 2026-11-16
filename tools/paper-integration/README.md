@@ -2066,8 +2066,9 @@ restoration. It also verifies that the category extension retains the existing
 exact `BiomeType` behavior.
 
 Run `pwsh -NoProfile -File tools/paper-integration/audit-evidence.ps1` to inspect
-the evidence inventory. It scans the root README, parity matrix, Paper README,
-and startup evidence document and reports documented `srv-paper-*` fixture
+the evidence inventory. It scans the root README, parity matrix, parity roadmap,
+Paper README, and startup evidence document; it also checks that all five
+roadmap status counts match the matrix. It reports documented `srv-paper-*` fixture
 directories that are absent from the workspace, including each source document
 and line. Versioned Paper names are treated as single references. Maven
 `verify` reads `release-evidence.json` and requires every listed report to be

@@ -3,6 +3,7 @@ $temporaryRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("helstera-evidence
 $documents = @(
     'README.md',
     'MYTHICMOBS_PARITY_MATRIX.md',
+    'MYTHICMOBS_PARITY_ROADMAP.md',
     'tools/paper-integration/README.md',
     'tools/paper-integration/STARTUP_EVIDENCE.md'
 )
@@ -20,6 +21,9 @@ try {
             }
             'MYTHICMOBS_PARITY_MATRIX.md' {
                 "| Area | Status | Evidence |`n| --- | --- | --- |`n| Example | mapped-unverified | pending |`n"
+            }
+            'MYTHICMOBS_PARITY_ROADMAP.md' {
+                "| Matrix status | Rows | Meaning |`n| --- | ---: | --- |`n| ``implemented-runtime`` | 0 | runtime |`n| ``mapped-unverified`` | 1 | mapped |`n| ``unsupported-preserved`` | 0 | preserved |`n| ``missing`` | 0 | missing |`n| ``blocked-by-external-plugin`` | 0 | external |`n"
             }
             default { "" }
         }
@@ -686,6 +690,44 @@ try {
     $fullReport.probes += [pscustomobject]@{
         id = 'mobsInChunkImportedCondition'; status = 'passed'; observations = @('imported-mobs-in-chunk-condition default-zero=true range-positive=true zero-negative=true invalid-preserved=true passed=true')
     }
+    # This report is synthetic and tests the audit contract, not Paper behavior.
+    # Populate any catalog additions from their declared status/observation
+    # contract so adding a probe does not require editing this fixture builder.
+    $probeCatalog = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'release-probe-catalog.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    foreach ($requiredProbe in $probeCatalog.probes) {
+        $requiredId = [string]$requiredProbe.id
+        if ($requiredId -cnotin @($fullReport.expectedProbeIds)) {
+            $fullReport.expectedProbeIds += $requiredId
+        }
+        $matchingProbe = @($fullReport.probes | Where-Object { $_.id -ceq $requiredId })
+        if ($matchingProbe.Count -eq 0) {
+            $matchingProbe = @([pscustomobject]@{
+                id = $requiredId
+                status = [string]$requiredProbe.status
+                observations = @()
+            })
+            $fullReport.probes += $matchingProbe[0]
+        } elseif ($matchingProbe.Count -eq 1) {
+            $matchingProbe[0].status = [string]$requiredProbe.status
+        }
+        if ($matchingProbe.Count -eq 1) {
+            $observations = [System.Collections.Generic.List[string]]::new()
+            foreach ($observation in @($matchingProbe[0].observations)) {
+                if (-not [string]::IsNullOrWhiteSpace([string]$observation)) { $observations.Add([string]$observation) }
+            }
+            if ($requiredProbe.requiredObservation) {
+                $observations.Add([string]$requiredProbe.requiredObservation)
+            }
+            if ($requiredProbe.requiredObservationPattern) {
+                $observations.Add([string]$requiredProbe.requiredObservationPattern)
+            }
+            foreach ($fragment in @($requiredProbe.requiredObservationContains)) {
+                if (-not [string]::IsNullOrWhiteSpace([string]$fragment)) { $observations.Add([string]$fragment) }
+            }
+            if ($observations.Count -eq 0) { $observations.Add("synthetic-$requiredId=true") }
+            $matchingProbe[0].observations = @($observations | Select-Object -Unique)
+        }
+    }
     $latestProbeCount = $fullReport.probes.Count
     $fullReport.fixtureDirectory = 'srv-paper-integration'
     $testJarPath = Join-Path $temporaryRoot 'release.jar'
@@ -807,6 +849,21 @@ try {
     }
 
     $originalMatrix = [System.IO.File]::ReadAllText($matrixPath)
+    $roadmapPath = Join-Path $temporaryRoot 'MYTHICMOBS_PARITY_ROADMAP.md'
+    $originalRoadmap = [System.IO.File]::ReadAllText($roadmapPath)
+    [System.IO.File]::WriteAllText($matrixPath, $originalMatrix + "`n| Added | implemented-runtime | evidence |`n")
+    $staleRoadmapStatusOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $staleRoadmapStatusOutput -notmatch 'Parity roadmap status count is stale for implemented-runtime') {
+        throw "Stale parity roadmap status count was not rejected: $staleRoadmapStatusOutput"
+    }
+    [System.IO.File]::WriteAllText($matrixPath, $originalMatrix)
+    [System.IO.File]::WriteAllText($roadmapPath, $originalRoadmap.Replace(
+        '| `implemented-runtime` | 0 |', '| `implemented-runtime` | 1 |'))
+    $staleRoadmapCountOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $staleRoadmapCountOutput -notmatch 'Parity roadmap status count is stale for implemented-runtime') {
+        throw "Edited stale parity roadmap status count was not rejected: $staleRoadmapCountOutput"
+    }
+    [System.IO.File]::WriteAllText($roadmapPath, $originalRoadmap)
     [System.IO.File]::WriteAllText($matrixPath, $originalMatrix.Replace(
         "completes $latestProbeCount probes", 'completes 290 probes'))
     $staleMatrixOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
