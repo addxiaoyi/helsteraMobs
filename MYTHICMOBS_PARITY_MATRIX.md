@@ -4134,3 +4134,12 @@ positional runtime factories. Unknown, duplicate, empty, mixed, invalid, and
 out-of-range phase values fail closed. AI and plugin contract tests cover the
 numeric lunar cycle and Ender Dragon phase lists. This adds no Paper evidence;
 the Conditions catalog remains `mapped-unverified`.
+
+### Entity identity condition binding update
+
+Direct `mythic-mob-type` and `template-type` bindings now validate named value
+and flag aliases before runtime matching. Unknown, duplicate, empty, mixed,
+and invalid values fail closed, including the `exactmatch`/`em` boolean
+contract. AI and plugin contract tests cover Mythic type matching and template
+lineage matching. This adds no Paper evidence; the Conditions catalog remains
+`mapped-unverified`.

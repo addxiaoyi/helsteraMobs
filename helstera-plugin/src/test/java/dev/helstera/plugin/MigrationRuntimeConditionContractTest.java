@@ -358,6 +358,46 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("canonical Mythic mob type and template conditions validate named arguments")
+    void canonicalNamedIdentityConditionsReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        SkillExtras.mythicMobTypeMatcher((entity, type, exact) ->
+                entity == target && type.equalsIgnoreCase("Zombie") && !exact);
+        SkillExtras.mobTemplateLookup(entity -> entity == target
+                ? List.of("mythic_undead", "mythic_boss") : List.of());
+        try {
+            String typeKey = service.bindCondition("mythic-mob-type{types=Zombie;em=false}");
+            assertNotNull(typeKey, service.warnings().toString());
+            assertTrue(registry.testCondition(typeKey,
+                    dev.helstera.api.behavior.BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE")));
+            String positionalTypeKey = service.bindCondition("mythic-mob-type{Zombie;false}");
+            assertNotNull(positionalTypeKey, service.warnings().toString());
+            assertTrue(registry.testCondition(positionalTypeKey,
+                    dev.helstera.api.behavior.BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE")));
+
+            String templateKey = service.bindCondition("template-type{t=Undead,Boss}");
+            assertNotNull(templateKey, service.warnings().toString());
+            assertTrue(registry.testCondition(templateKey,
+                    dev.helstera.api.behavior.BehaviorContext.of(null, target, 1.0, -1, 0, "IDLE")));
+
+            for (String invalid : List.of(
+                    "mythic-mob-type{unknown=Zombie}",
+                    "mythic-mob-type{type=Zombie;types=Husk}",
+                    "mythic-mob-type{type=Zombie;exactmatch=maybe}",
+                    "mythic-mob-type{type=Zombie;em=false;exactmatch=true}",
+                    "template-type{template=Undead;t=Boss}",
+                    "template-type{unknown=Undead}",
+                    "template-type{templates=}")) {
+                assertNull(service.bindCondition(invalid), invalid);
+            }
+        } finally {
+            SkillExtras.resetRuntimeHooks();
+        }
+    }
+
+    @Test
     @DisplayName("imported Mythic crouching and wearing aliases reach their runtime conditions")
     void importedCrouchingAndWearingAliasesReachRuntime() {
         var registry = new BehaviorRegistryImpl();

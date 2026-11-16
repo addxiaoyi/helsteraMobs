@@ -74,6 +74,13 @@ plugin contract tests cover the numeric lunar cycle and Ender Dragon phase
 list. No Paper evidence was added, so the Conditions catalog remains
 `mapped-unverified`.
 
+The direct `mythic-mob-type` and `template-type` bindings now validate their
+named value and flag aliases before runtime matching. Unknown, duplicate,
+empty, mixed, and invalid values fail closed, including the
+`exactmatch`/`em` boolean contract. AI and plugin contract tests cover Mythic
+type matching and template lineage matching. No Paper evidence was added, so
+the Conditions catalog remains `mapped-unverified`.
+
 ## Completion contract
 
 A capability can leave `mapped-unverified` only when all applicable checks below

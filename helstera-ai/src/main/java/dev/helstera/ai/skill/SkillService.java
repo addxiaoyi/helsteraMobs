@@ -362,6 +362,12 @@ public final class SkillService {
                 warn("月相/末影龙阶段条件参数无效 \"" + spec + "\"");
                 return null;
             }
+        } else if (conditionSpec.indexOf('{') >= 0 && isNamedIdentityCondition(rawCanonicalName)) {
+            normalized = normalizeNamedIdentityCondition(conditionSpec, rawCanonicalName);
+            if (normalized == null) {
+                warn("实体类型/模板条件参数无效 \"" + spec + "\"");
+                return null;
+            }
         } else {
             normalized = conditionSpec.indexOf('{') >= 0
                     ? SpecSyntax.normalize(conditionSpec) : conditionSpec;
@@ -512,6 +518,10 @@ public final class SkillService {
         return Set.of("lunar-phase", "ender-dragon-phase").contains(name);
     }
 
+    private static boolean isNamedIdentityCondition(String name) {
+        return Set.of("mythic-mob-type", "template-type").contains(name);
+    }
+
     /**
      * Keeps named environment-condition arguments long enough to validate and
      * order them before the positional runtime factories receive them.
@@ -628,6 +638,86 @@ public final class SkillService {
             }
         }
         return true;
+    }
+
+    /**
+     * Keeps the Mythic mob-type and template argument names intact while
+     * normalizing them to the positional runtime factories.  Both conditions
+     * have a value plus optional flags, so generic key stripping can otherwise
+     * silently discard an unknown or duplicate key.
+     */
+    private static String normalizeNamedIdentityCondition(String spec, String condition) {
+        MythicSkillSpec parsed;
+        try {
+            parsed = MythicSkillSpec.parse(spec);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+        if (parsed.targeter() != null || parsed.trigger() != null || parsed.chance() != null
+                || !parsed.inlineConditions().isEmpty() || !parsed.targetConditions().isEmpty()) return null;
+        if (parsed.arguments().size() + parsed.positional().size() != SpecSyntax.argCount(spec)) return null;
+
+        if (condition.equals("template-type")) {
+            String templates = null;
+            for (String positional : parsed.positional()) {
+                if (templates != null || positional.isBlank()) return null;
+                templates = positional;
+            }
+            for (var entry : parsed.arguments().entrySet()) {
+                String key = entry.getKey().toLowerCase(Locale.ROOT);
+                if (!Set.of("template", "templates", "t").contains(key)
+                        || entry.getValue() == null || entry.getValue().isBlank() || templates != null) {
+                    return null;
+                }
+                templates = entry.getValue();
+            }
+            return templates == null ? null : condition + " templates="
+                    + quoteNormalizedConditionValue(templates);
+        }
+
+        String types = null;
+        String exact = "true";
+        boolean exactSeen = false;
+        if (!parsed.arguments().isEmpty()) {
+            if (!parsed.positional().isEmpty()) return null;
+        } else {
+            if (parsed.positional().size() > 2) return null;
+            if (!parsed.positional().isEmpty()) {
+                types = parsed.positional().get(0);
+                if (types.isBlank()) return null;
+            }
+            if (parsed.positional().size() > 1) {
+                exact = normalizeConditionBoolean(parsed.positional().get(1));
+                if (exact == null) return null;
+                exactSeen = true;
+            }
+        }
+        for (var entry : parsed.arguments().entrySet()) {
+            String key = entry.getKey().toLowerCase(Locale.ROOT);
+            String value = entry.getValue();
+            if (value == null || value.isBlank()) return null;
+            if (Set.of("type", "types", "t").contains(key)) {
+                if (types != null) return null;
+                types = value;
+            } else if (Set.of("exactmatch", "em").contains(key)) {
+                if (exactSeen) return null;
+                exact = normalizeConditionBoolean(value);
+                if (exact == null) return null;
+                exactSeen = true;
+            } else {
+                return null;
+            }
+        }
+        return types == null ? null : condition + " " + quoteNormalizedConditionValue(types)
+                + " exactmatch=" + exact;
+    }
+
+    private static String normalizeConditionBoolean(String raw) {
+        return switch (raw.trim().toLowerCase(Locale.ROOT)) {
+            case "true", "yes", "on", "1" -> "true";
+            case "false", "no", "off", "0" -> "false";
+            default -> null;
+        };
     }
 
     private static String quoteNormalizedConditionValue(String value) {

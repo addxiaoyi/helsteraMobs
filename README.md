@@ -18,6 +18,14 @@ contract tests cover numeric lunar phases and Ender Dragon phase lists. No new
 Paper evidence is claimed; the complete Conditions catalog remains
 `mapped-unverified`.
 
+Entity identity condition update (2026-11-16): direct `mythic-mob-type` and
+`template-type` binding now validates their named value and flag aliases before
+runtime matching. Unknown, duplicate, empty, mixed, and invalid values fail
+closed, including `exactmatch`/`em` boolean validation. AI and plugin contract
+tests cover Mythic type matching and template lineage matching. No new Paper
+evidence is claimed; the complete Conditions catalog remains
+`mapped-unverified`.
+
 Conditions alias update (2026-11-16): official MythicMobs 5.7.2 `Sunny` accepts `sunny`/`isSunny`, while `Thundering` accepts `thundering`/`isThundering`/`stormy`/`isStormy`. These aliases now pass through importer translation, `SkillService` canonicalization, and condition-list parsing to `weather-is clear` or `weather-is thunder`; unknown and duplicate arguments remain preserved and fail closed. Migration, API, AI, and plugin cross-module tests cover the mappings and runtime states. No new Paper evidence is claimed for this alias slice; the complete Conditions catalog remains `mapped-unverified`.
 Conditions alias update (2026-11-16): official MythicMobs 5.7.2 `Crouching` aliases `sneaking`/`isCrouching`/`isSneaking`, and `Wearing` aliases `isWearing`/`wielding`/`isWielding`, now map through migration, `SkillService`, and condition-list parsing. The existing `is-sneaking` and `wearing` runtime paths are reused; wearing item aliases are validated and unknown, duplicate, or empty arguments fail closed. Migration, API, AI, and plugin cross-module tests cover Player sneaking, helmet matching, alias mapping, and preservation. No new Paper evidence is claimed; the complete Conditions catalog remains `mapped-unverified`.
 Conditions alias update (2026-11-16): official `Environment`/dimension and `InRegion` naming variants now map through migration, `SkillService`, and condition-list parsing: `environment`/`dimension` resolve to `dimension-is`, `inregion`/`region` resolve to `region`, and singular `playerinradius` joins `playersinradius`. Existing `hasplugin` and `mmtype` mappings are also recognized as list-condition starts. Unknown, duplicate, and malformed arguments remain preserved and fail closed. Migration, API, AI, and plugin contract tests cover the alias paths. No new Paper evidence is claimed; the complete Conditions catalog remains `mapped-unverified`.
