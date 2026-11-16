@@ -2654,7 +2654,8 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("world-is", (SkillCatalog.ConditionFactory) a -> {
-                    String want = str(a, 0, "");
+                    String want = singleConditionValue(a, "world-is", "",
+                            Map.of("world", "value", "w", "value", "name", "value", "value", "value"));
                     return ctx -> {
                         Location l = selfLoc(ctx);
                         return l != null && l.getWorld() != null
@@ -2662,12 +2663,29 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("biome-is", (SkillCatalog.ConditionFactory) a -> {
-                    String wanted = str(a, 0, "minecraft:plains");
-                    boolean exact = bool(a, 1, true);
+                    ParsedConditionArguments parsed = parseConditionArguments(a, Map.of(
+                            "biome", "biome", "b", "biome", "name", "biome", "value", "biome",
+                            "exact", "exact", "e" , "exact"), 2, "biome-is");
+                    String parsedWanted = parsed.named().get("biome");
+                    if (parsedWanted != null && !parsed.positional().isEmpty()) {
+                        throw new IllegalArgumentException("biome-is cannot mix named and positional biome values");
+                    }
+                    if (parsedWanted == null) parsedWanted = parsed.positional().isEmpty()
+                            ? "minecraft:plains" : parsed.positional().get(0);
+                    String exactRaw = parsed.named().get("exact");
+                    if (exactRaw != null && parsed.positional().size() > 1) {
+                        throw new IllegalArgumentException("biome-is exact value is duplicated");
+                    }
+                    boolean exact = exactRaw == null
+                            ? parseConditionBoolean(parsed.positional().size() > 1
+                                    ? parsed.positional().get(1) : null, true, "biome-is exact")
+                            : parseConditionBoolean(exactRaw, true, "biome-is exact");
+                    final String wanted = parsedWanted;
                     return ctx -> biomeMatches(conditionLocation(ctx), wanted, exact);
                 }),
                 Map.entry("time-is", (SkillCatalog.ConditionFactory) a -> {
-                    String want = str(a, 0, "day");
+                    String want = singleConditionValue(a, "time-is", "day",
+                            Map.of("time", "value", "t", "value", "name", "value", "value", "value"));
                     return ctx -> {
                         Location l = selfLoc(ctx);
                         if (l == null) return false;
@@ -2687,7 +2705,8 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("weather-is", (SkillCatalog.ConditionFactory) a -> {
-                    String want = str(a, 0, "clear");
+                    String want = singleConditionValue(a, "weather-is", "clear",
+                            Map.of("weather", "value", "type", "value", "name", "value", "value", "value"));
                     return ctx -> {
                         Location l = selfLoc(ctx);
                         if (l == null) return false;
@@ -4512,7 +4531,9 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("dimension-is", (SkillCatalog.ConditionFactory) a -> {
-                    String wanted = str(a, 0, "");
+                    String wanted = singleConditionValue(a, "dimension-is", "",
+                            Map.of("dimension", "value", "environment", "value", "env", "value",
+                                    "world", "value", "name", "value", "value", "value"));
                     return ctx -> matchesDimension(selfLoc(ctx), wanted);
                 }),
                 Map.entry("ender-dragon-alive", (SkillCatalog.ConditionFactory) a ->
@@ -9592,6 +9613,72 @@ public final class SkillExtras {
         } catch (RuntimeException ignored) {
             return null;
         }
+    }
+
+    private record ParsedConditionArguments(List<String> positional, Map<String, String> named) {
+    }
+
+    /**
+     * Parses a condition's positional and named arguments without allowing an
+     * unknown key to fall through as a positional string.  Mythic condition
+     * names are commonly written as {@code condition{key=value}}, while the
+     * canonical runtime form may still be positional; both forms must produce
+     * the same value and duplicate aliases must fail closed.
+     */
+    private static ParsedConditionArguments parseConditionArguments(List<String> args,
+                                                                    Map<String, String> aliases,
+                                                                    int maxPositionals,
+                                                                    String condition) {
+        List<String> positional = new ArrayList<>();
+        Map<String, String> named = new LinkedHashMap<>();
+        if (args == null) return new ParsedConditionArguments(List.of(), Map.of());
+        for (String raw : args) {
+            if (raw == null || raw.isBlank()) {
+                throw new IllegalArgumentException(condition + " contains an empty argument");
+            }
+            String candidate = raw.trim();
+            int equals = candidate.indexOf('=');
+            if (equals > 0 && candidate.substring(0, equals).trim()
+                    .matches("[A-Za-z][A-Za-z0-9_-]*")) {
+                String key = candidate.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                String value = candidate.substring(equals + 1).trim();
+                String canonical = aliases.get(key);
+                if (canonical == null) {
+                    throw new IllegalArgumentException(condition + " has unknown argument: " + key);
+                }
+                if (value.isBlank()) {
+                    throw new IllegalArgumentException(condition + " has an empty argument: " + key);
+                }
+                if (named.put(canonical, value) != null) {
+                    throw new IllegalArgumentException(condition + " has duplicate argument: " + canonical);
+                }
+                continue;
+            }
+            if (positional.size() >= maxPositionals) {
+                throw new IllegalArgumentException(condition + " has too many positional arguments");
+            }
+            positional.add(candidate);
+        }
+        return new ParsedConditionArguments(List.copyOf(positional), Map.copyOf(named));
+    }
+
+    private static String singleConditionValue(List<String> args, String condition,
+                                               String fallback, Map<String, String> aliases) {
+        ParsedConditionArguments parsed = parseConditionArguments(args, aliases, 1, condition);
+        if (!parsed.named().isEmpty() && !parsed.positional().isEmpty()) {
+            throw new IllegalArgumentException(condition + " cannot mix named and positional values");
+        }
+        if (!parsed.named().isEmpty()) return parsed.named().get("value");
+        return parsed.positional().isEmpty() ? fallback : parsed.positional().get(0);
+    }
+
+    private static boolean parseConditionBoolean(String raw, boolean fallback, String label) {
+        if (raw == null) return fallback;
+        return switch (raw.trim().toLowerCase(Locale.ROOT)) {
+            case "true", "yes", "on", "1" -> true;
+            case "false", "no", "off", "0" -> false;
+            default -> throw new IllegalArgumentException(label + " must be a boolean");
+        };
     }
 
     private static String regionArgument(List<String> args) {

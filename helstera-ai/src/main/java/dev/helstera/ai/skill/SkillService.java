@@ -349,8 +349,23 @@ public final class SkillService {
             warn("移动条件参数无效 \"" + spec + "\"");
             return null;
         }
-        String normalized = conditionSpec.indexOf('{') >= 0
-                ? SpecSyntax.normalize(conditionSpec) : conditionSpec;
+        String normalized;
+        if (conditionSpec.indexOf('{') >= 0 && isNamedEnvironmentCondition(rawCanonicalName)) {
+            normalized = normalizeNamedEnvironmentCondition(conditionSpec, rawCanonicalName);
+            if (normalized == null) {
+                warn("环境条件参数无效 \"" + spec + "\"");
+                return null;
+            }
+        } else if (conditionSpec.indexOf('{') >= 0 && isNamedPhaseCondition(rawCanonicalName)) {
+            normalized = normalizeNamedPhaseCondition(conditionSpec, rawCanonicalName);
+            if (normalized == null) {
+                warn("月相/末影龙阶段条件参数无效 \"" + spec + "\"");
+                return null;
+            }
+        } else {
+            normalized = conditionSpec.indexOf('{') >= 0
+                    ? SpecSyntax.normalize(conditionSpec) : conditionSpec;
+        }
         List<String> parts = split(normalized);
         String name = canonicalConditionName(parts.get(0).toLowerCase(Locale.ROOT));
         List<String> args = new ArrayList<>(parts.subList(1, parts.size()));
@@ -487,6 +502,138 @@ public final class SkillService {
             registry.registerCondition(key, ctx -> evaluateMetaskillCondition(skillName, parameters, ctx));
         }
         return key;
+    }
+
+    private static boolean isNamedEnvironmentCondition(String name) {
+        return Set.of("world-is", "biome-is", "weather-is", "time-is", "dimension-is").contains(name);
+    }
+
+    private static boolean isNamedPhaseCondition(String name) {
+        return Set.of("lunar-phase", "ender-dragon-phase").contains(name);
+    }
+
+    /**
+     * Keeps named environment-condition arguments long enough to validate and
+     * order them before the positional runtime factories receive them.
+     * {@link SpecSyntax} intentionally strips keys for legacy mechanics, so
+     * these conditions need a narrow parser at the binding boundary.
+     */
+    private static String normalizeNamedEnvironmentCondition(String spec, String condition) {
+        MythicSkillSpec parsed;
+        try {
+            parsed = MythicSkillSpec.parse(spec);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+        if (parsed.targeter() != null || parsed.trigger() != null || parsed.chance() != null
+                || !parsed.inlineConditions().isEmpty() || !parsed.targetConditions().isEmpty()) return null;
+        if (parsed.arguments().size() + parsed.positional().size() != SpecSyntax.argCount(spec)) return null;
+
+        Map<String, String> aliases = switch (condition) {
+            case "world-is" -> Map.of("world", "value", "w", "value", "name", "value", "value", "value");
+            case "weather-is" -> Map.of("weather", "value", "type", "value", "name", "value", "value", "value");
+            case "time-is" -> Map.of("time", "value", "t", "value", "name", "value", "value", "value");
+            case "dimension-is" -> Map.of("dimension", "value", "environment", "value", "env", "value",
+                    "world", "value", "name", "value", "value", "value");
+            case "biome-is" -> Map.of("biome", "biome", "b", "biome", "name", "biome", "value", "biome",
+                    "exact", "exact", "e", "exact");
+            default -> Map.of();
+        };
+        List<String> positional = new ArrayList<>(parsed.positional());
+        if (!parsed.arguments().isEmpty() && !positional.isEmpty()) return null;
+        List<String> ordered = new ArrayList<>();
+        if (condition.equals("biome-is")) {
+            String biome = null;
+            String exact = null;
+            for (var entry : parsed.arguments().entrySet()) {
+                String canonical = aliases.get(entry.getKey().toLowerCase(Locale.ROOT));
+                if (canonical == null || entry.getValue().isBlank()) return null;
+                if (canonical.equals("biome") ? biome != null : exact != null) return null;
+                if (canonical.equals("biome")) biome = entry.getValue();
+                else exact = entry.getValue();
+            }
+            if (biome != null) ordered.add(biome);
+            if (exact != null) {
+                if (biome == null) ordered.add("minecraft:plains");
+                ordered.add(exact);
+            }
+            ordered.addAll(positional);
+            if (ordered.size() > 2) return null;
+        } else {
+            String value = null;
+            for (var entry : parsed.arguments().entrySet()) {
+                String canonical = aliases.get(entry.getKey().toLowerCase(Locale.ROOT));
+                if (!"value".equals(canonical) || entry.getValue().isBlank() || value != null) return null;
+                value = entry.getValue();
+            }
+            if (value != null) ordered.add(value);
+            ordered.addAll(positional);
+            if (ordered.size() > 1) return null;
+        }
+        return condition + (ordered.isEmpty() ? "" : " " + ordered.stream()
+                .map(SkillService::quoteNormalizedConditionValue)
+                .collect(java.util.stream.Collectors.joining(" ")));
+    }
+
+    /**
+     * Validates the shared {@code phase}/{@code phases}/{@code p} argument
+     * contract for the two phase conditions before legacy positional factories
+     * receive it.  The phase list itself remains one value because commas are
+     * part of the Mythic condition value.
+     */
+    private static String normalizeNamedPhaseCondition(String spec, String condition) {
+        MythicSkillSpec parsed;
+        try {
+            parsed = MythicSkillSpec.parse(spec);
+        } catch (IllegalArgumentException ignored) {
+            return null;
+        }
+        if (parsed.targeter() != null || parsed.trigger() != null || parsed.chance() != null
+                || !parsed.inlineConditions().isEmpty() || !parsed.targetConditions().isEmpty()) return null;
+        if (parsed.arguments().size() + parsed.positional().size() != SpecSyntax.argCount(spec)) return null;
+        if (!parsed.arguments().isEmpty() && !parsed.positional().isEmpty()) return null;
+
+        String value = null;
+        if (!parsed.arguments().isEmpty()) {
+            for (var entry : parsed.arguments().entrySet()) {
+                String key = entry.getKey().toLowerCase(Locale.ROOT);
+                if (!Set.of("phase", "phases", "p").contains(key)
+                        || entry.getValue() == null || entry.getValue().isBlank() || value != null) {
+                    return null;
+                }
+                value = entry.getValue();
+            }
+        } else if (parsed.positional().size() > 1) {
+            return null;
+        } else if (!parsed.positional().isEmpty()) {
+            value = parsed.positional().get(0);
+        }
+
+        if (value != null && condition.equals("lunar-phase") && !validLunarPhaseList(value)) {
+            return null;
+        }
+        return condition + (value == null ? "" : " " + quoteNormalizedConditionValue(value));
+    }
+
+    private static boolean validLunarPhaseList(String value) {
+        String[] tokens = value.split(",", -1);
+        if (tokens.length == 0) return false;
+        for (String token : tokens) {
+            if (token.isBlank()) return false;
+            try {
+                int phase = Integer.parseInt(token.trim());
+                if (phase < 0 || phase > 7) return false;
+            } catch (NumberFormatException ignored) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String quoteNormalizedConditionValue(String value) {
+        if (value == null || value.isBlank()) return "";
+        if (value.indexOf(' ') < 0 && value.indexOf('"') < 0) return value;
+        return "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
     }
 
     private boolean evaluateMetaskillCondition(String skillName, Map<String, String> parameters,

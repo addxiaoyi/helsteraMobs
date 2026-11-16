@@ -292,6 +292,7 @@ class SkillConditionsTest {
         }
     }
 
+
     @Test
     @DisplayName("name-is：优先匹配自定义名，无目标或空参数时失败关闭")
     void nameConditionMatchesCustomAndEntityNames() {
@@ -1695,6 +1696,39 @@ class SkillConditionsTest {
                 List.of("minecraft:desert,sunflower_plains", "true")).test(context));
         assertFalse(extraFactory("biome-is").create(List.of("plains", "true")).test(context));
         assertFalse(extraFactory("biome-is").create(List.of("example:plains", "false")).test(context));
+    }
+
+    @Test
+    @DisplayName("environment conditions decode canonical named arguments and reject ambiguity")
+    void environmentConditionsDecodeNamedArgumentsStrictly() {
+        World world = mock(World.class);
+        Block block = mock(Block.class);
+        when(world.getName()).thenReturn("arena");
+        when(world.getEnvironment()).thenReturn(World.Environment.NORMAL);
+        when(world.hasStorm()).thenReturn(true);
+        when(world.isThundering()).thenReturn(false);
+        when(world.getTime()).thenReturn(14_000L);
+        when(world.getBlockAt(any(Location.class))).thenReturn(block);
+        when(block.getBiome()).thenReturn(org.bukkit.block.Biome.SUNFLOWER_PLAINS);
+        BehaviorContext context = BehaviorContext.execution(null, null, 1.0, -1, 0,
+                "IDLE", null, null, List.of(), new Location(world, 0, 64, 0));
+
+        assertTrue(extraFactory("world-is").create(List.of("world=arena")).test(context));
+        assertTrue(extraFactory("weather-is").create(List.of("type=rain")).test(context));
+        assertTrue(extraFactory("time-is").create(List.of("t=night")).test(context));
+        assertTrue(extraFactory("dimension-is").create(List.of("environment=overworld")).test(context));
+        assertTrue(extraFactory("biome-is").create(List.of("b=plains", "e=false")).test(context));
+
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("world-is").create(List.of("unknown=arena")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("weather-is").create(List.of("type=rain", "weather=clear")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("time-is").create(List.of("night", "day")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("biome-is").create(List.of("b=plains", "unknown=false")));
+        assertThrows(IllegalArgumentException.class,
+                () -> extraFactory("dimension-is").create(List.of("environment=overworld", "NETHER")));
     }
 
     @Test

@@ -56,6 +56,24 @@ malformed-input paths. This closes the cone-family slice only; the broader
 Context targeters row remains `mapped-unverified` until the complete targeter
 catalog and its parameters have been verified.
 
+The canonical environment conditions now validate named arguments at both the
+direct runtime and `SkillService` binding boundaries. `world-is` accepts
+`world`/`w`/`name`, `biome-is` accepts `biome`/`b` plus `exact`/`e`,
+`weather-is` accepts `weather`/`type`, `time-is` accepts `time`/`t`, and
+`dimension-is` accepts `dimension`/`environment`/`env`/`world`. Unknown,
+duplicate, empty, mixed positional/named, and malformed arguments fail closed;
+legacy positional forms remain supported. AI and plugin contract tests cover
+the direct and imported paths. No Paper evidence was added, so the Conditions
+catalog remains `mapped-unverified`.
+
+The direct `lunar-phase` and `ender-dragon-phase` bindings now apply the
+importer's strict `phase`/`phases`/`p` argument contract before passing the
+phase list to their legacy positional factories. Unknown, duplicate, empty,
+mixed, invalid, and out-of-range numeric phase values fail closed. AI and
+plugin contract tests cover the numeric lunar cycle and Ender Dragon phase
+list. No Paper evidence was added, so the Conditions catalog remains
+`mapped-unverified`.
+
 ## Completion contract
 
 A capability can leave `mapped-unverified` only when all applicable checks below

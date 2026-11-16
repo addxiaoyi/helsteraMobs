@@ -287,6 +287,77 @@ class MigrationRuntimeConditionContractTest {
     }
 
     @Test
+    @DisplayName("canonical named environment conditions reach runtime and reject unknown arguments")
+    void canonicalNamedEnvironmentConditionsReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var world = mock(org.bukkit.World.class);
+        var block = mock(org.bukkit.block.Block.class);
+        when(world.getName()).thenReturn("arena");
+        when(world.getEnvironment()).thenReturn(org.bukkit.World.Environment.NORMAL);
+        when(world.hasStorm()).thenReturn(true);
+        when(world.isThundering()).thenReturn(false);
+        when(world.getTime()).thenReturn(14_000L);
+        when(world.getBlockAt(any(org.bukkit.Location.class))).thenReturn(block);
+        when(block.getBiome()).thenReturn(org.bukkit.block.Biome.SUNFLOWER_PLAINS);
+        var location = new org.bukkit.Location(world, 0, 64, 0);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(location);
+        var context = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, null, 1.0, -1, 0, "IDLE");
+
+        for (String spec : List.of(
+                "world-is{world=arena}", "weather-is{type=rain}",
+                "time-is{t=night}", "dimension-is{environment=overworld}",
+                "biome-is{b=plains;e=false}")) {
+            String key = service.bindCondition(spec);
+            assertNotNull(key, spec + " warnings=" + service.warnings());
+            assertTrue(registry.testCondition(key, context), spec);
+        }
+        for (String spec : List.of(
+                "world-is{unknown=arena}", "weather-is{type=rain;weather=clear}",
+                "time-is{night;day}", "dimension-is{environment=overworld;NETHER}",
+                "biome-is{b=plains;unknown=false}")) {
+            assertNull(service.bindCondition(spec), spec);
+        }
+    }
+
+    @Test
+    @DisplayName("canonical phase conditions validate named arguments before runtime binding")
+    void canonicalNamedPhaseConditionsReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var world = mock(org.bukkit.World.class);
+        when(world.getFullTime()).thenReturn(9L * 24_000L);
+        var location = new org.bukkit.Location(world, 0, 64, 0);
+        var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.location()).thenReturn(location);
+        var lunarContext = dev.helstera.api.behavior.BehaviorContext.of(
+                instance, null, 1.0, -1, 0, "IDLE");
+        String lunar = service.bindCondition("lunar-phase{phases=0,1,2}");
+        assertNotNull(lunar, service.warnings().toString());
+        assertTrue(registry.testCondition(lunar, lunarContext));
+
+        var dragon = mock(org.bukkit.entity.EnderDragon.class);
+        when(dragon.getPhase()).thenReturn(org.bukkit.entity.EnderDragon.Phase.CIRCLING);
+        String dragonKey = service.bindCondition("ender-dragon-phase{p=CIRCLING,HOVER}");
+        assertNotNull(dragonKey, service.warnings().toString());
+        assertTrue(registry.testCondition(dragonKey,
+                dev.helstera.api.behavior.BehaviorContext.of(null, dragon, 1.0, -1, 0, "IDLE")));
+
+        for (String invalid : List.of(
+                "lunar-phase{unknown=1}", "lunar-phase{phase=1;phases=2}",
+                "lunar-phase{phase=1;2}", "lunar-phase{phase=8}",
+                "ender-dragon-phase{phase=CIRCLING;unknown=HOVER}",
+                "ender-dragon-phase{phase=CIRCLING;p=HOVER}",
+                "ender-dragon-phase{phase=CIRCLING;HOVER}")) {
+            assertNull(service.bindCondition(invalid), invalid);
+        }
+    }
+
+    @Test
     @DisplayName("imported Mythic crouching and wearing aliases reach their runtime conditions")
     void importedCrouchingAndWearingAliasesReachRuntime() {
         var registry = new BehaviorRegistryImpl();

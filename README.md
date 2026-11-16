@@ -1,5 +1,23 @@
 Latest full-catalog strict fixture `srv-paper-context-targeter-inactive-strict-20261115-r1` completed all 462 probes on Paper 1.21.1-133: 443 passed, 19 expected rejections, zero failed or incomplete. It adds real Paper lifecycle evidence for inactive `@target`, `@targets`, `@trigger`, and `@attacker` entities, including projectile shooter removal and fail-closed filtering; the same run retains the imported runtime catalog and client workflows. Plugin SHA-256: `cf47341951771fafa34cfc2824b5a6b402645f3340a5cd0b05607b428da995a6`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-context-targeter-inactive-strict-20261115-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions and Context Targeters catalogs remain incomplete.
 
+Conditions argument update (2026-11-16): canonical environment conditions now
+accept validated named arguments at the direct runtime boundary. `world-is`
+accepts `world`/`w`/`name`, `biome-is` accepts `biome`/`b` and `exact`/`e`,
+`weather-is` accepts `weather`/`type`, `time-is` accepts `time`/`t`, and
+`dimension-is` accepts `dimension`/`environment`/`env`/`world`. Unknown,
+duplicate, empty, mixed positional/named, and malformed values fail closed.
+AI and plugin contract tests cover the runtime and imported binding paths. No
+new Paper evidence is claimed; the complete Conditions catalog remains
+`mapped-unverified`.
+
+Phase condition update (2026-11-16): direct `lunar-phase` and
+`ender-dragon-phase` binding now validates `phase`/`phases`/`p` aliases before
+the positional runtime factories receive them. Unknown, duplicate, empty,
+mixed, invalid, and out-of-range phase values fail closed. AI and plugin
+contract tests cover numeric lunar phases and Ender Dragon phase lists. No new
+Paper evidence is claimed; the complete Conditions catalog remains
+`mapped-unverified`.
+
 Conditions alias update (2026-11-16): official MythicMobs 5.7.2 `Sunny` accepts `sunny`/`isSunny`, while `Thundering` accepts `thundering`/`isThundering`/`stormy`/`isStormy`. These aliases now pass through importer translation, `SkillService` canonicalization, and condition-list parsing to `weather-is clear` or `weather-is thunder`; unknown and duplicate arguments remain preserved and fail closed. Migration, API, AI, and plugin cross-module tests cover the mappings and runtime states. No new Paper evidence is claimed for this alias slice; the complete Conditions catalog remains `mapped-unverified`.
 Conditions alias update (2026-11-16): official MythicMobs 5.7.2 `Crouching` aliases `sneaking`/`isCrouching`/`isSneaking`, and `Wearing` aliases `isWearing`/`wielding`/`isWielding`, now map through migration, `SkillService`, and condition-list parsing. The existing `is-sneaking` and `wearing` runtime paths are reused; wearing item aliases are validated and unknown, duplicate, or empty arguments fail closed. Migration, API, AI, and plugin cross-module tests cover Player sneaking, helmet matching, alias mapping, and preservation. No new Paper evidence is claimed; the complete Conditions catalog remains `mapped-unverified`.
 Conditions alias update (2026-11-16): official `Environment`/dimension and `InRegion` naming variants now map through migration, `SkillService`, and condition-list parsing: `environment`/`dimension` resolve to `dimension-is`, `inregion`/`region` resolve to `region`, and singular `playerinradius` joins `playersinradius`. Existing `hasplugin` and `mmtype` mappings are also recognized as list-condition starts. Unknown, duplicate, and malformed arguments remain preserved and fail closed. Migration, API, AI, and plugin contract tests cover the alias paths. No new Paper evidence is claimed; the complete Conditions catalog remains `mapped-unverified`.
