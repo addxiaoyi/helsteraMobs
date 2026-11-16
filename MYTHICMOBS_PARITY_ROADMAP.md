@@ -226,10 +226,12 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   `targetconditions` parameter aliases, `nearestconditional`/`nearestif`
   targeter aliases, and inline `- condition true|false` list entries. Legacy
   delimited entries remain default-true, and malformed or duplicate private
-  arguments fail closed. AI selector `mustsee` is honored; non-zero `interval`
-  and `mustreach=true` fail closed until their runtime semantics are supported.
-  This is covered by API, AI, and importer tests; no new Paper evidence is
-  claimed, so the complete Context Targeters catalog remains `mapped-unverified`.
+  arguments fail closed. AI selector `mustsee` is honored; `interval` follows
+  Paper's native reduced goal-check probability and `mustreach` requires a
+  complete public Paper Pathfinder result. Missing, cross-world, empty, and
+  exceptional paths fail closed. This is covered by API, AI, and importer
+  tests; no new Paper evidence is claimed, so the complete Context Targeters
+  catalog remains `mapped-unverified`.
 
 **Exit:** every condition in the declared catalog has a verified implementation,
 an explicit preserved/unsupported explanation, or a documented external/version

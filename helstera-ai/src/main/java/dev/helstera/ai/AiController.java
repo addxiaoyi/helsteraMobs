@@ -17,6 +17,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -66,6 +67,8 @@ public final class AiController {
     private Location patrolTarget;
     private Location home;
     private final Random random = new Random();
+    /** Last Paper goal-selector check observed for each conditional target rule. */
+    private final Map<String, Integer> lastConditionalTargetCheckTicks = new HashMap<>();
     /** 寻路服务；未注入时全部走直线，保证旧配置行为不变。 */
     private volatile dev.helstera.ai.nav.NavService navService;
     /** 触发寻路的最小距离平方；低于它一律直连，避免近距离频繁重算。 */
@@ -329,6 +332,13 @@ public final class AiController {
     private void applySelectorProfile(Entity base, Location loc) {
         AiProfile.SelectorPolicy policy = profile.selectorPolicy();
         selectorPlan = SelectorPlan.compile(profile);
+        Set<String> activeConditionalRules = new HashSet<>();
+        for (SelectorPlan.Rule rule : selectorPlan.targets()) {
+            if (SelectorPlan.targetKind(rule) == SelectorPlan.TargetKind.CONDITIONAL) {
+                activeConditionalRules.add(rule.order() + ":" + rule.raw());
+            }
+        }
+        lastConditionalTargetCheckTicks.keySet().retainAll(activeConditionalRules);
         refreshRouteState();
         selectorCanChase = policy.chase() || selectorPlan.goals().stream().anyMatch(AiController::isChaseGoal);
         selectorCanAttack = policy.attack();
@@ -588,6 +598,7 @@ public final class AiController {
         if ((selectorAttackerFirst || selectorHurtByFirst) && lastAttackerEntity != null
                 && lastAttackerEntity.isValid() && !lastAttackerEntity.isDead()) return lastAttackerEntity;
         if (selectorTargetMatches(combatTarget)) return combatTarget;
+        if (selectorHasExplicitTargets) return validTarget(sensed) ? sensed : null;
         return preferredTarget(loc, sensed);
     }
 
@@ -654,6 +665,9 @@ public final class AiController {
 
     private LivingEntity nearestConfiguredTarget(Location origin, SelectorPlan.Rule rule,
                                                  SelectorPlan.TargetKind kind) {
+        if (kind == SelectorPlan.TargetKind.CONDITIONAL
+                && (!SelectorPlan.validConditionalTargeter(rule)
+                || !conditionalTargetAttempt(rule))) return null;
         Entity self = inst.entity();
         LivingEntity best = null;
         double bestDistance = profile.sightRadius;
@@ -688,6 +702,9 @@ public final class AiController {
             boolean mustSee = kind != SelectorPlan.TargetKind.CONDITIONAL
                     || SelectorPlan.conditionalMustSee(rule);
             if (distance < 0 || distance > bestDistance || mustSee && !visible) continue;
+            if (kind == SelectorPlan.TargetKind.CONDITIONAL
+                    && SelectorPlan.conditionalMustReach(rule)
+                    && !canReach(living)) continue;
             best = living;
             bestDistance = distance;
         }
@@ -764,6 +781,63 @@ public final class AiController {
             }
         }
         return true;
+    }
+
+    /**
+     * Mirrors NMS {@code NearestAttackableTargetGoal}'s random interval. Paper
+     * reduces the configured tick interval by its two-tick goal cadence, then
+     * attempts once per cadence with probability 1/N. Our AI controller is
+     * polled less often, so fold the missed native checks into their equivalent
+     * combined probability instead of treating the configured value as the
+     * controller's own tick period.
+     */
+    private boolean conditionalTargetAttempt(SelectorPlan.Rule rule) {
+        if (rule == null || !SelectorPlan.validConditionalTargeter(rule)) return false;
+        int interval = SelectorPlan.conditionalInterval(rule);
+        if (interval == 0) return true;
+        int now = Bukkit.getCurrentTick();
+        String key = rule.order() + ":" + rule.raw();
+        Integer previous = lastConditionalTargetCheckTicks.put(key, now);
+        if (previous == null) previous = now - 2;
+        int elapsed = now - previous;
+        if (elapsed < 0) elapsed = 2; // tolerate the server tick counter wrapping
+        int checks = Math.max(0, Math.floorDiv(now, 2) - Math.floorDiv(now - elapsed, 2));
+        if (checks == 0) return false;
+        return conditionalIntervalPasses(interval, checks, random.nextDouble());
+    }
+
+    static boolean conditionalIntervalPasses(int interval, int checks, double roll) {
+        if (interval == 0) return true;
+        if (interval < 0 || checks <= 0 || !Double.isFinite(roll) || roll < 0 || roll >= 1) return false;
+        int randomInterval = Math.max(1, interval / 2 + interval % 2);
+        if (randomInterval == 1) return true;
+        double probability = -Math.expm1(checks * Math.log1p(-1.0 / randomInterval));
+        return roll < probability;
+    }
+
+    /**
+     * Uses Paper's public path result as the mustReach boundary.  A missing
+     * native Mob/pathfinder, a cross-world target, an empty path, or any Paper
+     * exception means the target is not proven reachable and is rejected.
+     */
+    boolean canReach(LivingEntity target) {
+        if (target == null || !validTarget(target)) return false;
+        Entity base = inst.entity();
+        if (!(base instanceof org.bukkit.entity.Mob mob)) return false;
+        Location origin = base.getLocation();
+        Location destination = target.getLocation();
+        if (origin == null || destination == null || origin.getWorld() == null
+                || destination.getWorld() == null
+                || !origin.getWorld().equals(destination.getWorld())) return false;
+        try {
+            com.destroystokyo.paper.entity.Pathfinder pathfinder = mob.getPathfinder();
+            if (pathfinder == null) return false;
+            com.destroystokyo.paper.entity.Pathfinder.PathResult path = pathfinder.findPath(target);
+            return path != null && path.canReachFinalPoint();
+        } catch (RuntimeException failure) {
+            warnSelector("conditional-target", "mustreach:" + failure.getClass().getSimpleName());
+            return false;
+        }
     }
 
     private boolean visible(Location origin, LivingEntity entity) {
@@ -1043,7 +1117,12 @@ public final class AiController {
                     // 只有仇恨表里有记录或就是最近攻击者的实体才算「被冒犯」。
                     if (threat != null && threat.contains(entity.getUniqueId())) return true;
                     if (entity == lastAttackerEntity) return true;
-                } else if (matchesConfiguredKind(entity, kind, rule, inst.location())) {
+                } else if (matchesConfiguredKind(entity, kind, rule, inst.location())
+                        && (kind != SelectorPlan.TargetKind.CONDITIONAL
+                        || !SelectorPlan.conditionalMustSee(rule)
+                        || visible(inst.location(), entity))
+                        && (kind != SelectorPlan.TargetKind.CONDITIONAL
+                        || !SelectorPlan.conditionalMustReach(rule) || canReach(entity))) {
                     return true;
                 }
             }

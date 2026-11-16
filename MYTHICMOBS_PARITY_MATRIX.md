@@ -44,8 +44,11 @@ new Paper evidence was added, so the broader Context targeters row remains
 [NearestConditionalTarget](https://wiki.mythiccraft.io/mythicmobs/Mobs/ai/targets/nearestconditionaltarget),
 and [Inline Conditions](https://wiki.mythiccraft.io/mythicmobs/Skills/Inline-Conditions).
 For AI selector rules, `mustsee`/`ms` follows the documented default and can be
-disabled explicitly; non-zero `interval` and `mustreach=true` fail closed until
-their scheduling/path-reach behavior is implemented.
+disabled explicitly. `interval` follows Paper's native reduced goal-check
+probability (`1/N` per opportunity), while `mustreach` requires a complete
+Paper Pathfinder result and fails closed when the public API cannot prove reachability.
+No new Paper evidence was added, so the broader Context Targeters row remains
+`mapped-unverified`.
 
 Conditions alias update (2026-11-16): `environment` joins `dimension` for
 `dimension-is`, `inregion` joins `region`, and singular

@@ -670,11 +670,9 @@ final class SelectorPlan {
                     conditionsSeen = true;
                     if (targetConditionSpecs(rule).isEmpty()) return false;
                 }
-                // Runtime evaluates selectors each decision; non-zero interval
-                // scheduling and path-reach checks have no equivalent yet.
                 case "interval" -> {
                     try {
-                        if (Integer.parseInt(value) != 0) return false;
+                        if (Integer.parseInt(value) < 0) return false;
                     } catch (NumberFormatException invalid) {
                         return false;
                     }
@@ -683,7 +681,7 @@ final class SelectorPlan {
                     if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return false;
                 }
                 case "mustreach" -> {
-                    if (!value.equalsIgnoreCase("false")) return false;
+                    if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return false;
                 }
                 default -> { }
             }
@@ -704,6 +702,49 @@ final class SelectorPlan {
             }
         }
         return true;
+    }
+
+    /** Returns Mythic's random-attempt interval; zero means every goal check. */
+    static int conditionalInterval(Rule rule) {
+        return conditionalIntegerArgument(rule, 0, "interval", "int", "i");
+    }
+
+    /** Returns whether the conditional target must have a complete native path. */
+    static boolean conditionalMustReach(Rule rule) {
+        if (rule == null) return false;
+        List<String> arguments = splitTargetArguments(targetArgument(rule));
+        if (arguments == null) return false;
+        for (String argument : arguments) {
+            int equals = argument.indexOf('=');
+            if (equals <= 0) continue;
+            String key = argument.substring(0, equals).trim();
+            if (key.equalsIgnoreCase("mustreach") || key.equalsIgnoreCase("mr")) {
+                String value = argument.substring(equals + 1).trim();
+                return value.equalsIgnoreCase("true");
+            }
+        }
+        return false;
+    }
+
+    private static int conditionalIntegerArgument(Rule rule, int defaultValue, String... keys) {
+        if (rule == null) return 0;
+        List<String> arguments = splitTargetArguments(targetArgument(rule));
+        if (arguments == null) return defaultValue;
+        for (String keyName : keys) {
+            for (String argument : arguments) {
+                int equals = argument.indexOf('=');
+                if (equals <= 0) continue;
+                String key = argument.substring(0, equals).trim();
+                if (!key.equalsIgnoreCase(keyName)) continue;
+                try {
+                    int value = Integer.parseInt(argument.substring(equals + 1).trim());
+                    return value < 0 ? defaultValue : value;
+                } catch (NumberFormatException invalid) {
+                    return defaultValue;
+                }
+            }
+        }
+        return defaultValue;
     }
 
     private static List<String> splitTargetArguments(String value) {

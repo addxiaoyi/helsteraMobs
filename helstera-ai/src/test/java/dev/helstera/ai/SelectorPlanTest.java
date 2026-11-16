@@ -224,8 +224,9 @@ class SelectorPlanTest {
                 "0 nearestif{conditions=[ - has-aura true ;; - is-player true ]}",
                 "0 nearestif{conditions=[ - has-aura true ];unknown=true}",
                 "0 nearestif{conditions=[ - has-aura true ];c=[ - is-player true ]}",
-                "0 nearestif{conditions=[ - has-aura true ];interval=2}",
-                "0 nearestif{conditions=[ - has-aura true ];mustreach=true}")) {
+                "0 nearestif{conditions=[ - has-aura true ];interval=-1}",
+                "0 nearestif{conditions=[ - has-aura true ];interval=NaN}",
+                "0 nearestif{conditions=[ - has-aura true ];mustreach=maybe}")) {
             AiProfile profile = new AiProfile("invalid-conditional");
             profile.targets.add(raw);
             SelectorPlan.Rule rule = SelectorPlan.compile(profile).targets().get(0);
@@ -237,5 +238,26 @@ class SelectorPlanTest {
         SelectorPlan.Rule noSight = SelectorPlan.compile(profile).targets().get(0);
         assertTrue(SelectorPlan.validConditionalTargeter(noSight));
         assertFalse(SelectorPlan.conditionalMustSee(noSight));
+    }
+
+    @Test
+    @DisplayName("conditional target interval and path reach aliases match Mythic defaults")
+    void conditionalTargetRuntimeArgumentsAreParsed() {
+        AiProfile profile = new AiProfile("conditional-runtime-attributes");
+        profile.targets.add("0 nearestif{c=[ - is-player true ];i=7;mr=true;ms=false}");
+        SelectorPlan.Rule rule = SelectorPlan.compile(profile).targets().get(0);
+
+        assertTrue(SelectorPlan.validConditionalTargeter(rule));
+        assertEquals(7, SelectorPlan.conditionalInterval(rule));
+        assertTrue(SelectorPlan.conditionalMustReach(rule));
+        assertFalse(SelectorPlan.conditionalMustSee(rule));
+
+        AiProfile defaults = new AiProfile("conditional-default-attributes");
+        defaults.targets.add("0 nearestif{conditions=[ - is-player true ]}");
+        SelectorPlan.Rule defaultRule = SelectorPlan.compile(defaults).targets().get(0);
+        assertTrue(SelectorPlan.validConditionalTargeter(defaultRule));
+        assertEquals(0, SelectorPlan.conditionalInterval(defaultRule));
+        assertFalse(SelectorPlan.conditionalMustReach(defaultRule));
+        assertTrue(SelectorPlan.conditionalMustSee(defaultRule));
     }
 }
