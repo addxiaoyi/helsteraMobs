@@ -1466,6 +1466,7 @@ public final class SkillService {
             }
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
             if (isVariableMechanic(name) || dev.helstera.api.util.NumericMechanicSpec.supports(name)
+                    || dev.helstera.api.util.PercentHealthSpec.supports(name)
                     || "effect-self".equals(name) || "effect-targets".equals(name)
                     || "mythic-aura".equals(name)
                     || "determine-condition".equals(name)) {
@@ -3256,6 +3257,9 @@ public final class SkillService {
     }
 
     private static String canonicalActionName(String name) {
+        if (dev.helstera.api.util.PercentHealthSpec.supports(name)) {
+            return dev.helstera.api.util.PercentHealthSpec.canonical(name);
+        }
         if (dev.helstera.api.util.NumericMechanicSpec.supports(name)) {
             return dev.helstera.api.util.NumericMechanicSpec.canonical(name);
         }
@@ -3376,9 +3380,7 @@ public final class SkillService {
             case "dismount", "unmount" -> "dismount";
             case "ejectpassenger", "eject_passenger", "eject-passenger" -> "eject-passenger";
             case "cancelevent" -> "cancel-event";
-            case "damagepercent" -> "damage-percent";
             case "damagemelee", "meleedamage" -> "damage-melee";
-            case "healpercent" -> "heal-percent";
             case "setmaxhealth", "set-max-health" -> "set-max-health";
             case "modifymaxhealth", "modify-max-health" -> "modify-max-health";
             case "removeeffect" -> "remove-effect";

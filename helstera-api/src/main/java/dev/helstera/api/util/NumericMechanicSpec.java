@@ -25,8 +25,6 @@ public record NumericMechanicSpec(List<String> arguments, int numericCount) {
             case "heal" -> "heal-self";
             case "ignite" -> "ignite-targets";
             case "knockback" -> "knockback-targets";
-            case "damagepercent" -> "damage-percent";
-            case "healpercent" -> "heal-percent";
             case "damagemelee", "meleedamage" -> "damage-melee";
             case "sethealth" -> "set-health";
             case "modifyhealth" -> "modify-health";

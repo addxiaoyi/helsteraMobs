@@ -201,6 +201,7 @@ debug:
   self-test-modify-damage: false
   self-test-potion-mechanic: false
   self-test-numeric-mechanic: false
+  self-test-percent-health: false
   self-test-show-health: false
   self-test-item-effects: false
   self-test-loot: false

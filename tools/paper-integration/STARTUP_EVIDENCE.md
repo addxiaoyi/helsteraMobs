@@ -1,5 +1,39 @@
 # Paper Startup Evidence
 
+Focused percentage-health fixture `srv-paper-percent-health-exploratory-20261117-r4`
+passes on Paper 1.21.1-133 with actual MythicMobs 5.7.2. Its `percentHealthRuntime`
+probe has 27 assertions, including 14 identical-source native/imported health
+and absorption comparisons, damage event modification/cancellation, isolation,
+dynamic invalid-value no-ops, legacy percent units, self healing, invalid imports,
+and cleanup. Both systems load [percent-health-skills.yml](percent-health-skills.yml)
+and select explicit API `@Trigger` recipients. Cow max-health and absorption
+capacity are set to 20; the test does not prove default absorption capacity,
+`@Target` equivalence, MM healing-event callbacks, advanced damage flags,
+client behavior, other versions, or the full strict release gate.
+
+Report: [paper-1.21.1-percent-health-exploratory-20261117-r4.json](reports/paper-1.21.1-percent-health-exploratory-20261117-r4.json),
+SHA-256 `f27cec9a3ceb703f43bdf9b656f3ca253c2f2e7a87274f7cc17ab67f7a92e55c`.
+Redacted log: [paper-1.21.1-percent-health-exploratory-20261117-r4.log.gz](reports/paper-1.21.1-percent-health-exploratory-20261117-r4.log.gz),
+SHA-256 `231a8838dd14921fa0b0d585a01185f78422360ec3fa69f0030e14d1c288049b`.
+Plugin SHA-256: `ab1fc36245b60aa0b4a8019e9b20f0291e80d9ef54de8505dcaf7835209a213e`.
+MythicMobs 5.7.2 SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+Shared source SHA-256: `f87f341e4c5aedb8802ffce36fcbbb3ae2a75bf406f1ee8bd946aa7b96d01fde`.
+Paper bootstrap SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+The final artifact passed the full 2,220-test `verify` suite, including the
+location-target no-op regression, SpotBugs, and this Paper probe. Earlier
+fixture `srv-paper-percent-health-exploratory-20261117-r3` also passed the 27
+Paper assertions; its report and redacted log remain archived. Attempts r1
+(source-root validation) and r2 (generic-caster
+`@Target` semantics) failed and are not evidence reports. Their isolated server
+directories remain available for diagnosis.
+
+Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`, then
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r5 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+(choose a fresh revision). The runner enforces the pinned external SHA-256,
+disables the web UI, and archives sanitized logs; it does not redistribute MM.
+See the [compatibility audit](../../docs/PERCENT_HEALTH_COMPATIBILITY.md) for
+unit migration instructions and the remaining parity boundaries.
+
 Focused numeric fixture `srv-paper-numeric-mechanic-exploratory-20261117-r1`
 passes on Paper 1.21.1-133. The `numericMechanicRuntime` probe records 22
 assertions covering production import/binding, invalid-source preservation,

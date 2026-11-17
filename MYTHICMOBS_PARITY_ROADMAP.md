@@ -81,7 +81,7 @@ AI, migration, and plugin tests cover direct binding and imported runtime
 paths. No Paper evidence was added, so the Conditions catalog remains
 `mapped-unverified`.
 
-## Next targets after the numeric argument slice (2026-11-17)
+## Next targets after the percentage-health correction (2026-11-17)
 
 The covered numeric factories now use a shared argument contract through direct
 calls, `SkillService`, and migration. Reordered/omitted fields, explicit target
@@ -90,18 +90,29 @@ API, AI, migration, and cross-module tests. Focused exploratory fixture
 `srv-paper-numeric-mechanic-exploratory-20261117-r1` adds 22 real Paper assertions
 for impact vectors, damage/healing, target isolation, speed/status, and cleanup.
 
-1. Audit numeric mechanics against the declared upstream version: defaults,
-   percent units, clamping/ranges, target semantics, and damage-event behavior.
-   In particular, imported `healpercent`/`damagepercent` still default to `0`
-   while direct runtime calls default to `10`; imported `modifyspeed` defaults
-   to `0` while direct calls default to `1`. Existing percent factories divide
-   by 100, and `set-tick-speed` scales the movement-speed attribute. These are
-   historical behaviors, not verified upstream parity. Correct discrepancies
-   with explicit migration compatibility handling and inverse runtime controls.
+Mythic `healpercent`/`percentheal`/`hp` and `damagepercent`/`percentdamage` now
+use fractional units with default `0.1`, separate from Helstera's existing
+percentage-point actions. The correction includes current-health damage and
+5.7.2 overheal absorption behavior. See the [compatibility audit](docs/PERCENT_HEALTH_COMPATIBILITY.md)
+for the exact version, accepted fields, upgrade instructions, and remaining
+event/placeholder boundaries.
+Focused fixture `srv-paper-percent-health-exploratory-20261117-r4` passes 27
+assertions with real MM 5.7.2, including 14 identical-source native/imported
+comparisons plus damage event modification/cancellation. It uses explicit
+`@Trigger` recipients and leaves the distinct MM `@Target` selection contract
+open. The full regression suite passes 2,220 tests and SpotBugs.
+
+1. Implement official `setspeed` after the pinned 5.7.2 audit: WALK/FLY use
+   absolute `0.2/0.1 * multiplier`, including player APIs and mob attributes.
+   Keep legacy speed multiplication explicit; imported `modifyspeed` still
+   defaults to `0`, direct calls to `1`, and `set-tick-speed` currently scales
+   movement speed. Those legacy names do not establish official speed parity.
+   Continue the numeric audit for skill-power/damage modifiers, healing events,
+   full-precision entity placeholders, and version-specific options.
 2. Extend Potion evidence to delayed/repeated execution, effect-event callbacks,
    expiration/hidden-effect behavior, instant effects, and client particles/icons.
    Reconcile those results with the declared MythicMobs version boundary.
-3. Add the verified Potion and numeric cases to the full strict release catalog,
+3. Add the verified Potion, numeric, and fractional-health cases to the full strict release catalog,
    then run the exact release artifact and the remaining Paper combinations.
    Numeric delay/repeat timing, player walk-speed, complete max-health variants,
    and client-observed motion still require focused runtime evidence. Keep broader
@@ -282,7 +293,7 @@ Matrix rows: `Mechanics catalog`, `Skills importer`, `Context targeters`,
   swapped knockback fields and incorrect omitted defaults in pull/melee damage.
   Invalid dynamic numeric values skip the whole action before mutation. The
   focused 22-assertion Paper numeric fixture above supersedes the earlier
-  no-Paper status for those specific cases; percent semantics, player variants,
+  no-Paper status for those specific cases; extended percent semantics, player variants,
   timing, and the complete Mechanics/Skills catalogs remain open.
 - Finish metaskill reference, parameter, inheritance, target-scope, and nested
   execution semantics; ensure unsupported lines remain visible.

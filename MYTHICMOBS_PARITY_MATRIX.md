@@ -2002,11 +2002,34 @@ Paper 1.21.1-133, covering imported reordered/omitted arguments, knockback and
 force-pull vectors, radial pull/melee defaults, damage/healing, target isolation,
 dynamic invalid-value no-ops, speed/status changes, and cleanup. This does not
 load MythicMobs, prove delayed/repeated timing, player walk-speed/client motion,
-or replace the strict release catalog. Historical percentage defaults remain
-`0` on import versus `10` on direct runtime calls; `modify-speed` remains `0`
-versus `1`. Percent factories still divide by 100 and `set-tick-speed` scales
-movement speed. These semantics require upstream audit. The Mechanics catalog
-and Skills importer rows remain `mapped-unverified`.
+or replace the strict release catalog. The subsequent percentage-health
+correction below supersedes the old zero import default and fractional-unit
+mismatch for Mythic names. Legacy hyphenated percent actions still divide by
+100. `modify-speed` remains `0` on import versus `1` on direct calls, and
+`set-tick-speed` scales movement speed; neither establishes official `setspeed`
+parity. The Mechanics catalog and Skills importer rows remain `mapped-unverified`.
+
+Percentage-health correction (2026-11-17): Mythic `healpercent`/`percentheal`/`hp`
+map to `heal-fraction`; `damagepercent`/`percentdamage` map to `damage-fraction`.
+Both use fraction `0.1` by default, without dividing by 100. Existing hyphenated
+Helstera percent actions keep percentage-point semantics. Accepted aliases,
+current-health damage, negative/clamped healing, dynamic values per target,
+and the pinned 5.7.2 strict overheal absorption cap have API/runtime/importer
+coverage. Invalid and unimplemented options remain preserved with WARN.
+The [compatibility audit](docs/PERCENT_HEALTH_COMPATIBILITY.md) records source
+artifact identity, the current-documentation alias extension, upgrade behavior,
+and the unimplemented healing-event/damage-modifier/placeholder contracts.
+
+Exploratory fixture `srv-paper-percent-health-exploratory-20261117-r4` runs real
+MythicMobs 5.7.2 and Helstera on Paper 1.21.1-133. It passes 27 assertions,
+including 14 identical-source native/imported health and absorption comparisons,
+Bukkit damage modification/cancellation, target isolation, dynamic invalid-value
+no-ops, legacy units, self healing, invalid imports, and cleanup. The comparison
+uses explicit API `@Trigger` recipients; MM `@Target` selection for generic
+casters differs from Helstera context targets and remains an open targeter
+contract. The focused report does not establish complete mechanics/event
+parity, client behavior, other versions, or a passing full-catalog release gate.
+The Mechanics catalog and Skills importer rows remain `mapped-unverified`.
 
 Potion mechanic update (2026-11-17): `potion`/`effect` import and
 `effect-self`/`effect-targets` runtime share `PotionSpec`. The

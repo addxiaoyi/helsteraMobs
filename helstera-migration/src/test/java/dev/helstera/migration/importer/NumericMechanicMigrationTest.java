@@ -40,7 +40,8 @@ class NumericMechanicMigrationTest {
                 "knockback-targets{delay=0} 1 0.5 @target", "pull 6 2", "damage-melee 3 4",
                 "force-pull 1 0.2", "force-pull 1", "knockback-targets 2 0.5 @target",
                 "damage-target{repeat=2;repeatinterval=1} <skill.var.amount> tags=FIRE @target",
-                "heal-targets 3 @target", "heal-percent 0", "damage-percent 0", "modify-speed 0",
+                "heal-targets 3 @target", "heal-fraction multiplier=0.1 overheal=false maxoverheal=0",
+                "damage-fraction percent=0.1 currenthealth=false", "modify-speed 0",
                 "set-fire 60 @target", "set-max-health 30 @target",
                 "damage-target 2 \"rawtags=custom tag\" @target"),
                 output(entries).getStringList("skills.probe.on-decision"));

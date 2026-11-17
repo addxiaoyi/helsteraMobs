@@ -1,5 +1,15 @@
 # Isolated Paper Integration Server
 
+The percentage-health runner compares the same skill source on native MM 5.7.2
+and the Helstera importer/runtime. After building, run
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r5 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+(choose a fresh revision). Only the pinned Modrinth `FTWvGuE5` artifact is
+accepted. Fixture `srv-paper-percent-health-exploratory-20261117-r4` passes 27
+assertions, including 14 identical-source health/absorption comparisons and
+damage event cancellation/modification. Reports and hashes are recorded in
+[STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). The runner disables the web UI and
+uses an isolated fresh server; this is exploratory, not full-catalog evidence.
+
 The focused numeric runner, `run-numeric-mechanic-fixture.ps1`, validates the
 pinned Paper bootstrap and starts a fresh server with only the numeric probe
 enabled. Build using `./mvnw -o -q -pl helstera-plugin -am verify`, then run

@@ -106,7 +106,7 @@ class NumericMechanicBindingTest {
         clearInvocations(target, caster, control, world);
         for (String line : List.of("sethealth{a=<missing.value>} @Target",
                 "knockback{power=2;y=<missing.value>} @Target", "pull{power=<missing.value>}",
-                "healpercent{p=<missing.value>} @Target", "setfire{t=<missing.value>} @Target")) run(line);
+                "healpercent{m=<missing.value>} @Target", "setfire{t=<missing.value>} @Target")) run(line);
         verify(target, never()).setVelocity(any());
         verify(target, never()).setHealth(anyDouble());
         verify(target, never()).setFireTicks(anyInt());

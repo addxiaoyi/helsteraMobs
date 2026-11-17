@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T03:29:32.0117374Z",
+  "fixtureDirectory": "srv-paper-percent-health-exploratory-20261117-r3",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "214d836486dbdce772c5063615f73764c01e944467e23b396c9271681ced1777",
+  "externalPlugin": "MythicMobs 5.7.2 (Modrinth FTWvGuE5)",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "sharedSourceSha256": "f87f341e4c5aedb8802ffce36fcbbb3ae2a75bf406f1ee8bd946aa7b96d01fde",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "percentHealthRuntime"
+  ],
+  "probes": [
+    {
+      "id": "percentHealthRuntime",
+      "status": "passed",
+      "observations": [
+        "percent-health native-enabled=true shared-source-import=true fraction_heal_default=true fraction_heal_quarter=true fraction_heal_alias=true fraction_heal_hp=true fraction_heal_clamp=true fraction_heal_negative=true fraction_overheal_below=true fraction_overheal_at_cap=true fraction_overheal_no_cap=true fraction_damage_default=true fraction_damage_quarter=true fraction_damage_alias=true fraction_damage_current=true fraction_damage_current_alias=true target-isolation=true modified-damage=true cancelled-damage=true dynamic=true invalid-dynamic-20=true invalid-dynamic-21=true invalid-dynamic-22=true legacy-percent-points=true self-healing=true invalid-preserved=true cleanup=true observations=fraction_heal_default[native=12.0/0.0,imported=12.0/0.0],fraction_heal_quarter[native=15.0/0.0,imported=15.0/0.0],fraction_heal_alias[native=15.0/0.0,imported=15.0/0.0],fraction_heal_hp[native=15.0/0.0,imported=15.0/0.0],fraction_heal_clamp[native=20.0/0.0,imported=20.0/0.0],fraction_heal_negative[native=6.0/0.0,imported=6.0/0.0],fraction_overheal_below[native=20.0/2.0,imported=20.0/2.0],fraction_overheal_at_cap[native=20.0/0.0,imported=20.0/0.0],fraction_overheal_no_cap[native=20.0/0.0,imported=20.0/0.0],fraction_damage_default[native=8.0/0.0,imported=8.0/0.0],fraction_damage_quarter[native=5.0/0.0,imported=5.0/0.0],fraction_damage_alias[native=5.0/0.0,imported=5.0/0.0],fraction_damage_current[native=7.5/0.0,imported=7.5/0.0],fraction_damage_current_alias[native=7.5/0.0,imported=7.5/0.0] passed=true"
+      ]
+    }
+  ]
+}

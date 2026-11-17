@@ -1675,7 +1675,7 @@ class ImportersTest {
         assertTrue(actions.contains("dash 6 forward"));
         assertTrue(actions.contains("blink 8 target"));
         assertTrue(actions.contains("knockback-self 1.2 0.5"));
-        assertTrue(actions.contains("heal-percent 10"));
+        assertTrue(actions.contains("heal-fraction multiplier=10 overheal=false maxoverheal=0"));
         assertTrue(actions.contains("set-health 20"));
         assertTrue(actions.contains("leap 1.2"));
         assertTrue(actions.contains("set-tick-speed 1.1"));

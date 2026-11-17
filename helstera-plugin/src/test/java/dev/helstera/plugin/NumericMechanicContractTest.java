@@ -42,6 +42,10 @@ class NumericMechanicContractTest {
                     Skills: ['damagemelee{r=4}']
                   tagged:
                     Skills: ['damage{a=2;rawtags="custom tag"} @Target']
+                  fraction_heal:
+                    Skills: ['healpercent{m=0.25} @Target']
+                  fraction_damage:
+                    Skills: ['damagepercent{p=0.25;current=true} @Target']
                   invalid:
                     Skills: ['sethealth{unknown=1} @Target']
                 """);
@@ -87,6 +91,10 @@ class NumericMechanicContractTest {
         verify(target).setHealth(8);
         assertTrue(service.castSkill("tagged", context));
         verify(target).damage(2, caster);
+        assertTrue(service.castSkill("fraction_heal", context));
+        verify(target).setHealth(10);
+        assertTrue(service.castSkill("fraction_damage", context));
+        verify(target).damage(1.25, caster);
         assertTrue(service.castSkill("radial", context));
         verify(target).damage(3, caster);
         verify(caster, never()).setHealth(anyDouble());

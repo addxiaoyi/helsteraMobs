@@ -5625,6 +5625,14 @@ public final class SkillExtras {
 
     public static Map<String, SkillCatalog.ActionFactory> actions() {
         return NumericMechanicActions.wrap(Map.ofEntries(
+                Map.entry("heal-fraction", (SkillCatalog.ActionFactory) a -> {
+                    var spec = dev.helstera.api.util.PercentHealthSpec.parse("heal-fraction", a);
+                    return ctx -> PercentHealthAction.apply(spec, ctx, itemTargets(ctx));
+                }),
+                Map.entry("damage-fraction", (SkillCatalog.ActionFactory) a -> {
+                    var spec = dev.helstera.api.util.PercentHealthSpec.parse("damage-fraction", a);
+                    return ctx -> PercentHealthAction.apply(spec, ctx, itemTargets(ctx));
+                }),
                 Map.entry("mythic-aura", (SkillCatalog.ActionFactory) SkillExtras::mythicAuraAction),
                 Map.entry("mythic-aura-remove", (SkillCatalog.ActionFactory) SkillExtras::mythicAuraRemoveAction),
                 Map.entry("move-pin", (SkillCatalog.ActionFactory) a -> {
@@ -9177,7 +9185,7 @@ public final class SkillExtras {
         applyDamage(ctx, target, amount, cause);
     }
 
-    private static void applyDamage(BehaviorContext ctx, LivingEntity target, double amount, String cause) {
+    static void applyDamage(BehaviorContext ctx, LivingEntity target, double amount, String cause) {
         if (target == null || amount <= 0) return;
         try {
             DamagePolicy policy = damagePolicy;

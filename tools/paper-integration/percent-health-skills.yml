@@ -1,0 +1,30 @@
+# Identical source loaded by MM 5.7.2 and the production Helstera importer.
+# The API trigger supplies the recipient explicitly; a vanilla cow has no combat target.
+fraction_heal_default:
+  Skills: ['healpercent @Trigger']
+fraction_heal_quarter:
+  Skills: ['healpercent{m=0.25} @Trigger']
+fraction_heal_alias:
+  Skills: ['percentheal{multiplier=0.25} @Trigger']
+fraction_heal_hp:
+  Skills: ['hp{m=0.25} @Trigger']
+fraction_heal_clamp:
+  Skills: ['healpercent{m=2} @Trigger']
+fraction_heal_negative:
+  Skills: ['healpercent{m=-0.2} @Trigger']
+fraction_overheal_below:
+  Skills: ['healpercent{m=0.6;oh=true;mo=0.5} @Trigger']
+fraction_overheal_at_cap:
+  Skills: ['healpercent{m=0.6;oh=true;mo=0.1} @Trigger']
+fraction_overheal_no_cap:
+  Skills: ['healpercent{m=0.6;oh=true} @Trigger']
+fraction_damage_default:
+  Skills: ['damagepercent @Trigger']
+fraction_damage_quarter:
+  Skills: ['damagepercent{p=0.25} @Trigger']
+fraction_damage_alias:
+  Skills: ['percentdamage{percent=0.25} @Trigger']
+fraction_damage_current:
+  Skills: ['damagepercent{p=0.25;currenthealth=true} @Trigger']
+fraction_damage_current_alias:
+  Skills: ['damagepercent{p=0.25;ch=true} @Trigger']
