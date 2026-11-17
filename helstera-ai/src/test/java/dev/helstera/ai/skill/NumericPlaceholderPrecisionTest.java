@@ -133,10 +133,10 @@ class NumericPlaceholderPrecisionTest {
         assertEquals("0.0123456789", Placeholders.resolve("<skill.var.Amount>", context));
         assertEquals("0.0123456789", Placeholders.resolveDisplay("<skill.var.Amount>", context));
         assertEquals("name=<unknown> health=3.125", Placeholders.resolve("name=<unknown> health=<target.hp>", context));
-        assertEquals(0.0125, Placeholders.resolveNumber("<random.0.0125to0.0125>", context, -1));
+        assertEquals((double) 0.0125f, Placeholders.resolveNumber("<random.float.0.0125to0.0125>", context, -1));
         for (int i = 0; i < 100; i++) {
-            double number = Placeholders.resolveNumber("<random.0.123to0.124>", context, -1);
-            assertTrue(number >= 0.123 && number <= 0.124);
+            double number = Placeholders.resolveNumber("<random.float.0.123to0.124>", context, -1);
+            assertTrue(number >= (double) 0.123f && number <= (double) 0.124f);
         }
         assertNull(Placeholders.resolveDisplay(null, context));
     }

@@ -29,7 +29,7 @@ public record PercentHealthSpec(boolean healing, String fraction, boolean curren
         int positional = 0;
         for (String raw : args == null ? List.<String>of() : args) {
             if (raw == null || raw.isBlank()) throw invalid("empty argument");
-            int equals = raw.indexOf('=');
+            int equals = PlaceholderSyntax.argumentEquals(raw);
             String key;
             String value;
             if (equals < 0) {
@@ -80,7 +80,7 @@ public record PercentHealthSpec(boolean healing, String fraction, boolean curren
 
     public record Resolved(double fraction, double maxOverheal) { }
 
-    private static boolean dynamic(String value) { return value.matches("<[a-zA-Z0-9_.:-]+>"); }
+    private static boolean dynamic(String value) { return PlaceholderSyntax.isToken(value); }
 
     private static double finite(String value) {
         double number = Double.parseDouble(value);

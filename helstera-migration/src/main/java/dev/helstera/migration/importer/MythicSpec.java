@@ -137,8 +137,8 @@ public final class MythicSpec {
                 continue;
             }
             if (!quoted) {
-                if (c == '[' || c == '(') bracket++;
-                else if (c == ']' || c == ')') bracket = Math.max(0, bracket - 1);
+                if (c == '[' || c == '(' || c == '{') bracket++;
+                else if (c == ']' || c == ')' || c == '}') bracket = Math.max(0, bracket - 1);
                 else if (bracket == 0) {
                     if (c == ';') {
                         flush(out, cur, stripKeys);

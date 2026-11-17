@@ -39,8 +39,11 @@ class PlaceholdersTest {
         c.skillTree().orElseThrow().setVariable("Count", 5);
         c.skillTree().orElseThrow().setVariable("flag", true);
         c.skillTree().orElseThrow().setVariable("unsupported", new Object());
+        c.skillTree().orElseThrow().setVariable("伤害", 7);
+        c.skillTree().orElseThrow().setVariable("custom/value", "text");
         assertEquals("5 true <skill.var.count> <skill.var.unsupported>",
                 Placeholders.resolve("<SKILL.VAR.Count> <skill.var.flag> <skill.var.count> <skill.var.unsupported>", c));
+        assertEquals("7 text", Placeholders.resolve("<skill.var.伤害> <skill.var.custom/value>", c));
     }
 
     @Test
@@ -234,6 +237,7 @@ class PlaceholdersTest {
         when(player.isGlowing()).thenReturn(true);
         when(player.getFireTicks()).thenReturn(20);
         when(player.hasPermission("my.node")).thenReturn(true);
+        when(player.hasPermission("my.*")).thenReturn(true);
         BehaviorContext context = BehaviorContext.of(null, player, 1.0, 3.0, 0, "CHASE");
 
         assertEquals("true", Placeholders.lookup("target.is-sneaking", context));
@@ -249,6 +253,7 @@ class PlaceholdersTest {
         assertEquals("true", Placeholders.lookup("target.is-glowing", context));
         assertEquals("true", Placeholders.lookup("target.is-on-fire", context));
         assertEquals("true", Placeholders.lookup("target.permission.my.node", context));
+        assertEquals("true", Placeholders.lookup("target.permission.my.*", context));
     }
 
     @Test

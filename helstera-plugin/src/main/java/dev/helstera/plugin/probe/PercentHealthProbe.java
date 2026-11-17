@@ -123,6 +123,12 @@ public final class PercentHealthProbe {
             precision.put("precision_heal_fraction", 5.625);
             precision.put("precision_damage_fraction", 0.625);
             precision.put("precision_damage_current", 2.734375);
+            precision.put("rounding_caster_hp", 3.255);
+            precision.put("rounding_target_hp", 6.255);
+            precision.put("rounding_target_integer", 6.125);
+            precision.put("rounding_fraction", 5.725);
+            precision.put("random_float_rounded", 3.255);
+            precision.put("random_signed", 2.125);
             caster.setHealth(0.125);
             reset(oracle);
             oracle.setHealth(3.125);
@@ -193,13 +199,16 @@ public final class PercentHealthProbe {
                         - 'healpercent{oh=maybe} @Target'
                         - 'damagepercent{ignorearmor=true} @Target'
                         - 'healpercent{tags=NEWER_VERSION} @Target'
+                        - 'heal{a=<caster.hp{r=2;round=3}>} @Target'
+                        - 'heal{a=<caster.hp{r=341}>} @Target'
+                        - 'healpercent{m=<caster.hp{unknown=2}>} @Target'
                     """);
             var invalidEntries = new MythicMobsImporter().convert(invalid, root);
             var invalidPlan = invalidEntries.stream().filter(e -> "skills.yml".equals(e.get("target-file"))).findFirst().orElseThrow();
             var preserved = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(invalidPlan.get("content"))));
-            require(checks, "invalid-preserved", preserved.getStringList("skills.invalid.unsupported").size() == 5
+            require(checks, "invalid-preserved", preserved.getStringList("skills.invalid.unsupported").size() == 8
                     && preserved.getStringList("skills.invalid.on-decision").isEmpty()
-                    && invalidEntries.stream().filter(e -> "WARN".equals(e.get("severity"))).count() == 5);
+                    && invalidEntries.stream().filter(e -> "WARN".equals(e.get("severity"))).count() == 8);
         } catch (Exception failure) {
             Throwable cause = failure instanceof java.lang.reflect.InvocationTargetException invocation
                     ? invocation.getTargetException() : failure;
@@ -265,6 +274,49 @@ public final class PercentHealthProbe {
             observations.add(entry.getKey() + "[native=" + nativeText + ",imported=" + importedText + "]");
             require(checks, "placeholder-" + entry.getKey(), nativeText.equals(importedText)
                     && close(Double.parseDouble(nativeText), entry.getValue()));
+        }
+        var configured = new LinkedHashMap<String, String>();
+        configured.put("caster.hp{rounding=2}", "0.13");
+        configured.put("caster.hp{round=2}", "0.13");
+        configured.put("caster.hp{r=2}", "0.13");
+        configured.put("caster.hp{}", "0.13");
+        configured.put("target.hp{r=0}", "3");
+        configured.put("target.hp{r=-1}", "3.125");
+        configured.put("target.php{round=2}", "15.63");
+        configured.put("caster.mhp{r=2}", "20.0");
+        configured.put("c.h{r=2}", "0.13");
+        configured.put("random.-5", "-5");
+        configured.put("random.-5to-5", "-5");
+        configured.put("random.7-7", "7");
+        configured.put("random.float.0.0125to0.0125", Double.toString((double) 0.0125f));
+        configured.put("random.float.-0.125to-0.125", "-0.125");
+        configured.put("random.float{r=2}.-0.125to-0.125", "-0.13");
+        configured.put("random.float{round=0}.2.5to2.5", "3");
+        configured.put("random.float{}.0.125to0.125", "0.13");
+        configured.put("random.float.rounded.-0.125to-0.125", "-0.12");
+        configured.put("random.float.rounded.1to1", "1.00");
+        for (var entry : configured.entrySet()) {
+            String source = "<" + entry.getKey() + ">";
+            String nativeText = (String) get.invoke(of.invoke(null, source), meta, targetAdapter);
+            String importedText = Placeholders.resolve(source, context);
+            observations.add(entry.getKey() + "[native=" + nativeText + ",imported=" + importedText + "]");
+            require(checks, "configured-" + entry.getKey(), entry.getValue().equals(nativeText)
+                    && nativeText.equals(importedText));
+        }
+        for (String range : List.of("random.-2to2", "random.0-2", "random.float.-1to1")) {
+            boolean valid = true;
+            for (int i = 0; i < 32; i++) {
+                String source = "<" + range + ">";
+                String nativeText = (String) get.invoke(of.invoke(null, source), meta, targetAdapter);
+                String importedText = Placeholders.resolve(source, context);
+                for (String value : List.of(nativeText, importedText)) {
+                    double number = Double.parseDouble(value);
+                    if (range.startsWith("random.float.")) {
+                        valid &= number >= -1 && number <= 1 && number == (double) (float) number;
+                    } else valid &= value.matches("-?\\d+") && number >= (range.contains("0-2") ? 0 : -2) && number <= 2;
+                }
+            }
+            require(checks, "sampled-" + range, valid);
         }
     }
 

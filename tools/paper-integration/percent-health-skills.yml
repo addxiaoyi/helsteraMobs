@@ -55,3 +55,16 @@ precision_damage_fraction:
   Skills: ['damagepercent{p=<caster.hp>} @Trigger']
 precision_damage_current:
   Skills: ['damagepercent{p=<caster.hp>;ch=true} @Trigger']
+# Additional imported dynamic outcomes; MM Free's numeric gate also applies here.
+rounding_caster_hp:
+  Skills: ['heal{a=<caster.hp{rounding=2}>} @Trigger']
+rounding_target_hp:
+  Skills: ['heal{a=<target.hp{round=2}>} @Trigger']
+rounding_target_integer:
+  Skills: ['heal{a=<target.hp{r=0}>} @Trigger']
+rounding_fraction:
+  Skills: ['healpercent{m=<caster.hp{r=2}>} @Trigger']
+random_float_rounded:
+  Skills: ['heal{a=<random.float{r=2}.0.125to0.125>} @Trigger']
+random_signed:
+  Skills: ['modifyhealth{a=<random.-1to-1>} @Trigger']

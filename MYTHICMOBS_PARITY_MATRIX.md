@@ -8,12 +8,16 @@ Numeric placeholder correction (2026-11-17): resolution preserves finite source
 precision; raw `hp/health/thp`, maximum `mhp`, percent `healthpercent/php`, and
 caster `c.h/c.mh/c.ph` aliases read live entities. Missing/non-finite entity data
 stays unresolved. Existing profiles using `hp` as percent must migrate to
-`hp.percent` or `php`. Full verification passes 2,235 tests and SpotBugs.
-Focused `srv-paper-percent-health-exploratory-20261117-r7` passes 60 assertions,
-including 19 exact native MM string comparisons and 12 imported dynamic outcomes.
+`hp.percent` or `php`. Inline `rounding/round/r`, signed inclusive integer
+random ranges, float ranges, and fixed two-decimal random text are implemented.
+Bare random ranges now produce integers; decimal ranges require `random.float`.
+Full verification passes 2,243 tests and SpotBugs.
+Focused `srv-paper-percent-health-exploratory-20261117-r9` passes 88 assertions,
+including 38 exact native MM string comparisons, three random type/bounds
+checks, and 18 imported dynamic outcomes.
 MM Free numeric arguments are Premium-gated and fall back to `1`; this behavior
-is recorded separately. Premium numeric skill comparison, inline rounding,
-expressions, signed random grammar, generic per-target evaluation, versions,
+is recorded separately. Premium numeric skill comparison, other placeholder
+families, expressions, generic per-target evaluation, versions,
 and full strict release integration remain open. See the
 [compatibility audit](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md). No broader
 catalog status is promoted by this slice.

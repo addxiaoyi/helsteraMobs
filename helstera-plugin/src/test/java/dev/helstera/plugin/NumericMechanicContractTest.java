@@ -39,6 +39,18 @@ class NumericMechanicContractTest {
                   Skills: ['damage{a=<target.thp>} @Target']
                 fraction:
                   Skills: ['healpercent{m=<c.h>} @Target']
+                rounded:
+                  Skills: ['heal{a=<caster.hp{rounding=2}>} @Target']
+                positional_rounded:
+                  Skills: ['heal{<caster.hp{r=2}>} @Target']
+                direct_positional:
+                  Skills: ['heal <caster.hp{round=2}> @Target']
+                random_float:
+                  Skills: ['heal{a=<random.float{r=2}.0.125to0.125>} @Target']
+                random_signed:
+                  Skills: ['modifyhealth{a=<random.-1to-1>} @Target']
+                rounded_fraction:
+                  Skills: ['healpercent{m=<caster.hp{r=2}>} @Target']
                 invalid:
                   Skills: ['sethealth{a=<skill.var.amount>} @Target']
                 """);
@@ -78,6 +90,15 @@ class NumericMechanicContractTest {
         verify(target).damage(3.125, caster);
         assertTrue(service.castSkill("fraction", context));
         verify(target).setHealth(6.09375);
+        clearInvocations(target);
+        for (String name : List.of("rounded", "positional_rounded", "direct_positional", "random_float")) {
+            assertTrue(service.castSkill(name, context), name);
+        }
+        verify(target, times(4)).setHealth(3.255);
+        assertTrue(service.castSkill("random_signed", context));
+        verify(target).setHealth(2.125);
+        assertTrue(service.castSkill("rounded_fraction", context));
+        verify(target).setHealth(6.2125);
         clearInvocations(target);
         for (String invalid : List.of("NaN", "Infinity", "1e999", "<missing>")) {
             tree.setVariable("amount", invalid);

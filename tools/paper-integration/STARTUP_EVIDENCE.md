@@ -1,6 +1,60 @@
 # Paper Startup Evidence
 
-Focused numeric-placeholder follow-up
+Focused rounding/random follow-up
+`srv-paper-percent-health-exploratory-20261117-r9` passes on Paper 1.21.1-133
+with actual MythicMobs 5.7.2. The final artifact passes 2,243 tests, zero failures/
+errors/skips, and SpotBugs. `percentHealthRuntime` records 88 assertions:
+14 paired static health comparisons, 38 exact native-string/Helstera-string
+comparisons, three sampled random type/bounds checks, 18 imported dynamic skill
+outcomes, and retained edition/event/isolation/negative/cleanup checks.
+The string comparisons include the earlier 19 health aliases plus 19 examples
+for `rounding/round/r`, empty configuration, negative/zero scales, signed integer
+randoms, float precision, and two-decimal formatting. Native numeric rounding
+and Helstera agree on `0.125` → `0.13`, `15.625` → `15.63`, and `2.5` → `3`.
+For `-0.125`, `random.float{r=2}` produces `-0.13` (HALF_UP), while
+`random.float.rounded` produces `-0.12` (HALF_EVEN).
+
+Each sampled range (`random.-2to2`, `random.0-2`, `random.float.-1to1`) uses
+32 draws per engine, checking bounds and integer/float representation, without
+comparing independent samples for equality. Imported rounded heals produce
+`3.255000114440918` and `5.724999904632568`; expected decimal outcomes are
+checked within `1e-6` to account for Minecraft float health storage. Eight
+invalid source lines, including malformed rounding configuration, remain
+preserved with warnings. The MM Free numeric argument fallback to `1` is still
+recorded separately; no Premium dynamic numeric skill parity is claimed.
+
+Report: [paper-1.21.1-percent-health-exploratory-20261117-r9.json](reports/paper-1.21.1-percent-health-exploratory-20261117-r9.json),
+SHA-256 `185a29fba427440bac10cba28baf7210c489f21cecf24b584d2e8110ea42c0e5`.
+Redacted log: [paper-1.21.1-percent-health-exploratory-20261117-r9.log.gz](reports/paper-1.21.1-percent-health-exploratory-20261117-r9.log.gz),
+SHA-256 `cf05e9142c35cf7a628478a91db451caa1efed374649ed7f421514856325a578`.
+Plugin SHA-256: `ec04131390fbc0903901aa902183f52209cb67a513b853596377c1d982789fff`.
+Shared YAML SHA-256: `d98ed24427557c31bd2dedbd07e0cc26ded69f7ee82584802a1ec7514a19c1f8`.
+MythicMobs SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+Paper bootstrap SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+
+Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`, then
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r10 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+(choose a fresh revision). The runner checks pinned artifact hashes, uses a
+fresh isolated server, disables its web UI, and archives sanitized logs. This
+focused exploratory report is not added to the strict release manifest.
+Expressions/math, other placeholder families, generic per-recipient evaluation,
+Premium numeric skill comparison, versions, and the complete strict catalog
+remain open. See the [compatibility and upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
+
+Earlier fixture `srv-paper-percent-health-exploratory-20261117-r8` passed the
+same 88 assertions before preserving unrestricted unconfigured text keys and
+the normalizer's existing whitespace acceptance. Its
+[report](reports/paper-1.21.1-percent-health-exploratory-20261117-r8.json)
+(SHA-256 `2bb71e1a6e7f26b5809bffaa67ea72ca44a1f61b76d0ab710d15741b324ec5c7`)
+and [redacted log](reports/paper-1.21.1-percent-health-exploratory-20261117-r8.log.gz)
+(SHA-256 `2911e3589a63fdbb1597d8594fe0867838d70df2ef72c55d667aef7ed662ba83`)
+remain archived. Its plugin SHA-256 was
+`3b13a317ab913b146d61c6852508459da32868e0e0957d5c20b080edc429c45a`.
+The final r9 build additionally passes regression coverage for Unicode variable
+names, arbitrary text variable keys, wildcard permission nodes, positional
+configured placeholders, and normalizer whitespace.
+
+Previous numeric-placeholder follow-up
 `srv-paper-percent-health-exploratory-20261117-r7` passes on Paper 1.21.1-133
 with actual MythicMobs 5.7.2. The final artifact passes 2,235 tests, zero failures/
 errors/skips, and SpotBugs. `percentHealthRuntime` now records 60 assertions:
@@ -37,13 +91,14 @@ remain archived. The final r7 adds a caster/control isolation check before
 restoring the precision fixture's caster health.
 
 Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`, then
-`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r8 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r10 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
 (choose a fresh revision). The runner checks pinned artifact hashes, isolates
 the server, disables its web UI, and archives sanitized logs. The shared YAML
 contains both the paired static cases and the explicitly gated numeric cases.
-This exploratory fixture does not complete inline rounding/math, generic
-per-target numeric evaluation, other versions, or the full strict release
-catalog. See the [precision/upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
+That earlier exploratory fixture did not cover inline rounding; the r9 follow-up
+above adds that slice. Expressions/math, generic per-target numeric evaluation,
+other versions, and the full strict release catalog remain open.
+See the [precision/upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
 Focused SetSpeed fixture `srv-paper-set-speed-exploratory-20261117-r2` passes
 on Paper 1.21.1-133 with actual MythicMobs 5.7.2. The final artifact passes the

@@ -15,17 +15,18 @@ the full strict release catalog or version/physics/timing validation.
 
 The percentage-health runner loads the same skill source on native MM 5.7.2
 and the Helstera importer/runtime. After building, run
-`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r8 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r10 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
 (choose a fresh revision). Only the pinned Modrinth `FTWvGuE5` artifact is
-accepted. Fixture `srv-paper-percent-health-exploratory-20261117-r7` passes 60
+accepted. Fixture `srv-paper-percent-health-exploratory-20261117-r9` passes 88
 assertions, including 14 identical-source static health/absorption comparisons,
-19 exact native-string health alias comparisons, 12 imported dynamic outcomes,
+38 exact native-string health/rounding/random comparisons, three random
+type/bounds checks with 32 draws per engine per range, 18 imported dynamic outcomes,
 and damage event cancellation/modification. MM Free gates numeric placeholders
 behind Premium and substitutes `1`; the probe verifies that boundary separately,
 without claiming Premium dynamic skill parity. Reports and hashes are recorded in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). The runner disables the web UI and
-uses an isolated fresh server. This is exploratory evidence; inline rounding,
-math, generic per-target numeric scope, versions, and full-catalog integration
+uses an isolated fresh server. This is exploratory evidence; expressions/math,
+other placeholder families, generic per-target numeric scope, versions, and full-catalog integration
 remain open. See the [precision/upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
 The focused numeric runner, `run-numeric-mechanic-fixture.ps1`, validates the

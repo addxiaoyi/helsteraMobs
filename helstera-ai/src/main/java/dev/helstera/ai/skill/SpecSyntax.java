@@ -35,8 +35,10 @@ public final class SpecSyntax {
         if (s.isEmpty()) return s;
         int brace = s.indexOf('{');
         if (brace < 0) return s;
-
         String head = s.substring(0, brace).trim();
+        // Inline placeholder configuration in an argument is not the mechanic's argument block.
+        if (head.chars().anyMatch(Character::isWhitespace) || head.indexOf('<') >= 0) return s;
+
         int close = s.lastIndexOf('}');
         String body = close > brace ? s.substring(brace + 1, close) : s.substring(brace + 1);
 
@@ -70,8 +72,8 @@ public final class SpecSyntax {
                 continue;
             }
             if (!quoted) {
-                if (c == '[' || c == '(') bracket++;
-                else if (c == ']' || c == ')') bracket = Math.max(0, bracket - 1);
+                if (c == '[' || c == '(' || c == '{') bracket++;
+                else if (c == ']' || c == ')' || c == '}') bracket = Math.max(0, bracket - 1);
                 else if (bracket == 0) {
                     if (c == ';') {
                         flush(out, cur);

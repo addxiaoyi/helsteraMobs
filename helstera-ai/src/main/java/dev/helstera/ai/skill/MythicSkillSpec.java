@@ -122,7 +122,7 @@ public record MythicSkillSpec(
             String value = part.trim();
             if (strict && value.isEmpty()) throw new IllegalArgumentException("empty mechanic argument");
             if (value.isEmpty()) continue;
-            int eq = value.indexOf('=');
+            int eq = dev.helstera.api.util.PlaceholderSyntax.argumentEquals(value);
             if (eq > 0) {
                 String key = value.substring(0, eq).trim().toLowerCase(Locale.ROOT);
                 if (strict && args.containsKey(key)) {

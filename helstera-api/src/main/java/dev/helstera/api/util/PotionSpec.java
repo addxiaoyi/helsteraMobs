@@ -28,7 +28,7 @@ public record PotionSpec(String type, String duration, String level,
         int positional = 0;
         for (String argument : arguments == null ? List.<String>of() : arguments) {
             if (argument == null || argument.isBlank()) throw invalid("blank argument");
-            int equals = argument.indexOf('=');
+            int equals = PlaceholderSyntax.argumentEquals(argument);
             String key;
             String value;
             if (equals < 0) {
@@ -119,7 +119,7 @@ public record PotionSpec(String type, String duration, String level,
     }
 
     private static boolean dynamic(String raw) {
-        return raw.matches("<[a-zA-Z0-9_.:-]+>");
+        return PlaceholderSyntax.isToken(raw);
     }
 
     private static int integer(String raw, int minimum) {

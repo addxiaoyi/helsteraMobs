@@ -113,15 +113,19 @@ global target eligibility, physics/timing, and complete catalogs open.
 
 Numeric placeholders now preserve full finite precision; raw-health, max-health,
 and live-percentage aliases match the pinned upstream names and units. Existing
-`hp`-as-percent profiles require migration. The full build passes 2,235 tests
-and SpotBugs. Focused fixture `srv-paper-percent-health-exploratory-20261117-r7`
-passes 60 assertions, including 19 exact native-string alias comparisons and 12
-imported dynamic outcomes. MM Free substitutes `1` for Premium-gated numeric
+`hp`-as-percent profiles require migration. Inline `rounding/round/r` and signed
+integer/float/fixed-decimal random families now pass importer and runtime checks.
+Bare random ranges produce inclusive integers; decimal ranges require the
+`random.float` family. The full build passes 2,243 tests
+and SpotBugs. Focused fixture `srv-paper-percent-health-exploratory-20261117-r9`
+passes 88 assertions, including 38 exact native-string comparisons, three
+random type/bounds checks, and 18 imported dynamic outcomes. MM Free substitutes `1` for Premium-gated numeric
 placeholders; the probe records this boundary without claiming Premium numeric
 skill parity. See the [precision audit](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
-1. Finish inline rounding, signed random grammar, math, and generic per-recipient
+1. Complete expressions/math, other placeholder families, and generic per-recipient
    numeric evaluation; add actual Premium numeric skill comparison when available.
+   Keep the documented invalid-input, locale, and extended-random-range boundaries explicit.
    Audit skill-power/damage modifiers, healing events, and version-specific
    options against the declared upstream boundary. Complete MM global target
    eligibility, including creative/spectator defaults and `@Target` semantics;

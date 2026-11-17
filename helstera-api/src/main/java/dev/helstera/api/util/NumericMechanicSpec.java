@@ -94,7 +94,7 @@ public record NumericMechanicSpec(List<String> arguments, int numericCount) {
         int position = 0;
         for (String raw : args == null ? List.<String>of() : args) {
             if (raw == null || raw.isBlank()) throw invalid(name, "empty argument");
-            int equals = raw.indexOf('=');
+            int equals = PlaceholderSyntax.argumentEquals(raw);
             int index = -1;
             String value = equals < 0 ? raw.trim() : raw.substring(equals + 1).trim();
             if (value.length() >= 2 && value.startsWith("\"") && value.endsWith("\"")) {
@@ -152,7 +152,7 @@ public record NumericMechanicSpec(List<String> arguments, int numericCount) {
         }
     }
 
-    private static boolean dynamic(String raw) { return raw.matches("<[a-zA-Z0-9_.:-]+>"); }
+    private static boolean dynamic(String raw) { return PlaceholderSyntax.isToken(raw); }
 
     private static void finite(String value) {
         double number = Double.parseDouble(value);

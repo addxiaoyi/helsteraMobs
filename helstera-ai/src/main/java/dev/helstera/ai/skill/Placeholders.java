@@ -10,7 +10,7 @@ import org.bukkit.entity.Player;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ThreadLocalRandom;
+import dev.helstera.api.util.PlaceholderSyntax;
 import java.util.function.BiFunction;
 import java.util.function.DoubleFunction;
 
@@ -76,6 +76,21 @@ public final class Placeholders {
 
     private static String lookup(String key, BehaviorContext ctx, DoubleFunction<String> numbers) {
         if (key == null || key.isEmpty()) return null;
+        // Existing text keys include Unicode variable names and wildcard permission nodes.
+        // Numeric token validation must not narrow their unconfigured lookup contract.
+        if (key.indexOf('{') < 0 && key.indexOf('}') < 0) return lookupValue(key, ctx, numbers);
+        PlaceholderSyntax parsed;
+        try { parsed = PlaceholderSyntax.parse(key); }
+        catch (IllegalArgumentException e) { return null; }
+        if (parsed.rounding() == null) return lookupValue(parsed.key(), ctx, numbers);
+        if (!supportsRounding(parsed.key())) return null;
+        String value = lookupValue(parsed.key(), ctx, Placeholders::exact);
+        if (value == null) return null;
+        try { return rounded(Double.parseDouble(value), parsed.rounding()); }
+        catch (NumberFormatException e) { return null; }
+    }
+
+    private static String lookupValue(String key, BehaviorContext ctx, DoubleFunction<String> numbers) {
         String k = key.toLowerCase(Locale.ROOT);
         k = switch (k) {
             case "c.h" -> "caster.health";
@@ -85,7 +100,7 @@ public final class Placeholders {
         };
 
         // random.* 不依赖上下文，优先处理
-        if (k.startsWith("random.")) return random(k.substring(7), numbers);
+        if (k.startsWith("random.")) return RandomPlaceholder.resolve(k.substring(7));
 
         if (ctx == null) return null;
         int dot = k.indexOf('.');
@@ -266,31 +281,6 @@ public final class Placeholders {
         return null;
     }
 
-    /** {@code <random.a-to-b>} / {@code <random.1to10>} / {@code <random.percent>}。 */
-    private static String random(String field, DoubleFunction<String> numbers) {
-        if (field.isEmpty()) return null;
-        var rnd = ThreadLocalRandom.current();
-        // random.percent 概率判定：成功返回 1.0，否则 0.0
-        if (field.equals("percent") || field.equals("chance")) {
-            return String.valueOf(rnd.nextDouble());
-        }
-        int dash = field.replace("-", "").indexOf("to");
-        if (dash > 0) {
-            String a = field.replace("-", "").substring(0, dash).trim();
-            String b = field.replace("-", "").substring(dash + 2).trim();
-            try {
-                double lo = Double.parseDouble(a);
-                double hi = Double.parseDouble(b);
-                if (hi < lo) { double t = lo; lo = hi; hi = t; }
-                if (lo == hi) return numbers.apply(lo);
-                return numbers.apply(lo + rnd.nextDouble() * (hi - lo));
-            } catch (NumberFormatException ignored) {
-                return null;
-            }
-        }
-        return null;
-    }
-
     // ------------------------------------------------------------------
     // 文本扫描
     // ------------------------------------------------------------------
@@ -398,7 +388,8 @@ public final class Placeholders {
         out.addAll(List.of("c.h", "c.mh", "c.ph"));
         out.addAll(List.of("skill.payload", "ctx.payload", "ctx.state",
                 "caster.id", "caster.state", "caster.decisions",
-                "random.1to10", "random.1to100", "random.percent"));
+                "random.1to10", "random.1to100", "random.percent",
+                "random.float.0to1", "random.float.rounded.0to1"));
         out.addAll(List.of("caster.display", "target.display",
                 "caster.entity_type", "target.entity_type",
                 "caster.distancesquared", "target.distancesquared"));
@@ -686,6 +677,27 @@ public final class Placeholders {
     /** Preserve the source double; invalid data must remain unresolved instead of becoming zero. */
     private static String exact(double value) {
         return Double.isFinite(value) ? Double.toString(value) : null;
+    }
+
+    private static boolean supportsRounding(String key) {
+        String lower = key.toLowerCase(Locale.ROOT);
+        if (List.of("c.h", "c.mh", "c.ph").contains(lower)) return true;
+        if (lower.startsWith("random.float.") && !lower.startsWith("random.float.rounded.")) return true;
+        int dot = lower.indexOf('.');
+        if (dot < 0 || !List.of("caster", "target", "mob", "player").contains(lower.substring(0, dot))) return false;
+        String field = normalizeField(lower.substring(dot + 1));
+        return List.of("hp.raw", "hp.max", "hp.percent", "health", "maxhealth", "absorption", "absorb",
+                "distance", "distancesquared", "dx", "dy", "dz", "armor", "luck", "saturation", "exhaustion",
+                "loc.x", "loc.y", "loc.z", "loc.yaw", "loc.pitch",
+                "l.x", "l.y", "l.z", "l.x.double", "l.y.double", "l.z.double", "l.yaw", "l.pitch").contains(field);
+    }
+
+    private static String rounded(double value, int scale) {
+        if (!Double.isFinite(value)) return null;
+        if (scale < 0) return exact(value);
+        double rounded = java.math.BigDecimal.valueOf(value).setScale(scale, java.math.RoundingMode.HALF_UP).doubleValue();
+        // MM's round=0 converts the rounded double with Number.intValue(), including saturation.
+        return scale == 0 ? Integer.toString((int) rounded) : exact(rounded);
     }
 
     private static String compact(double value) {

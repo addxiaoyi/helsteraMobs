@@ -22,6 +22,10 @@ class SpecSyntaxTest {
         assertEquals("damage 5 true",
                 SpecSyntax.normalize("damage{amount=5;aoe=true}"));
         assertEquals("damage 5 true", SpecSyntax.normalize("damage{amount=5, aoe=true}"));
+        assertEquals("damage 5", SpecSyntax.normalize("damage {amount=5}"));
+        assertEquals("heal <caster.hp{r=2}>", SpecSyntax.normalize("heal <caster.hp{r=2}>"));
+        assertEquals("heal <caster.hp{r=2;round=3}>",
+                SpecSyntax.normalize("heal{a=<caster.hp{r=2;round=3}>}"));
     }
 
     @Test
