@@ -1,4 +1,32 @@
 # Paper Startup Evidence
+
+Focused Potion fixture `srv-paper-potion-mechanic-exploratory-20261117-r5`
+passes on Paper 1.21.1-133. Its `potionMechanicRuntime` probe records 18 assertions
+covering active entities, production import/binding, invalid-source preservation,
+SLOWNESS/100-tick defaults, target isolation, aliases/flags, dynamic values,
+normal stronger-effect retention, forced replacement, cancelled removal,
+invalid dynamic values, self/multiple targets, and cleanup. This is exploratory
+server evidence; it does not load MythicMobs, observe client visuals, or replace
+the full release catalog.
+
+Report: [paper-1.21.1-potion-mechanic-exploratory-20261117-r5.json](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r5.json),
+SHA-256 `4e6a7548e01cd40dccdce4135ce61b9561fb524a35abb9cf9032500d85bbcecd`.
+Redacted log: [paper-1.21.1-potion-mechanic-exploratory-20261117-r5.log.gz](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r5.log.gz),
+SHA-256 `74dd2408e0d51faf88be0d3c005d062e9422d665b2f72594457138e7113ee0b1`.
+Plugin SHA-256: `d03d5fb6bf48b355c25c2412184f7fac696af2fd181737145c30fe039f23bef6`.
+Paper bootstrap SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+Reproduce with `./mvnw -o -pl helstera-plugin -am package`, then
+`pwsh -NoProfile -File tools/paper-integration/run-potion-mechanic-fixture.ps1 -EvidenceRevision r6`
+(choose a fresh revision). The fixture disables the web UI and preserves its
+server directory; temporary probe files, entities, listeners, and the bound
+model instance are cleaned up before reporting success.
+
+The prior focused run `srv-paper-potion-mechanic-exploratory-20261117-r4`
+also passed; its [report](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r4.json)
+and [log](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r4.log.gz)
+remain archived. Revision r5 additionally includes the suffix-validation fix
+covered by the final regression suite and corresponds to the plugin hash above.
+
 Latest full-catalog fixture `srv-paper-directional-velocity-strict-20261116-r1` passed the full strict gate on Paper 1.21.1-133: 466 registered probes, 447 passed, 19 expected rejections, zero failed or incomplete. Its catalog verifies `Velocity` and `DirectionalVelocity`, including regular and directional modes, aliases, dynamic placeholders, invalid-input preservation, and restoration; it also retains strict HasInventorySpace, Inline Conditions and Altitude evidence, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and full client workflows. Plugin SHA-256: `cc50507ce75b3365152f6c0897787acdff8682b65bae0337770ced1853496916`. Report: [paper-1.21.1-directional-velocity-strict-20261116-r1.json](reports/paper-1.21.1-directional-velocity-strict-20261116-r1.json), SHA-256 `513d11381a20cc6382d11e3d1cb12d595c48a25b79b5d534f735c29628073d29`. Compressed token-redacted server log: [paper-1.21.1-directional-velocity-strict-20261116-r1.log.gz](reports/paper-1.21.1-directional-velocity-strict-20261116-r1.log.gz), SHA-256 `69e1362e6d47746a7990062ed04e95acb6b993ef6e6df09dccff61c1fa0a072b`; client log archive: [paper-1.21.1-directional-velocity-strict-20261116-r1-client-logs.tar.gz](reports/paper-1.21.1-directional-velocity-strict-20261116-r1-client-logs.tar.gz), SHA-256 `6a60847bc9a9b437b1a4ec8cf7c4766b88471e1cb0f0e21697fb60c5c702d456`.
 
 Focused exploratory fixture `srv-paper-targeter-context-alias-strict-20261115-r3` ran the production plugin on Paper 1.21.1-133 with two real Mineflayer players. The `context-targeter-chain` self-test verifies `@nearestConditionalTarget` hyphen and underscore aliases, the Mythic `condition`/`c` argument aliases, chained condition filtering, and fail-closed rejection of unknown, duplicate, empty, and malformed private arguments. The report records 454 probes: 434 passed, 19 observed expected rejections, and one unrelated `not-observed` probe. This is focused exploratory evidence, not a full-catalog release run, so the Context Targeters row and complete Conditions catalog remain `mapped-unverified`. Plugin SHA-256: `3e30ff137249d0361cb8d796b791da8b9ac757dcc99935210f604abb2a95fc67`. Report: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.json](reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.json), SHA-256 `7fea79bd34a2cd6f6a1d339f00c85ee51a7b9f4e781549c62948470da49826dc`. Compressed token-redacted server log: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz](reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz), SHA-256 `df05235cd9e9da01e0f396311805e29679ffac6f744ebb99de4a4016718ac883`.

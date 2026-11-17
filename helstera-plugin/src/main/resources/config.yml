@@ -199,6 +199,7 @@ debug:
   self-test-metaskill-condition: false
   self-test-nested-skill-cooldown: false
   self-test-modify-damage: false
+  self-test-potion-mechanic: false
   self-test-show-health: false
   self-test-item-effects: false
   self-test-loot: false

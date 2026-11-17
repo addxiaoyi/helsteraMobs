@@ -7,7 +7,7 @@ requires another plugin.
 
 ## Baseline
 
-Audited against the matrix on 2026-11-16:
+Audited against the matrix on 2026-11-17:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
@@ -80,6 +80,19 @@ non-finite, and out-of-range values; valid positional forms remain compatible.
 AI, migration, and plugin tests cover direct binding and imported runtime
 paths. No Paper evidence was added, so the Conditions catalog remains
 `mapped-unverified`.
+
+## Next targets after the Potion slice (2026-11-17)
+
+1. Audit the earlier numeric mechanic factories through `SkillService`, preserving
+   named keys and optional defaults regardless of argument order. Cover explicit
+   target variants and actual importer output, especially multi-argument impact
+   mechanics; direct factory tests alone do not establish the binding contract.
+2. Extend Potion evidence to delayed/repeated execution, effect-event callbacks,
+   expiration/hidden-effect behavior, instant effects, and client particles/icons.
+   Reconcile those results with the declared MythicMobs version boundary.
+3. Add the verified Potion cases to the full strict release catalog, then run the
+   exact release artifact and the remaining Paper version combinations. Keep
+   broader matrix rows open until their complete catalogs meet the contract below.
 
 ## Completion contract
 
@@ -267,6 +280,14 @@ Matrix rows: `Mechanics catalog`, `Skills importer`, `Context targeters`,
 - Movement speed mechanics now accept imported `amount`/`a`/`speed`/`factor` forms at the direct runtime boundary for both self and target scopes: `modify-speed` and `set-tick-speed`. Positional arguments remain compatible, execution-time placeholders are preserved, and literal non-finite values fail during binding. Runtime coverage includes Bukkit movement-attribute scaling and target dispatch; no new Paper evidence is claimed, so the full Mechanics catalog remains `mapped-unverified`.
 - Damage and healing mechanics now accept imported named numeric forms at the direct runtime boundary: absolute `damage-target`, `heal-targets`, and `heal-self` accept amount/value aliases, while `heal-percent` and `damage-percent` self/target paths accept amount/percent aliases. Positional arguments, target dispatch, execution-time placeholders, and eager non-finite rejection remain covered by runtime tests; no new Paper evidence is claimed, so the full Mechanics catalog remains `mapped-unverified`.
 - Impact and displacement mechanics now accept their imported named numeric forms at the direct runtime boundary: `ignite-targets` accepts `ticks`/`duration`/`time`/`t`, `knockback-targets` accepts power and vertical aliases, and `pull`, `leap`, and `leap-targets` accept radius/velocity aliases. `damage-melee` now accepts amount and radius aliases and resolves both values at execution time, preserving positional syntax and rejecting non-finite literals. Runtime coverage includes target and self dispatch, vector outcomes, nearby-target damage, placeholder-compatible binding, and invalid-input rejection; no new Paper evidence is claimed, so the full Mechanics catalog remains `mapped-unverified`.
+- Potion now uses a shared API parser across migration and self/target runtime.
+  Official aliases, SLOWNESS/100-tick named defaults, the legacy 60-tick positional
+  default, flags, force replacement, dynamic type/duration/level, duplicate and
+  malformed-input rejection, and original-line preservation are covered.
+  Focused exploratory fixture `srv-paper-potion-mechanic-exploratory-20261117-r5`
+  verifies real Paper 1.21.1-133 execution, inverse controls, cancelled removal,
+  multiple targets, and cleanup. It does not replace the full strict release
+  catalog; the Mechanics and Skills importer rows remain `mapped-unverified`.
 - Complete official targeter names, filters, modifiers, ordering, limits,
   chaining, location/entity distinctions, and invalid-input behavior.
 - Verify trigger registration, event actor/target/trigger context, priority,

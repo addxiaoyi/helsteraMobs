@@ -52,7 +52,9 @@ public record MythicSkillSpec(
         String body = brace < 0 ? null : head.substring(brace + 1, closingBrace);
         List<String> positional = new ArrayList<>();
         java.util.LinkedHashMap<String, String> args = new java.util.LinkedHashMap<>();
-        if (body != null) parseBody(body, args, positional);
+        boolean potion = java.util.Set.of("potion", "effect", "effect-self", "effect-targets")
+                .contains(mechanic.toLowerCase(Locale.ROOT));
+        if (body != null) parseBody(body, args, positional, potion);
 
         String targeter = null;
         String trigger = null;
@@ -98,6 +100,10 @@ public record MythicSkillSpec(
                 } else if (token.endsWith("%")) {
                     throw new IllegalArgumentException("invalid chance percentage: " + token);
                 } else {
+                    if (potion && (targeter != null || trigger != null || chance != null
+                            || !conditions.isEmpty() || !targetConditions.isEmpty())) {
+                        throw new IllegalArgumentException("unexpected Potion argument after execution suffix");
+                    }
                     positional.add(unquote(token));
                 }
             }
@@ -106,13 +112,19 @@ public record MythicSkillSpec(
                 conditions, targetConditions);
     }
 
-    private static void parseBody(String body, Map<String, String> args, List<String> positional) {
+    private static void parseBody(String body, Map<String, String> args, List<String> positional,
+                                  boolean strict) {
+        if (body.isBlank()) return;
         for (String part : splitBody(body)) {
             String value = part.trim();
+            if (strict && value.isEmpty()) throw new IllegalArgumentException("empty mechanic argument");
             if (value.isEmpty()) continue;
             int eq = value.indexOf('=');
             if (eq > 0) {
                 String key = value.substring(0, eq).trim().toLowerCase(Locale.ROOT);
+                if (strict && args.containsKey(key)) {
+                    throw new IllegalArgumentException("duplicate mechanic argument: " + key);
+                }
                 if ((key.equals("delay") || key.equals("repeat") || key.equals("repeatinterval")
                         || key.equals("cooldown")
                         || key.equals("repeat-interval"))

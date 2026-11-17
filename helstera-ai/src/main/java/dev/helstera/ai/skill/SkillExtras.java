@@ -6657,24 +6657,8 @@ public final class SkillExtras {
                 // ---- 增益 / 减益 ----
 
                 Map.entry("effect-self", (SkillCatalog.ActionFactory) a -> {
-                    String potion = str(a, 0, "");
-                    var ticks = dynamicNum(a, 1, 60);
-                    var amp = dynamicNum(a, 2, 0);
-                    boolean ambient = bool(a, 3, false);
-                    boolean particles = bool(a, 4, true);
-                    boolean icon = bool(a, 5, true);
-                    return ctx -> selfLiving(ctx).ifPresent(e -> {
-                        PotionEffectType type = potionType(potion);
-                        int duration = (int) ticks.applyAsDouble(ctx);
-                        int amplifier = (int) amp.applyAsDouble(ctx);
-                        if (type == null || duration <= 0) return;
-                        try {
-                            e.addPotionEffect(new PotionEffect(type, duration, amplifier,
-                                    ambient, particles, icon));
-                        } catch (Throwable ignored) {
-                            SkillFaults.swallow("SkillExtras#589");
-                        }
-                    });
+                    var potion = dev.helstera.api.util.PotionSpec.parse(a);
+                    return ctx -> selfLiving(ctx).ifPresent(e -> PotionAction.apply(potion, ctx, List.of(e)));
                 }),
                 Map.entry("remove-effect", (SkillCatalog.ActionFactory) a -> {
                     String potion = str(a, 0, "");

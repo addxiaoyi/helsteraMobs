@@ -64,29 +64,7 @@ public final class MythicSpec {
     }
 
     static boolean ambiguousExecutionSuffix(String spec) {
-        List<String> tokens = new ArrayList<>();
-        StringBuilder token = new StringBuilder();
-        int depth = 0;
-        char quote = 0;
-        boolean escaped = false;
-        for (int i = 0; i < spec.length(); i++) {
-            char c = spec.charAt(i);
-            if (escaped) { token.append(c); escaped = false; continue; }
-            if (quote != 0 && c == '\\') { token.append(c); escaped = true; continue; }
-            if (quote != 0 && c == quote) quote = 0;
-            else if (quote == 0 && (c == '\'' || c == '"')) quote = c;
-            else if (quote == 0 && (c == '{' || c == '[' || c == '(')) depth++;
-            else if (quote == 0 && (c == '}' || c == ']' || c == ')')) depth--;
-            boolean chainSeparator = c == '>' && (token.length() > 0 && token.charAt(0) == '@'
-                    || token.isEmpty() && !tokens.isEmpty()
-                    && (tokens.get(tokens.size() - 1).startsWith("@")
-                    || tokens.get(tokens.size() - 1).equals(">")));
-            if (quote == 0 && depth == 0 && (Character.isWhitespace(c) || chainSeparator)) {
-                if (!token.isEmpty()) { tokens.add(token.toString()); token.setLength(0); }
-                if (chainSeparator) tokens.add(">");
-            } else token.append(c);
-        }
-        if (!token.isEmpty()) tokens.add(token.toString());
+        List<String> tokens = executionTokens(spec);
         boolean targeter = false;
         boolean chance = false;
         for (int i = 1; i < tokens.size(); i++) {
@@ -111,6 +89,34 @@ public final class MythicSpec {
             }
         }
         return false;
+    }
+
+    /** Outer tokens retaining quoted/braced targeter and condition arguments. */
+    static List<String> executionTokens(String spec) {
+        List<String> tokens = new ArrayList<>();
+        StringBuilder token = new StringBuilder();
+        int depth = 0;
+        char quote = 0;
+        boolean escaped = false;
+        for (int i = 0; i < spec.length(); i++) {
+            char c = spec.charAt(i);
+            if (escaped) { token.append(c); escaped = false; continue; }
+            if (quote != 0 && c == '\\') { token.append(c); escaped = true; continue; }
+            if (quote != 0 && c == quote) quote = 0;
+            else if (quote == 0 && (c == '\'' || c == '"')) quote = c;
+            else if (quote == 0 && (c == '{' || c == '[' || c == '(')) depth++;
+            else if (quote == 0 && (c == '}' || c == ']' || c == ')')) depth--;
+            boolean chainSeparator = c == '>' && (token.length() > 0 && token.charAt(0) == '@'
+                    || token.isEmpty() && !tokens.isEmpty()
+                    && (tokens.get(tokens.size() - 1).startsWith("@")
+                    || tokens.get(tokens.size() - 1).equals(">")));
+            if (quote == 0 && depth == 0 && (Character.isWhitespace(c) || chainSeparator)) {
+                if (!token.isEmpty()) { tokens.add(token.toString()); token.setLength(0); }
+                if (chainSeparator) tokens.add(">");
+            } else token.append(c);
+        }
+        if (!token.isEmpty()) tokens.add(token.toString());
+        return tokens;
     }
 
     private static List<String> splitBody(String body, boolean stripKeys) {

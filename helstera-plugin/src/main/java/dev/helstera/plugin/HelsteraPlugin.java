@@ -777,6 +777,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test-modify-damage", false)) {
             runModifyDamageSelfTest();
         }
+        if (getConfig().getBoolean("debug.self-test-potion-mechanic", false)) {
+            getServer().getScheduler().runTaskLater(this,
+                    () -> dev.helstera.plugin.probe.PotionMechanicProbe.run(this, instances()),
+                    Math.max(1, getConfig().getLong("debug.self-test-delay-ticks", 40)));
+        }
         if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
             runEntityOptionsSelfTest();
         }

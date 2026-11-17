@@ -1,5 +1,19 @@
 Latest full-catalog strict fixture `srv-paper-directional-velocity-strict-20261116-r1` completed all 466 probes on Paper 1.21.1-133: 447 passed, 19 expected rejections, zero failed or incomplete. Its catalog verifies Mythic `Velocity` and `DirectionalVelocity` mechanics: the five regular velocity modes plus yaw/pitch vector construction, `SET`, `ADD`, `MULTIPLY`, `REMOVE`, `DIVIDE`, `MINIMUM`, the `dvelocity` alias, imported execution, dynamic placeholders, invalid-input preservation, and restoration. The same catalog retains strict `HasInventorySpace`, `Inline Conditions`, and `Altitude` coverage, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and the full runtime/client workflows. Plugin SHA-256: `cc50507ce75b3365152f6c0897787acdff8682b65bae0337770ced1853496916`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-directional-velocity-strict-20261116-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions and Context Targeters catalogs remain incomplete.
 
+Potion mechanic update (2026-11-17): migration and runtime now share validation
+for type, duration, level, flags, and official aliases. Named/default syntax uses
+Mythic's SLOW/100-tick defaults (normalized to SLOWNESS); legacy positional
+syntax retains its 60-tick duration default. Dynamic values fail closed, invalid
+source lines remain preserved with warnings, and `force=true` explicitly replaces
+existing effects while respecting cancelled removal. The build and 2,196 tests
+pass, as does SpotBugs. Focused Paper 1.21.1-133 fixture
+`srv-paper-potion-mechanic-exploratory-20261117-r5` verifies imported execution,
+target isolation, flags, placeholders, stronger-effect retention/replacement,
+cancelled removal, multiple targets, and cleanup. See the
+[report](tools/paper-integration/reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r5.json)
+and [remaining goals](MYTHICMOBS_PARITY_ROADMAP.md). This is exploratory server
+evidence; client visuals, other versions, and the full Mechanics catalog remain open.
+
 Conditions parity update (2026-11-16): official MythicMobs 5.7.2 `Altitude` scans down from the active target block to the first non-passable block, bounded by `maxHeight`, matching the audited upstream bytecode for caves and overhangs. Runtime, importer, and direct `SkillService` tests cover local surfaces, scan boundary, aliases, and malformed/duplicate arguments. Strict Paper fixture `srv-paper-altitude-strict-20261116-r4` now verifies the imported and runtime paths, restoration, and cleanup in the 464-probe release catalog; the full Conditions catalog remains `mapped-unverified`.
 
 Inline Conditions parity update (2026-11-16): caster `?condition`, living-trigger `?~condition`, and per-target `?@condition` are covered, including `?!`, `?~!`, and `?@!` negation, target filtering, rejection when no target matches, imported syntax preservation, and restoration. Strict Paper fixture `srv-paper-moist-condition-strict-20261116-r13` verifies this slice in the complete 464-probe release catalog. The full Inline Conditions and Conditions catalogs remain `mapped-unverified`.
@@ -1471,7 +1485,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 632 cited IDs; 539 report files; 4 directories without reports; 89 missing directories; 318 archived release reports. The
+   Current fixture inventory: 634 cited IDs; 541 report files; 4 directories without reports; 89 missing directories; 318 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

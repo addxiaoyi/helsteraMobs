@@ -1984,10 +1984,31 @@ Direct mechanic alias update: hand-written `remove`, owner/parent actions,
 controls, and `setinvulnerable` now bind to the same runtime actions already
 produced by the Mythic importer.
 
-Potion mechanic parity update: `effect-self` now consumes Mythic-style
-`ambient`, `particles`, and `icon` flags in addition to duration/amplifier;
-targeted `effect` already uses the same six-argument runtime constructor, and
-unit coverage now locks both paths.
+Potion mechanic update (2026-11-17): `potion`/`effect` import and
+`effect-self`/`effect-targets` runtime share `PotionSpec`. The
+[official Potion reference](https://wiki.mythiccraft.io/mythicmobs/skills/mechanics/potion)
+defines SLOW, 100 ticks, level 0, force false, ambient false, particles true,
+and icon true. Named/default syntax follows those defaults; historical
+positional syntax retains 60 ticks. Legacy Bukkit names (including SLOW and
+FAST_DIGGING) normalize to the Paper 1.21.1 effect catalog. Duration must be a
+positive finite integer and level a nonnegative finite integer, both bounded
+by Java's integer range; negative/infinite duration and later effect types are
+outside this contract. Dynamic type/duration/level resolve before entity
+mutation and fail closed when unavailable or invalid. Boolean flags are static.
+Unknown, duplicate, empty, and conflicting arguments are rejected; invalid
+imports preserve the original line and emit WARN diagnostics.
+
+Paper's deprecated boolean force overload does not implement replacement on
+the pinned server. `force=true` now removes the existing effect before adding
+the replacement; if removal is cancelled and the effect remains, no update is
+attempted. Normal application preserves Bukkit's effect merging behavior.
+API, AI, and migration tests plus exploratory Paper fixture
+`srv-paper-potion-mechanic-exploratory-20261117-r5` verify defaults, aliases,
+server-side flags, dynamic values, selected-target isolation, stronger-effect
+retention/replacement, cancelled removal, self/multiple targets, and cleanup.
+This fixture does not load MythicMobs or prove client rendering, potion-event
+callback timing, every effect type, other server versions, or the full strict
+catalog. The broader Mechanics and Skills importer rows remain `mapped-unverified`.
 
 Targeter context update: targeter-bound actions now retain the originating
 cancellable event and Bukkit damage cause when their context is narrowed to the

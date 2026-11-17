@@ -1465,7 +1465,8 @@ public final class SkillService {
                 return null;
             }
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
-            if (isVariableMechanic(name) || "mythic-aura".equals(name)
+            if (isVariableMechanic(name) || "effect-self".equals(name) || "effect-targets".equals(name)
+                    || "mythic-aura".equals(name)
                     || "determine-condition".equals(name)) {
                 parsed.arguments().forEach((key, value) -> {
                     if (!isExecutionAttribute(key)) mechanicArgs.add(key + "=" + value);
@@ -1475,7 +1476,7 @@ public final class SkillService {
                     if (!isExecutionAttribute(key)) mechanicArgs.add(value);
                 });
             }
-            if (!mechanicArgs.isEmpty()) args = mechanicArgs;
+            args = mechanicArgs;
             if (name.equals("branch-unlock")) {
                 List<String> branchArgs = new ArrayList<>();
                 String branch = parsed.arguments().get("branch");

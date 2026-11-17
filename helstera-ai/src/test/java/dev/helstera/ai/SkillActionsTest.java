@@ -58,6 +58,21 @@ class SkillActionsTest {
         factory("knockback-self").create(List.of("1.0", "0.4")).accept(ctx());
     }
 
+
+    @Test
+    @DisplayName("Potion rejects invalid finite duration and level values at bind time")
+    void potionRejectsInvalidNumericArguments() {
+        assertThrows(IllegalArgumentException.class, () ->
+                SkillExtras.actions().get("effect-self").create(List.of("type=SPEED", "duration=NaN")));
+        assertThrows(IllegalArgumentException.class, () ->
+                SkillCatalog.actions().get("effect-targets").create(List.of("type=SPEED", "level=-1")));
+
+        var service = new dev.helstera.ai.skill.SkillService(
+                new BehaviorRegistryImpl(), null);
+        org.junit.jupiter.api.Assertions.assertNull(service.bindAction("effect{duration=Infinity}"));
+        org.junit.jupiter.api.Assertions.assertNull(service.bindAction("effect{level=-1}"));
+    }
+
     @Test
     @DisplayName("jump mechanic raises the caster without replacing horizontal velocity")
     void jumpActionRaisesCaster() {

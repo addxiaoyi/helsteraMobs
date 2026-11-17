@@ -1860,6 +1860,13 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "unsupported", "Invalid mechanic execution options; original line preserved.", "WARN");
             return;
         }
+        if (Set.of("potion", "effect").contains(mechanic) && potionSpec(raw) == null) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid Potion type, duration, level, flag, duplicate or unknown argument; original line preserved.", "WARN");
+            return;
+        }
         if (Set.of("modifydamage", "moddamage", "modify-damage").contains(mechanic)
                 && !validModifyDamageMechanic(raw)) {
             scan.unsupported.add(raw);
@@ -2524,17 +2531,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                     + firstArgOrPositional(trimmed, 0, "1", "power", "strength") + " "
                     + firstArgOrPositional(trimmed, 1, "0.4", "vertical", "up");
             case "effect", "potion" -> {
-                String effect = firstArgOrPositional(trimmed, 0, "", "effect", "type");
-                String duration = firstArgOrPositional(trimmed, 1, "60", "duration");
-                String amplifier = firstArgOrPositional(trimmed, 2, "0", "amplifier", "level");
-                String ambient = firstArg(trimmed, "ambient");
-                String particles = firstArg(trimmed, "particles", "show-particles");
-                String icon = firstArg(trimmed, "icon", "show-icon");
-                String flags = ambient == null && particles == null && icon == null ? ""
-                        : " " + (ambient == null ? "false" : ambient)
-                        + " " + (particles == null ? "true" : particles)
-                        + " " + (icon == null ? "true" : icon);
-                yield effect.isBlank() ? null : "effect-targets " + effect + " " + duration + " " + amplifier + flags;
+                var potion = potionSpec(trimmed);
+                yield potion == null ? null : "effect-targets " + String.join(" ", potion.positionalArguments());
             }
             case "teleportself", "teleport-self" -> "teleport-self "
                     + firstArgOrPositional(trimmed, 0, "0", "x", "dx") + " "
@@ -3102,6 +3100,45 @@ public final class MythicMobsImporter implements MigrationImporter {
             case 3, 4 -> "preserve";
             default -> "";
         };
+    }
+
+    /** Validates Potion arguments without dropping unknown trailing tokens. */
+    private static dev.helstera.api.util.PotionSpec potionSpec(String raw) {
+        try {
+            List<String> arguments = new ArrayList<>();
+            int open = MythicSpec.mechanicOpen(raw);
+            if (open >= 0) {
+                int close = mechanicClose(raw, open);
+                if (close < 0) return null;
+                String body = raw.substring(open + 1, close);
+                if (!body.isBlank() && java.util.regex.Pattern.compile("(^|;)\\s*(;|$)").matcher(body).find()) {
+                    return null;
+                }
+                for (String argument : MythicSpec.keyedArguments(raw)) {
+                    int equals = argument.indexOf('=');
+                    String key = equals < 0 ? "" : argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                    if (!Set.of("delay", "repeat", "repeatinterval", "repeat-interval").contains(key)) {
+                        arguments.add(argument);
+                    }
+                }
+            }
+            List<String> tokens = MythicSpec.executionTokens(raw);
+            boolean suffix = false;
+            for (String token : tokens.subList(1, tokens.size())) {
+                if (potionSuffixStart(token)) suffix = true;
+                else if (!(suffix && token.equals(">"))) {
+                    if (suffix || open >= 0) return null;
+                    arguments.add(token);
+                }
+            }
+            return dev.helstera.api.util.PotionSpec.parse(arguments);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
+
+    private static boolean potionSuffixStart(String token) {
+        return token.startsWith("@") || token.startsWith("?") || token.startsWith("~") || token.endsWith("%");
     }
 
     /** Validates the synchronous event mutation mechanic before emitting a runtime action. */

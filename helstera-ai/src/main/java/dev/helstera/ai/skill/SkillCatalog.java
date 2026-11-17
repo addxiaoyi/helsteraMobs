@@ -932,22 +932,8 @@ public final class SkillCatalog {
                     };
                 }),
                 java.util.Map.entry("effect-targets", (ActionFactory) a -> {
-                    String potion = str(a, 0, "");
-                    var ticks = dynamicNum(a, 1, 60);
-                    var amplifier = dynamicNum(a, 2, 0);
-                    boolean ambient = bool(a, 3, false);
-                    boolean particles = bool(a, 4, true);
-                    boolean icon = bool(a, 5, true);
-                    return ctx -> {
-                        var type = potionType(potion);
-                        int duration = (int) ticks.applyAsDouble(ctx);
-                        int level = (int) amplifier.applyAsDouble(ctx);
-                        if (type == null || duration <= 0) return;
-                        for (LivingEntity target : activeTargets(ctx)) {
-                            target.addPotionEffect(new org.bukkit.potion.PotionEffect(
-                                    type, duration, level, ambient, particles, icon));
-                        }
-                    };
+                    var potion = dev.helstera.api.util.PotionSpec.parse(a);
+                    return ctx -> PotionAction.apply(potion, ctx, activeTargets(ctx));
                 }),
                 java.util.Map.entry("teleport-targets", (ActionFactory) a -> {
                     String location = str(a, 0, "@origin");
