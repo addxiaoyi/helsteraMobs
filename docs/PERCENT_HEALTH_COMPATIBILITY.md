@@ -73,8 +73,9 @@ default one. For players it uses walk/fly-speed APIs; for living mobs it sets
 the corresponding attribute base. This is distinct from the existing Helstera
 `modify-speed` and `set-tick-speed` actions, which multiply movement speed.
 No `ModifySpeedMechanic` or `SetTickSpeedMechanic` class was found in this
-artifact. That is evidence for a separate `setspeed` implementation/audit,
-not evidence that legacy movement scaling matches official MM semantics.
+artifact. The subsequent separate `setspeed` implementation and native/client
+comparison are recorded in the [speed compatibility audit](SET_SPEED_COMPATIBILITY.md).
+Legacy movement scaling still does not establish official MM speed semantics.
 
 ## Validation
 

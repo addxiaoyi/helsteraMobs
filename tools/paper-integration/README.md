@@ -1,5 +1,18 @@
 # Isolated Paper Integration Server
 
+The SetSpeed runner compares identical native/imported MM 5.7.2 skill source
+on a pinned Paper 1.21.1-133 server with a real Mineflayer player. After building
+with `./mvnw -o -q -pl helstera-plugin -am verify` and installing client
+dependencies with `npm ci --prefix tools/paper-integration`, run
+`pwsh -NoProfile -File tools/paper-integration/run-set-speed-fixture.ps1 -EvidenceRevision r3 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+(choose a fresh revision). Fixture `srv-paper-set-speed-exploratory-20261117-r2`
+passes 41 server assertions and 32 client ability-packet phases, including
+16 paired mob and 16 paired player comparisons. Player game mode/speeds are
+restored; MM's global creative/spectator filtering remains a separate open
+contract. Source/artifact hashes and archived server/client logs are in
+[STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This focused fixture does not replace
+the full strict release catalog or version/physics/timing validation.
+
 The percentage-health runner compares the same skill source on native MM 5.7.2
 and the Helstera importer/runtime. After building, run
 `pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r5 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`

@@ -1861,7 +1861,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             return;
         }
         if (dev.helstera.api.util.NumericMechanicSpec.supports(mechanic)
-                || dev.helstera.api.util.PercentHealthSpec.supports(mechanic)) {
+                || dev.helstera.api.util.PercentHealthSpec.supports(mechanic)
+                || dev.helstera.api.util.SetSpeedSpec.supports(mechanic)) {
             try { numericMechanic(raw, mechanic); }
             catch (IllegalArgumentException e) {
                 scan.unsupported.add(raw);
@@ -2455,7 +2456,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "remove-effect", "remove-all-effects", "cast-skill", "command",
                     "command-self", "command-target", "shoot-projectile", "stop", "sound", "particle",
                     "summon", "transform", "dash", "blink", "knockback-self", "heal-percent",
-                    "set-health", "modify-health", "modify-speed", "invisible", "glowing",
+                    "set-health", "modify-health", "modify-speed", "set-speed", "invisible", "glowing",
                     "set-max-health", "modify-max-health",
                     "set-tick-speed", "set-intent", "jump", "leap", "pull", "force-pull",
                     "actionbar", "title", "random-skill",
@@ -2509,7 +2510,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         head = head.toLowerCase(Locale.ROOT);
         if (head.contains(":")) head = head.substring(0, head.indexOf(':'));
         if (dev.helstera.api.util.NumericMechanicSpec.supports(head)
-                || dev.helstera.api.util.PercentHealthSpec.supports(head)) {
+                || dev.helstera.api.util.PercentHealthSpec.supports(head)
+                || dev.helstera.api.util.SetSpeedSpec.supports(head)) {
             return numericMechanic(trimmed, head);
         }
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
@@ -3101,11 +3103,13 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
         }
         boolean percentHealth = dev.helstera.api.util.PercentHealthSpec.supports(name);
-        String action = percentHealth ? dev.helstera.api.util.PercentHealthSpec.canonical(name)
+        boolean setSpeed = dev.helstera.api.util.SetSpeedSpec.supports(name);
+        String action = setSpeed ? "set-speed"
+                : percentHealth ? dev.helstera.api.util.PercentHealthSpec.canonical(name)
                 : name.equals("heal") ? "heal-targets"
                 : dev.helstera.api.util.NumericMechanicSpec.canonical(name);
-        List<String> normalized = percentHealth
-                ? dev.helstera.api.util.PercentHealthSpec.parse(action, args).arguments()
+        List<String> normalized = setSpeed ? dev.helstera.api.util.SetSpeedSpec.parse(args).arguments()
+                : percentHealth ? dev.helstera.api.util.PercentHealthSpec.parse(action, args).arguments()
                 : dev.helstera.api.util.NumericMechanicSpec.parseImported(action, args).arguments();
         String arguments = normalized.stream()
                 .map(argument -> argument.chars().anyMatch(Character::isWhitespace)

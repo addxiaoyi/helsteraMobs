@@ -1,5 +1,37 @@
 # Paper Startup Evidence
 
+Focused SetSpeed fixture `srv-paper-set-speed-exploratory-20261117-r2` passes
+on Paper 1.21.1-133 with actual MythicMobs 5.7.2. The final artifact passes the
+full 2,229-test `verify` suite and SpotBugs. `setSpeedRuntime` records 41 server
+assertions, including 16 identical-source native/imported mob and 16 player
+comparisons for WALK/FLY defaults, aliases, type fallback, zero/negative speeds,
+absolute repetition, retained modifiers, isolation, location/missing-attribute/
+player-range no-ops, and cleanup. `setSpeedClient` verifies 32 ability-packet
+phases, paired across the 16 native/imported player cases. The comparison uses
+explicit `@Trigger` recipients and an eligible survival player; its original
+game mode and speeds are restored. Initial attempt r1 failed because MM's
+shared entity selector filters creative players by default; no passing report
+was generated. Global creative/spectator selection parity remains open.
+
+Report: [paper-1.21.1-set-speed-exploratory-20261117-r2.json](reports/paper-1.21.1-set-speed-exploratory-20261117-r2.json),
+SHA-256 `d0df1410e6786ca2069d26e2b6eb8570f5ab2391edaaa42ac293ef825d56928b`.
+Redacted server log: [paper-1.21.1-set-speed-exploratory-20261117-r2.log.gz](reports/paper-1.21.1-set-speed-exploratory-20261117-r2.log.gz),
+SHA-256 `c0e03fbf2230ca12f6527ce7db5c5ef159f411f18b1b567d906951182e8dbc20`.
+Client log: [paper-1.21.1-set-speed-exploratory-20261117-r2.client.log.gz](reports/paper-1.21.1-set-speed-exploratory-20261117-r2.client.log.gz),
+SHA-256 `a37a0969ad5e9dd4015b1bc534cf3cb541745d49ef06cea88bc98cecfd496e73`.
+Plugin SHA-256: `487e79a1ef8098c0d67d26a77215c995dc37576531f5098f6741c2037507f47a`.
+MythicMobs SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+Shared YAML SHA-256: `03811e27062444d8316096773fffb9037bfbd4f6a1c61d0631b4533b9658c90f`.
+Client source SHA-256: `4886300147f80ff0df75d2b8df21ef5a69a4510310c10797c6eea38e8a713f80`.
+Paper bootstrap SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+
+Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`,
+`npm ci --prefix tools/paper-integration`, then
+`pwsh -NoProfile -File tools/paper-integration/run-set-speed-fixture.ps1 -EvidenceRevision r3 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+(choose a fresh revision). This is focused exploratory evidence; natural motion/
+flight physics, every entity type, timing, other versions, and full strict
+release integration remain open. See the [speed audit](../../docs/SET_SPEED_COMPATIBILITY.md).
+
 Focused percentage-health fixture `srv-paper-percent-health-exploratory-20261117-r4`
 passes on Paper 1.21.1-133 with actual MythicMobs 5.7.2. Its `percentHealthRuntime`
 probe has 27 assertions, including 14 identical-source native/imported health

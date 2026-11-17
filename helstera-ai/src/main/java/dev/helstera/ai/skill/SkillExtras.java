@@ -5625,6 +5625,10 @@ public final class SkillExtras {
 
     public static Map<String, SkillCatalog.ActionFactory> actions() {
         return NumericMechanicActions.wrap(Map.ofEntries(
+                Map.entry("set-speed", (SkillCatalog.ActionFactory) a -> {
+                    var spec = dev.helstera.api.util.SetSpeedSpec.parse(a);
+                    return ctx -> SetSpeedAction.apply(spec, ctx, itemTargets(ctx));
+                }),
                 Map.entry("heal-fraction", (SkillCatalog.ActionFactory) a -> {
                     var spec = dev.helstera.api.util.PercentHealthSpec.parse("heal-fraction", a);
                     return ctx -> PercentHealthAction.apply(spec, ctx, itemTargets(ctx));

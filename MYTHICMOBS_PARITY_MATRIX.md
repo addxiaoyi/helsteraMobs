@@ -2031,6 +2031,23 @@ contract. The focused report does not establish complete mechanics/event
 parity, client behavior, other versions, or a passing full-catalog release gate.
 The Mechanics catalog and Skills importer rows remain `mapped-unverified`.
 
+SetSpeed update (2026-11-17): Mythic `setspeed` imports/binds as `set-speed`.
+The pinned 5.7.2 static float/default/alias/type contract sets absolute WALK/FLY
+values (`0.2f/0.1f * multiplier`) through player APIs or mob attribute bases,
+retaining existing attribute modifiers. Invalid/unsupported source fields are
+preserved with WARN. API, AI, migration, and plugin tests cover the path.
+Focused fixture `srv-paper-set-speed-exploratory-20261117-r2` passes 41 server
+assertions with actual MM 5.7.2 on Paper 1.21.1-133: 16 native/imported mob
+comparisons, 16 player comparisons, idempotence, target isolation, location/
+missing-attribute/range no-ops, and restoration. A real client verifies 32
+native/imported ability-packet phases. The oracle uses a survival player;
+MM's default creative/spectator filters differ from current Helstera context
+selection and remain open Targeters work. The [audit](docs/SET_SPEED_COMPATIBILITY.md)
+records explicit fail-closed differences from upstream errors and legacy speed
+actions. Motion physics, delayed/repeated timing, other versions, and full
+strict release integration remain open. Mechanics/Skills catalog statuses
+remain `mapped-unverified`.
+
 Potion mechanic update (2026-11-17): `potion`/`effect` import and
 `effect-self`/`effect-targets` runtime share `PotionSpec`. The
 [official Potion reference](https://wiki.mythiccraft.io/mythicmobs/skills/mechanics/potion)

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T04:26:07.8072079Z",
+  "fixtureDirectory": "srv-paper-set-speed-exploratory-20261117-r2",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "487e79a1ef8098c0d67d26a77215c995dc37576531f5098f6741c2037507f47a",
+  "externalPlugin": "MythicMobs 5.7.2 (Modrinth FTWvGuE5)",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "sharedSourceSha256": "03811e27062444d8316096773fffb9037bfbd4f6a1c61d0631b4533b9658c90f",
+  "clientSourceSha256": "4886300147f80ff0df75d2b8df21ef5a69a4510310c10797c6eea38e8a713f80",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "clientLog": "speed-client.log",
+  "playerMode": "SURVIVAL (restored after probe)",
+  "expectedProbeIds": [
+    "setSpeedRuntime",
+    "setSpeedClient"
+  ],
+  "probes": [
+    {
+      "id": "setSpeedRuntime",
+      "status": "passed",
+      "observations": [
+        "set-speed native-enabled=true shared-source-import=true mob-speed_default=true mob-speed_double=true mob-speed_fly_default=true mob-speed_fly_double=true mob-speed_walking=true mob-speed_flying=true mob-speed_type_fallback=true mob-speed_type_contains=true mob-speed_zero=true mob-speed_negative=true mob-speed_amount=true mob-speed_a=true mob-speed_value=true mob-speed_v=true mob-speed_multiplier=true mob-speed_m=true absolute-repeat=true target-isolation=true survival-recipient=true player-speed_default=true player-speed_double=true player-speed_fly_default=true player-speed_fly_double=true player-speed_walking=true player-speed_flying=true player-speed_type_fallback=true player-speed_type_contains=true player-speed_zero=true player-speed_negative=true player-speed_amount=true player-speed_a=true player-speed_value=true player-speed_v=true player-speed_multiplier=true player-speed_m=true player-out-of-range=true missing-attribute=true location-noop=true cleanup=true observations=speed_default[native=0.20000000298023224,imported=0.20000000298023224],speed_double[native=0.4000000059604645,imported=0.4000000059604645],speed_fly_default[native=0.10000000149011612,imported=0.10000000149011612],speed_fly_double[native=0.20000000298023224,imported=0.20000000298023224],speed_walking[native=0.20000000298023224,imported=0.20000000298023224],speed_flying[native=0.10000000149011612,imported=0.10000000149011612],speed_type_fallback[native=0.20000000298023224,imported=0.20000000298023224],speed_type_contains[native=0.10000000149011612,imported=0.10000000149011612],speed_zero[native=0.0,imported=0.0],speed_negative[native=-0.20000000298023224,imported=-0.20000000298023224],speed_amount[native=0.4000000059604645,imported=0.4000000059604645],speed_a[native=0.4000000059604645,imported=0.4000000059604645],speed_value[native=0.4000000059604645,imported=0.4000000059604645],speed_v[native=0.4000000059604645,imported=0.4000000059604645],speed_multiplier[native=0.4000000059604645,imported=0.4000000059604645],speed_m[native=0.4000000059604645,imported=0.4000000059604645],player-speed_default[native=0.2/0.06,imported=0.2/0.06],player-speed_double[native=0.4/0.06,imported=0.4/0.06],player-speed_fly_default[native=0.16/0.1,imported=0.16/0.1],player-speed_fly_double[native=0.16/0.2,imported=0.16/0.2],player-speed_walking[native=0.2/0.06,imported=0.2/0.06],player-speed_flying[native=0.16/0.1,imported=0.16/0.1],player-speed_type_fallback[native=0.2/0.06,imported=0.2/0.06],player-speed_type_contains[native=0.16/0.1,imported=0.16/0.1],player-speed_zero[native=0.0/0.06,imported=0.0/0.06],player-speed_negative[native=-0.2/0.06,imported=-0.2/0.06],player-speed_amount[native=0.4/0.06,imported=0.4/0.06],player-speed_a[native=0.4/0.06,imported=0.4/0.06],player-speed_value[native=0.4/0.06,imported=0.4/0.06],player-speed_v[native=0.4/0.06,imported=0.4/0.06],player-speed_multiplier[native=0.4/0.06,imported=0.4/0.06],player-speed_m[native=0.4/0.06,imported=0.4/0.06] passed=true"
+      ]
+    },
+    {
+      "id": "setSpeedClient",
+      "status": "passed",
+      "observations": [
+        "16 native/imported ability comparisons, 32 observed phases"
+      ]
+    }
+  ]
+}

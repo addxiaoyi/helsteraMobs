@@ -1,0 +1,33 @@
+# Same input for native MM 5.7.2 and the production Helstera importer.
+speed_default:
+  Skills: ['setspeed @Trigger']
+speed_double:
+  Skills: ['setspeed{speed=2} @Trigger']
+speed_fly_default:
+  Skills: ['setspeed{type=FLY} @Trigger']
+speed_fly_double:
+  Skills: ['setspeed{t=FLY;s=2} @Trigger']
+speed_walking:
+  Skills: ['setspeed{type=WALKING} @Trigger']
+speed_flying:
+  Skills: ['setspeed{type=flying} @Trigger']
+speed_type_fallback:
+  Skills: ['setspeed{type=unknown} @Trigger']
+speed_type_contains:
+  Skills: ['setspeed{type=dragon_fly} @Trigger']
+speed_zero:
+  Skills: ['setspeed{m=0} @Trigger']
+speed_negative:
+  Skills: ['setspeed{m=-1} @Trigger']
+speed_amount:
+  Skills: ['setspeed{amount=2} @Trigger']
+speed_a:
+  Skills: ['setspeed{a=2} @Trigger']
+speed_value:
+  Skills: ['setspeed{value=2} @Trigger']
+speed_v:
+  Skills: ['setspeed{v=2} @Trigger']
+speed_multiplier:
+  Skills: ['setspeed{multiplier=2} @Trigger']
+speed_m:
+  Skills: ['setspeed{m=2} @Trigger']

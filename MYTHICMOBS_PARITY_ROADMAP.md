@@ -81,7 +81,7 @@ AI, migration, and plugin tests cover direct binding and imported runtime
 paths. No Paper evidence was added, so the Conditions catalog remains
 `mapped-unverified`.
 
-## Next targets after the percentage-health correction (2026-11-17)
+## Next targets after the SetSpeed implementation (2026-11-17)
 
 The covered numeric factories now use a shared argument contract through direct
 calls, `SkillService`, and migration. Reordered/omitted fields, explicit target
@@ -102,20 +102,29 @@ comparisons plus damage event modification/cancellation. It uses explicit
 `@Trigger` recipients and leaves the distinct MM `@Target` selection contract
 open. The full regression suite passes 2,220 tests and SpotBugs.
 
-1. Implement official `setspeed` after the pinned 5.7.2 audit: WALK/FLY use
-   absolute `0.2/0.1 * multiplier`, including player APIs and mob attributes.
-   Keep legacy speed multiplication explicit; imported `modifyspeed` still
-   defaults to `0`, direct calls to `1`, and `set-tick-speed` currently scales
-   movement speed. Those legacy names do not establish official speed parity.
-   Continue the numeric audit for skill-power/damage modifiers, healing events,
-   full-precision entity placeholders, and version-specific options.
+Official `setspeed` now sets absolute WALK/FLY `0.2f/0.1f * multiplier` through
+player APIs and mob attribute bases, with static float defaults/aliases/type
+selection audited against 5.7.2. Fixture
+`srv-paper-set-speed-exploratory-20261117-r2` passes 41 server assertions,
+including 16 native/imported mob and 16 player comparisons; the real client
+verifies 32 ability-packet phases. The final artifact passes 2,229 tests and
+SpotBugs. See the [speed audit](docs/SET_SPEED_COMPATIBILITY.md). This leaves
+global target eligibility, physics/timing, and complete catalogs open.
+
+1. Separate full-precision numeric entity placeholders from display formatting;
+   audit skill-power/damage modifiers, healing events, and version-specific
+   options against the declared upstream boundary. Complete MM global target
+   eligibility, including creative/spectator defaults and `@Target` semantics;
+   the speed comparison uses an eligible survival player and explicit `@Trigger`.
+   Keep legacy speed multiplication explicit: imported `modifyspeed` defaults
+   to `0`, direct calls to `1`, and `set-tick-speed` scales movement speed.
 2. Extend Potion evidence to delayed/repeated execution, effect-event callbacks,
    expiration/hidden-effect behavior, instant effects, and client particles/icons.
    Reconcile those results with the declared MythicMobs version boundary.
-3. Add the verified Potion, numeric, and fractional-health cases to the full strict release catalog,
+3. Add the verified Potion, numeric, fractional-health, and SetSpeed cases to the full strict release catalog,
    then run the exact release artifact and the remaining Paper combinations.
-   Numeric delay/repeat timing, player walk-speed, complete max-health variants,
-   and client-observed motion still require focused runtime evidence. Keep broader
+   Numeric delay/repeat timing, player motion/flight physics, complete max-health
+   variants, and client-observed movement still require focused evidence. Keep broader
    matrix rows open until their complete catalogs meet the contract below.
 
 ## Completion contract

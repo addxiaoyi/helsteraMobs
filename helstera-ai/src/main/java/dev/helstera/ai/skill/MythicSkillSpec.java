@@ -55,7 +55,8 @@ public record MythicSkillSpec(
         boolean potion = java.util.Set.of("potion", "effect", "effect-self", "effect-targets")
                 .contains(mechanic.toLowerCase(Locale.ROOT));
         boolean strictNumeric = dev.helstera.api.util.NumericMechanicSpec.supports(mechanic)
-                || dev.helstera.api.util.PercentHealthSpec.supports(mechanic);
+                || dev.helstera.api.util.PercentHealthSpec.supports(mechanic)
+                || dev.helstera.api.util.SetSpeedSpec.supports(mechanic);
         if (body != null) parseBody(body, args, positional, potion || strictNumeric);
 
         String targeter = null;

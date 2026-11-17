@@ -1,5 +1,17 @@
 Latest full-catalog strict fixture `srv-paper-directional-velocity-strict-20261116-r1` completed all 466 probes on Paper 1.21.1-133: 447 passed, 19 expected rejections, zero failed or incomplete. Its catalog verifies Mythic `Velocity` and `DirectionalVelocity` mechanics: the five regular velocity modes plus yaw/pitch vector construction, `SET`, `ADD`, `MULTIPLY`, `REMOVE`, `DIVIDE`, `MINIMUM`, the `dvelocity` alias, imported execution, dynamic placeholders, invalid-input preservation, and restoration. The same catalog retains strict `HasInventorySpace`, `Inline Conditions`, and `Altitude` coverage, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and the full runtime/client workflows. Plugin SHA-256: `cc50507ce75b3365152f6c0897787acdff8682b65bae0337770ced1853496916`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-directional-velocity-strict-20261116-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions and Context Targeters catalogs remain incomplete.
 
+SetSpeed update (2026-11-17): native `setspeed` now imports/binds as `set-speed`
+with absolute WALK/FLY values `0.2f/0.1f * multiplier`, official aliases/defaults,
+player walk/fly APIs, and mob attribute bases. Full verification passes 2,229
+tests and SpotBugs. Focused Paper 1.21.1-133/MM 5.7.2 fixture
+`srv-paper-set-speed-exploratory-20261117-r2` passes 41 server assertions,
+including 16 native/imported mob and 16 player comparisons; a real client
+verifies 32 corresponding ability-packet phases. See the
+[report](tools/paper-integration/reports/paper-1.21.1-set-speed-exploratory-20261117-r2.json)
+and [compatibility audit](docs/SET_SPEED_COMPATIBILITY.md). Global creative/
+spectator target filtering, motion physics, timing, and strict/version catalogs
+remain open; the broader Mechanics/Skills rows remain `mapped-unverified`.
+
 Percentage-health correction (2026-11-17): Mythic `healpercent`/`percentheal`/`hp`
 and `damagepercent`/`percentdamage` now use fractions: `0.25` means 25%, with a
 default of `0.1`. Current-health damage and 5.7.2 overheal absorption are covered.
@@ -12,7 +24,7 @@ comparisons and damage event modification/cancellation. The regression suite
 passes 2,220 tests and SpotBugs. See the [report](tools/paper-integration/reports/paper-1.21.1-percent-health-exploratory-20261117-r4.json)
 and [compatibility/upgrade audit](docs/PERCENT_HEALTH_COMPATIBILITY.md).
 Full damage modifiers, MM healing events, numeric placeholder precision,
-official `setspeed`, and the strict/version catalogs remain open.
+extended speed/timing behavior, and the strict/version catalogs remain open.
 
 Numeric mechanic update (2026-11-17): direct factories, `SkillService`, and
 migration now preserve named field identity and omitted defaults for the covered
@@ -1514,7 +1526,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 637 cited IDs; 544 report files; 4 directories without reports; 89 missing directories; 318 archived release reports. The
+   Current fixture inventory: 638 cited IDs; 545 report files; 4 directories without reports; 89 missing directories; 318 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

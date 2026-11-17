@@ -792,6 +792,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     () -> dev.helstera.plugin.probe.PercentHealthProbe.run(this, instances()),
                     Math.max(100, getConfig().getLong("debug.self-test-delay-ticks", 100)));
         }
+        if (getConfig().getBoolean("debug.self-test-set-speed", false)) {
+            dev.helstera.plugin.probe.SetSpeedProbe.schedule(this, instances());
+        }
         if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
             runEntityOptionsSelfTest();
         }

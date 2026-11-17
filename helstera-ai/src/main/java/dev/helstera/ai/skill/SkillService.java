@@ -1467,6 +1467,7 @@ public final class SkillService {
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
             if (isVariableMechanic(name) || dev.helstera.api.util.NumericMechanicSpec.supports(name)
                     || dev.helstera.api.util.PercentHealthSpec.supports(name)
+                    || dev.helstera.api.util.SetSpeedSpec.supports(name)
                     || "effect-self".equals(name) || "effect-targets".equals(name)
                     || "mythic-aura".equals(name)
                     || "determine-condition".equals(name)) {
@@ -3257,6 +3258,7 @@ public final class SkillService {
     }
 
     private static String canonicalActionName(String name) {
+        if (dev.helstera.api.util.SetSpeedSpec.supports(name)) return "set-speed";
         if (dev.helstera.api.util.PercentHealthSpec.supports(name)) {
             return dev.helstera.api.util.PercentHealthSpec.canonical(name);
         }

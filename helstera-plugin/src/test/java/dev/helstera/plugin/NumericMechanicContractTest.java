@@ -46,6 +46,8 @@ class NumericMechanicContractTest {
                     Skills: ['healpercent{m=0.25} @Target']
                   fraction_damage:
                     Skills: ['damagepercent{p=0.25;current=true} @Target']
+                  speed:
+                    Skills: ['setspeed{m=2} @Target']
                   invalid:
                     Skills: ['sethealth{unknown=1} @Target']
                 """);
@@ -95,6 +97,10 @@ class NumericMechanicContractTest {
         verify(target).setHealth(10);
         assertTrue(service.castSkill("fraction_damage", context));
         verify(target).damage(1.25, caster);
+        var speed = mock(org.bukkit.attribute.AttributeInstance.class);
+        when(target.getAttribute(org.bukkit.attribute.Attribute.GENERIC_MOVEMENT_SPEED)).thenReturn(speed);
+        assertTrue(service.castSkill("speed", context));
+        verify(speed).setBaseValue((double) 0.4f);
         assertTrue(service.castSkill("radial", context));
         verify(target).damage(3, caster);
         verify(caster, never()).setHealth(anyDouble());
