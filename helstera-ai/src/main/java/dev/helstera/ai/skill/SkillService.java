@@ -1465,7 +1465,8 @@ public final class SkillService {
                 return null;
             }
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
-            if (isVariableMechanic(name) || "effect-self".equals(name) || "effect-targets".equals(name)
+            if (isVariableMechanic(name) || dev.helstera.api.util.NumericMechanicSpec.supports(name)
+                    || "effect-self".equals(name) || "effect-targets".equals(name)
                     || "mythic-aura".equals(name)
                     || "determine-condition".equals(name)) {
                 parsed.arguments().forEach((key, value) -> {
@@ -3255,6 +3256,9 @@ public final class SkillService {
     }
 
     private static String canonicalActionName(String name) {
+        if (dev.helstera.api.util.NumericMechanicSpec.supports(name)) {
+            return dev.helstera.api.util.NumericMechanicSpec.canonical(name);
+        }
         return switch (name) {
             case "detcond", "determinecondition", "determine-condition" -> "determine-condition";
             case "addtoaudience", "addaudience", "audienceadd", "add-to-audience" -> "add-to-audience";

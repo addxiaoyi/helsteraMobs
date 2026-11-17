@@ -1,4 +1,16 @@
 # Isolated Paper Integration Server
+
+The focused numeric runner, `run-numeric-mechanic-fixture.ps1`, validates the
+pinned Paper bootstrap and starts a fresh server with only the numeric probe
+enabled. Build using `./mvnw -o -q -pl helstera-plugin -am verify`, then run
+`pwsh -NoProfile -File tools/paper-integration/run-numeric-mechanic-fixture.ps1 -EvidenceRevision r2`
+(choose a fresh revision). Fixture `srv-paper-numeric-mechanic-exploratory-20261117-r1`
+passes 22 assertions for production import/binding, field order/defaults,
+real-entity health/velocity/status changes, target isolation, invalid-value
+no-ops, and cleanup. Its report and redacted log are linked with hashes in
+[STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
+separate from the full release gate.
+
 Latest full-catalog strict fixture `srv-paper-directional-velocity-strict-20261116-r1` passes all 466 probes on Paper 1.21.1-133 (447 passed, 19 expected rejections, zero failed or incomplete). Its catalog verifies `Velocity` and `DirectionalVelocity`, including regular and directional modes, aliases, dynamic placeholders, invalid-input preservation, and restoration; the same catalog retains strict HasInventorySpace, Inline Conditions and Altitude coverage, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and full client workflows. Plugin SHA-256: `cc50507ce75b3365152f6c0897787acdff8682b65bae0337770ced1853496916`. Report: [paper-1.21.1-directional-velocity-strict-20261116-r1.json](tools/paper-integration/reports/paper-1.21.1-directional-velocity-strict-20261116-r1.json); archived token-redacted server and client logs with hashes are indexed in [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md) and `release-evidence.json`. The complete Conditions and Context Targeters catalogs remain incomplete.
 
 Focused exploratory fixture `srv-paper-targeter-context-alias-strict-20261115-r3` runs the production plugin on Paper 1.21.1-133 with two real Mineflayer players. Its `context-targeter-chain` probe verifies `@nearestConditionalTarget` hyphen and underscore aliases, `condition`/`c` aliases, chained condition filtering, and fail-closed unknown, duplicate, empty, and malformed private arguments. It records 454 probes: 434 passed, 19 observed expected rejections, and one unrelated `not-observed` probe. The strict release fixture above now adds lifecycle evidence for inactive direct context targets; the Context Targeters and complete Conditions rows remain `mapped-unverified`. Plugin SHA-256: `3e30ff137249d0361cb8d796b791da8b9ac757dcc99935210f604abb2a95fc67`. Report: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.json](tools/paper-integration/reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.json), SHA-256 `7fea79bd34a2cd6f6a1d339f00c85ee51a7b9f4e781549c62948470da49826dc`; compressed redacted server log: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz](tools/paper-integration/reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz), SHA-256 `df05235cd9e9da01e0f396311805e29679ffac6f744ebb99de4a4016718ac883`.

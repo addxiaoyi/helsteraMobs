@@ -54,7 +54,8 @@ public record MythicSkillSpec(
         java.util.LinkedHashMap<String, String> args = new java.util.LinkedHashMap<>();
         boolean potion = java.util.Set.of("potion", "effect", "effect-self", "effect-targets")
                 .contains(mechanic.toLowerCase(Locale.ROOT));
-        if (body != null) parseBody(body, args, positional, potion);
+        boolean strictNumeric = dev.helstera.api.util.NumericMechanicSpec.supports(mechanic);
+        if (body != null) parseBody(body, args, positional, potion || strictNumeric);
 
         String targeter = null;
         String trigger = null;
@@ -100,9 +101,9 @@ public record MythicSkillSpec(
                 } else if (token.endsWith("%")) {
                     throw new IllegalArgumentException("invalid chance percentage: " + token);
                 } else {
-                    if (potion && (targeter != null || trigger != null || chance != null
+                    if ((potion || strictNumeric) && (targeter != null || trigger != null || chance != null
                             || !conditions.isEmpty() || !targetConditions.isEmpty())) {
-                        throw new IllegalArgumentException("unexpected Potion argument after execution suffix");
+                        throw new IllegalArgumentException("unexpected mechanic argument after execution suffix");
                     }
                     positional.add(unquote(token));
                 }

@@ -5624,7 +5624,7 @@ public final class SkillExtras {
     }
 
     public static Map<String, SkillCatalog.ActionFactory> actions() {
-        return Map.ofEntries(
+        return NumericMechanicActions.wrap(Map.ofEntries(
                 Map.entry("mythic-aura", (SkillCatalog.ActionFactory) SkillExtras::mythicAuraAction),
                 Map.entry("mythic-aura-remove", (SkillCatalog.ActionFactory) SkillExtras::mythicAuraRemoveAction),
                 Map.entry("move-pin", (SkillCatalog.ActionFactory) a -> {
@@ -7257,7 +7257,7 @@ public final class SkillExtras {
                         }
                     };
                 })
-        );
+        ));
     }
 
     /**

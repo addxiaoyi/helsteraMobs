@@ -697,7 +697,7 @@ public final class SkillCatalog {
 
     /** 内置动作名 -> 工厂。 */
     public static java.util.Map<String, ActionFactory> actions() {
-        return java.util.Map.ofEntries(
+        return NumericMechanicActions.wrap(java.util.Map.ofEntries(
                 java.util.Map.entry("set-scale", (ActionFactory) a -> {
                     double v = num(a, 0, 1.0);
                     return ctx -> {
@@ -1257,7 +1257,7 @@ public final class SkillCatalog {
                         }
                     };
                 })
-        );
+        ));
     }
 
     // ------------------------------------------------------------------

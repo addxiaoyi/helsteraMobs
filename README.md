@@ -1,5 +1,20 @@
 Latest full-catalog strict fixture `srv-paper-directional-velocity-strict-20261116-r1` completed all 466 probes on Paper 1.21.1-133: 447 passed, 19 expected rejections, zero failed or incomplete. Its catalog verifies Mythic `Velocity` and `DirectionalVelocity` mechanics: the five regular velocity modes plus yaw/pitch vector construction, `SET`, `ADD`, `MULTIPLY`, `REMOVE`, `DIVIDE`, `MINIMUM`, the `dvelocity` alias, imported execution, dynamic placeholders, invalid-input preservation, and restoration. The same catalog retains strict `HasInventorySpace`, `Inline Conditions`, and `Altitude` coverage, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and the full runtime/client workflows. Plugin SHA-256: `cc50507ce75b3365152f6c0897787acdff8682b65bae0337770ced1853496916`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-directional-velocity-strict-20261116-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). The complete Conditions and Context Targeters catalogs remain incomplete.
 
+Numeric mechanic update (2026-11-17): direct factories, `SkillService`, and
+migration now preserve named field identity and omitted defaults for the covered
+damage/healing, health, speed, status, and impact mechanics. Unknown, duplicate,
+empty, and non-finite arguments are rejected; invalid imports preserve their
+source with warnings, and unresolved numeric placeholders skip the entire action.
+The full build passes 2,210 tests and SpotBugs. Focused Paper 1.21.1-133 fixture
+`srv-paper-numeric-mechanic-exploratory-20261117-r1` passes 22 assertions for
+imported execution, reordered/omitted fields, force-pull's optional vertical
+field, damage/healing, target isolation, dynamic no-op behavior, speed/status,
+and cleanup. See the [report](tools/paper-integration/reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r1.json)
+and [remaining goals](MYTHICMOBS_PARITY_ROADMAP.md). Historical import defaults
+for percent damage/healing and speed remain different from direct calls;
+upstream defaults, percent units, timing, client behavior, and version coverage
+still need an audit. This exploratory evidence does not close the full catalogs.
+
 Potion mechanic update (2026-11-17): migration and runtime now share validation
 for type, duration, level, flags, and official aliases. Named/default syntax uses
 Mythic's SLOW/100-tick defaults (normalized to SLOWNESS); legacy positional
@@ -1485,7 +1500,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 634 cited IDs; 541 report files; 4 directories without reports; 89 missing directories; 318 archived release reports. The
+   Current fixture inventory: 635 cited IDs; 542 report files; 4 directories without reports; 89 missing directories; 318 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

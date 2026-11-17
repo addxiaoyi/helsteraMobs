@@ -81,18 +81,31 @@ AI, migration, and plugin tests cover direct binding and imported runtime
 paths. No Paper evidence was added, so the Conditions catalog remains
 `mapped-unverified`.
 
-## Next targets after the Potion slice (2026-11-17)
+## Next targets after the numeric argument slice (2026-11-17)
 
-1. Audit the earlier numeric mechanic factories through `SkillService`, preserving
-   named keys and optional defaults regardless of argument order. Cover explicit
-   target variants and actual importer output, especially multi-argument impact
-   mechanics; direct factory tests alone do not establish the binding contract.
+The covered numeric factories now use a shared argument contract through direct
+calls, `SkillService`, and migration. Reordered/omitted fields, explicit target
+variants, invalid-source preservation, and fail-closed dynamic resolution have
+API, AI, migration, and cross-module tests. Focused exploratory fixture
+`srv-paper-numeric-mechanic-exploratory-20261117-r1` adds 22 real Paper assertions
+for impact vectors, damage/healing, target isolation, speed/status, and cleanup.
+
+1. Audit numeric mechanics against the declared upstream version: defaults,
+   percent units, clamping/ranges, target semantics, and damage-event behavior.
+   In particular, imported `healpercent`/`damagepercent` still default to `0`
+   while direct runtime calls default to `10`; imported `modifyspeed` defaults
+   to `0` while direct calls default to `1`. Existing percent factories divide
+   by 100, and `set-tick-speed` scales the movement-speed attribute. These are
+   historical behaviors, not verified upstream parity. Correct discrepancies
+   with explicit migration compatibility handling and inverse runtime controls.
 2. Extend Potion evidence to delayed/repeated execution, effect-event callbacks,
    expiration/hidden-effect behavior, instant effects, and client particles/icons.
    Reconcile those results with the declared MythicMobs version boundary.
-3. Add the verified Potion cases to the full strict release catalog, then run the
-   exact release artifact and the remaining Paper version combinations. Keep
-   broader matrix rows open until their complete catalogs meet the contract below.
+3. Add the verified Potion and numeric cases to the full strict release catalog,
+   then run the exact release artifact and the remaining Paper combinations.
+   Numeric delay/repeat timing, player walk-speed, complete max-health variants,
+   and client-observed motion still require focused runtime evidence. Keep broader
+   matrix rows open until their complete catalogs meet the contract below.
 
 ## Completion contract
 
@@ -264,6 +277,13 @@ Matrix rows: `Mechanics catalog`, `Skills importer`, `Context targeters`,
 - Audit each mechanic's accepted syntax, aliases, defaults, target behavior,
   placeholders, timing, and cancellation rules; connect supported imports to
   production runtime actions.
+- The numeric argument pipeline now retains keys through `SkillService` and
+  uses the same validation at migration/direct-factory boundaries. This fixes
+  swapped knockback fields and incorrect omitted defaults in pull/melee damage.
+  Invalid dynamic numeric values skip the whole action before mutation. The
+  focused 22-assertion Paper numeric fixture above supersedes the earlier
+  no-Paper status for those specific cases; percent semantics, player variants,
+  timing, and the complete Mechanics/Skills catalogs remain open.
 - Finish metaskill reference, parameter, inheritance, target-scope, and nested
   execution semantics; ensure unsupported lines remain visible.
 - Nested `skill{s=...;cooldown=...}` now preserves validated cooldown

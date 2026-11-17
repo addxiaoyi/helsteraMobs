@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T02:35:18.9578931Z",
+  "fixtureDirectory": "srv-paper-numeric-mechanic-exploratory-20261117-r1",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "95476c32f1b9acd42398d0fbc39f0bb57aa16a7c0c25480fa7f618296c3c407a",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "numericMechanicRuntime"
+  ],
+  "probes": [
+    {
+      "id": "numericMechanicRuntime",
+      "status": "passed",
+      "observations": [
+        "numeric-mechanic active-entities=true invalid-preserved=true imported-binding=true reordered=true omitted=true force-no-vertical=true force-only-vertical=true radial-default-radius=true melee-default-damage=true absolute-damage=true heal-target=true set-health-target=true self-heal=true dynamic=true dynamic-noop-14=true dynamic-noop-15=true dynamic-noop-16=true speed-target=true status-target=true invalid-health-noop=true invalid-direct=true cleanup=true passed=true"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,28 @@
 # Paper Startup Evidence
 
+Focused numeric fixture `srv-paper-numeric-mechanic-exploratory-20261117-r1`
+passes on Paper 1.21.1-133. The `numericMechanicRuntime` probe records 22
+assertions covering production import/binding, invalid-source preservation,
+reordered/omitted knockback fields, force-pull with/without vertical override,
+radial pull/melee defaults, absolute damage, healing, self/target isolation,
+dynamic values and invalid-value no-ops, movement-speed/status changes, and
+cleanup. All entity assertions execute within one server tick. This is
+exploratory evidence; it does not load MythicMobs, verify client behavior or
+delayed execution, or replace the full strict release catalog.
+
+Report: [paper-1.21.1-numeric-mechanic-exploratory-20261117-r1.json](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r1.json),
+SHA-256 `7be99137ee1a778ab14a5187754d1dd26d098a2f454f0e3681b229d8a903aa7b`.
+Redacted log: [paper-1.21.1-numeric-mechanic-exploratory-20261117-r1.log.gz](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r1.log.gz),
+SHA-256 `3d53d78ff6b078efd18b4924ed30b4004b838c7a19c1ab438e11121eaa3e4b97`.
+Plugin SHA-256: `95476c32f1b9acd42398d0fbc39f0bb57aa16a7c0c25480fa7f618296c3c407a`.
+Paper bootstrap SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`, then
+`pwsh -NoProfile -File tools/paper-integration/run-numeric-mechanic-fixture.ps1 -EvidenceRevision r2`
+(choose a fresh revision). The runner disables the web UI, retains its isolated
+server directory, and archives sanitized logs. Probe entities, temporary files,
+and the model binding are cleaned before success is reported. Full verification
+for this artifact passed 2,210 tests (zero failures/errors/skips) and SpotBugs.
+
 Focused Potion fixture `srv-paper-potion-mechanic-exploratory-20261117-r5`
 passes on Paper 1.21.1-133. Its `potionMechanicRuntime` probe records 18 assertions
 covering active entities, production import/binding, invalid-source preservation,

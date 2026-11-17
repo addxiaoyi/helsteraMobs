@@ -1984,6 +1984,30 @@ Direct mechanic alias update: hand-written `remove`, owner/parent actions,
 controls, and `setinvulnerable` now bind to the same runtime actions already
 produced by the Mythic importer.
 
+Numeric argument update (2026-11-17): `NumericMechanicSpec` normalizes named,
+positional, and mixed arguments before direct factories, `SkillService`, or
+imported actions consume them. Named keys no longer become positional values
+according to insertion order, and a missing numeric field no longer consumes
+another field's value. Duplicate aliases, unknown fields, empty/excess values,
+malformed numbers, and non-finite literals are rejected; migration retains
+invalid source lines with WARN. Dynamic numeric values resolve once per action
+invocation, before mutations; unresolved/non-finite values skip the action.
+Damage tags retain named identity (including quoted spaces); force-pull without
+a vertical value retains its vector-derived vertical component.
+
+API, AI, migration, and plugin contract tests cover the selected numeric
+health/damage/healing, speed, status, and impact families. Focused fixture
+`srv-paper-numeric-mechanic-exploratory-20261117-r1` passes 22 assertions on
+Paper 1.21.1-133, covering imported reordered/omitted arguments, knockback and
+force-pull vectors, radial pull/melee defaults, damage/healing, target isolation,
+dynamic invalid-value no-ops, speed/status changes, and cleanup. This does not
+load MythicMobs, prove delayed/repeated timing, player walk-speed/client motion,
+or replace the strict release catalog. Historical percentage defaults remain
+`0` on import versus `10` on direct runtime calls; `modify-speed` remains `0`
+versus `1`. Percent factories still divide by 100 and `set-tick-speed` scales
+movement speed. These semantics require upstream audit. The Mechanics catalog
+and Skills importer rows remain `mapped-unverified`.
+
 Potion mechanic update (2026-11-17): `potion`/`effect` import and
 `effect-self`/`effect-targets` runtime share `PotionSpec`. The
 [official Potion reference](https://wiki.mythiccraft.io/mythicmobs/skills/mechanics/potion)

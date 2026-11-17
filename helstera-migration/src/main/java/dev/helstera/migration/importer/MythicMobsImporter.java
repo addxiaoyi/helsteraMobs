@@ -1860,6 +1860,17 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "unsupported", "Invalid mechanic execution options; original line preserved.", "WARN");
             return;
         }
+        if (dev.helstera.api.util.NumericMechanicSpec.supports(mechanic)) {
+            try { numericMechanic(raw, mechanic); }
+            catch (IllegalArgumentException e) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid or unsupported numeric mechanic arguments; original line preserved: "
+                                + e.getMessage(), "WARN");
+                return;
+            }
+        }
         if (Set.of("potion", "effect").contains(mechanic) && potionSpec(raw) == null) {
             scan.unsupported.add(raw);
             note(entries, srcFile, mobKey + ".Skills[]",
@@ -2496,6 +2507,9 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
         head = head.toLowerCase(Locale.ROOT);
         if (head.contains(":")) head = head.substring(0, head.indexOf(':'));
+        if (dev.helstera.api.util.NumericMechanicSpec.supports(head)) {
+            return numericMechanic(trimmed, head);
+        }
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
@@ -2503,8 +2517,6 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "determinecondition", "detcond" -> preserveNamedMechanic("determine-condition", trimmed, brace);
             case "auraremove", "aura-remove", "mythicauraremove", "removeaura", "remove-aura",
                     "removebuff", "remove-buff", "removedebuff", "remove-debuff" -> auraRemoveMechanic(trimmed);
-            case "damage" -> "damage-target " + (amount == null ? "0" : amount);
-            case "heal" -> "heal-targets " + (amount == null ? "0" : amount);
             case "message", "msg" -> {
                 String message = firstArg(trimmed, "message", "m", "text");
                 if (message == null) message = positionalArg(trimmed, 0);
@@ -2526,10 +2538,6 @@ public final class MythicMobsImporter implements MigrationImporter {
                         + firstArgOrPositional(trimmed, 3, "40", "stay", "duration") + " "
                         + firstArgOrPositional(trimmed, 4, "10", "fadeout", "fade-out", "out");
             }
-            case "ignite" -> "ignite-targets " + firstArgOrPositional(trimmed, 0, "40", "ticks", "duration");
-            case "knockback" -> "knockback-targets "
-                    + firstArgOrPositional(trimmed, 0, "1", "power", "strength") + " "
-                    + firstArgOrPositional(trimmed, 1, "0.4", "vertical", "up");
             case "effect", "potion" -> {
                 var potion = potionSpec(trimmed);
                 yield potion == null ? null : "effect-targets " + String.join(" ", potion.positionalArguments());
@@ -2573,14 +2581,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                         + " " + (speed == null ? "1.6" : speed)
                         + " " + (damage == null ? "3" : damage);
             }
-            case "damagepercent" -> "damage-percent " + (amount == null ? "0" : amount);
             case "modifydamage", "moddamage", "modify-damage" -> modifyDamageMechanic(trimmed);
-            case "damagemelee", "damage-melee", "meleedamage" -> {
-                String radius = firstArg(trimmed, "radius", "r");
-                if (radius == null) radius = positionalArg(trimmed, 1);
-                yield "damage-melee " + (amount == null ? "3" : amount)
-                        + " " + (radius == null ? "2.5" : radius);
-            }
             case "aoedamage" -> "aoe-damage players "
                     + firstArgOrPositional(trimmed, 1, "8", "radius", "r") + " 1 "
                     + (amount == null ? "0" : amount);
@@ -2600,31 +2601,6 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "knockbackself" -> "knockback-self "
                     + firstArgOrPositional(trimmed, 0, "1", "power", "strength") + " "
                     + firstArgOrPositional(trimmed, 1, "0.4", "vertical", "up");
-            case "healpercent" -> "heal-percent " + (amount == null ? "0" : amount);
-            case "sethealth" -> "set-health " + (amount == null ? "0" : amount);
-            case "setmaxhealth" -> "set-max-health " + (amount == null ? "20" : amount);
-            case "modifymaxhealth" -> "modify-max-health " + (amount == null ? "0" : amount);
-            case "modifyhealth" -> "modify-health " + (amount == null ? "0" : amount);
-            case "modifyspeed" -> "modify-speed " + firstArgOrPositional(trimmed, 0, "0", "amount", "speed");
-            case "settickspeed", "set-tick-speed" -> "set-tick-speed "
-                    + firstArgOrPositional(trimmed, 0, "1", "factor", "speed", "amount");
-            case "leap" -> "leap " + firstArgOrPositional(trimmed, 0, "1.2", "velocity", "power", "amount");
-            case "pull" -> "pull "
-                    + firstArgOrPositional(trimmed, 0, "6", "radius", "r") + " "
-                    + firstArgOrPositional(trimmed, 1, "1", "power", "velocity", "strength");
-            case "jump" -> {
-                String velocity = firstArg(trimmed, "velocity", "power", "strength", "v");
-                if (velocity == null) velocity = positionalArg(trimmed, 0);
-                yield "jump " + (velocity == null ? "0.42" : velocity);
-            }
-            case "forcepull", "force-pull" -> {
-                String vertical = firstArg(trimmed, "vertical", "y", "yvelocity", "y-velocity", "yv");
-                String power = firstArg(trimmed, "velocity", "power", "strength", "v");
-                if (power == null) power = positionalArg(trimmed, 0);
-                if (vertical == null) vertical = positionalArg(trimmed, 1);
-                String forcePullMapped = "force-pull " + (power == null ? "1" : power);
-                yield vertical == null ? forcePullMapped : forcePullMapped + " " + vertical;
-            }
             case "invisible" -> "invisible " + firstArgOrPositional(trimmed, 0, "true", "state");
             case "glowing" -> "glowing " + firstArgOrPositional(trimmed, 0, "true", "state");
             case "setinvulnerable" -> "set-invulnerable " + firstArgOrPositional(trimmed, 0, "true", "state");
@@ -2836,16 +2812,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "setswimming" -> "set-swimming " + firstArgOrPositional(trimmed, 0, "true", "swimming", "state");
             case "setsprinting" -> "set-sprinting " + firstArgOrPositional(trimmed, 0, "true", "sprinting", "state");
             case "setflying" -> "set-flying " + firstArgOrPositional(trimmed, 0, "true", "flying", "state");
-            case "setnodamageticks", "set-ndt" -> "set-no-damage-ticks "
-                    + firstArgOrPositional(trimmed, 0, "0", "ticks", "duration");
-            case "setmaxnodamageticks", "setmaximumnodamageticks" -> "set-maximum-no-damage-ticks "
-                    + firstArgOrPositional(trimmed, 0, "20", "ticks", "duration");
-            case "setwalkspeed" -> "set-walk-speed "
-                    + firstArgOrPositional(trimmed, 0, "0.2", "speed", "amount");
             case "setinvincible" -> "set-invulnerable " + firstArgOrPositional(trimmed, 0, "true", "invincible", "state");
-            case "setfire" -> "set-fire " + firstArgOrPositional(trimmed, 0, "40", "ticks", "duration");
             case "extinguish", "clearfire" -> "clear-fire";
-            case "freeze" -> "freeze " + firstArgOrPositional(trimmed, 0, "140", "duration", "ticks");
             case "look", "lookat", "look-at" -> "look-at";
             case "setrotation", "set-rotation", "rotation" -> "set-rotation "
                     + firstArgOrPositional(trimmed, 0, "0", "yaw", "y") + " "
@@ -3100,6 +3068,45 @@ public final class MythicMobsImporter implements MigrationImporter {
             case 3, 4 -> "preserve";
             default -> "";
         };
+    }
+
+    /** Preserves field identity, optional defaults and execution suffixes for numeric mechanics. */
+    private static String numericMechanic(String raw, String name) {
+        List<String> args = new ArrayList<>();
+        int open = MythicSpec.mechanicOpen(raw);
+        if (open >= 0) {
+            int close = mechanicClose(raw, open);
+            if (close < 0 || close + 1 < raw.length() && !Character.isWhitespace(raw.charAt(close + 1))) {
+                throw new IllegalArgumentException("malformed mechanic body");
+            }
+            String body = raw.substring(open + 1, close);
+            if (!body.isBlank() && java.util.regex.Pattern.compile("(^|;)\\s*(;|$)").matcher(body).find()) {
+                throw new IllegalArgumentException("empty argument");
+            }
+            for (String argument : MythicSpec.keyedArguments(raw)) {
+                int equals = argument.indexOf('=');
+                String key = equals < 0 ? "" : argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                if (!Set.of("delay", "repeat", "repeatinterval", "repeat-interval").contains(key)) args.add(argument);
+            }
+        }
+        var suffix = new ArrayList<String>();
+        List<String> tokens = MythicSpec.executionTokens(raw);
+        for (String token : tokens.subList(1, tokens.size())) {
+            if (potionSuffixStart(token) || !suffix.isEmpty() && token.equals(">")) suffix.add(token);
+            else {
+                if (!suffix.isEmpty()) throw new IllegalArgumentException("argument after execution suffix");
+                args.add(token);
+            }
+        }
+        String action = name.equals("heal") ? "heal-targets"
+                : dev.helstera.api.util.NumericMechanicSpec.canonical(name);
+        var parsed = dev.helstera.api.util.NumericMechanicSpec.parseImported(action, args);
+        String arguments = parsed.arguments().stream()
+                .map(argument -> argument.chars().anyMatch(Character::isWhitespace)
+                        ? "\"" + escape(argument) + "\"" : argument)
+                .collect(java.util.stream.Collectors.joining(" "));
+        return withExecutionOptions(action + " " + arguments
+                + (suffix.isEmpty() ? "" : normalizeTargeterSuffix(String.join(" ", suffix))), raw);
     }
 
     /** Validates Potion arguments without dropping unknown trailing tokens. */
