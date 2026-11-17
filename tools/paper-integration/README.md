@@ -1,5 +1,22 @@
 # Isolated Paper Integration Server
 
+Recipient-context follow-up: the final artifact passes the focused numeric
+fixture `srv-paper-numeric-mechanic-exploratory-20261117-r4` (32 assertions) and
+Potion fixture `srv-paper-potion-mechanic-exploratory-20261117-r8` (26 assertions).
+They verify production imports with different parameters for each recipient,
+invalid-input isolation, original target sets, removed numeric targets,
+and Potion removal callbacks invalidating the current or later recipient.
+Build with `./mvnw -o -q -pl helstera-plugin -am verify`, then run
+`pwsh -NoProfile -File tools/paper-integration/run-numeric-mechanic-fixture.ps1 -EvidenceRevision r5`
+and `pwsh -NoProfile -File tools/paper-integration/run-potion-mechanic-fixture.ps1 -EvidenceRevision r9`
+sequentially, choosing unused revisions. These server-only fixtures do not load
+MM. The same final artifact passes 88 assertions with MM in
+`srv-paper-percent-health-exploratory-20261117-r10`. Numeric delayed/repeated
+resolution also has scheduling-hook unit coverage; live timing, client effects,
+remaining mechanics, versions, and the complete strict release catalog remain
+open. Reports, sanitized logs, and hashes are in
+[STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md).
+
 The SetSpeed runner compares identical native/imported MM 5.7.2 skill source
 on a pinned Paper 1.21.1-133 server with a real Mineflayer player. After building
 with `./mvnw -o -q -pl helstera-plugin -am verify` and installing client
@@ -15,7 +32,7 @@ the full strict release catalog or version/physics/timing validation.
 
 The percentage-health runner loads the same skill source on native MM 5.7.2
 and the Helstera importer/runtime. After building, run
-`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r10 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r11 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
 (choose a fresh revision). Only the pinned Modrinth `FTWvGuE5` artifact is
 accepted. Fixture `srv-paper-percent-health-exploratory-20261117-r9` passes 88
 assertions, including 14 identical-source static health/absorption comparisons,
@@ -26,13 +43,13 @@ behind Premium and substitutes `1`; the probe verifies that boundary separately,
 without claiming Premium dynamic skill parity. Reports and hashes are recorded in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). The runner disables the web UI and
 uses an isolated fresh server. This is exploratory evidence; expressions/math,
-other placeholder families, generic per-target numeric scope, versions, and full-catalog integration
+other placeholder families, remaining mechanic recipient audits, versions, and full-catalog integration
 remain open. See the [precision/upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
 The focused numeric runner, `run-numeric-mechanic-fixture.ps1`, validates the
 pinned Paper bootstrap and starts a fresh server with only the numeric probe
 enabled. Build using `./mvnw -o -q -pl helstera-plugin -am verify`, then run
-`pwsh -NoProfile -File tools/paper-integration/run-numeric-mechanic-fixture.ps1 -EvidenceRevision r2`
+`pwsh -NoProfile -File tools/paper-integration/run-numeric-mechanic-fixture.ps1 -EvidenceRevision r5`
 (choose a fresh revision). Fixture `srv-paper-numeric-mechanic-exploratory-20261117-r1`
 passes 22 assertions for production import/binding, field order/defaults,
 real-entity health/velocity/status changes, target isolation, invalid-value

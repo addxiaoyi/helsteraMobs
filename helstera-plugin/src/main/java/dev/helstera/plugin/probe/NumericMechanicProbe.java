@@ -43,6 +43,7 @@ public final class NumericMechanicProbe {
                 entity.setAI(false);
                 entity.setGravity(false);
                 entity.setVelocity(new Vector());
+                entity.getAttribute(Attribute.GENERIC_MAX_ABSORPTION).setBaseValue(20);
             }
             var caster = entities.get(0);
             var target = entities.get(1);
@@ -82,6 +83,20 @@ public final class NumericMechanicProbe {
                           - 'freeze{time=80} @Target'
                           - 'setmaxnodamageticks{time=30} @Target'
                           - 'setnodamageticks{t=5} @Target'
+                      recipient_heal:
+                        Skills: ['heal{a=<target.hp{r=2}>} @Targets']
+                      recipient_damage:
+                        Skills: ['damage{a=<target.hp{r=0}>} @Targets']
+                      recipient_knockback:
+                        Skills: ['knockback{power=<target.hp>;y=<target.absorption>} @Targets']
+                      recipient_status:
+                        Skills: ['setfire{t=<target.absorption>} @Targets']
+                      recipient_invalid:
+                        Skills: ['setfire{t=<target.name>} @Targets']
+                      recipient_speed:
+                        Skills: ['modifyspeed{factor=<target.hp>} @Targets']
+                      recipient_maximum:
+                        Skills: ['setmaxhealth{a=<target.hp>} @Targets']
                       invalid:
                         Skills:
                           - 'knockback{power=1;strength=2} @Target'
@@ -147,6 +162,55 @@ public final class NumericMechanicProbe {
                     && close(target.getHealth(), 6));
             require(checks, "invalid-direct", skills.bindAction("knockback{power=2;strength=1}") == null
                     && skills.bindAction("sethealth{a=NaN}") == null);
+            target.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20);
+            control.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(30);
+            target.setHealth(3.125);
+            control.setHealth(5.25);
+            target.setAbsorptionAmount(0.125);
+            control.setAbsorptionAmount(0.25);
+            tree.targets(List.of(target, control));
+            require(checks, "recipient-rounded-heal", skills.castSkill("recipient_heal", context)
+                    && close(target.getHealth(), 6.255) && close(control.getHealth(), 10.5));
+            target.setHealth(3.125);
+            control.setHealth(5.25);
+            require(checks, "recipient-multiple-arguments", skills.castSkill("recipient_knockback", context)
+                    && vector(target.getVelocity(), 3.125, 0.125, 0)
+                    && vector(control.getVelocity(), 5.25, 0.25, 0));
+            target.setNoDamageTicks(0);
+            control.setNoDamageTicks(0);
+            target.setAbsorptionAmount(0);
+            control.setAbsorptionAmount(0);
+            require(checks, "recipient-damage", skills.castSkill("recipient_damage", context)
+                    && close(target.getHealth(), 0.125) && close(control.getHealth(), 0.25));
+            target.setHealth(3.125);
+            control.setHealth(5.25);
+            double firstSpeed = target.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getBaseValue();
+            require(checks, "recipient-speed", skills.castSkill("recipient_speed", context)
+                    && close(target.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getBaseValue(), firstSpeed * 3.125)
+                    && close(control.getAttribute(Attribute.GENERIC_MOVEMENT_SPEED).getBaseValue(), controlSpeed * 5.25));
+            target.setFireTicks(0);
+            control.setFireTicks(0);
+            target.setAbsorptionAmount(0.125);
+            control.setAbsorptionAmount(2);
+            require(checks, "recipient-status-truncates", skills.castSkill("recipient_status", context)
+                    && target.getFireTicks() == 0 && control.getFireTicks() == 2);
+            target.setCustomName("invalid-number");
+            control.setCustomName("2");
+            require(checks, "recipient-invalid-first", skills.castSkill("recipient_invalid", context)
+                    && target.getFireTicks() == 0 && control.getFireTicks() == 2);
+            target.setCustomName("3");
+            control.setCustomName("invalid-number");
+            require(checks, "recipient-invalid-second", skills.castSkill("recipient_invalid", context)
+                    && target.getFireTicks() == 3 && control.getFireTicks() == 2);
+            require(checks, "recipient-maximum", skills.castSkill("recipient_maximum", context)
+                    && close(target.getMaxHealth(), 3.125) && close(control.getMaxHealth(), 5.25));
+            require(checks, "recipient-context-preserved", tree.targets().equals(List.of(target, control))
+                    && context.targets().equals(List.of(target, control))
+                    && context.targetEntity().orElseThrow().equals(target));
+            target.remove();
+            control.setHealth(2);
+            require(checks, "recipient-removed-first", run(skills, "heal-targets <target.hp>", context)
+                    && close(control.getHealth(), 4));
         } catch (Exception failure) {
             error = " error=" + failure.getClass().getSimpleName() + ":" + failure.getMessage();
             checks.put("execution", false);

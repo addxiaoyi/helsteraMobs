@@ -8,6 +8,7 @@ import dev.helstera.api.instance.InstanceManager;
 import dev.helstera.api.instance.ModelInstance;
 import dev.helstera.api.instance.SpawnOptions;
 import dev.helstera.migration.importer.MythicMobsImporter;
+import org.bukkit.attribute.Attribute;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Zombie;
 import org.bukkit.event.HandlerList;
@@ -48,6 +49,7 @@ public final class PotionMechanicProbe {
                 entity.setAI(false);
                 entity.setGravity(false);
                 entity.setInvulnerable(true);
+                entity.getAttribute(Attribute.GENERIC_MAX_ABSORPTION).setBaseValue(20);
             }
             var caster = entities.get(0);
             var target = entities.get(1);
@@ -68,6 +70,12 @@ public final class PotionMechanicProbe {
                         Skills: ['potion{t=SPEED;d=40;l=0} @Target']
                       forced:
                         Skills: ['potion{t=SPEED;d=40;l=0;force=true} @Target']
+                      recipients:
+                        Skills: ['potion{t=HASTE;d=<target.mhp{r=0}>;l=<target.hp{r=0}>;force=true} @Targets']
+                      recipient_invalid:
+                        Skills: ['potion{t=SPEED;d=30;l=<target.absorption>;force=true} @Targets']
+                      recipient_type:
+                        Skills: ['potion{t=<target.name>;d=35;l=1;force=true} @Targets']
                       invalid:
                         Skills:
                           - 'potion{type=UNKNOWN} @Target'
@@ -139,6 +147,74 @@ public final class PotionMechanicProbe {
             require(checks, "multiple-targets", multiple != null && skills.runAction(multiple, context)
                     && target.hasPotionEffect(PotionEffectType.GLOWING) && control.hasPotionEffect(PotionEffectType.GLOWING)
                     && !caster.hasPotionEffect(PotionEffectType.GLOWING));
+            target.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(20);
+            control.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(30);
+            target.setHealth(2);
+            control.setHealth(4);
+            require(checks, "recipient-duration-level", skills.castSkill("recipients", context)
+                    && effect(target, PotionEffectType.HASTE, 20, 2, false, true, true)
+                    && effect(control, PotionEffectType.HASTE, 30, 4, false, true, true));
+            caster.setHealth(6);
+            String dynamicSelf = skills.bindAction("effect-self{t=HASTE;d=30;l=<target.hp{r=0}>;force=true}");
+            require(checks, "self-recipient-context", dynamicSelf != null && skills.runAction(dynamicSelf, context)
+                    && effect(caster, PotionEffectType.HASTE, 30, 6, false, true, true));
+            target.setCustomName("HASTE");
+            control.setCustomName("SPEED");
+            require(checks, "recipient-type", skills.castSkill("recipient_type", context)
+                    && effect(target, PotionEffectType.HASTE, 35, 1, false, true, true)
+                    && effect(control, PotionEffectType.SPEED, 35, 1, false, true, true));
+            control.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 400, 3, false, true, true));
+            target.setAbsorptionAmount(0.125);
+            control.setAbsorptionAmount(2);
+            require(checks, "recipient-invalid-first-preserves-effect", skills.castSkill("recipient_invalid", context)
+                    && effect(target, PotionEffectType.SPEED, 400, 3, false, true, true)
+                    && effect(control, PotionEffectType.SPEED, 30, 2, false, true, true));
+            control.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 400, 3, false, true, true));
+            target.setAbsorptionAmount(2);
+            control.setAbsorptionAmount(0.25);
+            require(checks, "recipient-invalid-second-preserves-effect", skills.castSkill("recipient_invalid", context)
+                    && effect(target, PotionEffectType.SPEED, 30, 2, false, true, true)
+                    && effect(control, PotionEffectType.SPEED, 400, 3, false, true, true));
+            require(checks, "recipient-context-preserved", tree.targets().equals(List.of(target, control))
+                    && context.targets().equals(List.of(target, control))
+                    && context.targetEntity().orElseThrow().equals(target));
+            boolean[] otherRemoved = {false};
+            int[] invalidAdds = {0};
+            plugin.getServer().getPluginManager().registerEvent(EntityPotionEffectEvent.class, cancellation,
+                    org.bukkit.event.EventPriority.HIGHEST, (listener, event) -> {
+                        var change = (EntityPotionEffectEvent) event;
+                        if (change.getEntity().equals(control) && change.getAction() == EntityPotionEffectEvent.Action.ADDED) {
+                            invalidAdds[0]++;
+                        }
+                        if (change.getEntity().equals(target) && change.getAction() == EntityPotionEffectEvent.Action.REMOVED
+                                && change.getModifiedType().equals(PotionEffectType.HASTE)) {
+                            otherRemoved[0] = true;
+                            control.remove();
+                        }
+                    }, plugin, false);
+            require(checks, "callback-removes-later-recipient", skills.castSkill("recipients", context)
+                    && otherRemoved[0] && !control.isValid() && invalidAdds[0] == 0
+                    && effect(target, PotionEffectType.HASTE, 20, 2, false, true, true));
+            HandlerList.unregisterAll(cancellation);
+            boolean[] currentRemoved = {false};
+            plugin.getServer().getPluginManager().registerEvent(EntityPotionEffectEvent.class, cancellation,
+                    org.bukkit.event.EventPriority.HIGHEST, (listener, event) -> {
+                        var change = (EntityPotionEffectEvent) event;
+                        if (change.getEntity().equals(target) && change.getAction() == EntityPotionEffectEvent.Action.ADDED) {
+                            invalidAdds[0]++;
+                        }
+                        if (!currentRemoved[0] && change.getEntity().equals(target)
+                                && change.getAction() == EntityPotionEffectEvent.Action.REMOVED
+                                && change.getModifiedType().equals(PotionEffectType.HASTE)) {
+                            currentRemoved[0] = true;
+                            target.remove();
+                        }
+                    }, plugin, false);
+            var callbackContext = BehaviorContext.continueExecution(instance, target, 1, 2, 0,
+                    "potion-probe", null, target, List.of(target, caster), origin, tree);
+            require(checks, "callback-removes-current-recipient", skills.castSkill("recipients", callbackContext)
+                    && currentRemoved[0] && !target.isValid() && invalidAdds[0] == 0
+                    && effect(caster, PotionEffectType.HASTE, 20, 6, false, true, true));
         } catch (Exception failure) {
             error = " error=" + failure.getClass().getSimpleName() + ":" + failure.getMessage();
             checks.put("execution", false);
@@ -175,7 +251,12 @@ public final class PotionMechanicProbe {
         var effect = entity.getPotionEffect(type);
         if (effect == null) throw new IllegalStateException("missing-effect:" + type.getKey()
                 + ":entity-valid=" + entity.isValid() + ":effects=" + entity.getActivePotionEffects());
-        return effect != null && effect.getDuration() == duration && effect.getAmplifier() == level
+        boolean matches = effect.getDuration() == duration && effect.getAmplifier() == level
                 && effect.isAmbient() == ambient && effect.hasParticles() == particles && effect.hasIcon() == icon;
+        if (!matches) throw new IllegalStateException("effect-mismatch:" + type.getKey()
+                + ":expected=" + duration + "/" + level + "/" + ambient + "/" + particles + "/" + icon
+                + ":actual=" + effect.getDuration() + "/" + effect.getAmplifier() + "/" + effect.isAmbient()
+                + "/" + effect.hasParticles() + "/" + effect.hasIcon());
+        return true;
     }
 }

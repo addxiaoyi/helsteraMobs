@@ -81,7 +81,7 @@ AI, migration, and plugin tests cover direct binding and imported runtime
 paths. No Paper evidence was added, so the Conditions catalog remains
 `mapped-unverified`.
 
-## Next targets after the numeric placeholder correction (2026-11-17)
+## Next targets after the recipient-context correction (2026-11-17)
 
 The covered numeric factories now use a shared argument contract through direct
 calls, `SkillService`, and migration. Reordered/omitted fields, explicit target
@@ -123,8 +123,22 @@ random type/bounds checks, and 18 imported dynamic outcomes. MM Free substitutes
 placeholders; the probe records this boundary without claiming Premium numeric
 skill parity. See the [precision audit](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
-1. Complete expressions/math, other placeholder families, and generic per-recipient
-   numeric evaluation; add actual Premium numeric skill comparison when available.
+Selected dynamic numeric factories and Potion now resolve each recipient's
+parameters independently, preserving execution metadata and inherited target
+lists. Invalid recipient data cannot reuse the first target's values or remove
+an existing Potion effect before validation. Numeric scheduling-hook tests
+verify resolution at each delayed/repeated invocation; live timing is still open.
+See the [recipient contract](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md#recipient-context).
+The regression suite passes 2,250 tests and SpotBugs. Final-artifact Paper
+fixtures `srv-paper-numeric-mechanic-exploratory-20261117-r4` and
+`srv-paper-potion-mechanic-exploratory-20261117-r8` pass 32 and 26 assertions,
+including per-recipient values, invalid-input isolation, and removal callbacks
+that invalidate the current or later recipient. The same artifact retains all
+88 MM comparison/regression assertions in
+`srv-paper-percent-health-exploratory-20261117-r10`. These remain exploratory evidence.
+
+1. Complete expressions/math, other placeholder families, and recipient audits
+   for remaining mechanics; add actual Premium numeric skill comparison when available.
    Keep the documented invalid-input, locale, and extended-random-range boundaries explicit.
    Audit skill-power/damage modifiers, healing events, and version-specific
    options against the declared upstream boundary. Complete MM global target
@@ -132,8 +146,8 @@ skill parity. See the [precision audit](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.m
    the speed comparison uses an eligible survival player and explicit `@Trigger`.
    Keep legacy speed multiplication explicit: imported `modifyspeed` defaults
    to `0`, direct calls to `1`, and `set-tick-speed` scales movement speed.
-2. Extend Potion evidence to delayed/repeated execution, effect-event callbacks,
-   expiration/hidden-effect behavior, instant effects, and client particles/icons.
+2. Extend Potion evidence to delayed/repeated execution, remaining effect-event
+   behavior, expiration/hidden effects, instant effects, and client particles/icons.
    Reconcile those results with the declared MythicMobs version boundary.
 3. Add the verified Potion, numeric/placeholder, fractional-health, and SetSpeed cases to the full strict release catalog,
    then run the exact release artifact and the remaining Paper combinations.
@@ -314,7 +328,9 @@ Matrix rows: `Mechanics catalog`, `Skills importer`, `Context targeters`,
 - The numeric argument pipeline now retains keys through `SkillService` and
   uses the same validation at migration/direct-factory boundaries. This fixes
   swapped knockback fields and incorrect omitted defaults in pull/melee damage.
-  Invalid dynamic numeric values skip the whole action before mutation. The
+  Invalid dynamic numeric values skip that recipient before mutation for the
+  covered selected-entity factories; caster-only/radial factories retain their
+  single invocation context. The
   focused 22-assertion Paper numeric fixture above supersedes the earlier
   no-Paper status for those specific cases; extended percent semantics, player variants,
   timing, and the complete Mechanics/Skills catalogs remain open.

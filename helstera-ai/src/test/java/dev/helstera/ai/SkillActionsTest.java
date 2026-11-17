@@ -555,6 +555,7 @@ class SkillActionsTest {
         org.mockito.Mockito.when(instance.baseEntity()).thenReturn(Optional.of(caster));
         org.mockito.Mockito.when(caster.getMaxHealth()).thenReturn(20.0);
         var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        org.mockito.Mockito.when(target.isValid()).thenReturn(true);
         org.mockito.Mockito.when(target.getHealth()).thenReturn(7.0);
         org.mockito.Mockito.when(target.getMaxHealth()).thenReturn(20.0);
         var context = BehaviorContext.continueExecution(instance, target, 1.0, -1, 0, "IDLE", null,
@@ -615,6 +616,7 @@ class SkillActionsTest {
         var instance = org.mockito.Mockito.mock(dev.helstera.api.instance.ModelInstance.class);
         var caster = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
         var target = org.mockito.Mockito.mock(org.bukkit.entity.LivingEntity.class);
+        org.mockito.Mockito.when(target.isValid()).thenReturn(true);
         var attribute = org.mockito.Mockito.mock(org.bukkit.attribute.AttributeInstance.class);
         org.mockito.Mockito.when(instance.isValid()).thenReturn(true);
         org.mockito.Mockito.when(instance.baseEntity()).thenReturn(Optional.of(caster));
@@ -672,6 +674,7 @@ class SkillActionsTest {
     @DisplayName("percentage damage and healing accept named aliases, placeholders, and reject non-finite values")
     void percentageDamageAndHealingSupportNamedArguments() {
         LivingEntity target = mock(LivingEntity.class);
+        when(target.isValid()).thenReturn(true);
         when(target.getHealth()).thenReturn(5.0);
         when(target.getMaxHealth()).thenReturn(20.0);
         var context = BehaviorContext.continueExecution(null, target, 1.0, -1, 0,

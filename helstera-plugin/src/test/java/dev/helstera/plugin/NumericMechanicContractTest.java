@@ -51,6 +51,8 @@ class NumericMechanicContractTest {
                   Skills: ['modifyhealth{a=<random.-1to-1>} @Target']
                 rounded_fraction:
                   Skills: ['healpercent{m=<caster.hp{r=2}>} @Target']
+                recipients:
+                  Skills: ['heal{a=<target.hp{r=2}>} @Targets']
                 invalid:
                   Skills: ['sethealth{a=<skill.var.amount>} @Target']
                 """);
@@ -106,6 +108,19 @@ class NumericMechanicContractTest {
         }
         verify(target, never()).setHealth(anyDouble());
         verify(caster, never()).setHealth(anyDouble());
+        var second = mock(LivingEntity.class);
+        when(second.isValid()).thenReturn(true);
+        when(second.getWorld()).thenReturn(world);
+        when(second.getLocation()).thenReturn(origin.clone().add(4, 0, 0));
+        when(second.getHealth()).thenReturn(5.25);
+        when(second.getMaxHealth()).thenReturn(30.0);
+        tree.targets(List.of(target, second));
+        context = BehaviorContext.continueExecution(instance, target, 0.99, -1, 0, "precision", null,
+                target, List.of(target, second), origin, tree);
+        assertTrue(service.castSkill("recipients", context));
+        verify(target).setHealth(6.255);
+        verify(second).setHealth(10.5);
+        assertEquals(List.of(target, second), tree.targets());
     }
 
     @Test

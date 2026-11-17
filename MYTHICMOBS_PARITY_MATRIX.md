@@ -4,6 +4,24 @@ See the [ordered parity roadmap](MYTHICMOBS_PARITY_ROADMAP.md) for the full
 remaining work packages, current gap inventory, and evidence-based completion
 contract.
 
+Recipient-context correction (2026-11-17): selected dynamic numeric factories
+and Potion resolve against each actual recipient before mutation. Invalid
+fields skip only that recipient. Potion preserves existing effects on invalid
+input, respects cancelled removal, and rechecks liveness after removal callbacks.
+Execution metadata and inherited target sets remain intact. The regression
+suite passes 2,250 tests; SpotBugs passes. Paper 1.21.1-133 final-artifact fixtures
+`srv-paper-numeric-mechanic-exploratory-20261117-r4` and
+`srv-paper-potion-mechanic-exploratory-20261117-r8` pass 32 and 26 assertions;
+`srv-paper-percent-health-exploratory-20261117-r10` retains 88 assertions with MM.
+The pinned native Heal/Potion getter calls receive each recipient in bytecode;
+MM Free's Premium numeric gate prevents claiming native dynamic numeric parity.
+Static numeric factory paths and caster/radial invocation context are retained.
+Scheduling-hook tests cover numeric delayed/repeated resolution; live timing,
+other mechanic recipient audits, versions, and strict integration remain open.
+See the [contract](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md#recipient-context)
+and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). The 33 broad
+`mapped-unverified` rows remain open.
+
 Numeric placeholder correction (2026-11-17): resolution preserves finite source
 precision; raw `hp/health/thp`, maximum `mhp`, percent `healthpercent/php`, and
 caster `c.h/c.mh/c.ph` aliases read live entities. Missing/non-finite entity data
@@ -17,7 +35,7 @@ including 38 exact native MM string comparisons, three random type/bounds
 checks, and 18 imported dynamic outcomes.
 MM Free numeric arguments are Premium-gated and fall back to `1`; this behavior
 is recorded separately. Premium numeric skill comparison, other placeholder
-families, expressions, generic per-target evaluation, versions,
+families, expressions, remaining mechanic recipient audits, versions,
 and full strict release integration remain open. See the
 [compatibility audit](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md). No broader
 catalog status is promoted by this slice.
@@ -2008,8 +2026,10 @@ imported actions consume them. Named keys no longer become positional values
 according to insertion order, and a missing numeric field no longer consumes
 another field's value. Duplicate aliases, unknown fields, empty/excess values,
 malformed numbers, and non-finite literals are rejected; migration retains
-invalid source lines with WARN. Dynamic numeric values resolve once per action
-invocation, before mutations; unresolved/non-finite values skip the action.
+invalid source lines with WARN. Dynamic numeric values now resolve once per
+recipient for selected-entity factories, before that recipient's mutations;
+unresolved/non-finite values skip only that recipient. Caster-only/radial actions
+retain one invocation context.
 Damage tags retain named identity (including quoted spaces); force-pull without
 a vertical value retains its vector-derived vertical component.
 
@@ -2088,8 +2108,8 @@ API, AI, and migration tests plus exploratory Paper fixture
 `srv-paper-potion-mechanic-exploratory-20261117-r5` verify defaults, aliases,
 server-side flags, dynamic values, selected-target isolation, stronger-effect
 retention/replacement, cancelled removal, self/multiple targets, and cleanup.
-This fixture does not load MythicMobs or prove client rendering, potion-event
-callback timing, every effect type, other server versions, or the full strict
+This earlier fixture does not load MythicMobs or prove client rendering, all
+potion-event behavior, every effect type, other server versions, or the full strict
 catalog. The broader Mechanics and Skills importer rows remain `mapped-unverified`.
 
 Targeter context update: targeter-bound actions now retain the originating

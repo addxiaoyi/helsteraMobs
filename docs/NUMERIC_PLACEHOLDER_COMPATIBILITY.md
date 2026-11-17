@@ -97,9 +97,47 @@ ranges, scientific float input, and `random.percent/chance` remain Helstera
 extensions, not claimed Mythic parity. Random results, configured numeric values, and
 fixed two-decimal random text retain their family formatting in `resolveDisplay`.
 
+## Recipient context
+
+Dynamic entity-targeted `NumericMechanicSpec` factories now resolve all numeric
+fields against each actual recipient before mutating that recipient. Previously,
+one resolution against the first selected entity was reused for the entire set.
+For `heal{a=<target.hp{r=2}>} @Targets`, health `3.125` and `5.25` now becomes
+`6.255` and `10.5`; the second entity no longer receives the first one's `3.13`.
+Random placeholders likewise draw separately for each recipient. An invalid
+field skips only that recipient, including every field of multi-argument actions.
+Removed/dead entities and recipient-scope failures do not block later recipients.
+
+This applies to the shared numeric factories' `*-targets` variants,
+`damage-target`, `force-pull`, and `freeze`. Freeze retains its entity-or-caster
+fallback. Literal-only numeric actions retain their existing factory path;
+this change does not establish uniform lifecycle handling for those actions.
+Caster-only legacy actions and radial `pull`/`damage-melee` retain one invocation
+context and one spatial query. For example, legacy direct
+`heal{a=<target.hp>}` still heals the caster using the active target's health.
+Other mechanic implementations require their own recipient audit.
+
+Potion resolves type, duration, and level separately for each valid recipient,
+including `effect-self` using the caster's recipient context. It validates all
+fields before forced removal, respects cancelled removal, and rechecks entity
+liveness after removal callbacks before adding an effect. Invalid dynamic data
+therefore leaves that recipient's existing effect intact. A callback invalidating
+one entity does not cause an add to that entity or prevent later valid recipients.
+
+Recipient scopes retain the original trigger, event, cause, payload, origin,
+execution audience, and shared SkillTree. Their singleton target lists do not
+replace the caller's inherited target list. A scheduling-hook test verifies
+delayed/repeated numeric resolution uses each recipient's latest health at
+execution time; that is unit evidence, separate from live Paper timing.
+
+Bytecode audit of pinned MM 5.7.2 `HealMechanic.castAtEntity` and
+`PotionMechanic.applyPotionEffect` shows their placeholder getters receive the
+actual recipient. This supports the context contract, but does not establish
+Premium dynamic numeric runtime parity: the MM Free edition gate still applies.
+
 ## Validation and remaining work
 
-The full `./mvnw -o -q -pl helstera-plugin -am verify` build passes 2,243 tests,
+The full `./mvnw -o -q -pl helstera-plugin -am verify` build passes 2,250 tests,
 zero failures/errors/skips, and SpotBugs. Tests cover stale context ratios,
 raw/percentage units, very small values, coordinates/deltas/attributes, explicit
 display formatting, multiple recipients of fractional healing, variable text,
@@ -110,6 +148,25 @@ precision, HALF_EVEN fixed decimals, extensions, and invalid/overflowing ranges.
 Importer-to-runtime tests verify named and positional inline configuration,
 signed random values, and fractional-health calculations. Shared Potion parsing
 also retains configured dynamic duration/level tokens and rejects invalid results.
+Seven recipient-context tests and an extended importer-to-runtime contract cover
+independent values, all-field validation, exception isolation, metadata retention,
+and delayed/repeated resolution through the scheduler hook. The final probe-only
+setup/diagnostic changes were rebuilt with `verify -DskipTests`, including SpotBugs.
+
+Final-artifact Paper fixtures
+`srv-paper-numeric-mechanic-exploratory-20261117-r4` and
+`srv-paper-potion-mechanic-exploratory-20261117-r8` pass 32 and 26 assertions.
+Numeric checks include rounded health, multi-field velocity, damage, speed,
+max-health attributes, integer status truncation, invalid input on either
+recipient, original target lists, and removed-target skipping. Potion checks
+include different type/duration/level, caster recipient scope, invalid levels
+preserving existing effects, and callbacks invalidating current/later recipients
+while continuing to a valid caster recipient. Both include importer/binding,
+isolation, and cleanup controls; Potion retains cancellation coverage. The final
+artifact also passes all 88 MM comparison/regression assertions in
+`srv-paper-percent-health-exploratory-20261117-r10`. The selected-recipient
+checks are Helstera runtime evidence, separate from native MM dynamic numeric
+comparison and live delayed/repeated timing.
 
 Focused Paper 1.21.1-133 fixture
 `srv-paper-percent-health-exploratory-20261117-r9` passes 88 assertions with
@@ -129,7 +186,7 @@ Reports, sanitized logs, reproduction commands, and hashes are in
 
 Actual Premium-enabled dynamic numeric skill comparison remains unverified.
 Other placeholder families, expressions/math, PlaceholderAPI
-integration, generic per-recipient evaluation,
+integration, recipient audits for remaining mechanics,
 timing, other versions, and integration into the full strict release catalog
 remain open. This slice does not complete the Mechanics, Skills importer,
 Conditions, or Targeters catalogs.

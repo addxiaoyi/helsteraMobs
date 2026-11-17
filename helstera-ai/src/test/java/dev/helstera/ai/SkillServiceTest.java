@@ -1006,6 +1006,7 @@ class SkillServiceTest {
     @DisplayName("placeholder-backed target mechanics resolve numbers at execution time")
     void targetMechanicsResolveNumericPlaceholders() {
         LivingEntity target = mock(LivingEntity.class);
+        when(target.isValid()).thenReturn(true);
         when(target.getMaxHealth()).thenReturn(20.0);
         when(target.getHealth()).thenReturn(10.0);
         BehaviorContext context = BehaviorContext.continueExecution(null, target, 0.5, 2.0,

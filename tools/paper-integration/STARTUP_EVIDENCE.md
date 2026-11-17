@@ -1,5 +1,85 @@
 # Paper Startup Evidence
 
+Recipient-context follow-up (2026-11-17) passes on Paper 1.21.1-133. The
+production implementation passes the full 2,250-test regression suite, with
+zero failures/errors/skips, and SpotBugs. Subsequent probe-only fixture setup
+and diagnostic changes pass `verify -DskipTests`, including SpotBugs; the final
+artifact is checked by all three focused fixtures below. Plugin SHA-256:
+`5dbacad55d1708629b4bbef7fb63cb3d15c86fedc0e80433486f8d7ddbbe9683`.
+Paper bootstrap SHA-256:
+`39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+
+- `srv-paper-numeric-mechanic-exploratory-20261117-r4`: 32 assertions. The
+  production importer/runtime independently resolves rounded healing,
+  multi-argument knockback, damage, movement speed, max-health attributes,
+  and status values for two recipients. Invalid text on either recipient skips
+  only that recipient; decimal status values retain integer truncation. Direct
+  numeric factories skip a removed first target and still heal the second.
+  Original target lists, earlier defaults/field order, radial isolation, and
+  cleanup remain covered.
+  [Report](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r4.json)
+  SHA-256 `33b2f75ec538d5baac10abbe8c567435b7a6a55bdb6ed748c78c3498c0211a28`;
+  [redacted log](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r4.log.gz)
+  SHA-256 `d655fd899d59d5fb93885d96ab6491e3c9ebdc20d845276c87df553c887ab177`.
+- `srv-paper-potion-mechanic-exploratory-20261117-r8`: 26 assertions. Imported
+  type/duration/level use each actual recipient; dynamic `effect-self` scopes
+  to the caster. Invalid fractional levels on either recipient retain its
+  existing effect, while the valid recipient updates. Forced-removal callbacks
+  remove the later or current target without adding to invalid entities; the
+  latter case continues to a valid caster recipient. Defaults/aliases/flags,
+  stronger-effect behavior, cancellation, target lists, and cleanup remain covered.
+  [Report](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r8.json)
+  SHA-256 `d694c14b8a7cd7e1613f7f652bc2367a4deda0f42ee02dcbf963f70cd867f674`;
+  [redacted log](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r8.log.gz)
+  SHA-256 `731b3e40bf77e7db14e9548c2f1f38524a477201a45e820bf10f2841efab49f9`.
+- `srv-paper-percent-health-exploratory-20261117-r10`: 88 assertions with MM
+  5.7.2, retaining the r9 static native health comparisons, exact string
+  comparisons, sampled random checks, imported dynamic outcomes, edition gate,
+  event controls, and cleanup. Shared source YAML SHA-256 remains
+  `d98ed24427557c31bd2dedbd07e0cc26ded69f7ee82584802a1ec7514a19c1f8`;
+  MM SHA-256 remains
+  `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+  [Report](reports/paper-1.21.1-percent-health-exploratory-20261117-r10.json)
+  SHA-256 `60c3193aa509e82aa8bee89d212fc0a691db0f32f4bfd98b7ff6e55a6d4b0921`;
+  [redacted log](reports/paper-1.21.1-percent-health-exploratory-20261117-r10.log.gz)
+  SHA-256 `af8db5547a6973c9d79a114da8acbdc730a1539e411b350b3bea864ebe76fcca`.
+
+The first two fixtures test Helstera behavior without loading MM. Bytecode
+audit of pinned native Heal/Potion getter calls confirms recipient arguments,
+but the MM Free Premium gate still prevents native dynamic numeric skill parity
+claims. Seven new unit tests cover independent numeric recipients, all-field
+validation, stale/removed/dead entities, event/audience/trigger metadata,
+inherited targets, radial query count, and delayed/repeated resolution with
+changed health at execution time. Live Paper delay/repeat timing is not covered.
+Literal-only numeric factory paths retain existing lifecycle behavior; remaining
+mechanics need separate recipient audits. See the
+[recipient contract](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md#recipient-context).
+
+Reproduce sequentially after building: numeric runner revision `r5`, Potion
+runner revision `r9`, then percent-health runner revision `r11`, choosing unused
+revisions and supplying the pinned MM JAR when absent from the local cache.
+All runners disable web UI, use fresh isolated servers, and archive redacted
+logs. Report hashes, exact plugin identities, log contents, and redaction were
+checked. These exploratory results are not added to the strict release manifest.
+The latest complete strict catalog remains the 466-probe directional-velocity
+fixture; versions, math, other mechanics, Premium comparison, and catalogs remain open.
+
+Earlier passing numeric fixture
+`srv-paper-numeric-mechanic-exploratory-20261117-r3` records the same 32
+assertions before the final Potion probe diagnostics/setup changes. Its plugin
+SHA-256 is `6c30d9fb01d28bd31e7cf397993918e4949152d0264a51b06fb4dd51456d4926`;
+[report](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r3.json)
+SHA-256 `1e57f0f7b7925deaf61ef38e6926c7931eef09f70fd1ca4dfcca9e9a10fa9ae4`;
+[redacted log](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r3.log.gz)
+SHA-256 `45ba53c3e3afbfd8b2bcb58ebf877f53d0c7196e0fc6150df4a752f0221f9197`.
+Diagnostic fixtures `srv-paper-numeric-mechanic-exploratory-20261117-r2`,
+`srv-paper-potion-mechanic-exploratory-20261117-r6`, and
+`srv-paper-potion-mechanic-exploratory-20261117-r7` failed probe checks and have
+no passing reports. They remain locally for diagnosis: numeric r2 omitted
+absorption capacity; Potion r6/r7 used a short Bukkit effect constructor whose
+ambient default differed from the asserted explicit flags. The corrected probes
+set capacity and flags explicitly. These failed directories are not parity evidence.
+
 Focused rounding/random follow-up
 `srv-paper-percent-health-exploratory-20261117-r9` passes on Paper 1.21.1-133
 with actual MythicMobs 5.7.2. The final artifact passes 2,243 tests, zero failures/
@@ -33,11 +113,11 @@ MythicMobs SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43b
 Paper bootstrap SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
 
 Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`, then
-`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r10 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r11 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
 (choose a fresh revision). The runner checks pinned artifact hashes, uses a
 fresh isolated server, disables its web UI, and archives sanitized logs. This
 focused exploratory report is not added to the strict release manifest.
-Expressions/math, other placeholder families, generic per-recipient evaluation,
+Expressions/math, other placeholder families, remaining mechanic recipient audits,
 Premium numeric skill comparison, versions, and the complete strict catalog
 remain open. See the [compatibility and upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
@@ -91,12 +171,12 @@ remain archived. The final r7 adds a caster/control isolation check before
 restoring the precision fixture's caster health.
 
 Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`, then
-`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r10 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r11 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
 (choose a fresh revision). The runner checks pinned artifact hashes, isolates
 the server, disables its web UI, and archives sanitized logs. The shared YAML
 contains both the paired static cases and the explicitly gated numeric cases.
 That earlier exploratory fixture did not cover inline rounding; the r9 follow-up
-above adds that slice. Expressions/math, generic per-target numeric evaluation,
+above adds that slice. Expressions/math, remaining mechanic recipient audits,
 other versions, and the full strict release catalog remain open.
 See the [precision/upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
