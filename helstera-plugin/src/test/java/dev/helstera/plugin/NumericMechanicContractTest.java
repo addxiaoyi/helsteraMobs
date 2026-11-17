@@ -26,6 +26,68 @@ class NumericMechanicContractTest {
     @TempDir Path root;
 
     @Test
+    void importedHealthPlaceholdersKeepSmallValuesAndOfficialUnits() throws Exception {
+        Path source = Files.createDirectories(root.resolve("Skills")).resolve("precision.yml");
+        Files.writeString(source, """
+                raw:
+                  Skills: ['heal{a=<caster.hp>} @Target']
+                percent:
+                  Skills: ['heal{a=<c.ph>} @Target']
+                maximum:
+                  Skills: ['sethealth{a=<caster.mhp>} @Target']
+                target_raw:
+                  Skills: ['damage{a=<target.thp>} @Target']
+                fraction:
+                  Skills: ['healpercent{m=<c.h>} @Target']
+                invalid:
+                  Skills: ['sethealth{a=<skill.var.amount>} @Target']
+                """);
+        var entries = new MythicMobsImporter().convert(source, root);
+        assertTrue(entries.stream().noneMatch(e -> "WARN".equals(e.get("severity"))));
+        var plan = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file"))).findFirst().orElseThrow();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+        var service = new SkillService(new BehaviorRegistryImpl(), null);
+        service.loadSkills(yaml.getConfigurationSection("skills"));
+        assertTrue(service.warnings().isEmpty(), service.warnings().toString());
+        var caster = mock(LivingEntity.class);
+        var target = mock(LivingEntity.class);
+        var instance = mock(ModelInstance.class);
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(instance.location()).thenReturn(origin);
+        when(caster.isValid()).thenReturn(true);
+        when(caster.getHealth()).thenReturn(0.125);
+        when(caster.getMaxHealth()).thenReturn(20.0);
+        when(target.isValid()).thenReturn(true);
+        when(target.getWorld()).thenReturn(world);
+        when(target.getLocation()).thenReturn(origin);
+        when(target.getHealth()).thenReturn(3.125);
+        when(target.getMaxHealth()).thenReturn(23.75);
+        var tree = new SkillTreeContext(target, List.of(target), origin);
+        var context = BehaviorContext.continueExecution(instance, target, 0.99, -1, 0, "precision", null,
+                target, List.of(target), origin, tree);
+        assertTrue(service.castSkill("raw", context));
+        verify(target).setHealth(3.25);
+        assertTrue(service.castSkill("percent", context));
+        verify(target).setHealth(3.75);
+        assertTrue(service.castSkill("maximum", context));
+        verify(target).setHealth(20);
+        assertTrue(service.castSkill("target_raw", context));
+        verify(target).damage(3.125, caster);
+        assertTrue(service.castSkill("fraction", context));
+        verify(target).setHealth(6.09375);
+        clearInvocations(target);
+        for (String invalid : List.of("NaN", "Infinity", "1e999", "<missing>")) {
+            tree.setVariable("amount", invalid);
+            assertTrue(service.castSkill("invalid", context));
+        }
+        verify(target, never()).setHealth(anyDouble());
+        verify(caster, never()).setHealth(anyDouble());
+    }
+
+    @Test
     void importedActionsExecuteWithDefaultsTargetIsolationAndFailClosedDynamicValues() throws Exception {
         Path source = Files.createDirectories(root.resolve("Skills")).resolve("numeric.yml");
         Files.writeString(source, """

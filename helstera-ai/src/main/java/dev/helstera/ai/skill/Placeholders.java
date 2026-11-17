@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiFunction;
+import java.util.function.DoubleFunction;
 
 /**
  * 占位符解析：把 {@code <caster.hp>} 这类标记替换为运行期实际值。
@@ -40,7 +41,13 @@ public final class Placeholders {
      */
     public static String resolve(String text, BehaviorContext ctx) {
         if (text == null || text.isEmpty() || text.indexOf('<') < 0) return text;
-        return render(text, ctx, (key, c) -> lookup(key, c));
+        return render(text, ctx, Placeholders::lookup);
+    }
+
+    /** Explicit one-decimal presentation; calculation/command/message paths use {@link #resolve}. */
+    public static String resolveDisplay(String text, BehaviorContext ctx) {
+        if (text == null || text.isEmpty() || text.indexOf('<') < 0) return text;
+        return render(text, ctx, (key, context) -> lookup(key, context, Placeholders::compact));
     }
 
     /**
@@ -55,7 +62,8 @@ public final class Placeholders {
         String s = resolve(text, ctx).trim();
         if (s.isEmpty()) return def;
         try {
-            return Double.parseDouble(s);
+            double value = Double.parseDouble(s);
+            return Double.isFinite(value) ? value : def;
         } catch (NumberFormatException e) {
             return def;
         }
@@ -63,11 +71,21 @@ public final class Placeholders {
 
     /** 单个占位符键的取值；未知键返回 null（调用方决定是否保留原文）。 */
     public static String lookup(String key, BehaviorContext ctx) {
+        return lookup(key, ctx, Placeholders::exact);
+    }
+
+    private static String lookup(String key, BehaviorContext ctx, DoubleFunction<String> numbers) {
         if (key == null || key.isEmpty()) return null;
         String k = key.toLowerCase(Locale.ROOT);
+        k = switch (k) {
+            case "c.h" -> "caster.health";
+            case "c.mh" -> "caster.maxhealth";
+            case "c.ph" -> "caster.healthpercent";
+            default -> k;
+        };
 
         // random.* 不依赖上下文，优先处理
-        if (k.startsWith("random.")) return random(k.substring(7));
+        if (k.startsWith("random.")) return random(k.substring(7), numbers);
 
         if (ctx == null) return null;
         int dot = k.indexOf('.');
@@ -75,13 +93,13 @@ public final class Placeholders {
         String field = dot < 0 ? "" : k.substring(dot + 1);
 
         return switch (scope) {
-            case "caster" -> caster(ctx, field);
-            case "target" -> target(ctx, field);
+            case "caster" -> caster(ctx, field, numbers);
+            case "target" -> target(ctx, field, numbers);
             case "trigger" -> trigger(ctx, field);
-            case "skill" -> skill(ctx, dot < 0 ? "" : key.substring(dot + 1));
+            case "skill" -> skill(ctx, dot < 0 ? "" : key.substring(dot + 1), numbers);
             case "ctx" -> context(ctx, field);
-            case "mob" -> caster(ctx, field);       // 兼容旧写法
-            case "player" -> target(ctx, field);    // 公告里的 %player%
+            case "mob" -> caster(ctx, field, numbers);       // 兼容旧写法
+            case "player" -> target(ctx, field, numbers);    // 公告里的 %player%
             default -> null;
         };
     }
@@ -90,26 +108,27 @@ public final class Placeholders {
     // 各作用域取值
     // ------------------------------------------------------------------
 
-    private static String caster(BehaviorContext ctx, String field) {
+    private static String caster(BehaviorContext ctx, String field, DoubleFunction<String> numbers) {
         if (field.isEmpty()) return null;
         field = normalizeField(field);
-        if (field.equals("hp") || field.equals("hp.percent")) {
-            return fmt(ctx.healthRatio() * 100.0);
+        if (field.equals("hp.percent")) {
+            return living(ctx.instance()).map(entity -> numbers.apply(
+                    100.0 * (entity.getHealth() / entity.getMaxHealth()))).orElse(null);
         }
         if (field.equals("hp.raw") || field.equals("health")) {
-            return fmt(living(ctx.instance()).map(LivingEntity::getHealth).orElse(0.0));
+            return living(ctx.instance()).map(entity -> numbers.apply(entity.getHealth())).orElse(null);
         }
         if (field.equals("absorption") || field.equals("absorb")) {
-            return living(ctx.instance()).map(entity -> fmt(entity.getAbsorptionAmount())).orElse(null);
+            return living(ctx.instance()).map(entity -> numbers.apply(entity.getAbsorptionAmount())).orElse(null);
         }
         if (field.equals("hp.max") || field.equals("maxhealth")) {
-            return fmt(living(ctx.instance()).map(LivingEntity::getMaxHealth).orElse(0.0));
+            return living(ctx.instance()).map(entity -> numbers.apply(entity.getMaxHealth())).orElse(null);
         }
         if (field.startsWith("loc.")) {
-            return locationField(loc(ctx), field.substring(4));
+            return locationField(loc(ctx), field.substring(4), numbers);
         }
         if (field.startsWith("l.")) {
-            return mythicLocationField(loc(ctx), field.substring(2));
+            return mythicLocationField(loc(ctx), field.substring(2), numbers);
         }
         if (field.equals("world")) {
             return loc(ctx).map(Location::getWorld).filter(java.util.Objects::nonNull)
@@ -123,7 +142,7 @@ public final class Placeholders {
         String worldField = worldField(loc(ctx), field);
         if (worldField != null) return worldField;
         if (field.equals("dx") || field.equals("dy") || field.equals("dz")) {
-            return deltaField(ctx, field.substring(1));
+            return deltaField(ctx, field.substring(1), numbers);
         }
         if (field.equals("faction")) {
             var entity = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
@@ -159,33 +178,31 @@ public final class Placeholders {
             return String.valueOf(ctx.decisionCount());
         }
         if (field.equals("distance")) {
-            return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
+            return ctx.distanceToTarget() < 0 ? null : numbers.apply(ctx.distanceToTarget());
         }
         if (field.equals("distancesquared")) return distanceSquared(ctx, false);
-        String gameplayField = gameplayField(living(ctx.instance()).orElse(null), field);
+        String gameplayField = gameplayField(living(ctx.instance()).orElse(null), field, numbers);
         if (gameplayField != null) return gameplayField;
         return null;
     }
 
-    private static String target(BehaviorContext ctx, String field) {
+    private static String target(BehaviorContext ctx, String field, DoubleFunction<String> numbers) {
         LivingEntity target = ctx.targetEntity().orElse(null);
         if (target == null) return null;
         field = normalizeField(field);
         if (field.equals("name")) return target instanceof Player p ? p.getName()
                 : target.getCustomName() == null ? target.getType().name().toLowerCase(Locale.ROOT) : target.getCustomName();
-        if (field.equals("hp") || field.equals("hp.percent")) {
-            return fmt(target.getMaxHealth() > 0
-                    ? target.getHealth() / target.getMaxHealth() * 100.0
-                    : ctx.healthRatio() * 100.0);
+        if (field.equals("hp.percent")) {
+            return numbers.apply(100.0 * (target.getHealth() / target.getMaxHealth()));
         }
-        if (field.equals("hp.raw") || field.equals("health")) return fmt(target.getHealth());
-        if (field.equals("absorption") || field.equals("absorb")) return fmt(target.getAbsorptionAmount());
-        if (field.equals("hp.max") || field.equals("maxhealth")) return fmt(target.getMaxHealth());
+        if (field.equals("hp.raw") || field.equals("health")) return numbers.apply(target.getHealth());
+        if (field.equals("absorption") || field.equals("absorb")) return numbers.apply(target.getAbsorptionAmount());
+        if (field.equals("hp.max") || field.equals("maxhealth")) return numbers.apply(target.getMaxHealth());
         if (field.startsWith("loc.")) {
-            return locationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(4));
+            return locationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(4), numbers);
         }
         if (field.startsWith("l.")) {
-            return mythicLocationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(2));
+            return mythicLocationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(2), numbers);
         }
         if (field.equals("world")) {
             return target.getWorld() == null ? null : target.getWorld().getName();
@@ -205,10 +222,10 @@ public final class Placeholders {
         if (entityState != null) return entityState;
         if (field.equals("type")) return target.getType().name().toLowerCase(Locale.ROOT);
         if (field.equals("distance")) {
-            return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
+            return ctx.distanceToTarget() < 0 ? null : numbers.apply(ctx.distanceToTarget());
         }
         if (field.equals("distancesquared")) return distanceSquared(ctx, true);
-        String gameplayField = gameplayField(target, field);
+        String gameplayField = gameplayField(target, field, numbers);
         if (gameplayField != null) return gameplayField;
         return null;
     }
@@ -219,7 +236,7 @@ public final class Placeholders {
     }
 
     /** Resolves current skill context and skill-tree variables. */
-    private static String skill(BehaviorContext ctx, String field) {
+    private static String skill(BehaviorContext ctx, String field, DoubleFunction<String> numbers) {
         if (field.regionMatches(true, 0, "var.", 0, 4) && field.length() > 4) {
             String name = field.substring(4);
             return ctx.skillTree().flatMap(tree -> tree.variable(name))
@@ -234,9 +251,9 @@ public final class Placeholders {
         field = normalizeField(field);
         if (field.equals("trigger") || field.equals("name")) return ctx.state();
         if (field.equals("payload")) return ctx.payload().orElse(null);
-        if (field.equals("health")) return fmt(ctx.healthRatio() * 100.0);
+        if (field.equals("health")) return numbers.apply(ctx.healthRatio() * 100.0);
         if (field.equals("distance")) {
-            return ctx.distanceToTarget() < 0 ? null : fmt(ctx.distanceToTarget());
+            return ctx.distanceToTarget() < 0 ? null : numbers.apply(ctx.distanceToTarget());
         }
         return null;
     }
@@ -250,7 +267,7 @@ public final class Placeholders {
     }
 
     /** {@code <random.a-to-b>} / {@code <random.1to10>} / {@code <random.percent>}。 */
-    private static String random(String field) {
+    private static String random(String field, DoubleFunction<String> numbers) {
         if (field.isEmpty()) return null;
         var rnd = ThreadLocalRandom.current();
         // random.percent 概率判定：成功返回 1.0，否则 0.0
@@ -265,8 +282,8 @@ public final class Placeholders {
                 double lo = Double.parseDouble(a);
                 double hi = Double.parseDouble(b);
                 if (hi < lo) { double t = lo; lo = hi; hi = t; }
-                if (lo == hi) return fmt(lo);
-                return fmt(lo + rnd.nextDouble() * (hi - lo));
+                if (lo == hi) return numbers.apply(lo);
+                return numbers.apply(lo + rnd.nextDouble() * (hi - lo));
             } catch (NumberFormatException ignored) {
                 return null;
             }
@@ -373,6 +390,12 @@ public final class Placeholders {
             }
         }
         out.addAll(List.of("caster.absorption", "caster.absorb", "target.absorption", "target.absorb"));
+        for (String scope : List.of("caster", "target")) {
+            for (String field : List.of("thp", "mhp", "healthpercent", "percenthealth", "php")) {
+                out.add(scope + "." + field);
+            }
+        }
+        out.addAll(List.of("c.h", "c.mh", "c.ph"));
         out.addAll(List.of("skill.payload", "ctx.payload", "ctx.state",
                 "caster.id", "caster.state", "caster.decisions",
                 "random.1to10", "random.1to100", "random.percent"));
@@ -386,32 +409,32 @@ public final class Placeholders {
     // 辅助
     // ------------------------------------------------------------------
 
-    private static String locationField(java.util.Optional<Location> loc, String axis) {
+    private static String locationField(java.util.Optional<Location> loc, String axis, DoubleFunction<String> numbers) {
         Location l = loc.orElse(null);
         if (l == null) return null;
         return switch (axis) {
-            case "x" -> fmt(l.getX());
-            case "y" -> fmt(l.getY());
-            case "z" -> fmt(l.getZ());
-            case "yaw" -> fmt(l.getYaw());
-            case "pitch" -> fmt(l.getPitch());
+            case "x" -> numbers.apply(l.getX());
+            case "y" -> numbers.apply(l.getY());
+            case "z" -> numbers.apply(l.getZ());
+            case "yaw" -> numbers.apply(l.getYaw());
+            case "pitch" -> numbers.apply(l.getPitch());
             default -> null;
         };
     }
 
     /** Mythic's {@code l.*} location family; plain axes refer to block centers. */
-    private static String mythicLocationField(java.util.Optional<Location> loc, String field) {
+    private static String mythicLocationField(java.util.Optional<Location> loc, String field, DoubleFunction<String> numbers) {
         Location location = loc.orElse(null);
         if (location == null) return null;
         return switch (field) {
-            case "x" -> fmt(Math.floor(location.getX()) + 0.5);
-            case "y" -> fmt(Math.floor(location.getY()) + 0.5);
-            case "z" -> fmt(Math.floor(location.getZ()) + 0.5);
-            case "x.double" -> Double.toString(location.getX());
-            case "y.double" -> Double.toString(location.getY());
-            case "z.double" -> Double.toString(location.getZ());
-            case "yaw" -> Float.toString(location.getYaw());
-            case "pitch" -> Float.toString(location.getPitch());
+            case "x" -> numbers.apply(Math.floor(location.getX()) + 0.5);
+            case "y" -> numbers.apply(Math.floor(location.getY()) + 0.5);
+            case "z" -> numbers.apply(Math.floor(location.getZ()) + 0.5);
+            case "x.double" -> exact(location.getX());
+            case "y.double" -> exact(location.getY());
+            case "z.double" -> exact(location.getZ());
+            case "yaw" -> Float.isFinite(location.getYaw()) ? Float.toString(location.getYaw()) : null;
+            case "pitch" -> Float.isFinite(location.getPitch()) ? Float.toString(location.getPitch()) : null;
             case "w" -> location.getWorld() == null ? null : location.getWorld().getName();
             default -> null;
         };
@@ -562,7 +585,7 @@ public final class Placeholders {
      * <p>没有目标时返回 null（保留原文），而不是退化成 0——
      * 0 偏移是合法数值，会让「把目标推开」这类动作变成原地不动。</p>
      */
-    private static String deltaField(BehaviorContext ctx, String axis) {
+    private static String deltaField(BehaviorContext ctx, String axis, DoubleFunction<String> numbers) {
         Location self = loc(ctx).orElse(null);
         if (self == null) return null;
         LivingEntity target = ctx.targetEntity().orElse(null);
@@ -570,9 +593,9 @@ public final class Placeholders {
         Location other = target.getLocation();
         if (other == null) return null;
         return switch (axis) {
-            case "x" -> fmt(other.getX() - self.getX());
-            case "y" -> fmt(other.getY() - self.getY());
-            case "z" -> fmt(other.getZ() - self.getZ());
+            case "x" -> numbers.apply(other.getX() - self.getX());
+            case "y" -> numbers.apply(other.getY() - self.getY());
+            case "z" -> numbers.apply(other.getZ() - self.getZ());
             default -> null;
         };
     }
@@ -595,7 +618,7 @@ public final class Placeholders {
         };
     }
 
-    private static String gameplayField(LivingEntity living, String field) {
+    private static String gameplayField(LivingEntity living, String field, DoubleFunction<String> numbers) {
         if (living == null) return null;
         if (field.equals("food") || field.equals("food.level") || field.equals("food-level")) {
             return living instanceof org.bukkit.entity.HumanEntity human
@@ -603,18 +626,18 @@ public final class Placeholders {
         }
         if (field.equals("saturation")) {
             return living instanceof org.bukkit.entity.HumanEntity human
-                    ? fmt(human.getSaturation()) : null;
+                    ? numbers.apply(human.getSaturation()) : null;
         }
         if (field.equals("exhaustion")) {
             return living instanceof org.bukkit.entity.HumanEntity human
-                    ? fmt(human.getExhaustion()) : null;
+                    ? numbers.apply(human.getExhaustion()) : null;
         }
         if (field.equals("air") || field.equals("air.level") || field.equals("air-level")) {
             return String.valueOf(living.getRemainingAir());
         }
         if (field.equals("air.max") || field.equals("air-max")) return String.valueOf(living.getMaximumAir());
-        if (field.equals("luck")) return attributeValue(living, org.bukkit.attribute.Attribute.GENERIC_LUCK);
-        if (field.equals("armor")) return attributeValue(living, org.bukkit.attribute.Attribute.GENERIC_ARMOR);
+        if (field.equals("luck")) return attributeValue(living, org.bukkit.attribute.Attribute.GENERIC_LUCK, numbers);
+        if (field.equals("armor")) return attributeValue(living, org.bukkit.attribute.Attribute.GENERIC_ARMOR, numbers);
         if (field.equals("attack-cooldown") && living instanceof org.bukkit.entity.HumanEntity human) {
             float cooldown = human.getAttackCooldown();
             return Float.isFinite(cooldown) && cooldown >= 0.0f && cooldown <= 1.0f
@@ -629,10 +652,11 @@ public final class Placeholders {
         return null;
     }
 
-    private static String attributeValue(LivingEntity living, org.bukkit.attribute.Attribute attribute) {
+    private static String attributeValue(LivingEntity living, org.bukkit.attribute.Attribute attribute,
+                                         DoubleFunction<String> numbers) {
         try {
             var instance = living.getAttribute(attribute);
-            return instance == null ? null : fmt(instance.getValue());
+            return instance == null ? null : numbers.apply(instance.getValue());
         } catch (Throwable ignored) {
             return null;
         }
@@ -647,6 +671,9 @@ public final class Placeholders {
             return "permission." + field.substring(field.indexOf('.') + 1);
         }
         return switch (lower) {
+            case "hp", "thp" -> "hp.raw";
+            case "mhp" -> "hp.max";
+            case "healthpercent", "percenthealth", "php" -> "hp.percent";
             case "hp_percent", "hp-percent", "hppercentage", "health_percent",
                     "health-percent", "health.percent" -> "hp.percent";
             case "hp_raw", "hp-raw", "health_raw", "health-raw", "health.raw" -> "hp.raw";
@@ -656,9 +683,13 @@ public final class Placeholders {
         };
     }
 
-    /** 统一保留一位小数，避免出现 12.300000000000001 这类文本。 */
-    private static String fmt(double d) {
-        if (Double.isNaN(d) || Double.isInfinite(d)) return "0";
-        return String.valueOf(Math.round(d * 10.0) / 10.0);
+    /** Preserve the source double; invalid data must remain unresolved instead of becoming zero. */
+    private static String exact(double value) {
+        return Double.isFinite(value) ? Double.toString(value) : null;
+    }
+
+    private static String compact(double value) {
+        return Double.isFinite(value) ? java.math.BigDecimal.valueOf(value)
+                .setScale(1, java.math.RoundingMode.HALF_UP).toPlainString() : null;
     }
 }

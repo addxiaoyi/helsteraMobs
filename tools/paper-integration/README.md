@@ -13,15 +13,20 @@ contract. Source/artifact hashes and archived server/client logs are in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This focused fixture does not replace
 the full strict release catalog or version/physics/timing validation.
 
-The percentage-health runner compares the same skill source on native MM 5.7.2
+The percentage-health runner loads the same skill source on native MM 5.7.2
 and the Helstera importer/runtime. After building, run
-`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r5 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r8 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
 (choose a fresh revision). Only the pinned Modrinth `FTWvGuE5` artifact is
-accepted. Fixture `srv-paper-percent-health-exploratory-20261117-r4` passes 27
-assertions, including 14 identical-source health/absorption comparisons and
-damage event cancellation/modification. Reports and hashes are recorded in
+accepted. Fixture `srv-paper-percent-health-exploratory-20261117-r7` passes 60
+assertions, including 14 identical-source static health/absorption comparisons,
+19 exact native-string health alias comparisons, 12 imported dynamic outcomes,
+and damage event cancellation/modification. MM Free gates numeric placeholders
+behind Premium and substitutes `1`; the probe verifies that boundary separately,
+without claiming Premium dynamic skill parity. Reports and hashes are recorded in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). The runner disables the web UI and
-uses an isolated fresh server; this is exploratory, not full-catalog evidence.
+uses an isolated fresh server. This is exploratory evidence; inline rounding,
+math, generic per-target numeric scope, versions, and full-catalog integration
+remain open. See the [precision/upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
 The focused numeric runner, `run-numeric-mechanic-fixture.ps1`, validates the
 pinned Paper bootstrap and starts a fresh server with only the numeric probe

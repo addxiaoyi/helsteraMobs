@@ -81,7 +81,7 @@ AI, migration, and plugin tests cover direct binding and imported runtime
 paths. No Paper evidence was added, so the Conditions catalog remains
 `mapped-unverified`.
 
-## Next targets after the SetSpeed implementation (2026-11-17)
+## Next targets after the numeric placeholder correction (2026-11-17)
 
 The covered numeric factories now use a shared argument contract through direct
 calls, `SkillService`, and migration. Reordered/omitted fields, explicit target
@@ -111,8 +111,18 @@ verifies 32 ability-packet phases. The final artifact passes 2,229 tests and
 SpotBugs. See the [speed audit](docs/SET_SPEED_COMPATIBILITY.md). This leaves
 global target eligibility, physics/timing, and complete catalogs open.
 
-1. Separate full-precision numeric entity placeholders from display formatting;
-   audit skill-power/damage modifiers, healing events, and version-specific
+Numeric placeholders now preserve full finite precision; raw-health, max-health,
+and live-percentage aliases match the pinned upstream names and units. Existing
+`hp`-as-percent profiles require migration. The full build passes 2,235 tests
+and SpotBugs. Focused fixture `srv-paper-percent-health-exploratory-20261117-r7`
+passes 60 assertions, including 19 exact native-string alias comparisons and 12
+imported dynamic outcomes. MM Free substitutes `1` for Premium-gated numeric
+placeholders; the probe records this boundary without claiming Premium numeric
+skill parity. See the [precision audit](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
+
+1. Finish inline rounding, signed random grammar, math, and generic per-recipient
+   numeric evaluation; add actual Premium numeric skill comparison when available.
+   Audit skill-power/damage modifiers, healing events, and version-specific
    options against the declared upstream boundary. Complete MM global target
    eligibility, including creative/spectator defaults and `@Target` semantics;
    the speed comparison uses an eligible survival player and explicit `@Trigger`.
@@ -121,7 +131,7 @@ global target eligibility, physics/timing, and complete catalogs open.
 2. Extend Potion evidence to delayed/repeated execution, effect-event callbacks,
    expiration/hidden-effect behavior, instant effects, and client particles/icons.
    Reconcile those results with the declared MythicMobs version boundary.
-3. Add the verified Potion, numeric, fractional-health, and SetSpeed cases to the full strict release catalog,
+3. Add the verified Potion, numeric/placeholder, fractional-health, and SetSpeed cases to the full strict release catalog,
    then run the exact release artifact and the remaining Paper combinations.
    Numeric delay/repeat timing, player motion/flight physics, complete max-health
    variants, and client-observed movement still require focused evidence. Keep broader

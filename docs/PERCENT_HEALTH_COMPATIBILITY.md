@@ -60,10 +60,12 @@ Mythic 5.7.2 `TargetTargeter` selects an ActiveMob's threat/combat target or a
 player's looked-at entity; it returns no target for a generic vanilla-mob caster.
 Helstera's direct context `@Target` behavior is broader. The comparison does not
 establish `@Target` parity, which remains part of the Context Targeters audit.
-Entity numeric placeholders currently pass through the shared display formatter,
-which rounds many fields to one decimal place; skill variables preserve their
-string/number value. Full numeric-placeholder precision is a separate open
-contract and is not established by the exact skill-variable cases here.
+The later [numeric-placeholder correction](NUMERIC_PLACEHOLDER_COMPATIBILITY.md)
+removes shared one-decimal rounding and aligns raw-health/percentage aliases.
+Its separate evidence compares 19 native string placeholders and 12 imported
+dynamic outcomes. The tested MM Free edition gates dynamic numeric arguments
+behind Premium and substitutes `1`, so actual Premium-enabled dynamic skill
+comparison remains open; the exact skill-variable cases here do not establish it.
 
 ## Speed audit follow-up
 

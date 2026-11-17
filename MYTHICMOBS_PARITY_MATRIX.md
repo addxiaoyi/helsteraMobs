@@ -4,6 +4,20 @@ See the [ordered parity roadmap](MYTHICMOBS_PARITY_ROADMAP.md) for the full
 remaining work packages, current gap inventory, and evidence-based completion
 contract.
 
+Numeric placeholder correction (2026-11-17): resolution preserves finite source
+precision; raw `hp/health/thp`, maximum `mhp`, percent `healthpercent/php`, and
+caster `c.h/c.mh/c.ph` aliases read live entities. Missing/non-finite entity data
+stays unresolved. Existing profiles using `hp` as percent must migrate to
+`hp.percent` or `php`. Full verification passes 2,235 tests and SpotBugs.
+Focused `srv-paper-percent-health-exploratory-20261117-r7` passes 60 assertions,
+including 19 exact native MM string comparisons and 12 imported dynamic outcomes.
+MM Free numeric arguments are Premium-gated and fall back to `1`; this behavior
+is recorded separately. Premium numeric skill comparison, inline rounding,
+expressions, signed random grammar, generic per-target evaluation, versions,
+and full strict release integration remain open. See the
+[compatibility audit](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md). No broader
+catalog status is promoted by this slice.
+
 This matrix records the current compatibility boundary. A passing unit test does
 not prove Paper runtime parity.
 

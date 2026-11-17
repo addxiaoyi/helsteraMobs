@@ -2,6 +2,7 @@ package dev.helstera.plugin.probe;
 
 import dev.helstera.ai.BehaviorRegistryImpl;
 import dev.helstera.ai.skill.SkillService;
+import dev.helstera.ai.skill.Placeholders;
 import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.behavior.SkillTreeContext;
 import dev.helstera.api.instance.InstanceManager;
@@ -109,6 +110,40 @@ public final class PercentHealthProbe {
                         && close(target.getMaxHealth(), 20) && close(oracle.getMaxHealth(), 20));
             }
             require(checks, "target-isolation", close(caster.getHealth(), 10) && close(control.getHealth(), 10));
+            var precision = new LinkedHashMap<String, Double>();
+            precision.put("precision_caster_hp", 3.25);
+            precision.put("precision_caster_thp", 3.25);
+            precision.put("precision_caster_short", 3.25);
+            precision.put("precision_caster_percent", 3.75);
+            precision.put("precision_caster_percent_short", 3.75);
+            precision.put("precision_target_hp", 6.25);
+            precision.put("precision_target_thp", 6.25);
+            precision.put("precision_target_percent", 18.75);
+            precision.put("precision_caster_max", 20.0);
+            precision.put("precision_heal_fraction", 5.625);
+            precision.put("precision_damage_fraction", 0.625);
+            precision.put("precision_damage_current", 2.734375);
+            caster.setHealth(0.125);
+            reset(oracle);
+            oracle.setHealth(3.125);
+            boolean nativeDynamicRan = Boolean.TRUE.equals(nativeCast.invoke(api, caster, "precision_caster_hp", oracle,
+                    origin, List.of(oracle), List.of(), 1.0f));
+            require(checks, "native-free-numeric-fallback", nativeDynamicRan && close(caster.getHealth(), 0.125)
+                    && close(oracle.getHealth(), 4.125)
+                    && Boolean.FALSE.equals(mythic.getClass().getMethod("isVolatile").invoke(null)));
+            for (var test : precision.entrySet()) {
+                reset(target);
+                target.setHealth(3.125);
+                boolean importedRan = skills.castSkill(test.getKey(), context);
+                observations.add(test.getKey() + "[imported=" + target.getHealth() + "]");
+                require(checks, test.getKey(), importedRan && close(target.getHealth(), test.getValue()));
+            }
+            oracle.setHealth(3.125);
+            target.setHealth(3.125);
+            nativePlaceholderChecks(caster, oracle, context, checks, observations);
+            require(checks, "precision-target-isolation", close(caster.getHealth(), 0.125)
+                    && close(control.getHealth(), 10));
+            caster.setHealth(10);
             boolean[] cancel = {false};
             int[] events = {0, 0};
             plugin.getServer().getPluginManager().registerEvent(EntityDamageEvent.class, listener,
@@ -195,6 +230,42 @@ public final class PercentHealthProbe {
         entity.setAbsorptionAmount(0);
         entity.setHealth(10);
         entity.setNoDamageTicks(0);
+    }
+
+    private static void nativePlaceholderChecks(Cow caster, Cow target, BehaviorContext context,
+                                                LinkedHashMap<String, Boolean> checks,
+                                                List<String> observations) throws Exception {
+        Class<?> abstractEntity = Class.forName("io.lumine.mythic.api.adapters.AbstractEntity");
+        Class<?> adapter = Class.forName("io.lumine.mythic.bukkit.BukkitAdapter");
+        var adapt = adapter.getMethod("adapt", Entity.class);
+        Object casterAdapter = adapt.invoke(null, caster);
+        Object targetAdapter = adapt.invoke(null, target);
+        Class<?> strings = Class.forName("io.lumine.mythic.api.skills.placeholders.PlaceholderString");
+        var of = strings.getMethod("of", String.class);
+        Class<?> metaType = Class.forName("io.lumine.mythic.core.skills.placeholders.PlaceholderMeta");
+        Class<?> genericMeta = Class.forName("io.lumine.mythic.core.skills.placeholders.GenericPlaceholderMeta");
+        Object meta = genericMeta.getConstructor(abstractEntity).newInstance(casterAdapter);
+        var get = strings.getMethod("get", metaType, abstractEntity);
+        var aliases = new LinkedHashMap<String, Double>();
+        for (String scope : List.of("caster", "target")) {
+            double health = scope.equals("caster") ? 0.125 : 3.125;
+            for (String field : List.of("health", "hp", "thp")) aliases.put(scope + "." + field, health);
+            for (String field : List.of("maxhealth", "mhp")) aliases.put(scope + "." + field, 20.0);
+            for (String field : List.of("healthpercent", "percenthealth", "php")) {
+                aliases.put(scope + "." + field, 100 * (health / 20));
+            }
+        }
+        aliases.put("c.h", 0.125);
+        aliases.put("c.mh", 20.0);
+        aliases.put("c.ph", 0.625);
+        for (var entry : aliases.entrySet()) {
+            String source = "<" + entry.getKey() + ">";
+            String nativeText = (String) get.invoke(of.invoke(null, source), meta, targetAdapter);
+            String importedText = Placeholders.resolve(source, context);
+            observations.add(entry.getKey() + "[native=" + nativeText + ",imported=" + importedText + "]");
+            require(checks, "placeholder-" + entry.getKey(), nativeText.equals(importedText)
+                    && close(Double.parseDouble(nativeText), entry.getValue()));
+        }
     }
 
     private static boolean run(SkillService service, String source, BehaviorContext context) {

@@ -28,3 +28,30 @@ fraction_damage_current:
   Skills: ['damagepercent{p=0.25;currenthealth=true} @Trigger']
 fraction_damage_current_alias:
   Skills: ['damagepercent{p=0.25;ch=true} @Trigger']
+# Precision/units regression: caster health 0.125/20, recipient health 3.125/20.
+# MM Free gates numeric placeholders and falls back to 1; the probe records that
+# boundary separately. These 12 dynamic results are importer/runtime evidence.
+precision_caster_hp:
+  Skills: ['heal{a=<caster.hp>} @Trigger']
+precision_caster_thp:
+  Skills: ['heal{a=<caster.thp>} @Trigger']
+precision_caster_short:
+  Skills: ['heal{a=<c.h>} @Trigger']
+precision_caster_percent:
+  Skills: ['heal{a=<caster.php>} @Trigger']
+precision_caster_percent_short:
+  Skills: ['heal{a=<c.ph>} @Trigger']
+precision_target_hp:
+  Skills: ['heal{a=<target.hp>} @Trigger']
+precision_target_thp:
+  Skills: ['heal{a=<target.thp>} @Trigger']
+precision_target_percent:
+  Skills: ['heal{a=<target.healthpercent>} @Trigger']
+precision_caster_max:
+  Skills: ['heal{a=<caster.mhp>} @Trigger']
+precision_heal_fraction:
+  Skills: ['healpercent{m=<caster.hp>} @Trigger']
+precision_damage_fraction:
+  Skills: ['damagepercent{p=<caster.hp>} @Trigger']
+precision_damage_current:
+  Skills: ['damagepercent{p=<caster.hp>;ch=true} @Trigger']

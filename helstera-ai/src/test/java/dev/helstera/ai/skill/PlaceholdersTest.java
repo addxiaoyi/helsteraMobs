@@ -58,11 +58,12 @@ class PlaceholdersTest {
     }
 
     @Test
-    @DisplayName("血量占位符按一位小数输出")
+    @DisplayName("紧凑显示显式保留一位小数，默认解析保留精度")
     void formatsHealthWithOneDecimal() {
         var c = ctx(0.2299999, -1, "IDLE");
-        assertEquals("23.0", Placeholders.resolve("<caster.hp>", c));
-        assertEquals("23.0", Placeholders.resolve("<caster.hp.percent>", c));
+        assertEquals("23.0", Placeholders.resolveDisplay("<skill.health>", c));
+        assertEquals(Double.toString(0.2299999 * 100), Placeholders.resolve("<skill.health>", c));
+        assertEquals("<caster.hp>", Placeholders.resolve("<caster.hp>", c));
     }
 
     @Test
@@ -162,8 +163,8 @@ class PlaceholdersTest {
     @DisplayName("resolveNumber 能吃带占位符的文本")
     void resolveNumberExpandsPlaceholders() {
         var c = ctx(0.5, -1, "IDLE");
-        // 0.5 血量比例 = 50%，一位小数输出
-        assertEquals(50.0, Placeholders.resolveNumber("<caster.hp>", c, -1));
+        // Legacy skill context health is a percentage; entity hp requires an entity.
+        assertEquals(50.0, Placeholders.resolveNumber("<skill.health>", c, -1));
     }
 
     @Test
@@ -254,6 +255,8 @@ class PlaceholdersTest {
     @DisplayName("placeholder field aliases accept Mythic underscore spellings")
     void acceptsUnderscoreFieldAliases() {
         Player player = mock(Player.class);
+        when(player.getHealth()).thenReturn(10.0);
+        when(player.getMaxHealth()).thenReturn(20.0);
         when(player.isSneaking()).thenReturn(true);
         when(player.getFireTicks()).thenReturn(20);
         BehaviorContext context = BehaviorContext.of(null, player, 0.5, -1, 0, "IDLE");
@@ -380,14 +383,14 @@ class PlaceholdersTest {
         assertEquals("14", Placeholders.lookup("target.food", context));
         assertEquals("14", Placeholders.lookup("target.food_level", context));
         assertEquals("3.5", Placeholders.lookup("target.saturation", context));
-        assertEquals("1.3", Placeholders.lookup("target.exhaustion", context));
+        assertEquals("1.25", Placeholders.lookup("target.exhaustion", context));
         dev.helstera.api.instance.ModelInstance instance = mock(dev.helstera.api.instance.ModelInstance.class);
         when(instance.isValid()).thenReturn(true);
         when(instance.baseEntity()).thenReturn(java.util.Optional.of(player));
         BehaviorContext casterContext = BehaviorContext.of(instance, player, 1.0, -1, 0, "IDLE");
         assertEquals("14", Placeholders.lookup("caster.food", casterContext));
         assertEquals("3.5", Placeholders.lookup("caster.saturation", casterContext));
-        assertEquals("1.3", Placeholders.lookup("caster.exhaustion", casterContext));
+        assertEquals("1.25", Placeholders.lookup("caster.exhaustion", casterContext));
         Monster nonHuman = mock(Monster.class);
         BehaviorContext nonHumanContext = BehaviorContext.of(null, nonHuman, 1.0, -1, 0, "IDLE");
         assertNull(Placeholders.lookup("target.food", nonHumanContext));

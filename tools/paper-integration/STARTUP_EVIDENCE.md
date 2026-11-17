@@ -1,5 +1,50 @@
 # Paper Startup Evidence
 
+Focused numeric-placeholder follow-up
+`srv-paper-percent-health-exploratory-20261117-r7` passes on Paper 1.21.1-133
+with actual MythicMobs 5.7.2. The final artifact passes 2,235 tests, zero failures/
+errors/skips, and SpotBugs. `percentHealthRuntime` now records 60 assertions:
+14 existing identical-source static health comparisons, 19 exact native-string/
+Helstera-string health alias comparisons, 12 imported dynamic skill results,
+the MM Free numeric fallback, and retained event/isolation/negative/cleanup checks.
+All assertions execute within one tick. Caster health is `0.125/20`, recipient
+health `3.125/20`; the aliases agree exactly for raw, max, percentage, and short
+forms. The imported skills retain values including `3.25`, `5.625`, `0.625`,
+and `2.734375` without display rounding.
+
+The native `PlaceholderString` API provides the 19 alias comparisons. The
+pinned Free edition gates dynamic numeric arguments behind Premium, logs the
+restriction, and substitutes `1`; its `heal{a=<caster.hp>}` result is therefore
+`4.125`, while Helstera resolves `0.125` and yields `3.25`. This fallback is an
+edition boundary, not a successful native dynamic comparison. Attempt r5 failed
+when the gated numeric result was initially treated as an unrestricted oracle;
+its isolated directory is retained and no passing report was generated. No
+licensing state is changed. Actual Premium numeric skill comparison remains open.
+
+Report: [paper-1.21.1-percent-health-exploratory-20261117-r7.json](reports/paper-1.21.1-percent-health-exploratory-20261117-r7.json),
+SHA-256 `c853849ee67c9d00d96a0048f591af9cfbfd334bcfad6cf51538c5b28559d922`.
+Redacted log: [paper-1.21.1-percent-health-exploratory-20261117-r7.log.gz](reports/paper-1.21.1-percent-health-exploratory-20261117-r7.log.gz),
+SHA-256 `9b38b650de916bec19ad4436debe1b57f29b010caf826f69638067ac9860abc8`.
+Plugin SHA-256: `c7ff32368fb000f6aa5a5fd3b0d503742c82cf3482821e53d47806ace47304fe`.
+Shared YAML SHA-256: `4266e7d9e1d1bae15fec1a01b905a95ce045b7e056bad497ab3f1118cb95875b`.
+MythicMobs SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+Paper bootstrap SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+
+Earlier fixture `srv-paper-percent-health-exploratory-20261117-r6` passed 59
+assertions; its [report](reports/paper-1.21.1-percent-health-exploratory-20261117-r6.json)
+and [redacted log](reports/paper-1.21.1-percent-health-exploratory-20261117-r6.log.gz)
+remain archived. The final r7 adds a caster/control isolation check before
+restoring the precision fixture's caster health.
+
+Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`, then
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r8 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+(choose a fresh revision). The runner checks pinned artifact hashes, isolates
+the server, disables its web UI, and archives sanitized logs. The shared YAML
+contains both the paired static cases and the explicitly gated numeric cases.
+This exploratory fixture does not complete inline rounding/math, generic
+per-target numeric evaluation, other versions, or the full strict release
+catalog. See the [precision/upgrade audit](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
+
 Focused SetSpeed fixture `srv-paper-set-speed-exploratory-20261117-r2` passes
 on Paper 1.21.1-133 with actual MythicMobs 5.7.2. The final artifact passes the
 full 2,229-test `verify` suite and SpotBugs. `setSpeedRuntime` records 41 server
@@ -60,7 +105,7 @@ Paper assertions; its report and redacted log remain archived. Attempts r1
 directories remain available for diagnosis.
 
 Reproduce with `./mvnw -o -q -pl helstera-plugin -am verify`, then
-`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r5 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
+`pwsh -NoProfile -File tools/paper-integration/run-percent-health-fixture.ps1 -EvidenceRevision r8 -MythicMobsJarPath /path/to/MythicMobs-5.7.2.jar`
 (choose a fresh revision). The runner enforces the pinned external SHA-256,
 disables the web UI, and archives sanitized logs; it does not redistribute MM.
 See the [compatibility audit](../../docs/PERCENT_HEALTH_COMPATIBILITY.md) for
