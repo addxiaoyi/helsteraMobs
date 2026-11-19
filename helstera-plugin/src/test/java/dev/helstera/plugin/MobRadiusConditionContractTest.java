@@ -259,4 +259,104 @@ class MobRadiusConditionContractTest {
         assertFalse(imported("mobsInRadius{r=5;a=0;t=TestMob}", ctx));
         assertFalse(imported("!mobsInRadius{r=5;a=0;t=TestMob}", ctx));
     }
+    @Test void importedSkillConditionsUseCasterTargetAndTriggerDispatch(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        LivingEntity caster = mock(LivingEntity.class), near = mock(LivingEntity.class), far = mock(LivingEntity.class);
+        for (LivingEntity entity : List.of(caster, near, far)) {
+            when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
+            when(entity.getType()).thenReturn(EntityType.COW);
+            when(entity.getWorld()).thenReturn(world);
+            when(entity.getMaxHealth()).thenReturn(20.0);
+            when(entity.getHealth()).thenReturn(20.0);
+            when(entity.isValid()).thenReturn(true);
+        }
+        when(caster.getLocation()).thenReturn(center);
+        when(near.getLocation()).thenReturn(center.clone().add(2, 0, 0));
+        when(far.getLocation()).thenReturn(center.clone().add(40, 0, 0));
+        doReturn(List.of(caster)).when(world).getNearbyEntities(any(Location.class), anyDouble(), anyDouble(), anyDouble());
+        SkillExtras.mythicMobTypeQuery(new SkillExtras.MythicMobTypeQuery() {
+            public boolean isKnownType(String name) { return name.equals("TestMob"); }
+            public Optional<Boolean> matches(Entity entity, String name) { return Optional.of(entity == caster); }
+        });
+        var instance = context(caster, center).instance();
+        var ctx = BehaviorContext.continueExecution(instance, near, 1, 2, 0, "dispatch", null,
+                far, List.of(near, far), center, null);
+        var observed = new java.util.ArrayList<BehaviorContext>();
+        registry.registerAction("dispatch-observe", observed::add);
+        var source = java.nio.file.Files.createDirectories(root.resolve("Skills")).resolve("dispatch.yml");
+        java.nio.file.Files.writeString(source, """
+                caster:
+                  Conditions: ['mobsInRadius{r=5;a=0;t=TestMob} true']
+                  Skills: ['message{m=probe}']
+                target:
+                  TargetConditions: ['mobsInRadius{r=5;a=1;t=TestMob} true']
+                  Skills: ['message{m=probe}']
+                trigger:
+                  TriggerConditions: ['mobsInRadius{r=5;a=1;t=TestMob} true']
+                  Skills: ['message{m=probe}']
+                invalid:
+                  Conditions: ['mobsInRadius{unknown=true} false']
+                  Skills: ['message{m=probe}']
+                player_caster:
+                  Conditions: ['isPlayer']
+                  Skills: ['message{m=probe}']
+                null_target:
+                  TargetConditions: null
+                  Skills: ['message{m=probe}']
+                null_trigger:
+                  TriggerConditions: null
+                  Skills: ['message{m=probe}']
+                null_condition:
+                  Conditions: null
+                  Skills: ['message{m=probe}']
+                """);
+        var entries = new dev.helstera.migration.importer.MythicMobsImporter().convert(source);
+        var plan = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file"))).findFirst().orElseThrow();
+        var yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(plan.get("content").toString()));
+        assertEquals(List.of("mobs-in-radius 0 5 TestMob"), yaml.getStringList("skills.caster.require"));
+        for (String key : yaml.getConfigurationSection("skills").getKeys(false))
+            yaml.set("skills." + key + ".on-decision", List.of("dispatch-observe"));
+        skills.loadSkills(yaml.getConfigurationSection("skills"));
+        assertTrue(skills.castSkill("caster", ctx));
+        assertTrue(skills.castSkill("target", ctx));
+        assertEquals(List.of(near), observed.getLast().targets());
+        assertEquals(BehaviorContext.ConditionScope.EXECUTION, observed.getLast().conditionScope());
+        when(near.isValid()).thenReturn(false);
+        observed.clear();
+        assertFalse(skills.castSkill("target", ctx), "Invalid near target cannot satisfy a condition");
+        assertTrue(observed.isEmpty());
+        when(near.isValid()).thenReturn(true);
+        when(near.isDead()).thenReturn(true);
+        assertFalse(skills.castSkill("target", ctx), "Dead targets are filtered before condition evaluation");
+        when(near.isDead()).thenReturn(false);
+        assertFalse(skills.castSkill("trigger", ctx));
+        var nearTrigger = BehaviorContext.continueExecution(instance, far, 1, 40, 0, "dispatch", null,
+                near, List.of(far), center, null);
+        assertTrue(skills.castSkill("trigger", nearTrigger));
+        assertFalse(skills.castSkill("invalid", ctx));
+        assertFalse(skills.castSkill("null_condition", ctx));
+        assertFalse(skills.castSkill("null_target", ctx));
+        assertFalse(skills.castSkill("null_trigger", ctx));
+        var player = mock(org.bukkit.entity.Player.class);
+        var playerTarget = BehaviorContext.execution(instance, player, 1, 2, 0, "dispatch", null,
+                player, List.of(player), center);
+        assertFalse(skills.castSkill("player_caster", playerTarget), "Conditions must test caster, not selected player");
+        var empty = BehaviorContext.continueExecution(instance, (LivingEntity) null, 1, -1, 0,
+                "dispatch", null, null, List.of(), center, null);
+        assertFalse(skills.castSkill("target", empty));
+        assertFalse(skills.castSkill("trigger", empty));
+        assertTrue(skills.castSkill("target", empty.withLocationTarget(near.getLocation())));
+        assertEquals(near.getLocation(), observed.getLast().targetLocation().orElseThrow());
+        assertFalse(skills.castSkill("target", empty.withLocationTarget(far.getLocation())));
+        // Caster conditions ignore an unrelated explicit location target.
+        assertTrue(skills.castSkill("caster", empty.withLocationTarget(near.getLocation())));
+        observed.clear();
+        String inline = skills.bindAction("dispatch-observe @Targets ?@mobsInRadius{r=5;a=1;t=TestMob}");
+        assertNotNull(inline);
+        assertTrue(skills.runAction(inline, ctx));
+        assertEquals(List.of(near), observed.getLast().targets());
+        assertEquals(BehaviorContext.ConditionScope.EXECUTION, observed.getLast().conditionScope());
+    }
+
 }

@@ -709,7 +709,7 @@ class SkillNestingTest {
     }
 
     @Test
-    @DisplayName("target and trigger gates receive distinct contexts")
+    @DisplayName("target gates reject an empty target set before evaluating conditions")
     void conditionStagesUseSeparateContextValues() {
         var seen = new java.util.ArrayList<BehaviorContext>();
         registry.registerCondition("capture", context -> { seen.add(context); return true; });
@@ -725,8 +725,7 @@ class SkillNestingTest {
         var original = BehaviorContext.execution(null, null, 1.0, -1, 0, "skill",
                 null, null, List.of(), null);
         assertFalse(svc.castSkill("gated", original));
-        assertEquals(1, seen.size());
-        assertSame(original, seen.get(0), "without a target, keep the neutral context");
+        assertTrue(seen.isEmpty(), "native target dispatch rejects missing targets before evaluating conditions");
     }
 
     @Test
@@ -815,6 +814,8 @@ class SkillNestingTest {
     void previewChecksTargetConditionsWithoutChangingTreeTargets() {
         var target = mock(org.bukkit.entity.Zombie.class);
         var other = mock(org.bukkit.entity.Zombie.class);
+        when(target.isValid()).thenReturn(true);
+        when(other.isValid()).thenReturn(true);
         var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of(target, other));
         registry.registerCondition("reject-target", context -> false);
         registry.registerCondition("accept-first", context -> context.targetEntity().orElse(null) == target);
@@ -872,6 +873,7 @@ class SkillNestingTest {
     void targetAndTriggerConditionsPreserveNonPlayerEntities() {
         var target = mock(org.bukkit.entity.Zombie.class);
         var trigger = mock(org.bukkit.entity.Zombie.class);
+        when(target.isValid()).thenReturn(true);
         when(target.getHealth()).thenReturn(10.0);
         when(target.getMaxHealth()).thenReturn(20.0);
         when(trigger.getHealth()).thenReturn(8.0);

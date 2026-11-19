@@ -811,6 +811,10 @@ try {
         [System.IO.File]::ReadAllText($matrixPath))
     [System.IO.File]::WriteAllText((Join-Path $temporaryRoot 'tools/paper-integration/README.md'),
         "Latest strict fixture ``$syntheticReleaseFixtureId`` passes all $latestProbeCount probes.`n")
+    $roadmapPath = Join-Path $temporaryRoot 'MYTHICMOBS_PARITY_ROADMAP.md'
+    [System.IO.File]::WriteAllText($roadmapPath,
+        "The latest full release fixture is ``$syntheticReleaseFixtureId`` on Paper, with $latestProbeCount probes.`n" +
+        [System.IO.File]::ReadAllText($roadmapPath))
     $startupEvidence = Get-Content -LiteralPath $evidencePath -Raw -Encoding utf8
     [System.IO.File]::WriteAllText($evidencePath,
         "Latest fixture ``$syntheticReleaseFixtureId`` passed the full strict gate on Paper 1.21.1-133: $latestProbeCount registered probes.`n" +
@@ -851,6 +855,14 @@ try {
     $originalMatrix = [System.IO.File]::ReadAllText($matrixPath)
     $roadmapPath = Join-Path $temporaryRoot 'MYTHICMOBS_PARITY_ROADMAP.md'
     $originalRoadmap = [System.IO.File]::ReadAllText($roadmapPath)
+    [System.IO.File]::WriteAllText($roadmapPath, $originalRoadmap.Replace(
+        "with $latestProbeCount probes", 'with 290 probes'))
+    $staleRoadmapRelease = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $staleRoadmapRelease -notmatch 'MYTHICMOBS_PARITY_ROADMAP\.md:\s*expected') {
+        throw "Stale roadmap release summary was not rejected: $staleRoadmapRelease"
+    }
+    [System.IO.File]::WriteAllText($roadmapPath, $originalRoadmap)
+
     [System.IO.File]::WriteAllText($matrixPath, $originalMatrix + "`n| Added | implemented-runtime | evidence |`n")
     $staleRoadmapStatusOutput = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot 2>&1 | Out-String)
     if ($LASTEXITCODE -eq 0 -or $staleRoadmapStatusOutput -notmatch 'Parity roadmap status count is stale for implemented-runtime') {

@@ -28,6 +28,10 @@ import java.util.Optional;
  */
 public final class BehaviorContext {
 
+    /** Native condition dispatch scope; ordinary action contexts use EXECUTION. */
+    public enum ConditionScope { EXECUTION, CASTER, TARGET, TRIGGER }
+    private final ConditionScope conditionScope;
+
     private static final class ExecutionAudienceScope {
         private volatile Set<UUID> players;
 
@@ -124,6 +128,7 @@ public final class BehaviorContext {
                             List<? extends LivingEntity> targets, Location origin,
                             SkillTreeContext skillTree, Cancellable cancellableEvent,
                             EntityDamageEvent.DamageCause damageCause, Location targetLocation) {
+        this.conditionScope = ConditionScope.EXECUTION;
         this.instance = instance;
         this.target = target;
         this.targetEntity = targetEntity;
@@ -146,6 +151,12 @@ public final class BehaviorContext {
     }
 
     private BehaviorContext(BehaviorContext source, ExecutionAudienceScope executionAudience) {
+        this(source, executionAudience, source.conditionScope);
+    }
+
+    private BehaviorContext(BehaviorContext source, ExecutionAudienceScope executionAudience,
+                            ConditionScope conditionScope) {
+        this.conditionScope = java.util.Objects.requireNonNull(conditionScope);
         this.instance = source.instance;
         this.target = source.target;
         this.targetEntity = source.targetEntity;
@@ -165,6 +176,7 @@ public final class BehaviorContext {
     }
 
     private BehaviorContext(BehaviorContext source, boolean clearCancellableEvent) {
+        this.conditionScope = source.conditionScope;
         this.instance = source.instance;
         this.target = source.target;
         this.targetEntity = source.targetEntity;
@@ -298,6 +310,13 @@ public final class BehaviorContext {
         Player player = target instanceof Player p ? p : null;
         return new BehaviorContext(instance, player, target, healthRatio, distanceToTarget,
                 decisionCount, state, payload, trigger, targets, origin, skillTree);
+    }
+
+    /** Scope used only while evaluating a condition, without changing its execution metadata. */
+    public ConditionScope conditionScope() { return conditionScope; }
+
+    public BehaviorContext withConditionScope(ConditionScope scope) {
+        return new BehaviorContext(this, executionAudience, scope);
     }
 
     public ModelInstance instance() {

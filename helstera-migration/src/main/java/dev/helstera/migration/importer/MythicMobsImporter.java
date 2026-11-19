@@ -361,6 +361,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         boolean isSkillsDir = "skills".equalsIgnoreCase(categoryName);
 
         if (isSkillsDir) {
+            preserveNullSkillConditions(src, sourceFile);
             return convertSkills(src, sourceFile, entries);
         }
         boolean isSpawnersDir = "spawners".equalsIgnoreCase(categoryName);
@@ -472,6 +473,35 @@ public final class MythicMobsImporter implements MigrationImporter {
                         }
                     }
                     section.set("conditions", ConditionListParser.INVALID_CONDITION);
+                }
+            }
+        } catch (java.io.IOException | org.yaml.snakeyaml.error.YAMLException | SecurityException ex) {
+            throw new IllegalArgumentException("Cannot inspect MythicMobs YAML " + sourceFile + ": " + ex.getMessage(), ex);
+        }
+    }
+
+    private static void preserveNullSkillConditions(YamlConfiguration config, Path sourceFile) {
+        try (var reader = Files.newBufferedReader(sourceFile)) {
+            var yaml = new org.yaml.snakeyaml.Yaml(new org.yaml.snakeyaml.constructor.SafeConstructor(
+                    new org.yaml.snakeyaml.LoaderOptions()));
+            Object raw = yaml.load(reader);
+            if (!(raw instanceof Map<?, ?> root)) return;
+            ConfigurationSection destination = config;
+            if (root.get("skills") instanceof Map<?, ?> wrapped) {
+                root = wrapped;
+                destination = config.getConfigurationSection("skills");
+            }
+            if (destination == null) return;
+            for (var entry : root.entrySet()) {
+                if (!(entry.getKey() instanceof String name) || !(entry.getValue() instanceof Map<?, ?> fields)) continue;
+                ConfigurationSection skill = destination.getConfigurationSection(name);
+                if (skill == null) continue;
+                for (var field : fields.entrySet()) {
+                    if (field.getKey() instanceof String key && field.getValue() == null
+                            && Set.of("conditions", "targetconditions", "triggerconditions")
+                            .contains(key.toLowerCase(Locale.ROOT))) {
+                        skill.set(key, ConditionListParser.INVALID_CONDITION);
+                    }
                 }
             }
         } catch (java.io.IOException | org.yaml.snakeyaml.error.YAMLException | SecurityException ex) {
@@ -4217,6 +4247,17 @@ public final class MythicMobsImporter implements MigrationImporter {
                     target, key + ".ExecutionAudience",
                     "skills." + skillId + ".execution-audience",
                     "skills." + skillId + ".unsupported.ExecutionAudience");
+            List<String> casterConditions = conditionValues(skill, "Conditions");
+            if (!casterConditions.isEmpty()) {
+                List<String> translated = new ArrayList<>();
+                List<String> unmapped = new ArrayList<>();
+                MmConditions.translateAll(casterConditions, translated, unmapped);
+                String targetPath = "skills." + skillId + ".require";
+                target.set(targetPath, translated);
+                note(entries, file.toString(), key + ".Conditions", targetPath, translated, "mapped",
+                        "Mythic caster conditions translated to Helstera skill requirements.");
+                noteUnmappedSkillConditions(entries, file.toString(), key + ".Conditions", targetPath, unmapped);
+            }
             List<String> targetConditions = conditionValues(skill, "TargetConditions");
             List<String> triggerConditions = conditionValues(skill, "TriggerConditions");
             if (!targetConditions.isEmpty()) {

@@ -65,8 +65,18 @@ that remain constant throughout each tested interval.
 
 | Context | Center | Caster exclusion | Eligible types |
 | --- | --- | --- | --- |
-| Model instance without an explicit location target | Caster entity location; execution origin is ignored | UUID | Bukkit entity types or active registered MythicMob internal names |
-| Explicit location target, or execution origin without an instance | Supplied location | None | Active registered MythicMob internal names |
+| Skill `Conditions` / inline caster conditions | Caster entity location, even with a selected target/location | UUID | Bukkit entity types or active registered MythicMob internal names |
+| Skill `TargetConditions` / inline entity target conditions | Each selected target's location, or the explicit location target | None | Active registered MythicMob internal names |
+| Skill `TriggerConditions` with a living trigger | Trigger location | None | Active registered MythicMob internal names |
+| Ordinary execution with a model instance and no explicit location target | Caster entity location; execution origin is ignored | UUID | Bukkit entity types or active registered MythicMob internal names |
+| Ordinary explicit location target, or execution origin without an instance | Supplied location | None | Active registered MythicMob internal names |
+
+The skill importer preserves `Conditions` as caster-scoped `require` guards;
+it no longer silently drops them. Null or malformed condition fields remain
+rejected after import. Target-condition evaluation rejects empty target sets
+and removes dead/invalid entities before applying predicates or negation.
+Explicit location targets survive creation of a skill-tree continuation.
+Condition scope is temporary: actions receive ordinary execution contexts.
 
 This asymmetry follows the two native `check` overloads. In particular,
 `t=ZOMBIE` on the location path does not count ordinary vanilla Zombies. A
@@ -119,16 +129,25 @@ Helstera retains its `mobs-near-origin` **condition extension**; prior statement
 calling it an official MM condition are superseded. This does not establish
 absence of third-party custom conditions or behavior in other MM versions.
 
-The native fixture calls the pinned constructors, actual deferred type resolver
-and both check overloads. It compares migrated and directly bound production
-conditions with real Bukkit entities and an API-spawned custom MythicMob.
-It does not prove every native skill/target-condition dispatch route.
+The native fixture calls the pinned constructors, actual deferred type resolver,
+both check overloads and the framework's `evaluateCaster`, `evaluateTargets`
+and `evaluateTrigger` methods. It compares full-file imported and direct named
+skills through production `SkillService`, using real Bukkit entities and an
+API-spawned custom MythicMob. Its 576 dispatch comparisons cover three fields,
+two type filters, three exact amounts, positive/negative outcomes, eight scenes
+and both import/direct paths. It checks retained target UUIDs, action invocation,
+location preservation and execution scope. Message delivery is replaced by an
+observer after the production gates; this is not a message-delivery claim.
+Non-living trigger dispatch and condition action suffixes beyond true/false
+remain outside this verified slice. Inline location/pin targeters currently do
+not apply target-condition guards; that dispatcher gap remains open. The
+complete native dispatcher is not yet covered.
 
 Reproduce the focused strict comparison after building the production JAR:
 
 ```powershell
 pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 `
-  -EvidenceRevision r43 -MobRadiusStrict `
+  -EvidenceRevision r47 -MobRadiusStrict `
   -VanillaCachePath srv-paper-random-spawn-replace-20261119-r21/cache/mojang_1.21.1.jar
 ```
 

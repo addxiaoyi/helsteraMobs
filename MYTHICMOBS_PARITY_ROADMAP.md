@@ -1,15 +1,17 @@
 # MythicMobs Parity Roadmap
 
-MobsInRadius active-registry update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r42` passes 22 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Its 216 new comparisons cover registered,
-unregistered-but-persistent and restored mobs, five native aliases, name
-collisions, three scopes, exact-zero/exact-one amounts and negation. Radius
-queries no longer reload unregistered mobs through the API helper. The fixture
-retains 120 constant mob and 132 player comparisons, 96 dynamic checks, six
-placeholder oracles, 48 random-radius comparisons and 256 independent draw
-pairs. Premium expressions, complete native dispatch and other versions remain
-unverified; the complete Conditions row remains `mapped-unverified`. See the
+MobsInRadius condition-dispatch update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r46` passes 23 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Its 576 new comparisons use actual native
+`evaluateCaster`, `evaluateTargets` and `evaluateTrigger` calls against
+full-file imported and direct production skills. Skill `Conditions` are now
+imported as caster guards; target/trigger radius checks use their own locations.
+Empty targets and dead/invalid entities are rejected before predicates or
+negation, and explicit locations survive skill-tree creation. Earlier active
+registry, aliases, constant/dynamic/random radius and player comparisons pass.
+Inline location/pin target guards, non-living trigger dispatch, broader condition
+actions, Premium expressions and other versions remain open; the complete
+Conditions row stays `mapped-unverified`. See the
 [contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
@@ -20,11 +22,15 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after the MobsInRadius active-registry implementation:
+Immediate continuation after the MobsInRadius condition-dispatch implementation:
 
-1. Audit native condition dispatch and the remaining MythicEntity catalog.
-   Five aliases, custom-name priority and unregister/reregister lifecycle now
-   have scoped native evidence. Stable native `isLoadedMob` requires an ActiveMob;
+1. Extend native condition dispatch beyond the verified caster, living-trigger
+   and entity/explicit-location target slice. Inline location/pin targeters still
+   omit target-condition guards; non-living trigger dispatch and condition actions
+   beyond true/false need implementation and comparison. Audit the remaining
+   MythicEntity catalog: five aliases, custom-name priority and
+   unregister/reregister lifecycle have scoped native evidence.
+   Stable native `isLoadedMob` requires an ActiveMob;
    its later missing-ActiveMob fallback was not observed. ModelEngine hitbox-parent
    lookup, boundary-crossing stochastic populations and full dispatch remain open.
    The pinned 5.7.2 `MobsNearOrigin` name is a targeter; its Helstera condition is
@@ -48,7 +54,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-random-radius-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `7afd6fefe63b1849660b33ccf31aef25ff6c61493d282dd3cc52517d0f461197`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,308 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-radius-dispatch-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `6d6261bbacfdce63ceb324935b961233926fa4b1bc3ee75e27bbd159f2979fa4`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,312 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

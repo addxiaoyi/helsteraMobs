@@ -435,6 +435,18 @@ if ($MobRadiusAudit) {
         observations = @($randomLines | ForEach-Object { $_.Value }) +
             @($sampleLines | ForEach-Object { $_.Value }) + @($randomSummary.Value)
     }
+    $dispatchLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_DISPATCH\|field=[^\r\n]+$')
+    $dispatchSummary = [regex]::Match($log,
+        '(?m)^.*MOB_RADIUS_DISPATCH_SUMMARY\|comparisons=576\|scopes=3\|scenes=8\|passed=true\s*$')
+    if ($dispatchLines.Count -ne 576 -or -not $dispatchSummary.Success -or
+            @($dispatchLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete native radius dispatch evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'mobRadius.condition-dispatch'
+        status = 'passed'
+        observations = @($dispatchLines | ForEach-Object { $_.Value }) + @($dispatchSummary.Value)
+    }
     $lifecycleLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_LIFECYCLE\|phase=[^\r\n]+$')
     $aliasLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_ALIAS\|type=[^\r\n]+$')
     $lifecycleSummary = [regex]::Match($log,
@@ -466,6 +478,7 @@ $report = [ordered]@{
     fixtureProbeSourceSha256 = (Get-FileHash -LiteralPath $fixtureSource -Algorithm SHA256).Hash.ToLowerInvariant()
     fixtureProbeJarSha256 = (Get-FileHash -LiteralPath $probeJar -Algorithm SHA256).Hash.ToLowerInvariant()
     conditionProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
+    dispatchProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     naturalSpawnClientSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'natural-spawn-client.js') -Algorithm SHA256).Hash.ToLowerInvariant()
     randomSpawnConfigSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'RandomSpawns/replace.yml') -Algorithm SHA256).Hash.ToLowerInvariant()
     mythicMobCatalogSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'Mobs/fixture.yml') -Algorithm SHA256).Hash.ToLowerInvariant()

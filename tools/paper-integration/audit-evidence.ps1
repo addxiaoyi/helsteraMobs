@@ -272,6 +272,11 @@ foreach ($item in $releaseEvidence) {
                 pattern = '(?m)^Latest strict release evidence: `(?<fixture>[^`]+)`\s*completes (?<count>\d+) probes'
             },
             @{
+                name = 'MYTHICMOBS_PARITY_ROADMAP.md'
+                text = $roadmapText
+                pattern = '(?m)^The latest full release fixture is `(?<fixture>[^`]+)`[^\r\n]*?with (?<count>\d+) probes'
+            },
+            @{
                 name = 'tools/paper-integration/README.md'
                 text = (Get-Content -LiteralPath (Join-Path $Root 'tools/paper-integration/README.md') -Raw -Encoding utf8)
                 pattern = '(?m)^Latest (?:full-catalog )?strict fixture `(?<fixture>[^`]+)` passes all (?<count>\d+) probes'

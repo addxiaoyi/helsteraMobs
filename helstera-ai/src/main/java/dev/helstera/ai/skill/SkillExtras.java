@@ -9593,13 +9593,19 @@ public final class SkillExtras {
         return location;
     }
 
+    private static boolean mobRadiusUsesCaster(BehaviorContext ctx) {
+        return ctx.conditionScope() == BehaviorContext.ConditionScope.CASTER
+                || ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION
+                && ctx.targetLocation().isEmpty() && ctx.instance() != null;
+    }
+
     private static double resolveMobRadius(String raw, BehaviorContext ctx) {
         var interval = dev.helstera.api.util.MobRadiusSpec.radiusInterval(raw);
         if (interval.isPresent()) return interval.get().sample();
         if (!dev.helstera.api.util.NumericExpression.dynamic(raw))
             return dev.helstera.api.util.MobRadiusSpec.requireRadius(Double.parseDouble(raw));
         BehaviorContext scoped = null;
-        if (ctx != null && ctx.targetLocation().isEmpty() && ctx.instance() != null) {
+        if (ctx != null && mobRadiusUsesCaster(ctx)) {
             if (!ctx.instanceValid()) throw new IllegalStateException("MobsInRadius caster is unavailable");
             Entity source = ctx.instance().baseEntity().orElseThrow(
                     () -> new IllegalStateException("MobsInRadius caster has no entity"));
@@ -9619,9 +9625,16 @@ public final class SkillExtras {
     private static int countMobsNear(
             BehaviorContext ctx, double radius, Set<String> types) {
         if (ctx == null) throw new IllegalStateException("MobsInRadius requires a context");
-        Location center = ctx.targetLocation().orElse(null);
+        Location center = switch (ctx.conditionScope()) {
+            case CASTER -> null;
+            case TARGET -> ctx.targetLocation().orElseGet(() -> ctx.targetEntity()
+                    .orElseThrow(() -> new IllegalStateException("MobsInRadius target is unavailable")).getLocation());
+            case TRIGGER -> ctx.trigger()
+                    .orElseThrow(() -> new IllegalStateException("MobsInRadius trigger is unavailable")).getLocation();
+            case EXECUTION -> ctx.targetLocation().orElse(null);
+        };
         Entity source = null;
-        if (center == null && ctx.instance() != null) {
+        if (mobRadiusUsesCaster(ctx)) {
             if (!ctx.instanceValid()) throw new IllegalStateException("MobsInRadius caster is unavailable");
             source = ctx.instance().baseEntity().orElseThrow(
                     () -> new IllegalStateException("MobsInRadius caster has no entity"));

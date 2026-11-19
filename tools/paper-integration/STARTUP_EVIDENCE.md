@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-radius-active-strict-20261119-r2` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `94a4cbe1f73dd48ec296d4ba48f54689f08e7e1654ae2be8eef8e46eb6e6cc70`. [Strict report](reports/paper-1.21.1-radius-active-strict-20261119-r2.json) · [Redacted server log](reports/paper-1.21.1-radius-active-strict-20261119-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-radius-active-strict-20261119-r2.client-logs.zip) This artifact passes 2,311 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-radius-dispatch-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `6d6261bbacfdce63ceb324935b961233926fa4b1bc3ee75e27bbd159f2979fa4`. [Strict report](reports/paper-1.21.1-radius-dispatch-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-radius-dispatch-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-radius-dispatch-strict-20261119-r1.client-logs.zip) This artifact passes 2,312 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,10 +9,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `51c508e56a359c82cc21ad0a9e7ba376db3a30c97918d84f9c5fcf1ea356ed0f`;
-redacted server log SHA-256: `38f846764d84427dde112f380904b0ac78c9a46218cdbc105c4ac15960a35a4f`;
-redacted client logs SHA-256: `54eabe878c624a131e2a98d4d6ec03dd3c7c0de012f6d526fe979d8096d59247`.
-The preceding `srv-paper-radius-active-strict-20261119-r1`,
+Current full-report SHA-256: `ca8552ce4892489bf26958164817e94fa345134b9b168dab0de81dff5431c5e8`;
+redacted server log SHA-256: `2a21371dd49f85e11e117be184ae8dca6a61bf97b02ed4ebc1009efd90658fe4`;
+redacted client logs SHA-256: `ba5c1b2a712540156ee3057772c2faeccaafb07fc7df216f6f05e3ca183b2802`.
+The preceding `srv-paper-radius-active-strict-20261119-r2`,
+`srv-paper-radius-active-strict-20261119-r1`,
 `srv-paper-random-radius-strict-20261119-r1`,
 `srv-paper-dynamic-radius-strict-20261119-r1`,
 `srv-paper-mob-radius-strict-20261119-r2` and
@@ -21,6 +22,49 @@ The preceding `srv-paper-radius-active-strict-20261119-r1`,
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Caster, target and trigger condition dispatch
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r46` passes all
+23 probes on plugin `6d6261bbacfdce63ceb324935b961233926fa4b1bc3ee75e27bbd159f2979fa4`.
+The 576 new comparisons call native MM 5.7.2 framework `evaluateCaster`,
+`evaluateTargets` and `evaluateTrigger` on Paper 1.21.1-133. Each compares
+full-file imported skills and direct named skills through production
+`SkillService`: three condition fields, two type filters, exact amounts 0/1/2,
+true/false outcomes, and eight near/far/mixed/empty/location/removed scenes.
+The observer checks invocation, retained target UUIDs, ordinary execution scope
+and explicit target-location preservation after skill-tree creation.
+It replaces message delivery after the production gates; message delivery is
+not a native comparison here. The original radius and RandomSpawns probes pass.
+
+Skill import no longer drops `Conditions`; caster checks use the caster even
+when an unrelated target/location is selected. Radius target/trigger checks use
+their respective locations and native active-mob population rules. Empty target
+sets and dead/invalid entities reject before negation. Unit regressions cover
+null Conditions/TargetConditions/TriggerConditions, malformed preservation,
+inline entity target filters, caster-vs-player selection and preview behavior.
+The final build passes 2,312 Maven tests and SpotBugs.
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r46.json), SHA-256
+  `d36f8833ad09eab3d9039872c8c26567056fc12fab2a4fa1c99c9f90b23b9466`.
+- [Redacted log](reports/paper-1.21.1-random-spawn-replace-20261119-r46.log.gz), SHA-256
+  `168f9ee97c3045f0447e9794f2e946016ca05a271ab8d6a0682cc05f0c6c1094`.
+
+Diagnostic attempts `srv-paper-random-spawn-replace-20261119-r43` and
+`srv-paper-random-spawn-replace-20261119-r44` exposed a fixture mistake: native
+`setLocationTargets`, even with an empty collection, clears entity targets.
+The recorded target was valid/alive and the raw location check passed; the
+framework saw an empty set. The fixture now selects only the intended target
+kind, and separately compares removed entities without faking their validity.
+`srv-paper-random-spawn-replace-20261119-r45` passed every runtime comparison
+but stopped before archival because the report schema lacked the new dispatch
+source-hash property. The schema was corrected and r46 reran the unchanged
+production JAR successfully. Diagnostic attempts are not release evidence.
+
+Non-living trigger dispatch, inline location/pin target guards, condition actions
+beyond true/false, Premium expressions and other versions remain open. The full
+Conditions catalog is still `mapped-unverified`; see the
+[compatibility contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).
 
 ## Active registry, aliases and persistent markers
 
@@ -43,8 +87,8 @@ covered by the adapter regression assertions.
 
 All prior constant/dynamic/random mob and player comparisons pass. Natural
 sampling records 6/6 cancellations at light 0; alternatives are 7:9 over 16
-valid events, without a distribution claim. The final build passes 2,311 Maven
-tests and SpotBugs, and the full strict report above validates the same JAR.
+valid events, without a distribution claim. That earlier build passed 2,311 Maven
+tests and SpotBugs; its full strict baseline is archived in the manifest.
 
 - [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r42.json), SHA-256
   `4bfbb28d7a4d06a0bb6708bd1243aabd890dcb15b465ecdbd12b018485c97616`.

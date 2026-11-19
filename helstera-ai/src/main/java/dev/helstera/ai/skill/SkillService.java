@@ -301,7 +301,7 @@ public final class SkillService {
         boolean allPass = !def.invalidCondition;
         if (def.invalidCondition) trace.add(new CondTrace("invalid-condition", false));
         for (String condKey : def.require) {
-            boolean ok = registry.testCondition(condKey, ctx);
+            boolean ok = registry.testCondition(condKey, inlineCasterConditionContext(ctx));
             trace.add(new CondTrace(condKey, ok));
             if (!ok) allPass = false;
         }
@@ -1742,8 +1742,9 @@ public final class SkillService {
         if (!targetConditionKeys.isEmpty()) {
             List<org.bukkit.entity.LivingEntity> passing = new ArrayList<>();
             for (var candidate : selected) {
-                if (conditionsPass(targetConditionKeys,
-                        targetConditionContext(ctx, candidate, List.of(candidate)))) {
+                if (validConditionTarget(candidate) && conditionsPass(targetConditionKeys,
+                        targetConditionContext(ctx, candidate, List.of(candidate))
+                                .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) {
                     passing.add(candidate);
                 }
             }
@@ -2178,7 +2179,7 @@ public final class SkillService {
             }
             ctx = ctx.withNarrowedExecutionAudience(resolution.players());
         }
-        if (!conditionsPass(def.require, ctx)) return false;
+        if (!conditionsPass(def.require, inlineCasterConditionContext(ctx))) return false;
         ctx = filterTargetConditions(def.targetRequire, ctx);
         if (ctx == null || (!def.triggerRequire.isEmpty()
                 && (!(ctx.trigger().orElse(null) instanceof org.bukkit.entity.LivingEntity)
@@ -2203,6 +2204,7 @@ public final class SkillService {
                     ctx.trigger().orElse(null), ctx.targets())
                     : dev.helstera.api.behavior.SkillTreeContext.restore(saved,
                     ctx.trigger().orElse(null), ctx.targets(), org.bukkit.Bukkit::getWorld);
+            var locationTarget = ctx.targetLocation().orElse(null);
             ctx = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                     ctx.instance(), ctx.targetEntity().orElse(null), ctx.healthRatio(),
                     ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
@@ -2210,6 +2212,7 @@ public final class SkillService {
                     ctx.targets(), ctx.origin().orElse(null), tree,
                     ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null))
                     .withExecutionAudienceFrom(ctx);
+            if (locationTarget != null) ctx = ctx.withLocationTarget(locationTarget);
         }
         for (SkillDef declared : defs.values()) {
             if (!declared.branch.isBlank()) {
@@ -2293,15 +2296,19 @@ public final class SkillService {
         List<org.bukkit.entity.LivingEntity> targets = ctx.targets();
         if (targets.isEmpty()) {
             var target = ctx.targetEntity().orElse(null);
-            if (target == null) return conditionsPass(conditions, ctx) ? ctx : null;
-            if (!conditionsPass(conditions, targetConditionContext(ctx, target, List.of(target)))) return null;
+            if (target == null) return ctx.targetLocation().isPresent()
+                    && conditionsPass(conditions, ctx.withConditionScope(
+                    dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET)) ? ctx : null;
+            if (!validConditionTarget(target) || !conditionsPass(conditions, targetConditionContext(ctx, target, List.of(target))
+                    .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) return null;
             if (updateTree) ctx.skillTree().ifPresent(tree -> tree.targets(List.of(target)));
             return targetConditionContext(ctx, target, List.of(target));
         }
 
         List<org.bukkit.entity.LivingEntity> passing = new ArrayList<>();
         for (var target : targets) {
-            if (conditionsPass(conditions, targetConditionContext(ctx, target, List.of(target)))) {
+            if (validConditionTarget(target) && conditionsPass(conditions, targetConditionContext(ctx, target, List.of(target))
+                    .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) {
                 passing.add(target);
             }
         }
@@ -2310,6 +2317,11 @@ public final class SkillService {
         var filtered = targetConditionContext(ctx, active, passing);
         if (updateTree) ctx.skillTree().ifPresent(tree -> tree.targets(passing));
         return filtered;
+    }
+
+    private static boolean validConditionTarget(org.bukkit.entity.LivingEntity target) {
+        // Native target-condition dispatch rejects removed/dead entities before inversion.
+        return target != null && !target.isDead() && target.isValid();
     }
 
     private dev.helstera.api.behavior.BehaviorContext triggerConditionContext(
@@ -2323,11 +2335,19 @@ public final class SkillService {
                 ctx.instance(), living, ratio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
                 ctx.payload().orElse(null), trigger, inherited, ctx.origin().orElse(null),
                 ctx.skillTree().orElse(null), ctx.cancellableEvent().orElse(null),
-                ctx.damageCause().orElse(null)).withExecutionAudienceFrom(ctx);
+                ctx.damageCause().orElse(null)).withExecutionAudienceFrom(ctx)
+                .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.TRIGGER);
+    }
+
+    private dev.helstera.api.behavior.BehaviorContext casterConditionScope(
+            dev.helstera.api.behavior.BehaviorContext ctx) {
+        return ctx == null ? null : ctx.withConditionScope(
+                dev.helstera.api.behavior.BehaviorContext.ConditionScope.CASTER);
     }
 
     private dev.helstera.api.behavior.BehaviorContext inlineCasterConditionContext(
             dev.helstera.api.behavior.BehaviorContext ctx) {
+        ctx = casterConditionScope(ctx);
         if (ctx == null || !ctx.instanceValid()) return ctx;
         var caster = ctx.instance().baseEntity().orElse(null);
         if (!(caster instanceof org.bukkit.entity.LivingEntity living)) return ctx;
@@ -2338,7 +2358,8 @@ public final class SkillService {
                 ctx.payload().orElse(null), ctx.trigger().orElse(null), ctx.targets(),
                 ctx.origin().orElse(null), ctx.skillTree().orElse(null),
                 ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null))
-                .withExecutionAudienceFrom(ctx);
+                .withExecutionAudienceFrom(ctx)
+                .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.CASTER);
     }
 
     private boolean isInstanceBusy(int instId) {
