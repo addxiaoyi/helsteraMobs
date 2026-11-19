@@ -3889,7 +3889,7 @@ public final class MythicMobsImporter implements MigrationImporter {
     private static String variableDurationArgument(String raw) {
         List<String> args = MythicSpec.mechanicOpen(raw) >= 0 ? MythicSpec.keyedArguments(raw)
                 : velocityPositionalArguments(raw);
-        return dev.helstera.api.util.VariableDuration.parse(args).argument();
+        return dev.helstera.api.util.VariableLifetime.parse(args).argument();
     }
 
     private static String variableSetAction(String raw) {

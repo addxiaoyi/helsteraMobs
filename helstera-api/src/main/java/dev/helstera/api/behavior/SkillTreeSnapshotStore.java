@@ -69,7 +69,7 @@ public final class SkillTreeSnapshotStore {
         return read(yaml);
     }
 
-    private static void write(ConfigurationSection section, SkillTreeContext.Snapshot snapshot)
+    static void write(ConfigurationSection section, SkillTreeContext.Snapshot snapshot)
             throws IOException {
         validateExpirations(snapshot.variableExpirations(), snapshot.variables());
         validateExpirations(snapshot.locationExpirations(), snapshot.locations());
@@ -112,7 +112,7 @@ public final class SkillTreeSnapshotStore {
         }
     }
 
-    private static SkillTreeContext.Snapshot read(ConfigurationSection section) throws IOException {
+    static SkillTreeContext.Snapshot read(ConfigurationSection section) throws IOException {
         int format = section.getInt("snapshot-format", 1);
         if (format < 1 || format > SNAPSHOT_FORMAT_VERSION) {
             throw new IOException("unsupported skill-tree snapshot format: " + format);

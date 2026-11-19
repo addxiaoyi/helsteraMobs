@@ -139,6 +139,10 @@ final class VariablePlaceholderAudit {
         final Entity item;
 
         Harness(JavaPlugin probe, Plugin runtime, Plugin mythic, Location center, boolean imported) throws Exception {
+            this(probe, runtime, mythic, center, imported, List.of());
+        }
+        Harness(JavaPlugin probe, Plugin runtime, Plugin mythic, Location center, boolean imported,
+                List<UUID> restoredEntities) throws Exception {
             this.runtime = runtime; this.mythic = mythic; this.imported = imported;
             nativeLoader = mythic.getClass().getClassLoader(); runtimeLoader = runtime.getClass().getClassLoader();
             abstractEntity = nativeType("io.lumine.mythic.api.adapters.AbstractEntity");
@@ -168,14 +172,23 @@ final class VariablePlaceholderAudit {
             source = probe.getDataFolder().toPath().resolve("variable-source/Skills/variables.yml");
             Files.createDirectories(source.getParent());
             Location base = center.clone().add(110, 20, 0);
-            a = mob(base); b = mob(base.clone().add(0, 0, 4)); c = mob(base.clone().add(4, 0, 0));
+            a = restoredEntities.isEmpty() ? mob(base) : restoredMob(restoredEntities.get(0));
+            b = restoredEntities.isEmpty() ? mob(base.clone().add(0, 0, 4)) : restoredMob(restoredEntities.get(1));
+            c = restoredEntities.isEmpty() ? mob(base.clone().add(4, 0, 0)) : restoredMob(restoredEntities.get(2));
             World other = Bukkit.getWorlds().stream().filter(w -> w != base.getWorld()).findFirst().orElseThrow();
-            Location cross = base.clone(); cross.setWorld(other); d = mob(cross);
+            Location cross = base.clone(); cross.setWorld(other);
+            d = restoredEntities.isEmpty() ? mob(cross) : restoredMob(restoredEntities.get(3));
             item = base.getWorld().dropItem(base, new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE));
             item.setGravity(false);
         }
         Class<?> nativeType(String name) throws ClassNotFoundException { return Class.forName(name, true, nativeLoader); }
         Class<?> runtimeType(String name) throws ClassNotFoundException { return Class.forName(name, true, runtimeLoader); }
+        Cow restoredMob(UUID identity) throws Exception {
+            if (!(Bukkit.getEntity(identity) instanceof Cow cow)) throw new IllegalStateException("Saved cow missing: " + identity);
+            Object saved = manager.getClass().getMethod("getMythicMobInstance", Entity.class).invoke(manager, cow);
+            if (saved == null) throw new IllegalStateException("Saved native registry missing: " + identity);
+            mobs.add(cow); active.put(cow, saved); return cow;
+        }
         Cow mob(Location point) throws Exception {
             Object api = mythic.getClass().getMethod("getAPIHelper").invoke(mythic);
             Cow cow = (Cow) api.getClass().getMethod("spawnMythicMob", String.class, Location.class)

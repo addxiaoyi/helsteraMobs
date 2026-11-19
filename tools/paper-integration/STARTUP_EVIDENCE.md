@@ -1,6 +1,41 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-skilltree-expiry-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `355bb38ace9484b2a944385f1d6c610e7e6b1624a40f0d39f403e5ef2d63c83d`. [Strict report](reports/paper-1.21.1-skilltree-expiry-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-skilltree-expiry-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-skilltree-expiry-strict-20261119-r1.client-logs.zip) This artifact passes 2,358 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Native scoped-registry restart evidence: [report](reports/paper-1.21.1-variable-persistence-20261119-r2.json),
+SHA-256 `ed285162f67b722f51970f3c3ee351ae720070e435bc8793512126a562fe13f8`;
+[redacted three-boot logs and shutdown snapshots](reports/paper-1.21.1-variable-persistence-20261119-r2-logs.zip),
+SHA-256 `ef384898b0b94458be05a7f99ecdca50b35d7d891423985bba4cb03d97e38bcb`.
+Plugin SHA-256 `1313d2459e5dacf818b457fb543c3e0b40b759a9bc43299b8c4ad66da79a4958`. Paper and native MM hashes,
+probe JAR/source hashes, runner hash and individual evidence hashes are embedded
+in the report. Eight stable UUIDs and 432 complete observations pass the independent
+validator; all 12 mutation controls are rejected. This focused custom restart report
+is separate from the standard full-release report schema.
+
+Focused native regression [report](reports/paper-1.21.1-random-spawn-replace-20261119-r71.json), SHA-256
+`fd9c7145d9d5729fb71d3d1051fc791816d8c55982b254e42359013f127f9c53`; [redacted server log](reports/paper-1.21.1-random-spawn-replace-20261119-r71.log.gz), SHA-256
+`44f902e8221b575910cb7b71b42667d7da74ba602f5f5dba3b9a3439bab15a45`. All 31 focused probes pass on the same plugin artifact,
+including the existing 420 variable-expiry comparisons and six snapshot observations.
+
+Scoped-variable persistence update (2026-11-19): focused fixture
+`srv-paper-variable-persistence-comparison-20261119-r2` passes 432 direct/imported
+comparisons across three real Paper 1.21.1-133 boots against public MM 5.7.2.
+Caster/target UUID registries, world and global values retain types, locations and
+original deadlines; expired and explicitly unset values stay absent. World transient
+save markers are filtered at shutdown, while native global/persistent-entity behavior
+retains them. Eight entity UUIDs remain stable. Three shutdown snapshots and redacted
+logs are archived; all 12 incomplete/altered-evidence controls are rejected.
+Atomic scoped-registry storage preserves the previous file on invalid writes and
+protects unreadable startup data from shutdown overwrite. Unloaded-world coordinates
+remain available for later resolution. Player reconnect/restart, chunk/world lifecycle,
+non-persistent entity cleanup, broader catalogs and other versions remain open;
+full MythicMobs parity is still incomplete.
+The same artifact passes 2,366 Maven tests and SpotBugs, the 471-probe full strict
+catalog (452 passed, 19 expected rejections), and all 31 focused native regression
+probes in `srv-paper-random-spawn-replace-20261119-r71`. Parity status totals remain
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin.
+See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
+
+Latest full-catalog fixture `srv-paper-variable-persistence-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `1313d2459e5dacf818b457fb543c3e0b40b759a9bc43299b8c4ad66da79a4958`. [Strict report](reports/paper-1.21.1-variable-persistence-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-variable-persistence-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-variable-persistence-strict-20261119-r1.client-logs.zip) This artifact passes 2,366 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,9 +44,9 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `611111094ece88a1090eac70beffbc6f4f2ec84a3ae94868e12dd985c1c1e029`;
-redacted server log SHA-256: `9027ae97e5165476e5cd0e7ccc07fbe743a6e63392858c8bb538cb91af34b4cc`;
-redacted client logs SHA-256: `5333febe5fdd9adda7172b2adb07c97a59632ef60473b318df48bcb67e8e816f`.
+Current full-report SHA-256: `8743fec4e8ce1e1a76d69dbb0c225e3731e88b3d66d7cbdb4267f2ea360a6408`;
+redacted server log SHA-256: `d0c3753f14a0993bb19ac267bbaaf740cb0bbb94bae0876adcd8a556c13729a2`;
+redacted client logs SHA-256: `9b4a30969de4e6fa67c0a193b461aac42603764ec5364ffa733b77bd5486c181`.
 The preceding `srv-paper-variable-expiry-strict-20261119-r2`,
 `srv-paper-variable-placeholders-strict-20261119-r1`,
 `srv-paper-trigger-placeholders-strict-20261119-r1`,

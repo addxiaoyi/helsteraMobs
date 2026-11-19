@@ -60,13 +60,20 @@ public final class ExpiringVariables<T> extends AbstractMap<String, T> {
     /** Capture values and deadlines together so a snapshot cannot turn expiry into permanence. */
     public record State<T>(Map<String, T> values, Map<String, Long> expirations) { }
     public State<T> snapshot() {
+        return snapshot(false);
+    }
+    /** Includes native non-expiring retention markers for registry persistence. */
+    public State<T> snapshotWithRetention() {
+        return snapshot(true);
+    }
+    private State<T> snapshot(boolean retention) {
         Map<String, T> values = new LinkedHashMap<>();
         Map<String, Long> expirations = new LinkedHashMap<>();
         entries.forEach((key, ignored) -> {
             EntryValue<T> entry = live(key);
             if (entry != null) {
                 values.put(key, entry.value());
-                if (entry.expiresAt() > 1) expirations.put(key, entry.expiresAt());
+                if (entry.expiresAt() > 1 || retention && entry.expiresAt() != 0) expirations.put(key, entry.expiresAt());
             }
         });
         return new State<>(Map.copyOf(values), Map.copyOf(expirations));

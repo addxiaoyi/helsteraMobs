@@ -1,5 +1,25 @@
 # MythicMobs Parity Roadmap
 
+Scoped-variable persistence update (2026-11-19): focused fixture
+`srv-paper-variable-persistence-comparison-20261119-r2` passes 432 direct/imported
+comparisons across three real Paper 1.21.1-133 boots against public MM 5.7.2.
+Caster/target UUID registries, world and global values retain types, locations and
+original deadlines; expired and explicitly unset values stay absent. World transient
+save markers are filtered at shutdown, while native global/persistent-entity behavior
+retains them. Eight entity UUIDs remain stable. Three shutdown snapshots and redacted
+logs are archived; all 12 incomplete/altered-evidence controls are rejected.
+Atomic scoped-registry storage preserves the previous file on invalid writes and
+protects unreadable startup data from shutdown overwrite. Unloaded-world coordinates
+remain available for later resolution. Player reconnect/restart, chunk/world lifecycle,
+non-persistent entity cleanup, broader catalogs and other versions remain open;
+full MythicMobs parity is still incomplete.
+The same artifact passes 2,366 Maven tests and SpotBugs, the 471-probe full strict
+catalog (452 passed, 19 expected rejections), and all 31 focused native regression
+probes in `srv-paper-random-spawn-replace-20261119-r71`. Parity status totals remain
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin.
+See the [variable lifecycle contract](./docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
+
 Timed SkillTree restart update (2026-11-19): `srv-paper-skilltree-expiry-restart-20261119-r1`
 passes 115 observations across three real Paper 1.21.1-133 boots. Two persistent
 mobs retain distinct UUID state; variables that expire during downtime stay absent,
@@ -13,8 +33,9 @@ Focused native fixture `srv-paper-random-spawn-replace-20261119-r70` passes all 
 on this artifact, including 420 variable lifecycle comparisons and six snapshot
 observations. Full strict fixture `srv-paper-skilltree-expiry-strict-20261119-r1` passes
 471 probes (452 passed, 19 expected rejections), with 2,358 Maven tests and SpotBugs.
-This completes the timed persistent SkillTree restart slice; native entity/world/global
-registry save persistence, player lifecycle and full MythicMobs parity remain open.
+This earlier milestone completed the timed persistent SkillTree restart slice.
+Native scoped-registry restart now has the separate evidence above; player lifecycle
+and full MythicMobs parity remain open.
 See the [variable lifecycle contract](docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Variable-lifecycle update (2026-11-19): focused strict fixture
@@ -29,8 +50,9 @@ phases and two paths), plus six Paper snapshot-file observations. It retains
 6,720 variable outputs, 1,020 trigger outputs and 17,680 dynamic Distance comparisons.
 Skill-tree snapshot format 4 preserves absolute deadlines and reads formats 1–3.
 Native location-mechanic deadline behavior and the separate Helstera arithmetic
-extensions are documented. Entity/world/global save persistence and native registry
-restart, connected players, broader catalogs and other versions remain open.
+extensions are documented. Native entity/world/global graceful restart is covered
+by the newer scoped-registry fixture above; connected players, broader catalogs
+and other versions remain open.
 Full Conditions, Mechanics/Skills and Context Targeters remain `mapped-unverified`.
 See the [variable lifecycle contract](docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -42,7 +64,7 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after timed SkillTree restart validation:
+Immediate continuation after scoped-variable restart validation:
 
 1. Extend native condition dispatch beyond the verified entity/location
    predicate slices for caster, target and living/non-living triggers. Location-targeter radius
@@ -60,7 +82,8 @@ Immediate continuation after timed SkillTree restart validation:
    Variable expiry and native INTEGER/FLOAT addition now add 420 lifecycle comparisons;
    six Paper file-round-trip checks retain skill-tree deadlines.
    Three actual Paper boots now verify 115 timed SkillTree observations and four shutdown snapshots.
-   Next compare native entity/world/global save persistence and restart, connected-player registries and
+   Native entity/world/global graceful restart now has a dedicated 432-observation comparison.
+   Next compare connected-player registries, logout/login/restart, world/chunk unload/reload and
    broader trigger/general placeholder families, player
    faction providers, relationship lifecycle/restart, non-living caster combinations
    and remaining generic entity
@@ -92,7 +115,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-skilltree-expiry-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `355bb38ace9484b2a944385f1d6c610e7e6b1624a40f0d39f403e5ef2d63c83d`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,358 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-variable-persistence-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `1313d2459e5dacf818b457fb543c3e0b40b759a9bc43299b8c4ad66da79a4958`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,366 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

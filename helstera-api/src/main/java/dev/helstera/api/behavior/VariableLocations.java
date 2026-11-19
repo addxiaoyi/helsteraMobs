@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Stores persistent location variables for scopes that outlive one skill tree. */
 public final class VariableLocations {
-    private static final Map<String, ExpiringVariables<Location>> VALUES = new ConcurrentHashMap<>();
+    private static final Map<String, ExpiringVariables<StoredLocation>> VALUES = new ConcurrentHashMap<>();
 
     private VariableLocations() {
     }
@@ -23,7 +23,7 @@ public final class VariableLocations {
     public static void set(String scope, String name, BehaviorContext context, Location location, long expiresAt) {
         String key = scopeKey(scope, context);
         if (key == null || name == null || name.isBlank() || location == null) return;
-        VALUES.computeIfAbsent(key, ignored -> new ExpiringVariables<>()).put(name, location.clone(), expiresAt);
+        VALUES.computeIfAbsent(key, ignored -> new ExpiringVariables<>()).put(name, new StoredLocation(location), expiresAt);
     }
 
     public static Optional<Location> get(String scope, String name, BehaviorContext context) {
@@ -37,25 +37,25 @@ public final class VariableLocations {
 
     private static Optional<Location> getByKey(String key, String name) {
         if (key == null || name == null || name.isBlank()) return Optional.empty();
-        ExpiringVariables<Location> values = VALUES.get(key);
-        Location location = values == null ? null : values.get(name);
-        return Optional.ofNullable(location == null ? null : location.clone());
+        ExpiringVariables<StoredLocation> values = VALUES.get(key);
+        StoredLocation location = values == null ? null : values.get(name);
+        return Optional.ofNullable(location == null ? null : location.resolve());
     }
 
     public static long expirationTime(String scope, String name, BehaviorContext context) {
         String key = scopeKey(scope, context);
-        ExpiringVariables<Location> values = key == null ? null : VALUES.get(key);
+        ExpiringVariables<StoredLocation> values = key == null ? null : VALUES.get(key);
         return values == null ? 0 : values.expirationTime(name);
     }
 
     public static Optional<Location> unset(String scope, String name, BehaviorContext context) {
         String key = scopeKey(scope, context);
         if (key == null || name == null || name.isBlank()) return Optional.empty();
-        Map<String, Location> values = VALUES.get(key);
+        Map<String, StoredLocation> values = VALUES.get(key);
         if (values == null) return Optional.empty();
-        Location removed = values.remove(name);
+        StoredLocation removed = values.remove(name);
         if (values.isEmpty()) VALUES.remove(key, values);
-        return Optional.ofNullable(removed == null ? null : removed.clone());
+        return Optional.ofNullable(removed == null ? null : removed.resolve());
     }
 
     public static void clearEntity(Entity entity) {
@@ -67,6 +67,51 @@ public final class VariableLocations {
         if (world == null) return;
         VALUES.remove("world:" + worldIdentity(world));
     }
+
+    /** Coordinates survive unloaded worlds; runtime resolution never substitutes another world. */
+    private static final class StoredLocation {
+        private final SkillTreeContext.LocationSnapshot snapshot;
+        private final java.lang.ref.WeakReference<World> fallback;
+        StoredLocation(Location location) {
+            World world = location.getWorld();
+            snapshot = new SkillTreeContext.LocationSnapshot(world == null ? null : world.getName(),
+                    location.getX(), location.getY(), location.getZ(), location.getYaw(), location.getPitch());
+            fallback = new java.lang.ref.WeakReference<>(world);
+        }
+        StoredLocation(SkillTreeContext.LocationSnapshot snapshot) {
+            this.snapshot = snapshot; fallback = new java.lang.ref.WeakReference<>(null);
+        }
+        Location resolve() {
+            World world = snapshot.world() == null ? null : org.bukkit.Bukkit.getServer() == null
+                    ? fallback.get() : org.bukkit.Bukkit.getWorld(snapshot.world());
+            if (snapshot.world() != null && world == null) return null;
+            return new Location(world, snapshot.x(), snapshot.y(), snapshot.z(), snapshot.yaw(), snapshot.pitch());
+        }
+    }
+
+    public static Map<String, ExpiringVariables.State<SkillTreeContext.LocationSnapshot>> snapshots() {
+        Map<String, ExpiringVariables.State<SkillTreeContext.LocationSnapshot>> result = new java.util.LinkedHashMap<>();
+        VALUES.forEach((key, registry) -> {
+            var state = registry.snapshotWithRetention();
+            Map<String, SkillTreeContext.LocationSnapshot> points = new java.util.LinkedHashMap<>();
+            state.values().forEach((name, value) -> points.put(name, value.snapshot));
+            result.put(key, new ExpiringVariables.State<>(Map.copyOf(points), state.expirations()));
+        });
+        return Map.copyOf(result);
+    }
+
+    public static void restore(Map<String, ScopedVariableSnapshotStore.Registry> registries) {
+        Map<String, ExpiringVariables<StoredLocation>> restored = new java.util.LinkedHashMap<>();
+        registries.forEach((key, registry) -> {
+            var values = new ExpiringVariables<StoredLocation>();
+            registry.locations().forEach((name, location) -> values.put(name, new StoredLocation(location),
+                    registry.locationRetention().getOrDefault(name, 0L)));
+            if (!values.isEmpty()) restored.put(key, values);
+        });
+        VALUES.clear(); VALUES.putAll(restored);
+    }
+
+    public static void clear() { VALUES.clear(); }
 
     public static int scopeCount() {
         return VALUES.size();

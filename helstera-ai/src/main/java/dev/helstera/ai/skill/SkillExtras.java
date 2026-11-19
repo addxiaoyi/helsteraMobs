@@ -7,6 +7,7 @@ import dev.helstera.api.behavior.Targeters;
 import dev.helstera.api.behavior.VariableLocations;
 import dev.helstera.api.behavior.ExpiringVariables;
 import dev.helstera.api.util.VariableDuration;
+import dev.helstera.api.util.VariableLifetime;
 import dev.helstera.api.instance.ModelInstance;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -575,6 +576,7 @@ public final class SkillExtras {
         ENDED_PROJECTILES.clear();
         VARS.clear();
         SCOPED_VALUES.clear();
+        VariableLocations.clear();
         SCORES.clear();
         STANCES.clear();
         GLOBAL_CD.clear();
@@ -597,8 +599,37 @@ public final class SkillExtras {
      */
     private static final Map<Integer, ExpiringVariables<Double>> VARS = new ConcurrentHashMap<>();
 
-    /** Numeric variables stored in caster, target, world, or global scope. */
+    /** Typed variables stored in caster, target, world, or global scope. */
     private static final Map<String, ExpiringVariables<Object>> SCOPED_VALUES = new ConcurrentHashMap<>();
+
+    /** Captures all scalar/location state before instance shutdown tears down entity registries. */
+    public static void saveScopedVariables(java.io.File file) throws java.io.IOException {
+        Map<String, dev.helstera.api.behavior.ScopedVariableSnapshotStore.Registry> result = new java.util.LinkedHashMap<>();
+        var locations = VariableLocations.snapshots();
+        java.util.Set<String> keys = new java.util.HashSet<>(SCOPED_VALUES.keySet()); keys.addAll(locations.keySet());
+        for (String key : keys) {
+            var values = SCOPED_VALUES.get(key);
+            var scalar = values == null ? new ExpiringVariables.State<Object>(Map.of(), Map.of()) : values.snapshotWithRetention();
+            var points = locations.get(key);
+            result.put(key, new dev.helstera.api.behavior.ScopedVariableSnapshotStore.Registry(scalar.values(),
+                    points == null ? Map.of() : points.values(), scalar.expirations(), points == null ? Map.of() : points.expirations()));
+        }
+        dev.helstera.api.behavior.ScopedVariableSnapshotStore.save(file, result);
+    }
+
+    /** Validate the complete document before replacing any live scope. */
+    public static void loadScopedVariables(java.io.File file) throws java.io.IOException {
+        var loaded = file.exists() ? dev.helstera.api.behavior.ScopedVariableSnapshotStore.load(file) : Map.<String,
+                dev.helstera.api.behavior.ScopedVariableSnapshotStore.Registry>of();
+        Map<String, ExpiringVariables<Object>> restored = new java.util.LinkedHashMap<>();
+        loaded.forEach((key, registry) -> {
+            var values = new ExpiringVariables<Object>();
+            registry.variables().forEach((name, value) -> values.put(name, value, registry.variableRetention().getOrDefault(name, 0L)));
+            if (!values.isEmpty()) restored.put(key, values);
+        });
+        VariableLocations.restore(loaded);
+        SCOPED_VALUES.clear(); SCOPED_VALUES.putAll(restored);
+    }
 
     private static final Map<Integer, Map<String, Integer>> SCORES = new ConcurrentHashMap<>();
     /** Last observed entity position for Mythic's exact/approximate moving condition. */
@@ -7108,7 +7139,7 @@ public final class SkillExtras {
                 Map.entry("branch-unlock", (SkillCatalog.ActionFactory) a -> branchUnlockAction(a, null)),
                 Map.entry("variable-location-set", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
-                    VariableDuration duration = VariableDuration.parse(a);
+                    VariableLifetime lifetime = VariableLifetime.parse(a);
                     return ctx -> {
                         if (ctx == null || ref.name().isEmpty()) return;
                         Location location = ctx.targetLocation().orElseGet(() -> ctx.targetEntity()
@@ -7117,7 +7148,7 @@ public final class SkillExtras {
                         if (location == null) return;
                         unsetScopedVariable(ctx, ref);
                         // Native SetVariableLocation passes its raw millisecond duration as the deadline.
-                        long expiresAt = duration.ticks() > 0 ? Math.multiplyExact(duration.ticks(), 50) : 0;
+                        long expiresAt = lifetime.locationExpirationTime();
                         if (ref.scope().equals("skill")) {
                             ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location, expiresAt));
                         } else {
@@ -7128,9 +7159,10 @@ public final class SkillExtras {
                 Map.entry("set-variable", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     Object value = parseVariableValue(a);
-                    VariableDuration duration = VariableDuration.parse(a);
-                    return ctx -> setRawVariable(ctx, ref, value, duration.expirationTime());
-                }),                Map.entry("var-set", (SkillCatalog.ActionFactory) a -> {
+                    VariableLifetime lifetime = VariableLifetime.parse(a);
+                    return ctx -> setRawVariable(ctx, ref, value, lifetime.expirationTime());
+                }),
+                Map.entry("var-set", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     double value = variableNumber(a, 1, 0, "value", "val", "amount");
                     VariableDuration duration = VariableDuration.parse(a);
@@ -7138,7 +7170,7 @@ public final class SkillExtras {
                 }),
                 Map.entry("variable-add", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
-                    VariableDuration duration = VariableDuration.parse(a);
+                    VariableDuration duration = VariableLifetime.parse(a).duration();
                     String raw = keyedArg(a, "value", "val", "v", "amount", "a");
                     if (raw == null) raw = str(a, 1, "0");
                     String amount = raw;

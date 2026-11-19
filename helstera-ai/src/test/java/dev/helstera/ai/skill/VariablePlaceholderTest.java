@@ -174,13 +174,13 @@ class VariablePlaceholderTest {
         action("variableadd{var=skill.Count;amount=2;expire=2400}", c);
         assertTrue(tree.variableExpiration("Count") > deadline);
         action("setvariable{var=skill.Count;type=STRING;value=permanent}", c);
-        assertEquals(0, tree.variableExpiration("Count"));
+        assertEquals(1, tree.variableExpiration("Count"));
         tree.setVariable("Count", 3, 2);
         assertEquals("fallback", Placeholders.resolve("<skill.var.Count|fallback>", c));
         assertFalse(registry.testCondition(skills.bindCondition("has-var Count"), c));
         action("setvariable{var=skill.Count;type=INTEGER;value=9;d=-1}", c);
         assertEquals("9", Placeholders.resolve("<skill.var.Count>", c));
-        assertEquals(0, tree.variableExpiration("Count"));
+        assertEquals(-50, tree.variableExpiration("Count"));
     }
 
     @Test
@@ -219,6 +219,40 @@ class VariablePlaceholderTest {
         assertEquals(7.0, tree.variable("Double").orElseThrow());
         action("var-add Extension 2", c);
         assertEquals(2.0, tree.variable("Extension").orElseThrow());
+    }
+
+    @Test
+    void scopedPersistencePreservesTypesAndAddRetentionWithoutLeakingEntityScopes(@org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) throws Exception {
+        SkillExtras.resetRuntimeHooks();
+        World world = world(); var a = entity(world); var b = entity(world); var c = context(a, b, a, world);
+        var file = directory.resolve("variables.yml").toFile();
+        try {
+            action("setvariable{var=world.Transient;value=7}", c);
+            action("variableadd{var=world.Transient;amount=2;save=true}", c);
+            action("setvariable{var=world.Saved;value=7;save=true}", c);
+            action("variableadd{var=world.Saved;amount=2;save=false}", c);
+            action("setvariable{var=caster.Count;value=7}", c);
+            action("setvariable{var=target.Count;value=3;save=true}", c);
+            action("setvariable{var=global.Rate;type=FLOAT;value=3.25;duration=1200;save=false}", c);
+            SkillExtras.saveScopedVariables(file);
+            var state = dev.helstera.api.behavior.ScopedVariableSnapshotStore.load(file);
+            long deadline = state.get("global").variableRetention().get("Rate");
+            SkillExtras.resetRuntimeHooks(); SkillExtras.loadScopedVariables(file);
+            assertNull(SkillExtras.placeholderVariable(c, "world", "Transient"));
+            assertEquals(9, SkillExtras.placeholderVariable(c, "world", "Saved"));
+            assertEquals("7 3 7", Placeholders.resolve("<caster.var.Count> <target.var.Count> <trigger.var.Count>", c));
+            assertEquals(3.25F, SkillExtras.placeholderVariable(c, "global", "Rate"));
+            SkillExtras.saveScopedVariables(file);
+            assertEquals(deadline, dev.helstera.api.behavior.ScopedVariableSnapshotStore.load(file).get("global").variableRetention().get("Rate"));
+            action("variable-unset{var=global.Rate}", c); SkillExtras.forgetEntity(a);
+            SkillExtras.saveScopedVariables(file); SkillExtras.resetRuntimeHooks(); SkillExtras.loadScopedVariables(file);
+            assertNull(SkillExtras.placeholderVariable(c, "global", "Rate"));
+            assertNull(SkillExtras.placeholderVariable(c, "caster", "Count"));
+            assertEquals(3, SkillExtras.placeholderVariable(c, "target", "Count"));
+            java.nio.file.Files.writeString(file.toPath(), "registry-format: 1\nregistries: [bad]\n");
+            assertThrows(java.io.IOException.class, () -> SkillExtras.loadScopedVariables(file));
+            assertEquals(3, SkillExtras.placeholderVariable(c, "target", "Count"));
+        } finally { SkillExtras.resetRuntimeHooks(); }
     }
 
 }

@@ -308,6 +308,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 // SkillExtras 里的 dot / despawn 等动作需要调度器与实例管理器，
                 // 同样走注入钩子而非直接依赖，保证目录类可被单元测试加载。
                 dev.helstera.ai.skill.SkillExtras.host(this);
+                try {
+                    dev.helstera.ai.skill.SkillExtras.loadScopedVariables(new java.io.File(getDataFolder(), "scoped-variables.yml"));
+                    scopedVariablesLoaded = true;
+                } catch (java.io.IOException e) {
+                    getLogger().log(java.util.logging.Level.SEVERE, "Could not restore scoped variables; disk writes disabled to preserve the file", e);
+                }
                 org.bukkit.plugin.Plugin mythicMobs = getServer().getPluginManager().getPlugin("MythicMobs");
                 dev.helstera.ai.skill.SkillExtras.mythicPackLookup(packId ->
                         mythicMobs == null || !mythicMobs.isEnabled() ? null
@@ -961,8 +967,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private boolean scopedVariablesLoaded;
+
     @Override
     public void onDisable() {
+        if (scopedVariablesLoaded) {
+            try { dev.helstera.ai.skill.SkillExtras.saveScopedVariables(new java.io.File(getDataFolder(), "scoped-variables.yml")); }
+            catch (java.io.IOException e) { getLogger().log(java.util.logging.Level.SEVERE, "Could not save scoped variables; previous file retained", e); }
+            scopedVariablesLoaded = false;
+        }
         dev.helstera.ai.skill.SkillExtras.itemResolver(null);
         dev.helstera.ai.skill.SkillExtras.claimedItemPredicate(null);
         if (auraCleanupTask != null) {
@@ -30430,6 +30443,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onConfirmedEntityDeath(org.bukkit.event.entity.EntityDeathEvent e) {
         if (!e.isCancelled()) {
+            if (!(e.getEntity() instanceof org.bukkit.entity.Player)) {
+                dev.helstera.ai.skill.SkillExtras.forgetEntity(e.getEntity());
+                dev.helstera.api.behavior.VariableLocations.clearEntity(e.getEntity());
+            }
             removePersistentMobSkillTreeSnapshot(e.getEntity());
             releasePersistentMobChunk(e.getEntity());
         }
@@ -33328,7 +33345,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @EventHandler
     public void onWorldUnload(WorldUnloadEvent e) {
-        dev.helstera.api.behavior.VariableLocations.clearWorld(e.getWorld());
+        // Scoped variables survive world unload; locations resolve the world lazily when it returns.
         if (instances != null) ((InstanceManagerImpl) instances).despawnWorld(e.getWorld());
     }
 

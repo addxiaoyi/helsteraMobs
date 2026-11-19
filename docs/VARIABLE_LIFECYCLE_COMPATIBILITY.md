@@ -64,7 +64,7 @@ set expired during downtime while the second set retains its exact deadline, the
 kills one mob. The third boot confirms the survivor restores without expired values
 or the dead mob's snapshot returning. Copies of all four shutdown snapshots are
 checked and archived alongside all three boot logs. This validates Helstera's
-persisted skill-tree extension; it does not implement native registry `save=true`.
+persisted skill-tree extension. Native registry persistence has the separate evidence below.
 
 Validation uses real native variable mechanics and production runtime actions
 through both direct and imported paths. Three actual-time phases cover short,
@@ -78,9 +78,48 @@ exact deadline boundaries, invalid input, replacement, past-deadline restoration
 and atomic preservation. See [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md)
 for artifact hashes and counts.
 
-This milestone does not implement native `save=true` persistence for entity,
-player, world or global registries. World unload lifecycle, player logout/login,
-nested dynamic variable names, native
+Native registry persistence now writes `scoped-variables.yml` before plugin shutdown
+tears down instance state, then restores it before skills run. The document uses
+UUID entity/world scopes, typed values, immutable location coordinates/world names,
+and separate retention metadata. Atomic replacement preserves the last valid file
+when a write fails. Invalid startup data disables disk writes for that session,
+so shutdown cannot overwrite the unreadable file. Expired values are pruned without
+resetting surviving deadlines. Unloaded worlds retain their location coordinates;
+lookups resolve the original world when available, never a replacement world.
+
+The pinned public MM 5.7.2 shutdown paths differ by scope:
+
+| Value metadata | World after graceful restart | Global / persistent native entity after graceful restart |
+| --- | --- | --- |
+| Omitted duration/save, or zero duration with `save=false` | Absent | Retained |
+| Zero/omitted duration with `save=true` | Retained | Retained |
+| Negative duration, including `save=false` | Retained | Retained |
+| Positive scalar duration, either save flag | Retained until original deadline | Retained until original deadline |
+| Deadline elapsed during downtime | Absent | Absent |
+
+Native `variableadd` preserves the existing retention marker unless a positive
+new duration refreshes the deadline; its `save` flag alone does not change retention.
+`setvariable` and `setvariablelocation` replace the metadata. Explicit save flags
+are validated as true/false, with quoted/case-insensitive values accepted and
+malformed or duplicate flags rejected/preserved by binding/import.
+
+Focused fixture `srv-paper-variable-persistence-comparison-20261119-r2`
+([report](../tools/paper-integration/reports/paper-1.21.1-variable-persistence-20261119-r2.json))
+passes 432 observations across three real Paper 1.21.1-133 boots.
+The runner covers 18 cases across caster, target, world and
+global registries through direct and imported actions. Eight native persistent cows
+retain their UUIDs; their saved chunks are explicitly loaded before resolving entities.
+The second boot validates typed values, world/coordinates and unchanged absolute
+deadlines, then removes every probe variable. The third boot verifies absence.
+Server observations have explicit expected presence/value assertions in addition to
+native/runtime equality. Three shutdown snapshots and redacted logs are hashed;
+the evidence validator rejects missing/duplicate rows, lost identities, changed
+deadlines, vacuous absence, wrong values and resaved deleted data.
+
+Connected-player logout/login and restart, chunk/world unload/reload parity,
+crash recovery, non-persistent entity cleanup, nested dynamic variable names,
 SetVariable expression/default-value semantics, the full arithmetic/location
-mechanic catalog, all save combinations and other server or
-MythicMobs versions remain open. Full MythicMobs parity is still incomplete.
+mechanic catalog, broader save combinations and other server/MythicMobs versions
+remain open. The shutdown snapshot is not a crash-durable per-mutation journal.
+The generic arithmetic and typed-location extensions retain their documented
+boundaries. Full MythicMobs parity is still incomplete.
