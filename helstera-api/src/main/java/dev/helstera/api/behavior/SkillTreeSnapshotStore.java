@@ -20,7 +20,7 @@ import java.util.Optional;
 
 /** YAML persistence for SkillTreeContext snapshots; live entities are intentionally excluded. */
 public final class SkillTreeSnapshotStore {
-    private static final int SNAPSHOT_FORMAT_VERSION = 3;
+    private static final int SNAPSHOT_FORMAT_VERSION = 4;
     private static final int MAX_VARIABLE_COLLECTION_SIZE = 4096;
     private static final int MAX_VARIABLE_VALUE_NODES = 16384;
     private static final int MAX_VARIABLE_VALUE_DEPTH = 16;
@@ -71,6 +71,8 @@ public final class SkillTreeSnapshotStore {
 
     private static void write(ConfigurationSection section, SkillTreeContext.Snapshot snapshot)
             throws IOException {
+        validateExpirations(snapshot.variableExpirations(), snapshot.variables());
+        validateExpirations(snapshot.locationExpirations(), snapshot.locations());
         section.set("snapshot-format", SNAPSHOT_FORMAT_VERSION);
         ConfigurationSection variables = section.createSection("variables");
         ConfigurationSection variableEntries = variables.createSection("entries");
@@ -78,6 +80,8 @@ public final class SkillTreeSnapshotStore {
         for (var entry : snapshot.variables().entrySet()) {
             ConfigurationSection variable = variableEntries.createSection(encodedKey(entry.getKey()));
             variable.set("name", entry.getKey());
+            if (snapshot.variableExpirations().containsKey(entry.getKey()))
+                variable.set("expires-at", snapshot.variableExpirations().get(entry.getKey()));
             writeVariableValue(variable.createSection("value"), entry.getValue(), 0, valueNodes);
         }
         ConfigurationSection locations = section.createSection("locations");
@@ -85,6 +89,8 @@ public final class SkillTreeSnapshotStore {
         snapshot.locations().forEach((name, value) -> {
             ConfigurationSection location = locationEntries.createSection(encodedKey(name));
             location.set("name", name);
+            if (snapshot.locationExpirations().containsKey(name))
+                location.set("expires-at", snapshot.locationExpirations().get(name));
             location.set("world", value.world());
             location.set("x", value.x());
             location.set("y", value.y());
@@ -111,6 +117,7 @@ public final class SkillTreeSnapshotStore {
         if (format < 1 || format > SNAPSHOT_FORMAT_VERSION) {
             throw new IOException("unsupported skill-tree snapshot format: " + format);
         }
+        Map<String, Long> variableExpirations = new LinkedHashMap<>(), locationExpirations = new LinkedHashMap<>();
         Map<String, Object> variables = new LinkedHashMap<>();
         int[] valueNodes = {0};
         ConfigurationSection variableSection = section.getConfigurationSection("variables");
@@ -126,6 +133,7 @@ public final class SkillTreeSnapshotStore {
                             throw new IOException("invalid skill-tree variable entry: " + key);
                         }
                         String name = variable.getString("name");
+                        readExpiration(variable, name, format, variableExpirations);
                         Object value = format == 2 ? variable.get("value")
                                 : readVariableValue(variable.getConfigurationSection("value"), 0, valueNodes);
                         if (name == null || name.isBlank()
@@ -151,6 +159,7 @@ public final class SkillTreeSnapshotStore {
                     if (name == null || name.isBlank()) {
                         throw new IOException("invalid skill-tree location name: " + key);
                     }
+                    readExpiration(value, name, format, locationExpirations);
                     locations.put(name, new SkillTreeContext.LocationSnapshot(
                             value.getString("world"), value.getDouble("x"), value.getDouble("y"),
                             value.getDouble("z"), (float) value.getDouble("yaw"),
@@ -182,7 +191,25 @@ public final class SkillTreeSnapshotStore {
             }
         }
         return new SkillTreeContext.Snapshot(variables, locations, requirements, unlocked,
-                new java.util.LinkedHashSet<>(section.getStringList("damage-tags")), parent);
+                new java.util.LinkedHashSet<>(section.getStringList("damage-tags")), parent,
+                variableExpirations, locationExpirations);
+    }
+
+    private static void validateExpirations(Map<String, Long> expirations, Map<String, ?> values) throws IOException {
+        for (var entry : expirations.entrySet()) {
+            if (!values.containsKey(entry.getKey()) || entry.getValue() <= 1)
+                throw new IOException("invalid variable expiration: " + entry.getKey());
+        }
+    }
+
+    private static void readExpiration(ConfigurationSection section, String name, int format,
+                                       Map<String, Long> expirations) throws IOException {
+        if (!section.contains("expires-at")) return;
+        Object value = section.get("expires-at");
+        if (format < 4 || !(value instanceof Long || value instanceof Integer)
+                || ((Number) value).longValue() <= 1 || name == null)
+            throw new IOException("invalid variable expiration: " + name);
+        expirations.put(name, ((Number) value).longValue());
     }
 
     private static String encodedKey(String value) {

@@ -63,7 +63,7 @@ class VariablePlaceholderTest {
             var self = c.withTargetEntity(caster);
             assertEquals("7", Placeholders.resolve("<target.var.Count>", self));
             action("variableadd{var=target.Count;amount=2}", self);
-            assertEquals("9.0 9.0", Placeholders.resolve("<caster.var.Count> <trigger.var.Count>", c));
+            assertEquals("9 9", Placeholders.resolve("<caster.var.Count> <trigger.var.Count>", c));
             assertTrue(registry.testCondition(skills.bindCondition("variable-equals{var=caster.Count;value=9}"), c));
             action("variable-unset{var=target.Count}", self);
             assertEquals("<caster.var.Count> 3 <trigger.var.Count>",
@@ -162,4 +162,63 @@ class VariablePlaceholderTest {
             assertEquals("7.0", Placeholders.resolve("<skill.var.Count>", legacy));
         } finally { SkillExtras.forget(c.instance().instanceId()); }
     }
+    @Test
+    void timedWritesReplacementAndArithmeticKeepTheCorrectDeadline() {
+        World world = world(); var entity = entity(world); var c = context(entity, entity, entity, world);
+        var tree = c.skillTree().orElseThrow();
+        action("setvariable{var=skill.Count;type=INTEGER;value=7;duration=1200}", c);
+        long deadline = tree.variableExpiration("Count");
+        assertTrue(deadline > System.currentTimeMillis());
+        action("variableadd{var=skill.Count;amount=2}", c);
+        assertEquals(deadline, tree.variableExpiration("Count"));
+        action("variableadd{var=skill.Count;amount=2;expire=2400}", c);
+        assertTrue(tree.variableExpiration("Count") > deadline);
+        action("setvariable{var=skill.Count;type=STRING;value=permanent}", c);
+        assertEquals(0, tree.variableExpiration("Count"));
+        tree.setVariable("Count", 3, 2);
+        assertEquals("fallback", Placeholders.resolve("<skill.var.Count|fallback>", c));
+        assertFalse(registry.testCondition(skills.bindCondition("has-var Count"), c));
+        action("setvariable{var=skill.Count;type=INTEGER;value=9;d=-1}", c);
+        assertEquals("9", Placeholders.resolve("<skill.var.Count>", c));
+        assertEquals(0, tree.variableExpiration("Count"));
+    }
+
+    @Test
+    void locationDeadlinesReachAllReadersAndMalformedDurationsCannotBind() {
+        World world = world(); var entity = entity(world); var c = context(entity, entity, entity, world);
+        try {
+            VariableLocations.set("caster", "Expired", c, entity.getLocation(), 2);
+            assertTrue(VariableLocations.get("target", "Expired", c).isEmpty());
+            assertEquals("fallback", Placeholders.resolve("<trigger.var.Expired|fallback>", c));
+            action("setvariable{var=caster.Location;type=LOCATION;value=1,2,3;duration=1200}", c);
+            assertTrue(VariableLocations.expirationTime("target", "Location", c) > System.currentTimeMillis());
+            action("setvariablelocation{var=caster.Location;duration=20}", c);
+            assertTrue(VariableLocations.get("caster", "Location", c).isEmpty());
+            assertNull(skills.bindAction("setvariable{var=skill.Count;type=INTEGER;value=9;duration=NaN}"));
+            assertNull(skills.bindAction("variableadd{var=skill.Count;amount=1;d=1;expire=2}"));
+        } finally { SkillExtras.forgetEntity(entity); VariableLocations.clearEntity(entity); }
+    }
+
+    @Test
+    void nativeAdditionPreservesNumericTypesAndDoesNotResurrectExpiredValues() {
+        World world = world(); var entity = entity(world); var c = context(entity, entity, entity, world);
+        var tree = c.skillTree().orElseThrow();
+        action("setvariable{var=skill.Integer;value=7;duration=1200}", c);
+        action("variableadd{var=skill.Integer;amount=2.9}", c);
+        assertEquals(9, tree.variable("Integer").orElseThrow());
+        set(c, "skill.Float", "FLOAT", "0.125");
+        action("variableadd{var=skill.Float;amount=0.125}", c);
+        assertEquals(0.25f, tree.variable("Float").orElseThrow());
+        tree.setVariable("Expired", 7, 2);
+        action("variableadd{var=skill.Expired;amount=2;duration=40}", c);
+        action("variableadd{var=skill.Missing;amount=2}", c);
+        assertTrue(tree.variable("Expired").isEmpty());
+        assertTrue(tree.variable("Missing").isEmpty());
+        set(c, "skill.Double", "DOUBLE", "7");
+        action("variableadd{var=skill.Double;amount=2}", c);
+        assertEquals(7.0, tree.variable("Double").orElseThrow());
+        action("var-add Extension 2", c);
+        assertEquals(2.0, tree.variable("Extension").orElseThrow());
+    }
+
 }

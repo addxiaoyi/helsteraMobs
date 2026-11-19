@@ -3331,7 +3331,7 @@ public final class SkillService {
     private static boolean isVariableMechanic(String name) {
         return switch (name) {
             case "variable-unset", "var-unset", "variable-location-set", "location-unset",
-                    "var-set", "set-variable", "var-add", "var-math",
+                    "var-set", "set-variable", "var-add", "variable-add", "var-math",
                     "score-set", "score-add", "signal", "dot", "mythic-aura",
                     "mythic-aura-remove", "add-to-audience", "remove-from-audience",
                     "unset-audience", "teleport-mythic", "modify-damage" -> true;
@@ -3354,7 +3354,7 @@ public final class SkillService {
             case "unsetaudience", "clearaudience", "audienceclear", "unset-audience" -> "unset-audience";
             case "variableunset", "unsetvariable", "unsetvar", "varunset" -> "variable-unset";
             case "setvariable", "setvar" -> "set-variable";
-            case "variableadd", "varadd" -> "var-add";
+            case "variableadd", "varadd" -> "variable-add";
             case "variablemath", "varmath" -> "var-math";
             case "setvariablelocation", "variablelocationset", "setvarloc" -> "variable-location-set";
             case "locationunset" -> "location-unset";

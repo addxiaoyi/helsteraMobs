@@ -27,8 +27,16 @@ public final class SkillTreeContext {
                            Map<String, Set<String>> branchRequirements,
                            Set<String> unlockedBranches,
                            Set<String> damageTags,
-                           Optional<Snapshot> parent) {
+                           Optional<Snapshot> parent,
+                           Map<String, Long> variableExpirations, Map<String, Long> locationExpirations) {
+        public Snapshot(Map<String, Object> variables, Map<String, LocationSnapshot> locations,
+                        Map<String, Set<String>> branchRequirements, Set<String> unlockedBranches,
+                        Set<String> damageTags, Optional<Snapshot> parent) {
+            this(variables, locations, branchRequirements, unlockedBranches, damageTags, parent, Map.of(), Map.of());
+        }
         public Snapshot {
+            variableExpirations = Map.copyOf(variableExpirations == null ? Map.of() : variableExpirations);
+            locationExpirations = Map.copyOf(locationExpirations == null ? Map.of() : locationExpirations);
             Map<String, Object> variableCopy = new java.util.LinkedHashMap<>();
             if (variables != null) {
                 variables.forEach((name, value) -> variableCopy.put(name, copyVariableValue(value)));
@@ -103,10 +111,10 @@ public final class SkillTreeContext {
     }
     private final Entity trigger;
     private final SkillTreeContext parent;
-    private final ConcurrentHashMap<String, Object> variables = new ConcurrentHashMap<>();
+    private final ExpiringVariables<Object> variables = new ExpiringVariables<>();
     private volatile List<LivingEntity> targets;
     private volatile boolean targetsSet;
-    private final ConcurrentHashMap<String, Location> locations = new ConcurrentHashMap<>();
+    private final ExpiringVariables<Location> locations = new ExpiringVariables<>();
     private final ConcurrentHashMap<String, Set<String>> branchRequirements = new ConcurrentHashMap<>();
     private final java.util.Set<String> unlockedBranches = ConcurrentHashMap.newKeySet();
     private volatile Set<String> damageTags = Set.of();
@@ -166,6 +174,16 @@ public final class SkillTreeContext {
         variables.put(name, value);
     }
 
+    public void setVariable(String name, Object value, long expiresAt) {
+        if (name == null || name.isBlank() || value == null) return;
+        variables.put(name, value, expiresAt);
+    }
+
+    public long variableExpiration(String name) {
+        return variables.containsKey(name) ? variables.expirationTime(name)
+                : parent == null ? 0 : parent.variableExpiration(name);
+    }
+
     public Optional<Object> unsetVariable(String name) {
         if (name == null || name.isBlank()) return Optional.empty();
         return Optional.ofNullable(variables.remove(name));
@@ -188,6 +206,16 @@ public final class SkillTreeContext {
     public void setLocation(String name, Location location) {
         if (name == null || name.isBlank() || location == null) return;
         locations.put(name, location.clone());
+    }
+
+    public void setLocation(String name, Location location, long expiresAt) {
+        if (name == null || name.isBlank() || location == null) return;
+        locations.put(name, location.clone(), expiresAt);
+    }
+
+    public long locationExpiration(String name) {
+        return locations.containsKey(name) ? locations.expirationTime(name)
+                : parent == null ? 0 : parent.locationExpiration(name);
     }
 
     public Map<String, Location> locations() {
@@ -242,17 +270,20 @@ public final class SkillTreeContext {
 
     /** Captures local state and its parent chain without serializing live entities. */
     public Snapshot snapshot() {
+        var variableState = variables.snapshot();
+        var locationState = locations.snapshot();
         Map<String, Object> savedVariables = new java.util.LinkedHashMap<>();
-        variables.forEach((name, value) -> {
+        variableState.values().forEach((name, value) -> {
             if (!Snapshot.isPersistentVariableValue(value, 0, new int[]{0})) {
                 throw new IllegalStateException("unsupported skill-tree variable type for '" + name + "'");
             }
             savedVariables.put(name, Snapshot.copyVariableValue(value));
         });
         Map<String, LocationSnapshot> savedLocations = new java.util.LinkedHashMap<>();
-        locations.forEach((name, location) -> savedLocations.put(name, toSnapshot(location)));
+        locationState.values().forEach((name, location) -> savedLocations.put(name, toSnapshot(location)));
         return new Snapshot(savedVariables, savedLocations, branchRequirements, unlockedBranches, damageTags,
-                parent == null ? Optional.empty() : Optional.of(parent.snapshot()));
+                parent == null ? Optional.empty() : Optional.of(parent.snapshot()),
+                variableState.expirations(), locationState.expirations());
     }
 
     /** Restores state while allowing the caller to resolve current trigger and target entities. */
@@ -263,12 +294,14 @@ public final class SkillTreeContext {
         SkillTreeContext parent = snapshot.parent()
                 .map(value -> restore(value, trigger, targets, worldResolver)).orElse(null);
         SkillTreeContext restored = new SkillTreeContext(trigger, targets, null, parent);
-        restored.variables.putAll(snapshot.variables());
+        snapshot.variables().forEach((name, value) -> restored.variables.put(name, value,
+                snapshot.variableExpirations().getOrDefault(name, 0L)));
         snapshot.branchRequirements().forEach(restored.branchRequirements::put);
         restored.unlockedBranches.addAll(snapshot.unlockedBranches());
         restored.damageTags = snapshot.damageTags();
         snapshot.locations().forEach((name, location) ->
-                restored.locations.put(name, fromSnapshot(location, worldResolver)));
+                restored.locations.put(name, fromSnapshot(location, worldResolver),
+                        snapshot.locationExpirations().getOrDefault(name, 0L)));
         return restored;
     }
 

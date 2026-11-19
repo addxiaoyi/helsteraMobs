@@ -5,6 +5,8 @@ import dev.helstera.api.behavior.BehaviorContext;
 import dev.helstera.api.behavior.SkillTreeContext;
 import dev.helstera.api.behavior.Targeters;
 import dev.helstera.api.behavior.VariableLocations;
+import dev.helstera.api.behavior.ExpiringVariables;
+import dev.helstera.api.util.VariableDuration;
 import dev.helstera.api.instance.ModelInstance;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
@@ -593,10 +595,10 @@ public final class SkillExtras {
      * <p>按实例 id 分桶，销毁时经 {@link #forget(int)} 回收——不回收的话，
      * 变量表随累计生成量无界增长，是那种跑一夜后内存缓慢上涨的典型来源。</p>
      */
-    private static final Map<Integer, Map<String, Double>> VARS = new ConcurrentHashMap<>();
+    private static final Map<Integer, ExpiringVariables<Double>> VARS = new ConcurrentHashMap<>();
 
     /** Numeric variables stored in caster, target, world, or global scope. */
-    private static final Map<String, Map<String, Object>> SCOPED_VALUES = new ConcurrentHashMap<>();
+    private static final Map<String, ExpiringVariables<Object>> SCOPED_VALUES = new ConcurrentHashMap<>();
 
     private static final Map<Integer, Map<String, Integer>> SCORES = new ConcurrentHashMap<>();
     /** Last observed entity position for Mythic's exact/approximate moving condition. */
@@ -662,7 +664,9 @@ public final class SkillExtras {
 
     /** 变量表快照，供 /helstera debug 查看。 */
     public static Map<Integer, Map<String, Double>> variableSnapshot() {
-        return Map.copyOf(VARS);
+        Map<Integer, Map<String, Double>> snapshot = new HashMap<>();
+        VARS.forEach((id, values) -> snapshot.put(id, Map.copyOf(values)));
+        return Map.copyOf(snapshot);
     }
 
     // ------------------------------------------------------------------
@@ -7104,6 +7108,7 @@ public final class SkillExtras {
                 Map.entry("branch-unlock", (SkillCatalog.ActionFactory) a -> branchUnlockAction(a, null)),
                 Map.entry("variable-location-set", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
+                    VariableDuration duration = VariableDuration.parse(a);
                     return ctx -> {
                         if (ctx == null || ref.name().isEmpty()) return;
                         Location location = ctx.targetLocation().orElseGet(() -> ctx.targetEntity()
@@ -7111,34 +7116,66 @@ public final class SkillExtras {
                                 .orElseGet(() -> ctx.origin().orElse(null)));
                         if (location == null) return;
                         unsetScopedVariable(ctx, ref);
+                        // Native SetVariableLocation passes its raw millisecond duration as the deadline.
+                        long expiresAt = duration.ticks() > 0 ? Math.multiplyExact(duration.ticks(), 50) : 0;
                         if (ref.scope().equals("skill")) {
-                            ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location));
+                            ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location, expiresAt));
                         } else {
-                            VariableLocations.set(ref.scope(), ref.name(), ctx, location);
+                            VariableLocations.set(ref.scope(), ref.name(), ctx, location, expiresAt);
                         }
                     };
                 }),
                 Map.entry("set-variable", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     Object value = parseVariableValue(a);
-                    return ctx -> setRawVariable(ctx, ref, value);
+                    VariableDuration duration = VariableDuration.parse(a);
+                    return ctx -> setRawVariable(ctx, ref, value, duration.expirationTime());
                 }),                Map.entry("var-set", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     double value = variableNumber(a, 1, 0, "value", "val", "amount");
-                    return ctx -> setVariable(ctx, ref, value);
+                    VariableDuration duration = VariableDuration.parse(a);
+                    return ctx -> setRawVariable(ctx, ref, value, duration.expirationTime());
+                }),
+                Map.entry("variable-add", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    VariableDuration duration = VariableDuration.parse(a);
+                    String raw = keyedArg(a, "value", "val", "v", "amount", "a");
+                    if (raw == null) raw = str(a, 1, "0");
+                    String amount = raw;
+                    return ctx -> {
+                        if (ctx == null || ref.name().isEmpty()) return;
+                        // Capture the deadline before the value: a boundary crossing cannot make it permanent.
+                        long previousExpiration = variableExpiration(ctx, ref);
+                        Object current = rawVariable(ctx, ref);
+                        if (!(current instanceof Integer || current instanceof Float)) return;
+                        float increment = (float) Placeholders.resolveNumber(amount, ctx, Double.NaN);
+                        if (!Float.isFinite(increment)) return;
+                        Object next;
+                        if (current instanceof Integer integer) next = integer + (int) increment;
+                        else {
+                            float value = (Float) current;
+                            if (!Float.isFinite(value)) return;
+                            next = java.math.BigDecimal.valueOf(value).add(java.math.BigDecimal.valueOf(increment)).floatValue();
+                        }
+                        long expiresAt = duration.ticks() > 0 ? duration.expirationTime() : previousExpiration;
+                        setRawVariable(ctx, ref, next, expiresAt);
+                    };
                 }),
                 Map.entry("var-add", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
+                    VariableDuration duration = VariableDuration.parse(a);
                     double amount = variableNumber(a, 1, 0, "value", "val", "amount");
                     return ctx -> {
                         if (ctx == null || ref.name().isEmpty()) return;
                         double current = varOf(ctx, ref);
                         if (current == Double.NEGATIVE_INFINITY) current = 0;
-                        setVariable(ctx, ref, current + amount);
+                        long expiresAt = duration.ticks() > 0 ? duration.expirationTime() : variableExpiration(ctx, ref);
+                        setRawVariable(ctx, ref, current + amount, expiresAt);
                     };
                 }),
                 Map.entry("var-math", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
+                    VariableDuration duration = VariableDuration.parse(a);
                     String operation = keyedArg(a, "op", "operation");
                     if (operation == null) operation = str(a, 1, "+");
                     double value = variableNumber(a, 2, 0, "value", "val", "amount");
@@ -7154,7 +7191,8 @@ public final class SkillExtras {
                             case "/" -> value == 0 ? current : current / value;
                             default -> current;
                         };
-                        setVariable(ctx, ref, next);
+                        long expiresAt = duration.ticks() > 0 ? duration.expirationTime() : variableExpiration(ctx, ref);
+                        setRawVariable(ctx, ref, next, expiresAt);
                     };
                 }),                Map.entry("score-set", (SkillCatalog.ActionFactory) a -> {
                     String parsedName = keyedArg(a, "objective", "score", "name", "o");
@@ -9202,7 +9240,7 @@ public final class SkillExtras {
 
     private static Object parseVariableValue(List<String> args) {
         String type = keyedArg(args, "type");
-        if (type == null) type = "DOUBLE";
+        if (type == null) type = "INTEGER";
         String raw = keyedArg(args, "value", "val");
         if (raw == null) raw = str(args, 1, "");
         return switch (type.trim().toUpperCase(Locale.ROOT)) {
@@ -9253,27 +9291,27 @@ public final class SkillExtras {
         return Map.copyOf(values);
     }
 
-    private static void setRawVariable(BehaviorContext ctx, VariableRef ref, Object value) {
+    private static void setRawVariable(BehaviorContext ctx, VariableRef ref, Object value, long expiresAt) {
         if (ctx == null || ref == null || ref.name().isEmpty() || value == null) return;
         if (value instanceof LocationValue locationValue) {
             Location location = resolveLocationValue(ctx, locationValue);
             if (location == null) return;
             unsetScopedVariable(ctx, ref);
             if (ref.scope().equals("skill")) {
-                ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location));
+                ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location, expiresAt));
             } else {
-                VariableLocations.set(ref.scope(), ref.name(), ctx, location);
+                VariableLocations.set(ref.scope(), ref.name(), ctx, location, expiresAt);
             }
             return;
         }
         unsetLocation(ctx, ref);
         if (ref.scope().equals("skill")) {
-            if (ctx.skillTree().isPresent()) ctx.skillTree().orElseThrow().setVariable(ref.name(), value);
-            else if (hasInstance(ctx) && value instanceof Number number) varsOf(id(ctx)).put(ref.name(), number.doubleValue());
+            if (ctx.skillTree().isPresent()) ctx.skillTree().orElseThrow().setVariable(ref.name(), value, expiresAt);
+            else if (hasInstance(ctx) && value instanceof Number number) varsOf(id(ctx)).put(ref.name(), number.doubleValue(), expiresAt);
             return;
         }
         String key = VariableLocations.scopeKey(ref.scope(), ctx);
-        if (key != null) scopedValuesOf(key).put(ref.name(), value);
+        if (key != null) scopedValuesOf(key).put(ref.name(), value, expiresAt);
     }
 
     private static Location resolveLocationValue(BehaviorContext ctx, LocationValue value) {
@@ -9302,9 +9340,6 @@ public final class SkillExtras {
         return new Location(world, value.x(), value.y(), value.z());
     }
 
-    private static void setVariable(BehaviorContext ctx, VariableRef ref, double value) {
-        setRawVariable(ctx, ref, value);
-    }
     private static double varOf(BehaviorContext ctx, VariableRef ref) {
         if (ctx == null || ref == null || ref.name().isEmpty()) return Double.NEGATIVE_INFINITY;
         Object raw = rawVariable(ctx, ref);
@@ -9317,8 +9352,7 @@ public final class SkillExtras {
                     || ctx.skillTree().flatMap(tree -> tree.location(ref.name())).isPresent();
         }
         String key = VariableLocations.scopeKey(ref.scope(), ctx);
-        return key != null && (SCOPED_VALUES.getOrDefault(key, Map.of()).containsKey(ref.name())
-                || VariableLocations.get(ref.scope(), ref.name(), ctx).isPresent());
+        return key != null && rawVariable(ctx, ref) != null;
     }
 
     private static void unsetScopedVariable(BehaviorContext ctx, VariableRef ref) {
@@ -9364,11 +9398,11 @@ public final class SkillExtras {
         return ctx.instance().instanceId();
     }
 
-    private static Map<String, Double> varsOf(int id) {
-        return VARS.computeIfAbsent(id, k -> new HashMap<>());
+    private static ExpiringVariables<Double> varsOf(int id) {
+        return VARS.computeIfAbsent(id, k -> new ExpiringVariables<>());
     }
-    private static Map<String, Object> scopedValuesOf(String key) {
-        return SCOPED_VALUES.computeIfAbsent(key, ignored -> new ConcurrentHashMap<>());
+    private static ExpiringVariables<Object> scopedValuesOf(String key) {
+        return SCOPED_VALUES.computeIfAbsent(key, ignored -> new ExpiringVariables<>());
     }
 
     private static Map<String, Integer> scoresOf(int id) {
@@ -9382,13 +9416,27 @@ public final class SkillExtras {
             if (value != null) return value;
             Location location = ctx.skillTree().flatMap(tree -> tree.location(ref.name())).orElse(null);
             if (location != null) return location;
-            if (ctx.skillTree().isEmpty() && hasInstance(ctx)) return VARS.getOrDefault(id(ctx), Map.of()).get(ref.name());
+            if (ctx.skillTree().isEmpty() && hasInstance(ctx)) return VARS.containsKey(id(ctx)) ? VARS.get(id(ctx)).get(ref.name()) : null;
             return null;
         }
         String key = VariableLocations.scopeKey(ref.scope(), ctx);
         if (key == null) return null;
-        Object value = SCOPED_VALUES.getOrDefault(key, Map.of()).get(ref.name());
+        Object value = SCOPED_VALUES.containsKey(key) ? SCOPED_VALUES.get(key).get(ref.name()) : null;
         return value != null ? value : VariableLocations.get(ref.scope(), ref.name(), ctx).orElse(null);
+    }
+
+    private static long variableExpiration(BehaviorContext ctx, VariableRef ref) {
+        if (ref.scope().equals("skill")) {
+            if (ctx.skillTree().isPresent()) {
+                var tree = ctx.skillTree().orElseThrow();
+                return tree.variable(ref.name()).isPresent() ? tree.variableExpiration(ref.name()) : tree.locationExpiration(ref.name());
+            }
+            return hasInstance(ctx) && VARS.containsKey(id(ctx)) ? VARS.get(id(ctx)).expirationTime(ref.name()) : 0;
+        }
+        String key = VariableLocations.scopeKey(ref.scope(), ctx);
+        var values = key == null ? null : SCOPED_VALUES.get(key);
+        return values != null && values.containsKey(ref.name()) ? values.expirationTime(ref.name())
+                : VariableLocations.expirationTime(ref.scope(), ref.name(), ctx);
     }
 
     /** Read the action/condition variable store without allocating a registry on a miss. */
@@ -9398,7 +9446,7 @@ public final class SkillExtras {
             Entity entity = ctx.trigger().orElse(null);
             String key = VariableLocations.entityScopeKey(entity);
             if (key == null) return null;
-            Object value = SCOPED_VALUES.getOrDefault(key, Map.of()).get(name);
+            Object value = SCOPED_VALUES.containsKey(key) ? SCOPED_VALUES.get(key).get(name) : null;
             return value != null ? value : VariableLocations.get(entity, name).orElse(null);
         }
         return rawVariable(ctx, new VariableRef(name, scope));
@@ -9523,7 +9571,7 @@ public final class SkillExtras {
     private static boolean hasVar(BehaviorContext ctx, String name) {
         if (ctx == null || name.isEmpty()) return false;
         return ctx.skillTree().flatMap(tree -> tree.variable(name)).isPresent()
-                || (ctx.skillTree().isEmpty() && hasInstance(ctx) && VARS.getOrDefault(id(ctx), Map.of()).containsKey(name));
+                || (ctx.skillTree().isEmpty() && hasInstance(ctx) && VARS.containsKey(id(ctx)) && VARS.get(id(ctx)).containsKey(name));
     }
 
     private static void applyDamage(BehaviorContext ctx, LivingEntity target, double amount) {

@@ -1847,7 +1847,7 @@ class ImportersTest {
         assertTrue(actions.contains("command-self \"me waves\""), actions.toString());
         assertTrue(actions.contains("command-target \"msg @s hello\""), actions.toString());
         assertTrue(actions.contains("set-variable var=skill.counter type=INTEGER value=\"2\""), actions.toString());
-        assertTrue(actions.contains("var-add var=skill.counter value=3"), actions.toString());
+        assertTrue(actions.contains("variable-add var=skill.counter value=3"), actions.toString());
         assertTrue(actions.contains("var-math var=skill.counter op=* value=2"), actions.toString());
         assertTrue(actions.contains("variable-unset var=skill.counter"), actions.toString());
         assertTrue(actions.contains("variable-location-set var=skill.mark"), actions.toString());

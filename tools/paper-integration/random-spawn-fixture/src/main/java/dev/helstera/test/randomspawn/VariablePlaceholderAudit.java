@@ -122,7 +122,7 @@ final class VariablePlaceholderAudit {
                 + boundaries + "|schedulerTicks=" + (Bukkit.getCurrentTick() - preparedTick) + "|passed=true");
     }
 
-    private static final class Harness implements AutoCloseable {
+    static final class Harness implements AutoCloseable {
         final Plugin runtime, mythic;
         final boolean imported;
         final ClassLoader nativeLoader, runtimeLoader;
@@ -234,6 +234,9 @@ final class VariablePlaceholderAudit {
             execute("unsetvariable{var=" + variable + "}", "VariableUnsetMechanic", meta, ctx, target);
         }
         void execute(String line, String mechanic, Object meta, Object ctx, Entity target) throws Exception {
+            execute(line, mechanic, meta, ctx, target, "SUCCESS");
+        }
+        void execute(String line, String mechanic, Object meta, Object ctx, Entity target, String expectedResult) throws Exception {
             Object action = nativeActions.get(line);
             if (action == null) {
                 action = nativeType("io.lumine.mythic.core.skills.mechanics." + mechanic)
@@ -243,7 +246,7 @@ final class VariablePlaceholderAudit {
             }
             Object result = action.getClass().getMethod("castAtEntity", skillMetadata, abstractEntity)
                     .invoke(action, meta, adapt.invoke(null, target));
-            if (!result.toString().equals("SUCCESS")) throw new IllegalStateException("Native variable action failed: " + line + " " + result);
+            if (!result.toString().equals(expectedResult)) throw new IllegalStateException("Native variable action failed: " + line + " " + result);
             runtimeAction(line, ctx);
         }
         void runtimeAction(String line, Object ctx) throws Exception {

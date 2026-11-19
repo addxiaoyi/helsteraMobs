@@ -2839,7 +2839,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "set-invulnerable", "start-cast", "cancel-cast", "start-dialogue", "dismount",
                     "determine-condition",
                     "suicide", "kill-targets", "set-nameplate", "broadcast",
-                    "set-variable", "var-set", "var-add", "var-math", "variable-unset",
+                    "set-variable", "var-set", "var-add", "variable-add", "var-math", "variable-unset",
                     "variable-location-set", "location-unset", "remove-self", "equip", "set-item", "drop-item", "drop-items",
                     "give-item", "take-item", "close-inventory", "clear-inventory", "clear-experience",
                     "clear-experience-levels", "give-experience-levels", "give-experience", "set-absorption", "oxygen", "consume-slot",
@@ -2987,7 +2987,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     + firstArgOrPositional(trimmed, 0, "", "dialogue", "id");
             case "setvariable" -> variableSetAction(trimmed);
             case "variableunset", "unsetvariable" -> variableSimpleAction("variable-unset", trimmed);
-            case "variableadd" -> variableNumericAction("var-add", trimmed, "amount", "value", "val");
+            case "variableadd" -> variableNumericAction("variable-add", trimmed, "amount", "value", "val");
             case "variablemath" -> variableMathAction(trimmed);
             case "setvariablelocation", "variablelocationset" ->
                     variableSimpleAction("variable-location-set", trimmed);
@@ -3886,28 +3886,42 @@ public final class MythicMobsImporter implements MigrationImporter {
                 ? null : action + " \"" + escape(command) + "\"";
     }
 
+    private static String variableDurationArgument(String raw) {
+        List<String> args = MythicSpec.mechanicOpen(raw) >= 0 ? MythicSpec.keyedArguments(raw)
+                : velocityPositionalArguments(raw);
+        return dev.helstera.api.util.VariableDuration.parse(args).argument();
+    }
+
     private static String variableSetAction(String raw) {
+        String duration;
+        try { duration = variableDurationArgument(raw); }
+        catch (IllegalArgumentException error) { return null; }
         String variable = variableName(raw);
         String type = firstArg(raw, "type");
         String value = firstArg(raw, "value", "val");
         if (value == null) value = positionalArg(raw, 1);
         if (variable == null || value == null) return null;
         return "set-variable var=" + escape(variable)
-                + " type=" + escape(type == null ? "DOUBLE" : type)
-                + " value=\"" + escape(value) + "\"";
+                + " type=" + escape(type == null ? "INTEGER" : type)
+                + " value=\"" + escape(value) + "\"" + duration;
     }
 
     private static String variableSimpleAction(String action, String raw) {
         String variable = variableName(raw);
-        return variable == null ? null : action + " var=" + escape(variable);
+        try {
+            return variable == null ? null : action + " var=" + escape(variable)
+                    + (action.equals("variable-location-set") ? variableDurationArgument(raw) : "");
+        } catch (IllegalArgumentException error) { return null; }
     }
 
     private static String variableNumericAction(String action, String raw, String... keys) {
         String variable = variableName(raw);
         String value = firstArg(raw, keys);
         if (value == null) value = positionalArg(raw, 1);
-        return variable == null || value == null ? null
-                : action + " var=" + escape(variable) + " value=" + escape(value);
+        try {
+            return variable == null || value == null ? null
+                    : action + " var=" + escape(variable) + " value=" + escape(value) + variableDurationArgument(raw);
+        } catch (IllegalArgumentException error) { return null; }
     }
 
     private static String variableMathAction(String raw) {
@@ -3916,9 +3930,11 @@ public final class MythicMobsImporter implements MigrationImporter {
         String value = firstArg(raw, "value", "val", "amount");
         if (operation == null) operation = positionalArg(raw, 1);
         if (value == null) value = positionalArg(raw, 2);
-        return variable == null || value == null ? null
-                : "var-math var=" + escape(variable) + " op="
-                + escape(operation == null ? "+" : operation) + " value=" + escape(value);
+        try {
+            return variable == null || value == null ? null
+                    : "var-math var=" + escape(variable) + " op="
+                    + escape(operation == null ? "+" : operation) + " value=" + escape(value) + variableDurationArgument(raw);
+        } catch (IllegalArgumentException error) { return null; }
     }
 
     private static String variableName(String raw) {

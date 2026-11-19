@@ -1,19 +1,21 @@
 # Isolated Paper Integration Server
 
-Scoped-variable update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r64` passes 30 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Caster/target/trigger placeholders share entity
-variable storage; skill/world/global reads use the existing action stores.
-Case-sensitive names, native dotted-argument/default behavior, location formatting,
-scalar/location replacement and skill-tree isolation now have focused coverage.
-The suite checks 6,720 outputs across 84 tokens, 10 scenes and direct/imported
-paths: 5,902 equal outputs and 818 documented missing/nonfinite/unmanaged-registry
-boundaries. Dynamic Distance passes 17,680 comparisons, including 3,120 added
-variable-default/unresolved rows. Previous trigger, comparison, relation and radius
-controls remain required. Expiry, persistence, connected-player registries,
-collections, broader placeholders and other versions remain open.
+Variable-lifecycle update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r69` passes 31 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Imported/direct duration aliases now reach shared
+scalar/location stores and skill-tree snapshots. Expiration uses real elapsed
+time; set replaces the deadline, while native addition retains or refreshes it
+without recreating expired values. SetVariable defaults to INTEGER; native
+INTEGER/FLOAT addition keeps its type.
+The suite passes 420 lifecycle comparisons (five scopes, 14 cases, three actual-time
+phases and two paths), plus six Paper snapshot-file observations. It retains
+6,720 variable outputs, 1,020 trigger outputs and 17,680 dynamic Distance comparisons.
+Skill-tree snapshot format 4 preserves absolute deadlines and reads formats 1–3.
+Native location-mechanic deadline behavior and the separate Helstera arithmetic
+extensions are documented. Entity/world/global save persistence, timed server
+restart, connected players, broader catalogs and other versions remain open.
 Full Conditions, Mechanics/Skills and Context Targeters remain `mapped-unverified`.
-See the [variable placeholder contract](../../docs/VARIABLE_PLACEHOLDER_COMPATIBILITY.md) and [Paper evidence](STARTUP_EVIDENCE.md).
+See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](STARTUP_EVIDENCE.md).
 
 
 Paper evidence runners redact web credentials before retaining logs. The plugin
@@ -182,7 +184,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-variable-placeholders-strict-20261119-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `96f4c3b76ae9cab9fd8f1482dfe054560e7eea0530cc575d527e6237a4b9d1c5`. See the [strict report](reports/paper-1.21.1-variable-placeholders-strict-20261119-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,348 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-variable-expiry-strict-20261119-r2` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `19821e88d1aa8babd357ab9f168d047d734f2dfda8a075f9754183be84c8b2d4`. See the [strict report](reports/paper-1.21.1-variable-expiry-strict-20261119-r2.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,356 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player

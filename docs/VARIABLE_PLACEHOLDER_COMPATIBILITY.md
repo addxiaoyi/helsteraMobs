@@ -57,10 +57,11 @@ tree isolation and shared entity cleanup also have unit coverage. Published
 counts, source hashes, artifact IDs and logs are in
 [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Existing skill-tree snapshots have separate persistence evidence; this probe
-does not extend it to other scopes. Variable expiry, entity/world/global
-disk/restart persistence, world unload lifecycle, player registries on connected
-clients, nested dynamic variable names, collections,
+Variable expiry and skill-tree deadline snapshots have a separate
+[lifecycle contract](VARIABLE_LIFECYCLE_COMPATIBILITY.md). Existing skill-tree
+snapshots retain their persistence evidence. Entity/world/global disk/restart
+persistence, world unload lifecycle, player registries on connected clients,
+nested dynamic variable names, collections,
 vectors and the complete variable mechanic catalog remain open. Broader
 placeholder families and other Paper/MythicMobs versions are not established by
 this fixture. Full Conditions, Mechanics/Skills and Context Targeters parity

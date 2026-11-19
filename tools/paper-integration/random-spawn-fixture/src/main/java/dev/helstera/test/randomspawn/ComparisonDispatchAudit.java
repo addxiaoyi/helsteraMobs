@@ -29,6 +29,7 @@ final class ComparisonDispatchAudit {
         run(probe, helstera, mythic, center, false, false);
         run(probe, helstera, mythic, center, true, false);
         run(probe, helstera, mythic, center, false, true);
+        VariableExpiryAudit.start(probe, helstera, mythic, center);
     }
 
     private static void run(JavaPlugin probe, Plugin helstera, Plugin mythic, Location center,

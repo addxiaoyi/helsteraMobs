@@ -193,6 +193,15 @@ try {
     if (-not $summary.Success -or $summary.Groups[1].Value -ne 'true') {
         throw 'RandomSpawn Paper fixture did not pass every synthetic and native-natural probe; inspect the retained fixture logs.'
     }
+    if ($MobRadiusAudit) {
+        while ([DateTime]::UtcNow -lt $deadline -and -not $process.HasExited -and
+            -not (Select-String -LiteralPath $latestLog -Pattern 'VARIABLE_EXPIRY_SUMMARY\|' -Quiet)) {
+            Start-Sleep -Milliseconds 250
+        }
+        if (-not (Select-String -LiteralPath $latestLog -Pattern 'VARIABLE_EXPIRY_SUMMARY\|observations=420.*\|cleanup=true\|passed=true' -Quiet)) {
+            throw 'Variable expiry lifecycle did not complete successfully.'
+        }
+    }
     $process.StandardInput.WriteLine('stop')
     $process.StandardInput.Flush()
     if (-not $process.WaitForExit(30000)) { throw 'Paper did not stop after the focused RandomSpawn probe.' }
@@ -483,6 +492,19 @@ if ($MobRadiusAudit) {
         status = 'passed'
         observations = @($relationLines | ForEach-Object { $_.Value }) + @($relationSummary.Value)
     }
+    $expiryLines = [regex]::Matches($log, '(?m)^.*VARIABLE_EXPIRY\|scope=[^\r\n]+$')
+    $expirySnapshotLines = [regex]::Matches($log, '(?m)^.*VARIABLE_EXPIRY_SNAPSHOT\|phase=[^\r\n]+$')
+    $expirySummary = [regex]::Match($log,
+        '(?m)^.*VARIABLE_EXPIRY_SUMMARY\|observations=420\|scopes=5\|cases=14\|phases=3\|paths=2\|snapshotChecks=6\|elapsedMillis=\d+\|cleanup=true\|passed=true\s*$')
+    if ($expiryLines.Count -ne 420 -or $expirySnapshotLines.Count -ne 6 -or -not $expirySummary.Success -or
+            @(@($expiryLines) + @($expirySnapshotLines) | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete native variable expiry lifecycle evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'variable.expiry-lifecycle'
+        status = 'passed'
+        observations = @($expiryLines | ForEach-Object { $_.Value }) + @($expirySnapshotLines | ForEach-Object { $_.Value }) + @($expirySummary.Value)
+    }
     $variablePlaceholderLines = [regex]::Matches($log, '(?m)^.*VARIABLE_PLACEHOLDER\|token=[^\r\n]+$')
     $variablePlaceholderSummary = [regex]::Match($log,
         '(?m)^.*VARIABLE_PLACEHOLDER_SUMMARY\|comparisons=6720\|tokens=84\|scenes=10\|modes=4\|paths=2\|boundaries=\d+\|schedulerTicks=\d+\|passed=true\s*$')
@@ -563,6 +585,7 @@ $report = [ordered]@{
     fixtureProbeJarSha256 = (Get-FileHash -LiteralPath $probeJar -Algorithm SHA256).Hash.ToLowerInvariant()
     conditionProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     dispatchProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
+    variableExpiryProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/VariableExpiryAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     variablePlaceholderProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     triggerPlaceholderProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/TriggerPlaceholderAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     comparisonProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/ComparisonDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()

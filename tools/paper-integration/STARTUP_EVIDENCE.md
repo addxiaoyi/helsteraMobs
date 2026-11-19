@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-variable-placeholders-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `96f4c3b76ae9cab9fd8f1482dfe054560e7eea0530cc575d527e6237a4b9d1c5`. [Strict report](reports/paper-1.21.1-variable-placeholders-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-variable-placeholders-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-variable-placeholders-strict-20261119-r1.client-logs.zip) This artifact passes 2,348 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-variable-expiry-strict-20261119-r2` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `19821e88d1aa8babd357ab9f168d047d734f2dfda8a075f9754183be84c8b2d4`. [Strict report](reports/paper-1.21.1-variable-expiry-strict-20261119-r2.json) · [Redacted server log](reports/paper-1.21.1-variable-expiry-strict-20261119-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-variable-expiry-strict-20261119-r2.client-logs.zip) This artifact passes 2,356 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,10 +9,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `0d757ce75f7c3d0ae7982fdcc4cda0e4ed6c40b069f9a0148fb94e3a88546021`;
-redacted server log SHA-256: `07ae2cfb49ffca7599faab81f461703347540e789ddc4bf83fcf234a5418626e`;
-redacted client logs SHA-256: `3d58140f1be44d1064517bb9d5b7c28a77b5459d160d49d5b67040575e1702c6`.
-The preceding `srv-paper-trigger-placeholders-strict-20261119-r1`,
+Current full-report SHA-256: `d8dbe7e4ce5ff2d8d962d1e4b6a918df6ea73fb2d17c449491e8b93d8e126568`;
+redacted server log SHA-256: `2de7c12ba18fa534e89dcfb11dc6494926f71d8ddafceba4d3267710464dde9a`;
+redacted client logs SHA-256: `303b5dea39a203bcde8899a099810fb80546b990ba3ee1f9a62a7484f63a93dd`.
+The preceding `srv-paper-variable-placeholders-strict-20261119-r1`,
+`srv-paper-trigger-placeholders-strict-20261119-r1`,
 `srv-paper-dynamic-distance-strict-20261119-r1`,
 `srv-paper-view-angle-strict-20261119-r1`,
 `srv-paper-relational-dispatch-strict-20261119-r1`,
@@ -30,6 +31,69 @@ The preceding `srv-paper-trigger-placeholders-strict-20261119-r1`,
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Variable expiry and snapshot deadlines
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r69` passes all 31 probes on
+plugin `19821e88d1aa8babd357ab9f168d047d734f2dfda8a075f9754183be84c8b2d4`. The new lifetime suite records 420 comparisons:
+five scopes × 14 cases × three real-time phases × direct/imported runtime paths.
+Public native variable mechanics write actual ActiveMob, target, skill, world and
+global registries. Native placeholders and registry presence match runtime
+placeholder text and conditions at initial, short-expired and refreshed-expired
+checkpoints. Expiry uses wall-clock time at 50 ms per configured tick; reads remove
+expired values. The probe holds chunk tickets until cleanup so delayed checks
+retain the native entity registries.
+
+Cases cover positive, zero and negative durations; permanent replacement; retained
+and refreshed arithmetic deadlines; explicit unset; location retention and native
+immediate positive-duration expiry; expired/missing addition rejection; INTEGER
+fractional-increment truncation; FLOAT addition; and unsupported DOUBLE rejection.
+No native clock, fields, callbacks or licensing checks are patched. Native
+SetVariableLocation selects @origin with origin set to the runtime selected
+location; arbitrary value-selector equivalence remains open. Typed runtime
+location values and generic var-add/var-math retain their documented extension
+boundaries. Native variableadd now imports to variable-add; existing generated
+var-add actions keep their extension behavior until re-imported.
+
+Six additional Paper observations save/load actual skill-tree snapshot files and
+verify the restored values keep their original expiration deadline across all
+three phases. Snapshot format 4 stores absolute expiry alongside scalar/location
+values and reads formats 1–3. Unit tests cover exact boundaries, expired restoration,
+invalid deadlines and atomic preservation. This is file-round-trip evidence,
+not a real server-restart comparison for timed variables.
+
+The suite retains 6,720 variable outputs (818 documented boundaries), 1,020 trigger
+outputs, 17,680 dynamic Distance, 14,280 comparison and 6,820 relation dispatch rows,
+plus previous radius and location-guard controls. Maven passes 2,356 tests with
+zero failures/errors/skips and SpotBugs. Full strict fixture `srv-paper-variable-expiry-strict-20261119-r2`
+passes 471 probes (452 passed, 19 expected rejections), zero failed/incomplete,
+on the same final JAR. Report/audit contracts, release audit, version matrix and
+archive credential scan pass. Matrix status counts remain unchanged.
+
+The first attempt `srv-paper-random-spawn-replace-20261119-r65` stopped when the
+native location selector lacked a target location.
+`srv-paper-random-spawn-replace-20261119-r66` supplied explicit origin metadata but lost a native entity registry during delayed checks. r67 retains
+chunk tickets through cleanup and passes. r68 adds the native-add deadline read
+ordering fix, preventing expiry during a read from making a value permanent.
+Final r69 also verifies omitted SetVariable type defaults to INTEGER before
+fractional addition. Earlier focused `srv-paper-random-spawn-replace-20261119-r68` remains archived
+with its own hash. Full `srv-paper-variable-expiry-strict-20261119-r1` also passed
+on that preceding artifact and remains local: the release archiver correctly
+rejected its hash after the build changed. Only full r2 is published for this
+release and validates the final JAR. The earlier r67 report is retained with its original
+plugin hash `8dbce93377eb16edce963a5585978bf22f22adeb57850baf3cb2c00c8be8a659`; it does not validate the final artifact.
+Failed attempts remain local and are not published as passing evidence. Entity/world/global save persistence, timed
+server restart, world unload/player logout lifecycle, complete arithmetic/location
+catalogs, SetVariable expression/default-value semantics, dynamic names and other
+versions remain open. See the
+[lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
+
+- [Focused report](reports/paper-1.21.1-random-spawn-replace-20261119-r69.json), SHA-256
+  `da4233d1aaf4550e39f053c4dfd919f8570514911c061e26748039eb128fe5bc`.
+- [Redacted focused log](reports/paper-1.21.1-random-spawn-replace-20261119-r69.log.gz), SHA-256
+  `0bc2ee8dff08106da9d70b2552b2595794d8c0cbbb4a6915b57f4bfe0e998441`.
+- [Preceding lifecycle report](reports/paper-1.21.1-random-spawn-replace-20261119-r67.json), SHA-256
+  `99df253de32edc29079e56e177983cce613180c9da828009d9091320b8b97cdd`.
 
 ## Scoped variable placeholders
 

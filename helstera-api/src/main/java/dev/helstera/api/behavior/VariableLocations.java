@@ -11,15 +11,19 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Stores persistent location variables for scopes that outlive one skill tree. */
 public final class VariableLocations {
-    private static final Map<String, Map<String, Location>> VALUES = new ConcurrentHashMap<>();
+    private static final Map<String, ExpiringVariables<Location>> VALUES = new ConcurrentHashMap<>();
 
     private VariableLocations() {
     }
 
     public static void set(String scope, String name, BehaviorContext context, Location location) {
+        set(scope, name, context, location, 0);
+    }
+
+    public static void set(String scope, String name, BehaviorContext context, Location location, long expiresAt) {
         String key = scopeKey(scope, context);
         if (key == null || name == null || name.isBlank() || location == null) return;
-        VALUES.computeIfAbsent(key, ignored -> new ConcurrentHashMap<>()).put(name, location.clone());
+        VALUES.computeIfAbsent(key, ignored -> new ExpiringVariables<>()).put(name, location.clone(), expiresAt);
     }
 
     public static Optional<Location> get(String scope, String name, BehaviorContext context) {
@@ -33,8 +37,15 @@ public final class VariableLocations {
 
     private static Optional<Location> getByKey(String key, String name) {
         if (key == null || name == null || name.isBlank()) return Optional.empty();
-        Location location = VALUES.getOrDefault(key, Map.of()).get(name);
+        ExpiringVariables<Location> values = VALUES.get(key);
+        Location location = values == null ? null : values.get(name);
         return Optional.ofNullable(location == null ? null : location.clone());
+    }
+
+    public static long expirationTime(String scope, String name, BehaviorContext context) {
+        String key = scopeKey(scope, context);
+        ExpiringVariables<Location> values = key == null ? null : VALUES.get(key);
+        return values == null ? 0 : values.expirationTime(name);
     }
 
     public static Optional<Location> unset(String scope, String name, BehaviorContext context) {

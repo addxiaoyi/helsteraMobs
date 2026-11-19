@@ -1,19 +1,21 @@
 # MythicMobs Parity Roadmap
 
-Scoped-variable update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r64` passes 30 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Caster/target/trigger placeholders share entity
-variable storage; skill/world/global reads use the existing action stores.
-Case-sensitive names, native dotted-argument/default behavior, location formatting,
-scalar/location replacement and skill-tree isolation now have focused coverage.
-The suite checks 6,720 outputs across 84 tokens, 10 scenes and direct/imported
-paths: 5,902 equal outputs and 818 documented missing/nonfinite/unmanaged-registry
-boundaries. Dynamic Distance passes 17,680 comparisons, including 3,120 added
-variable-default/unresolved rows. Previous trigger, comparison, relation and radius
-controls remain required. Expiry, persistence, connected-player registries,
-collections, broader placeholders and other versions remain open.
+Variable-lifecycle update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r69` passes 31 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Imported/direct duration aliases now reach shared
+scalar/location stores and skill-tree snapshots. Expiration uses real elapsed
+time; set replaces the deadline, while native addition retains or refreshes it
+without recreating expired values. SetVariable defaults to INTEGER; native
+INTEGER/FLOAT addition keeps its type.
+The suite passes 420 lifecycle comparisons (five scopes, 14 cases, three actual-time
+phases and two paths), plus six Paper snapshot-file observations. It retains
+6,720 variable outputs, 1,020 trigger outputs and 17,680 dynamic Distance comparisons.
+Skill-tree snapshot format 4 preserves absolute deadlines and reads formats 1–3.
+Native location-mechanic deadline behavior and the separate Helstera arithmetic
+extensions are documented. Entity/world/global save persistence, timed server
+restart, connected players, broader catalogs and other versions remain open.
 Full Conditions, Mechanics/Skills and Context Targeters remain `mapped-unverified`.
-See the [variable placeholder contract](docs/VARIABLE_PLACEHOLDER_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+See the [variable lifecycle contract](docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 This is the ordered worklist for closing the compatibility gaps recorded in the
@@ -23,7 +25,7 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after scoped variable placeholders:
+Immediate continuation after variable lifecycle validation:
 
 1. Extend native condition dispatch beyond the verified entity/location
    predicate slices for caster, target and living/non-living triggers. Location-targeter radius
@@ -38,7 +40,9 @@ Immediate continuation after scoped variable placeholders:
    Trigger name/type/health/location retains 1,020 output checks (86 documented boundaries).
    Scoped variables add 6,720 output checks (818 documented boundaries), shared entity
    registries and location formatting through direct/imported runtime actions.
-   Next compare variable expiry, persistence, connected-player registries and
+   Variable expiry and native INTEGER/FLOAT addition now add 420 lifecycle comparisons;
+   six Paper file-round-trip checks retain skill-tree deadlines.
+   Next compare timed server restart, entity/world/global persistence, connected-player registries and
    broader trigger/general placeholder families, player
    faction providers, relationship lifecycle/restart, non-living caster combinations
    and remaining generic entity
@@ -70,7 +74,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-variable-placeholders-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `96f4c3b76ae9cab9fd8f1482dfe054560e7eea0530cc575d527e6237a4b9d1c5`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,348 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-variable-expiry-strict-20261119-r2` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `19821e88d1aa8babd357ab9f168d047d734f2dfda8a075f9754183be84c8b2d4`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,356 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.
