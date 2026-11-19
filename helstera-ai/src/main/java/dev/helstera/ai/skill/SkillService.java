@@ -2281,7 +2281,19 @@ public final class SkillService {
     private boolean conditionsPass(List<String> conditions,
                                   dev.helstera.api.behavior.BehaviorContext ctx) {
         for (String condition : conditions) {
-            if (!registry.testCondition(condition, ctx)) return false;
+            if (ctx == null || ctx.conditionScope() != dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET) {
+                if (!registry.testCondition(condition, ctx)) return false;
+                continue;
+            }
+            try {
+                if (!registry.testConditionForComposition(condition, ctx)) return false;
+            } catch (dev.helstera.ai.ConditionDispatchException decision) {
+                if (decision.abortsTargetSet()) throw decision;
+                if (!decision.retained()) return false;
+            } catch (Throwable failure) {
+                warn("Target condition failed: " + condition + " (" + failure.getClass().getSimpleName() + ")");
+                return false;
+            }
         }
         return true;
     }
@@ -2311,6 +2323,16 @@ public final class SkillService {
     }
 
     private dev.helstera.api.behavior.BehaviorContext filterTargetConditions(
+            List<String> conditions, dev.helstera.api.behavior.BehaviorContext ctx, boolean updateTree) {
+        try {
+            return filterTargetConditionsUnchecked(conditions, ctx, updateTree);
+        } catch (dev.helstera.ai.ConditionDispatchException failure) {
+            // A dynamic parse error aborts native evaluateTargets, even if another target passed.
+            return null;
+        }
+    }
+
+    private dev.helstera.api.behavior.BehaviorContext filterTargetConditionsUnchecked(
             List<String> conditions, dev.helstera.api.behavior.BehaviorContext ctx, boolean updateTree) {
         if (ctx == null || conditions.isEmpty()) return ctx;
         List<org.bukkit.entity.LivingEntity> targets = ctx.targets();

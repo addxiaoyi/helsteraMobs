@@ -301,10 +301,16 @@ public final class MmConditions {
             return result.translated() ? result : new Mapped(s, false);
         }
         if ("distance".equals(name) && body != null) {
-            Map<String, String> arguments = strictValueArguments(body,
-                    Map.of("distance", "value", "d", "value", "value", "value", "amount", "value"), "value");
-            String value = arguments == null ? null : arguments.get("value");
+            String value = distanceArgument(body);
             if (value == null) return new Mapped(s, false);
+            if (dev.helstera.api.util.ComparisonRangeTemplate.hasPlaceholders(value)) {
+                try {
+                    new dev.helstera.api.util.ComparisonRangeTemplate(value);
+                    return new Mapped("distance{d=" + value + "}", true);
+                } catch (IllegalArgumentException invalid) {
+                    return new Mapped(s, false);
+                }
+            }
             Mapped result = compare(value, "distance");
             if (result.translated()) return result;
             return validNumberRange(value) ? new Mapped("distance " + value, true) : new Mapped(s, false);
@@ -2653,6 +2659,21 @@ public final class MmConditions {
         if (quoted || braces != 0 || current.toString().isBlank()) return null;
         parts.add(current.toString().trim());
         return parts;
+    }
+
+    private static String distanceArgument(String body) {
+        List<String> arguments = splitBalanced(body, ';');
+        if (arguments == null || arguments.size() != 1) return null;
+        String value = arguments.getFirst();
+        int equals = dev.helstera.api.util.PlaceholderSyntax.argumentEquals(value);
+        if (equals > 0) {
+            if (!Set.of("distance", "d", "value", "amount")
+                    .contains(value.substring(0, equals).trim().toLowerCase(Locale.ROOT))) return null;
+            value = value.substring(equals + 1).trim();
+        }
+        if (value.length() >= 2 && (value.startsWith("\"") && value.endsWith("\"")
+                || value.startsWith("'") && value.endsWith("'"))) value = value.substring(1, value.length() - 1);
+        return value.isBlank() ? null : value;
     }
 
     private static Map<String, String> strictValueArguments(String body,

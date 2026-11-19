@@ -67,6 +67,51 @@ XDiff/ZDiff and positional conveniences retain their extension status where the
 pinned native parser does not support them. Unscoped AI `distance` continues
 using cached target distance and its existing positional comparison convention.
 
+## Dynamic Distance
+
+Distance now accepts placeholder strings in exact values, comparisons and range
+endpoints, including `d=<random.4to4>`, `d=<<caster.hp>` and
+`d=0to<target.hp{r=0}>`. The doubled `<` in the second example is the strict
+comparison followed by a placeholder. Nested numeric rounding configuration
+survives direct binding and migration. Substitution happens on each evaluation;
+identical tokens in one expression resolve once, matching native string replacement.
+The resulting text must be a finite numeric comparison/range. This uses the
+public native `PlaceholderString` path, not the Premium-gated numeric factory.
+
+| Dispatch | Placeholder context |
+| --- | --- |
+| Named/inline caster condition | Metadata plus caster as the placeholder's target entity; a selected action target does not replace it |
+| Entity TargetConditions / TriggerConditions / inline trigger | No metadata or entity context; general placeholders such as `random` can resolve |
+| Explicit location TargetConditions | No metadata or entity context |
+| Unscoped Helstera execution | Existing execution context and cached distance convention; extension behavior |
+
+Consequently, `d=<<target.hp>` in a caster condition reads the caster's live
+health. Entity placeholders remain unresolved in native target/trigger/location
+comparisons. A parse failure rejects before true/false inversion; a false outcome
+cannot turn it into a pass. Native target-set filtering catches that error outside
+the entire filter, so a mixed set containing a same-world unresolved target and
+a cross-world target rejects the skill, even if the cross-world target would pass
+the false outcome. Helstera now aborts that target-set gate and leaves the caller's
+targets intact. This failure signal also propagates through condition composition.
+
+Same-world validation precedes resolution. A cross-world-only subject produces
+ordinary false, so the false outcome can pass without resolving the placeholder.
+Invalid/dead targets and missing triggers retain their existing dispatch rules.
+No arithmetic is evaluated inside a dynamic distance string: expressions such as
+`<caster.hp>+1` are preserved/rejected at binding. Malformed options, duplicate or
+unknown arguments, missing values, and nonfinite resolved numbers fail closed.
+
+The new native suite contains 10,400 matching rows: 20 expressions, 26 scenes,
+five named/inline modes, both outcomes, and imported/direct execution. It checks
+health aliases and rounding, caster health changing from 3.125 to 0.4/0.6 on the
+same compiled condition, constant integer/float/rounded random tokens, strict
+comparisons and range endpoints, removed/non-living triggers, explicit points,
+and mixed-world/removed target sets in both orders. Native unresolved-input error
+logs are expected observations; their returned framework result is compared with
+runtime preview and execution. This does not prove arbitrary variable/trigger
+placeholder families, stochastic distribution equivalence, non-living casters,
+arbitrary formulas or other versions.
+
 ## Evidence
 
 `ComparisonDispatchAudit` calls native framework methods without replacing
@@ -93,14 +138,14 @@ After building, use an unused revision to reproduce the focused suite:
 
 ```powershell
 ./mvnw -B -pl helstera-plugin -am verify
-pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision r59 -MobRadiusStrict -VanillaCachePath <verified-vanilla-cache>
+pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision r60 -MobRadiusStrict -VanillaCachePath <verified-vanilla-cache>
 ```
 
 ## Open boundaries
 
 Cuboid, faction/owner/parent/line-of-sight and vehicle comparisons have additional
 scoped evidence in the [relational contract](RELATIONAL_CONDITION_COMPATIBILITY.md).
-Dynamic distance placeholders, the broader generic entity condition catalog,
+Broader distance placeholder families, the generic entity condition catalog,
 condition action suffixes beyond true/false, Premium expressions and other
 MM/Paper versions remain open. Wider finite FOV angles have scoped evidence;
 non-living caster combinations and malformed native numeric fallbacks remain

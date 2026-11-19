@@ -1,16 +1,18 @@
-Latest full-catalog strict fixture `srv-paper-view-angle-strict-20261119-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-view-angle-strict-20261119-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,329 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-dynamic-distance-strict-20261119-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `dee429696ad1488fe6ce36c956db37d5ab50639a191ae247b7e619ba57ae29e8`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-dynamic-distance-strict-20261119-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,337 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-FieldOfView-angle update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r58` passes 27 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Import and runtime now accept every finite view
-angle, including negative, 181/270/360/720-degree and maximum-double values,
-without clamping or wrapping. Native float boundaries and multi-turn rotations
-are preserved. The comparison suite now has 14,280 matching rows, including
-7,560 new angle rows; all 6,820 relational comparisons and prior radius/trigger
-controls also pass. Dynamic distance placeholders, player faction providers,
-relationship lifecycle/restart, condition actions, Premium expressions and
-other versions remain open. Complete Conditions and Context Targeters rows
-remain `mapped-unverified`. See the [comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md) and
+Dynamic-Distance update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r59` passes 28 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Dynamic comparison/range strings now preserve native
+placeholder context: caster gates resolve target health against the caster;
+entity/trigger/location gates resolve general placeholders without metadata.
+Cross-world checks happen first, and unresolved comparisons reject before
+inversion and abort the whole target-set gate. The new suite passes 10,400
+native comparisons covering health/rounding updates, constant random families,
+mixed-world/removed targets and explicit locations. All previous 14,280 comparison
+and 6,820 relational rows also pass. Broader placeholder families, relationship
+lifecycle/restart, player faction providers, condition actions and other versions
+remain open. Complete Conditions and Context Targeters rows remain
+`mapped-unverified`. See the [comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md) and
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
@@ -1691,7 +1693,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-view-angle-strict-20261119-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-dynamic-distance-strict-20261119-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1707,7 +1709,7 @@ all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-view-angle-strict-20261119-r1`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,329 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-dynamic-distance-strict-20261119-r1`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `dee429696ad1488fe6ce36c956db37d5ab50639a191ae247b7e619ba57ae29e8`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,337 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
 
@@ -1716,7 +1718,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 729 cited IDs; 621 report files; 17 directories without reports; 91 missing directories; 366 archived release reports. The
+   Current fixture inventory: 731 cited IDs; 623 report files; 17 directories without reports; 91 missing directories; 368 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

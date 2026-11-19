@@ -1,16 +1,18 @@
 # Isolated Paper Integration Server
 
-FieldOfView-angle update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r58` passes 27 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Import and runtime now accept every finite view
-angle, including negative, 181/270/360/720-degree and maximum-double values,
-without clamping or wrapping. Native float boundaries and multi-turn rotations
-are preserved. The comparison suite now has 14,280 matching rows, including
-7,560 new angle rows; all 6,820 relational comparisons and prior radius/trigger
-controls also pass. Dynamic distance placeholders, player faction providers,
-relationship lifecycle/restart, condition actions, Premium expressions and
-other versions remain open. Complete Conditions and Context Targeters rows
-remain `mapped-unverified`. See the [comparison contract](../../docs/COMPARISON_CONDITION_COMPATIBILITY.md) and
+Dynamic-Distance update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r59` passes 28 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Dynamic comparison/range strings now preserve native
+placeholder context: caster gates resolve target health against the caster;
+entity/trigger/location gates resolve general placeholders without metadata.
+Cross-world checks happen first, and unresolved comparisons reject before
+inversion and abort the whole target-set gate. The new suite passes 10,400
+native comparisons covering health/rounding updates, constant random families,
+mixed-world/removed targets and explicit locations. All previous 14,280 comparison
+and 6,820 relational rows also pass. Broader placeholder families, relationship
+lifecycle/restart, player faction providers, condition actions and other versions
+remain open. Complete Conditions and Context Targeters rows remain
+`mapped-unverified`. See the [comparison contract](../../docs/COMPARISON_CONDITION_COMPATIBILITY.md) and
 [Paper evidence](STARTUP_EVIDENCE.md).
 
 
@@ -180,7 +182,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-view-angle-strict-20261119-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849`. See the [strict report](reports/paper-1.21.1-view-angle-strict-20261119-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,329 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-dynamic-distance-strict-20261119-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `dee429696ad1488fe6ce36c956db37d5ab50639a191ae247b7e619ba57ae29e8`. See the [strict report](reports/paper-1.21.1-dynamic-distance-strict-20261119-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,337 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player

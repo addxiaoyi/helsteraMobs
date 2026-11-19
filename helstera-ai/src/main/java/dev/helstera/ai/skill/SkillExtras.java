@@ -2113,7 +2113,9 @@ public final class SkillExtras {
 
     private static String comparisonArgument(List<String> args, String name, String fallback,
                                              Map<String, String> aliases) {
-        Map<String, String> named = strictConditionValues(args, aliases, name);
+        boolean namedArguments = args != null && args.stream().anyMatch(value -> value != null
+                && dev.helstera.api.util.PlaceholderSyntax.argumentEquals(value) > 0);
+        Map<String, String> named = namedArguments ? strictConditionValues(args, aliases, name) : null;
         if (named != null) return named.getOrDefault("value", fallback);
         if (args == null || args.isEmpty()) return fallback;
         if (args.size() > 2 || args.size() == 2 && !Set.of("<", ">", "<=", ">=", "=", "==", "!=").contains(args.getFirst()))
@@ -2139,29 +2141,59 @@ public final class SkillExtras {
                 : new NumberRange(range.max(), range.min(), range.maxInclusive(), range.minInclusive());
     }
 
+    private record DistanceComparison(NumberRange range, NumberRange squared,
+                                      Comparison execution, boolean notEqual) {
+        static DistanceComparison parse(String raw) {
+            boolean notEqual = raw.startsWith("!=");
+            NumberRange range = comparisonRange(notEqual ? raw.substring(2) : raw);
+            NumberRange squared = new NumberRange(Double.isFinite(range.min()) ? range.min() * range.min() : range.min(),
+                    Double.isFinite(range.max()) ? range.max() * range.max() : range.max(),
+                    range.minInclusive(), range.maxInclusive());
+            return new DistanceComparison(range, squared, comparison(List.of(raw), 0, "<="), notEqual);
+        }
+
+        boolean executionMatches(double distance) {
+            return distance >= 0 && (Double.isFinite(execution.value()) ? compare(distance, execution)
+                    : range.contains(distance) != notEqual);
+        }
+    }
+
     private static SkillCatalog.ConditionFactory distanceCondition() {
         return args -> {
             String raw = comparisonArgument(args, "distance", "0", Map.of(
                     "distance", "value", "d", "value", "value", "value", "amount", "value"));
-            boolean notEqual = raw.startsWith("!=");
-            NumberRange range = comparisonRange(notEqual ? raw.substring(2) : raw);
-            Comparison executionComparison = comparison(List.of(raw), 0, "<=");
-            NumberRange squared = new NumberRange(Double.isFinite(range.min()) ? range.min() * range.min() : range.min(),
-                    Double.isFinite(range.max()) ? range.max() * range.max() : range.max(),
-                    range.minInclusive(), range.maxInclusive());
+            var dynamic = dev.helstera.api.util.ComparisonRangeTemplate.hasPlaceholders(raw)
+                    ? new dev.helstera.api.util.ComparisonRangeTemplate(raw) : null;
+            DistanceComparison fixed = dynamic == null ? DistanceComparison.parse(raw) : null;
             return ctx -> {
                 if (ctx == null) return false;
-                if (ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION)
-                    return ctx.distanceToTarget() >= 0 && (Double.isFinite(executionComparison.value())
-                            ? compare(ctx.distanceToTarget(), executionComparison)
-                            : range.contains(ctx.distanceToTarget()) != notEqual);
+                boolean execution = ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION;
+                if (execution && fixed != null) return fixed.executionMatches(ctx.distanceToTarget());
                 Location caster = comparisonCasterLocation(ctx);
                 Location target = ctx.conditionScope() == BehaviorContext.ConditionScope.CASTER
                         ? caster : comparisonTargetLocation(ctx);
-                if (caster == null || target == null || caster.getWorld() == null || target.getWorld() == null)
-                    throw new dev.helstera.ai.ConditionDispatchException(false);
-                if (!caster.getWorld().equals(target.getWorld())) return false;
-                return squared.contains((double) (float) caster.distanceSquared(target)) != notEqual;
+                if (!execution) {
+                    if (caster == null || target == null || caster.getWorld() == null || target.getWorld() == null)
+                        throw new dev.helstera.ai.ConditionDispatchException(false);
+                    // Native short-circuits cross-world input before evaluating placeholders.
+                    if (!caster.getWorld().equals(target.getWorld())) return false;
+                }
+                DistanceComparison comparison = fixed;
+                if (dynamic != null) {
+                    BehaviorContext resolvedContext = execution ? ctx : null;
+                    if (ctx.conditionScope() == BehaviorContext.ConditionScope.CASTER) {
+                        resolvedContext = casterEntity(ctx) instanceof LivingEntity living
+                                ? ctx.withTargetEntity(living) : ctx;
+                    }
+                    final BehaviorContext placeholderContext = resolvedContext;
+                    try {
+                        comparison = DistanceComparison.parse(dynamic.resolve(token -> Placeholders.resolve(token, placeholderContext)));
+                    } catch (IllegalArgumentException invalid) {
+                        throw dev.helstera.ai.ConditionDispatchException.evaluationFailure();
+                    }
+                }
+                if (execution) return comparison.executionMatches(ctx.distanceToTarget());
+                return comparison.squared().contains((double) (float) caster.distanceSquared(target)) != comparison.notEqual();
             };
         };
     }

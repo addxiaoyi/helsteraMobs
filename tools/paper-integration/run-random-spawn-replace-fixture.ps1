@@ -483,6 +483,18 @@ if ($MobRadiusAudit) {
         status = 'passed'
         observations = @($relationLines | ForEach-Object { $_.Value }) + @($relationSummary.Value)
     }
+    $distanceLines = [regex]::Matches($log, '(?m)^.*DYNAMIC_DISTANCE_DISPATCH\|condition=[^\r\n]+$')
+    $distanceSummary = [regex]::Match($log,
+        '(?m)^.*DYNAMIC_DISTANCE_DISPATCH_SUMMARY\|comparisons=10400\|conditions=20\|scenes=26\|modes=5\|passed=true\s*$')
+    if ($distanceLines.Count -ne 10400 -or -not $distanceSummary.Success -or
+            @($distanceLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete dynamic distance native comparison evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'condition.dynamic-distance-dispatch'
+        status = 'passed'
+        observations = @($distanceLines | ForEach-Object { $_.Value }) + @($distanceSummary.Value)
+    }
     $locationLines = [regex]::Matches($log, '(?m)^.*LOCATION_TARGET_GUARD\|scene=[^\r\n]+$')
     $locationSummary = [regex]::Match($log,
         '(?m)^.*LOCATION_TARGET_GUARD_SUMMARY\|comparisons=672\|selectors=7\|aliases=4\|publicNativeGuardApplied=false\|reference=condition-library\|passed=true\s*$')

@@ -24,11 +24,13 @@ final class ComparisonDispatchAudit {
     private record Scene(String name, List<LivingEntity> targets, Entity trigger, Location point, float pitch) {}
 
     static void run(JavaPlugin probe, Plugin helstera, Plugin mythic, Location center) throws Exception {
-        run(probe, helstera, mythic, center, false);
-        run(probe, helstera, mythic, center, true);
+        run(probe, helstera, mythic, center, false, false);
+        run(probe, helstera, mythic, center, true, false);
+        run(probe, helstera, mythic, center, false, true);
     }
 
-    private static void run(JavaPlugin probe, Plugin helstera, Plugin mythic, Location center, boolean extended) throws Exception {
+    private static void run(JavaPlugin probe, Plugin helstera, Plugin mythic, Location center,
+                            boolean extended, boolean dynamicDistance) throws Exception {
         List<Entity> owned = new ArrayList<>();
         Relations relations = null;
         try {
@@ -88,6 +90,17 @@ final class ComparisonDispatchAudit {
                         new Scene("dismounted", List.of(above), above, null, 0)));
                 scenes = List.copyOf(expanded);
             }
+            if (dynamicDistance) {
+                var expanded = new ArrayList<>(scenes);
+                expanded.addAll(List.of(
+                        new Scene("low-health", List.of(front), front, null, 0),
+                        new Scene("rounded-health", List.of(front), front, null, 0),
+                        new Scene("mixed-world", List.of(front, cross), front, null, 0),
+                        new Scene("mixed-world-reversed", List.of(cross, front), cross, null, 0),
+                        new Scene("mixed-removed-world", List.of(removed, cross), cross, null, 0)));
+                scenes = List.copyOf(expanded);
+                front.setHealth(8);
+            }
             String[][] cases = {
                     {"distance{d=0}", "DistanceCondition"}, {"distance{d=4}", "DistanceCondition"},
                     {"distance{d=<4}", "DistanceCondition"}, {"distance{d=>4}", "DistanceCondition"},
@@ -122,6 +135,29 @@ final class ComparisonDispatchAudit {
                         {"owner", "OwnerCondition"}, {"isparent", "IsParentCondition"},
                         {"samefaction", "FactionSameCondition"}, {"lineofsight", "LineOfSightCondition"},
                         {"vehicleisdead", "VehicleIsDeadCondition"}};
+            }
+            if (dynamicDistance) {
+                cases = new String[][] {
+                        {"distance{d=<caster.hp>}", "DistanceCondition"},
+                        {"distance{d=<<caster.hp>}", "DistanceCondition"},
+                        {"distance{d=><caster.hp>}", "DistanceCondition"},
+                        {"distance{d=0to<caster.hp>}", "DistanceCondition"},
+                        {"distance{d=<target.hp>}", "DistanceCondition"},
+                        {"distance{d=<<target.hp>}", "DistanceCondition"},
+                        {"distance{d=<target.hp{r=0}>}", "DistanceCondition"},
+                        {"distance{d=<<target.hp{r=0}>}", "DistanceCondition"},
+                        {"distance{d=<caster.hp{rounding=0}>}", "DistanceCondition"},
+                        {"distance{d=<c.h>}", "DistanceCondition"},
+                        {"distance{d=<random.4to4>}", "DistanceCondition"},
+                        {"distance{d=<<random.4to4>}", "DistanceCondition"},
+                        {"distance{d=><random.4to4>}", "DistanceCondition"},
+                        {"distance{d=<random.-4to-4>}", "DistanceCondition"},
+                        {"distance{d=<random.float.4to4>}", "DistanceCondition"},
+                        {"distance{d=<random.float{r=0}.4to4>}", "DistanceCondition"},
+                        {"distance{d=<random.4to4>to<random.4to4>}", "DistanceCondition"},
+                        {"distance{d=<random.0to0>to<random.4to4>}", "DistanceCondition"},
+                        {"distance{d=<target.hp>to<caster.hp>}", "DistanceCondition"},
+                        {"distance{d=<random.float.rounded.4to4>}", "DistanceCondition"}};
             }
             ClassLoader nativeLoader = mythic.getClass().getClassLoader();
             ClassLoader runtimeLoader = helstera.getClass().getClassLoader();
@@ -171,7 +207,7 @@ final class ComparisonDispatchAudit {
                     List.class, Location.class, treeType);
             Location origin = base.clone().add(100, 100, 100);
             if (extended) relations = new Relations(helstera, mythic, caster, front, back, above, base, owned);
-            String marker = extended ? "RELATIONAL_DISPATCH" : "COMPARISON_DISPATCH";
+            String marker = extended ? "RELATIONAL_DISPATCH" : dynamicDistance ? "DYNAMIC_DISTANCE_DISPATCH" : "COMPARISON_DISPATCH";
             int rows = 0;
             for (String[] test : cases) for (boolean outcome : List.of(true, false)) {
                 String expression = test[0] + " " + outcome;
@@ -214,6 +250,8 @@ final class ComparisonDispatchAudit {
                         skillsType.getMethod("loadSkills", ConfigurationSection.class).invoke(skills, yaml.getConfigurationSection("skills"));
                         for (Scene scene : scenes) {
                             if (relations != null) relations.configure(scene);
+                            if (dynamicDistance) caster.setHealth(scene.name().equals("low-health") ? .4
+                                    : scene.name().equals("rounded-health") ? .6 : 3.125);
                             caster.setRotation(0, scene.pitch());
                             Object nativeMeta = metadataImpl.getConstructor(triggerType, skillCaster, abstractEntity)
                                     .newInstance(triggerType.getMethod("get", String.class).invoke(null, "API"), nativeCaster,
@@ -260,7 +298,7 @@ final class ComparisonDispatchAudit {
                     }
                 }
             }
-            int expectedRows = extended ? 6820 : 14280;
+            int expectedRows = extended ? 6820 : dynamicDistance ? 10400 : 14280;
             if (rows != expectedRows) throw new IllegalStateException("Incomplete comparison dispatch evidence: " + rows);
             probe.getLogger().info(marker + "_SUMMARY|comparisons=" + rows + "|conditions=" + cases.length
                     + "|scenes=" + scenes.size() + "|modes=5|passed=true");

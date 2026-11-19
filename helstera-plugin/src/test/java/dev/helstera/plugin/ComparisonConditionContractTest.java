@@ -69,6 +69,81 @@ class ComparisonConditionContractTest {
                 .withConditionScope(BehaviorContext.ConditionScope.TARGET)));
     }
 
+    @Test void dynamicDistanceCasterResolvesTargetToCasterAndRefreshesHealth() {
+        var ctx = context(BehaviorContext.ConditionScope.CASTER);
+        when(caster.getHealth()).thenReturn(3.125);
+        when(caster.getMaxHealth()).thenReturn(20.0);
+        when(target.getHealth()).thenReturn(8.0);
+        assertTrue(test("distance{d=<<caster.hp>}", ctx));
+        assertTrue(test("distance{d=<<target.hp{r=0}>}", ctx));
+        assertTrue(test("distance{d=0to<target.hp>}", ctx));
+        String bound = skills.bindCondition("distance{d=<<target.hp{r=0}>}");
+        when(caster.getHealth()).thenReturn(.4);
+        assertFalse(registry.testCondition(bound, ctx), "compiled condition reads new caster health, not selected target");
+        assertTrue(test("distance{d=<target.hp{r=0}>}", ctx));
+        assertTrue(test("distance{d=<<target.hp>}", ctx), "unrounded positive health stays above zero");
+        assertTrue(test("distance{<target.hp{rounding=0}>}", ctx));
+    }
+
+    @Test void dynamicDistanceNonMetadataScopesResolveOnlyGeneralPlaceholders() {
+        var ctx = context(BehaviorContext.ConditionScope.TARGET);
+        for (var scope : List.of(BehaviorContext.ConditionScope.TARGET, BehaviorContext.ConditionScope.TRIGGER)) {
+            var scoped = ctx.withConditionScope(scope);
+            assertTrue(test("distance{d=<random.4to4>}", scoped));
+            assertTrue(test("distance{d=<random.float{r=0}.4to4>}", scoped));
+            assertTrue(test("distance{d=<random.0to0>to<random.4to4>}", scoped));
+            assertFalse(test("distance{d=<<random.4to4>}", scoped));
+            assertFalse(test("distance{d=<caster.hp>}", scoped));
+            assertFalse(test("!distance{d=<caster.hp>}", scoped));
+        }
+        var point = ctx.withLocationTarget(new Location(world, 0, 64, 4))
+                .withConditionScope(BehaviorContext.ConditionScope.TARGET);
+        assertTrue(test("distance{d=<random.float.4to4>}", point));
+        assertFalse(test("!distance{d=<target.hp>}", point));
+        when(target.getLocation()).thenReturn(new Location(mock(World.class), 0, 64, 4));
+        assertTrue(test("!distance{d=<caster.hp>}", ctx), "cross-world false precedes dynamic resolution");
+    }
+
+    @Test void unresolvedDistanceAbortsMixedWorldTargetSetAndLeavesCallerStateIntact() {
+        var ctx = context(BehaviorContext.ConditionScope.EXECUTION);
+        var cross = mock(LivingEntity.class);
+        var elsewhere = mock(World.class);
+        when(cross.getLocation()).thenReturn(new Location(elsewhere, 0, 64, 4));
+        when(cross.isValid()).thenReturn(true);
+        var yaml = new org.bukkit.configuration.file.YamlConfiguration();
+        yaml.set("skills.probe.target-conditions", List.of("!distance{d=<caster.hp>}"));
+        yaml.set("skills.probe.on-decision", List.of("observe-distance"));
+        var observed = new ArrayList<BehaviorContext>();
+        registry.registerAction("observe-distance", observed::add);
+        skills.loadSkills(yaml.getConfigurationSection("skills"));
+        for (List<LivingEntity> targets : List.of(List.of(cross, target), List.of(target, cross))) {
+            var mixed = BehaviorContext.continueExecution(model, targets.getFirst(), 1, 4, 0, "probe", "payload",
+                    trigger, targets, ctx.origin().orElseThrow(), null);
+            assertFalse(skills.preview("probe", mixed).wouldRun());
+            assertFalse(skills.castSkill("probe", mixed));
+            assertEquals(targets, mixed.targets());
+            assertTrue(observed.isEmpty());
+        }
+        var single = ctx.withTargetEntity(cross);
+        assertTrue(skills.preview("probe", single).wouldRun());
+        assertTrue(skills.castSkill("probe", single));
+        assertEquals(1, observed.size());
+    }
+
+    @Test void invalidDynamicDistanceRemainsRejectedThroughInversionAndComposition() {
+        var ctx = context(BehaviorContext.ConditionScope.CASTER);
+        when(caster.getHealth()).thenReturn(Double.NaN);
+        for (String source : List.of("distance{d=<caster.hp>}", "!distance{d=<caster.hp>}",
+                "distance{d=<caster.var.missing>}", "!distance{d=<caster.var.missing>}")) assertFalse(test(source, ctx));
+        registry.registerCondition("accept-distance", ignored -> true);
+        assertFalse(registry.testCondition(skills.bindCondition("any{distance{d=<caster.hp>};accept-distance}"), ctx));
+        for (String source : List.of("distance{d=<caster.hp>+1}", "distance{d=<caster.hp{r=0;r=1}>}",
+                "distance{d=<caster.hp>;distance=4}", "distance{d=<caster.hp>;unknown=1}", "distance{d=<caster.hp>toNaN}")) {
+            assertNull(skills.bindCondition(source), source);
+            assertFalse(MmConditions.translate("?" + source).translated(), source);
+        }
+    }
+
     @Test void yDifferenceUsesCasterAndSubjectIncludingCrossWorldCoordinates() {
         var ctx = context(BehaviorContext.ConditionScope.TRIGGER);
         assertTrue(test("ydiff{d=4}", ctx));
