@@ -1,19 +1,19 @@
 # MythicMobs Parity Matrix
 
-Non-living trigger update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r54` passes 25 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Its 864 new comparisons verify entity/location
-trigger predicates across nine live, removed and missing-trigger scenes,
-true/false outcomes and imported/direct named/inline execution. Named previews
-agree, and actions retain their original selected targets and origin.
-`isLiving` excludes ArmorStand; absolute health is zero for non-living triggers.
-Missing triggers reject before inversion. Existing 576 condition-dispatch and
-672 location-guard boundary comparisons also pass. `?@` remains a Helstera
-extension; public MM gates bracketed targeter guards behind Premium.
-Other comparison interfaces, remaining generic entity predicates, action suffixes,
-Premium expressions and other versions remain open. Complete Conditions and
-Context Targeters rows remain `mapped-unverified`. See the
-[trigger contract](docs/TRIGGER_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+Comparison-condition update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r56` passes 26 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Its 6,720 new comparisons cover Distance, YDiff,
+FieldOfView, IsCaster and BoundingBoxesOverlap across 21 scenes, five named/inline
+modes, both outcomes and imported/direct execution. Named previews and action
+context agree. Distance uses actual caster/subject coordinates and native float
+precision; view cones use eyes, and pitched box offsets preserve native geometry.
+Unavailable caster interfaces reject before inversion; entity-only predicates
+retain location targets. The native FOV location-filter inversion is preserved.
+Existing 864 non-living trigger, 576 radius dispatch and 672 location-guard
+boundary comparisons also pass. Broader comparisons, dynamic placeholders,
+condition actions, Premium expressions and other versions remain open.
+Complete Conditions and Context Targeters rows remain `mapped-unverified`.
+See the [comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 See the [ordered parity roadmap](MYTHICMOBS_PARITY_ROADMAP.md) for the full
@@ -245,7 +245,7 @@ mixed player/monster/animal candidates and invalid values. Strict Paper fixture
 angle/length boundaries, and malformed, duplicate, and unknown arguments. The
 broader Context targeters row remains `mapped-unverified`.
 
-Latest strict release evidence: `srv-paper-trigger-dispatch-strict-20261119-r1` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `e6cc1c825ad454f4582af294c1ebb7aa28c145c561b8d16c77a645d3f1670948`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-trigger-dispatch-strict-20261119-r1.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,314 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict release evidence: `srv-paper-comparison-dispatch-strict-20261119-r1` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `9d75bd8a09ec2a645c5de6b6ad9c24f616613710ce3cd80a69b0aa6d87a5e4af`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-comparison-dispatch-strict-20261119-r1.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,321 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Sunny` aliases `sunny`/`isSunny` now map to `weather-is clear`; `Thundering` aliases `thundering`/`isThundering`/`stormy`/`isStormy` now map to `weather-is thunder`. The importer, `SkillService`, and `ConditionListParser` agree on these names, and malformed or duplicate arguments remain fail-closed. Migration, API, AI, and plugin cross-module tests cover the alias paths and clear/thunder runtime states. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Crouching` aliases `sneaking`/`isCrouching`/`isSneaking`, and `Wearing` aliases `isWearing`/`wielding`/`isWielding`, now map through the importer, `SkillService`, and `ConditionListParser`. The existing `is-sneaking` and `wearing` evaluators are reused; wearing item arguments are strict and unknown, duplicate, or empty values fail closed. Migration, API, AI, and plugin cross-module tests cover Player sneaking, helmet matching, aliases, and preservation. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
@@ -3537,7 +3537,7 @@ row remains `mapped-unverified` until the declared catalog is covered.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-trigger-dispatch-strict-20261119-r1` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `e6cc1c825ad454f4582af294c1ebb7aa28c145c561b8d16c77a645d3f1670948`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-location-guards-strict-20261119-r3` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-comparison-dispatch-strict-20261119-r1` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `9d75bd8a09ec2a645c5de6b6ad9c24f616613710ce3cd80a69b0aa6d87a5e4af`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-trigger-dispatch-strict-20261119-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -4099,6 +4099,10 @@ and evaluate non-living triggers without falling back to selected targets.
 Skill preview checks target/trigger gates without changing the tree targets.
 The latest trigger-dispatch slice has focused native Paper evidence for the
 listed predicates; see [the scoped contract](docs/TRIGGER_CONDITION_COMPATIBILITY.md).
+Distance, YDiff, FieldOfView, IsCaster and BoundingBoxesOverlap additionally
+have 6,720 native dispatch comparisons, including explicit location filtering,
+non-living triggers, inversion and mixed target sets; see the
+[comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md).
 Branch-gated named skills now check the branch before recording cooldown or
 entering a busy instance's queue. Unit tests cover rejection while locked,
 unlock followed by casting, and queued execution after unlocking. This change

@@ -2019,17 +2019,18 @@ public final class SkillExtras {
     }
 
     private static boolean boundingBoxesOverlap(BehaviorContext ctx, double forwardOffset) {
+        comparisonDispatch(ctx, false);
         if (ctx == null || !ctx.instanceValid() || !Double.isFinite(forwardOffset)) return false;
         Entity caster = ctx.instance().baseEntity().orElse(null);
-        Entity target = targetOnlyEntity(ctx);
-        if (caster == null || target == null || caster.getWorld() != target.getWorld()) return false;
+        Entity target = comparisonTarget(ctx);
+        if (caster == null || target == null) return false;
         try {
             org.bukkit.util.BoundingBox casterBox = caster.getBoundingBox().clone();
             if (forwardOffset != 0.0) {
                 org.bukkit.util.Vector direction = caster.getLocation().getDirection();
-                direction.setY(0);
                 if (direction.lengthSquared() > 1.0e-9) {
-                    casterBox.shift(direction.normalize().multiply(forwardOffset));
+                    // Native normalization includes pitch, but the box moves horizontally only.
+                    casterBox.shift(direction.normalize().multiply(forwardOffset).setY(0));
                 }
             }
             return casterBox.overlaps(target.getBoundingBox());
@@ -2039,38 +2040,70 @@ public final class SkillExtras {
         }
     }
 
+    private static Entity comparisonTarget(BehaviorContext ctx) {
+        return ctx == null ? null : ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER
+                ? ctx.trigger().orElse(null) : ctx.targetEntity().orElse(null);
+    }
+
+    private static Location comparisonTargetLocation(BehaviorContext ctx) {
+        if (ctx == null) return null;
+        if (ctx.conditionScope() == BehaviorContext.ConditionScope.TARGET && ctx.targetLocation().isPresent())
+            return ctx.targetLocation().orElseThrow();
+        Entity target = comparisonTarget(ctx);
+        return target == null ? null : target.getLocation();
+    }
+
+    private static boolean locationComparisonTarget(BehaviorContext ctx) {
+        return ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.TARGET
+                && ctx.targetLocation().isPresent();
+    }
+
+    private static void comparisonDispatch(BehaviorContext ctx, boolean locationsSupported) {
+        if (ctx == null || ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION) return;
+        if (ctx.conditionScope() == BehaviorContext.ConditionScope.CASTER)
+            throw new dev.helstera.ai.ConditionDispatchException(false);
+        if (!locationsSupported && locationComparisonTarget(ctx))
+            throw new dev.helstera.ai.ConditionDispatchException(true);
+    }
+
+    private static Location comparisonCasterLocation(BehaviorContext ctx) {
+        Entity caster = casterEntity(ctx);
+        return caster != null ? caster.getLocation() : ctx != null && ctx.instanceValid()
+                ? ctx.instance().location() : null;
+    }
+
+    private static Location conditionEyeLocation(Entity entity) {
+        if (entity == null) return null;
+        Location eye = entity instanceof LivingEntity living ? living.getEyeLocation() : null;
+        return eye == null ? entity.getLocation() : eye;
+    }
+
     private static boolean fieldOfView(BehaviorContext ctx, double angle, double rotation) {
+        comparisonDispatch(ctx, true);
         if (ctx == null || !ctx.instanceValid() || !Double.isFinite(angle)
                 || !Double.isFinite(rotation)) return false;
-        Entity caster = ctx.instance().baseEntity().orElse(null);
-        Entity target = targetOnlyEntity(ctx);
-        if (caster == null || target == null) return false;
-        try {
-            Location from = caster.getLocation();
-            Location to = target.getLocation();
-            if (from == null || to == null) return false;
-            if (from.getWorld() != null && to.getWorld() != null
-                    && !from.getWorld().equals(to.getWorld())) return false;
-            org.bukkit.util.Vector facing = from.getDirection();
-            org.bukkit.util.Vector delta = to.toVector().subtract(from.toVector());
-            if (facing.lengthSquared() < 1.0e-9 || delta.lengthSquared() < 1.0e-9) return false;
-            facing.normalize().rotateAroundY(Math.toRadians(rotation));
-            double cone = Math.max(0, Math.min(180, angle));
-            return facing.dot(delta.normalize()) >= Math.cos(Math.toRadians(cone / 2.0));
-        } catch (Throwable ignored) {
-            SkillFaults.swallow("SkillExtras#fieldOfView");
-            return false;
-        }
+        Entity caster = casterEntity(ctx);
+        Location from = conditionEyeLocation(caster);
+        Location to = locationComparisonTarget(ctx) ? ctx.targetLocation().orElse(null)
+                : conditionEyeLocation(comparisonTarget(ctx));
+        if (from == null || to == null) return false;
+        org.bukkit.util.Vector facing = from.getDirection().rotateAroundY(Math.toRadians(rotation));
+        org.bukkit.util.Vector delta = to.toVector().subtract(from.toVector()).normalize();
+        // Native AbstractVector.angle returns float; this matters at the cone boundary.
+        boolean matches = Math.toDegrees(delta.angle(facing)) <= angle / 2.0;
+        // MM 5.7.2's entity/location branch returns the outcome directly to removeIf.
+        return locationComparisonTarget(ctx) ? !matches : matches;
     }
 
     private static boolean coordinateDifference(BehaviorContext ctx, char axis, NumberRange range) {
+        if (axis == 'y') comparisonDispatch(ctx, true);
         if (ctx == null || range == null || !ctx.instanceValid()) return false;
-        LivingEntity target = targetOnlyEntity(ctx);
-        Location caster = selfLoc(ctx);
-        if (target == null || caster == null || caster.getWorld() == null) return false;
-        Location targetLocation = target.getLocation();
-        if (targetLocation == null || targetLocation.getWorld() == null
-                || !caster.getWorld().equals(targetLocation.getWorld())) return false;
+        Location caster = ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION
+                ? selfLoc(ctx) : comparisonCasterLocation(ctx);
+        Location targetLocation = comparisonTargetLocation(ctx);
+        if (targetLocation == null || caster == null) return false;
+        // Native YDiff compares coordinates even across worlds. X/Z remain Helstera extensions.
+        if (axis != 'y' && (caster.getWorld() == null || !caster.getWorld().equals(targetLocation.getWorld()))) return false;
         double difference = switch (axis) {
             case 'x' -> targetLocation.getX() - caster.getX();
             case 'y' -> targetLocation.getY() - caster.getY();
@@ -2078,6 +2111,61 @@ public final class SkillExtras {
             default -> Double.NaN;
         };
         return range.contains(difference);
+    }
+
+    private static String comparisonArgument(List<String> args, String name, String fallback,
+                                             Map<String, String> aliases) {
+        Map<String, String> named = strictConditionValues(args, aliases, name);
+        if (named != null) return named.getOrDefault("value", fallback);
+        if (args == null || args.isEmpty()) return fallback;
+        if (args.size() > 2 || args.size() == 2 && !Set.of("<", ">", "<=", ">=", "=", "==", "!=").contains(args.getFirst()))
+            throw new IllegalArgumentException(name + " requires one numeric expression");
+        return String.join("", args);
+    }
+
+    private static NumberRange comparisonRange(String expression) {
+        String raw = expression.replaceFirst("^==?", "");
+        // Preserve scalar scientific notation; its exponent's minus is not a range separator.
+        try {
+            double exact = Double.parseDouble(raw);
+            if (Double.isFinite(exact)) return new NumberRange(exact, exact, true, true);
+        } catch (NumberFormatException ignored) {
+            // Continue with the comparison/range grammar.
+        }
+        NumberRange range = numberRange(List.of(raw), 0);
+        if (range == null || Double.isNaN(range.min()) || Double.isNaN(range.max())
+                || !raw.startsWith("<") && !Double.isFinite(range.min())
+                || !raw.startsWith(">") && !Double.isFinite(range.max()))
+            throw new IllegalArgumentException("invalid numeric comparison: " + expression);
+        return range.min() <= range.max() ? range
+                : new NumberRange(range.max(), range.min(), range.maxInclusive(), range.minInclusive());
+    }
+
+    private static SkillCatalog.ConditionFactory distanceCondition() {
+        return args -> {
+            String raw = comparisonArgument(args, "distance", "0", Map.of(
+                    "distance", "value", "d", "value", "value", "value", "amount", "value"));
+            boolean notEqual = raw.startsWith("!=");
+            NumberRange range = comparisonRange(notEqual ? raw.substring(2) : raw);
+            Comparison executionComparison = comparison(List.of(raw), 0, "<=");
+            NumberRange squared = new NumberRange(Double.isFinite(range.min()) ? range.min() * range.min() : range.min(),
+                    Double.isFinite(range.max()) ? range.max() * range.max() : range.max(),
+                    range.minInclusive(), range.maxInclusive());
+            return ctx -> {
+                if (ctx == null) return false;
+                if (ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION)
+                    return ctx.distanceToTarget() >= 0 && (Double.isFinite(executionComparison.value())
+                            ? compare(ctx.distanceToTarget(), executionComparison)
+                            : range.contains(ctx.distanceToTarget()) != notEqual);
+                Location caster = comparisonCasterLocation(ctx);
+                Location target = ctx.conditionScope() == BehaviorContext.ConditionScope.CASTER
+                        ? caster : comparisonTargetLocation(ctx);
+                if (caster == null || target == null || caster.getWorld() == null || target.getWorld() == null)
+                    throw new dev.helstera.ai.ConditionDispatchException(false);
+                if (!caster.getWorld().equals(target.getWorld())) return false;
+                return squared.contains((double) (float) caster.distanceSquared(target)) != notEqual;
+            };
+        };
     }
 
     private static double coordinateArg(List<String> args, int index, double fallback, String... names) {
@@ -2751,11 +2839,7 @@ public final class SkillExtras {
                         return entity != null && compare(entity.getAbsorptionAmount(), comparison);
                     };
                 }),
-                Map.entry("distance", (SkillCatalog.ConditionFactory) a -> {
-                    Comparison comparison = comparison(a, 0, "<=");
-                    return ctx -> ctx != null && ctx.distanceToTarget() >= 0
-                            && compare(ctx.distanceToTarget(), comparison);
-                }),
+                Map.entry("distance", distanceCondition()),
 
                 Map.entry("on-ground", noArgumentCondition("on-ground", ctx -> {
                     if (ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
@@ -3280,12 +3364,13 @@ public final class SkillExtras {
                         ctx -> conditionEntity(ctx) instanceof Player player && player.isOp())),
                 Map.entry("target-is-player", noArgumentCondition("target-is-player",
                         ctx -> targetOnlyEntity(ctx) instanceof Player)),
-                Map.entry("is-caster", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                Map.entry("is-caster", noArgumentCondition("is-caster", ctx -> {
+                    comparisonDispatch(ctx, false);
                     if (ctx == null || !ctx.instanceValid()) return false;
                     Entity caster = ctx.instance().baseEntity().orElse(null);
-                    Entity target = targetOnlyEntity(ctx);
+                    Entity target = comparisonTarget(ctx);
                     return caster != null && target != null && caster.getUniqueId().equals(target.getUniqueId());
-                }),
+                })),
                 Map.entry("target-is-op", noArgumentCondition("target-is-op",
                         ctx -> targetOnlyEntity(ctx) instanceof Player player && player.isOp())),
                 Map.entry("target-is-living", noArgumentCondition("target-is-living",
@@ -4540,7 +4625,10 @@ public final class SkillExtras {
                         ctx -> conditionEntity(ctx) instanceof org.bukkit.entity.Creeper creeper
                                 && creeper.isIgnited()),
                 Map.entry("bounding-boxes-overlap", (SkillCatalog.ConditionFactory) a -> {
-                    double offset = num(a, 0, 0.0);
+                    String raw = comparisonArgument(a, "bounding-boxes-overlap", "0", Map.of(
+                            "shiftforward", "value", "so", "value", "forwardoffset", "value", "fo", "value",
+                            "forward", "value", "f", "value"));
+                    double offset = finiteDouble(raw, "bounding-boxes-overlap offset");
                     return ctx -> boundingBoxesOverlap(ctx, offset);
                 }),
                 Map.entry("field-of-view", (SkillCatalog.ConditionFactory) a -> {
@@ -4580,7 +4668,8 @@ public final class SkillExtras {
                     return ctx -> coordinateDifference(ctx, 'x', range);
                 }),
                 Map.entry("y-diff", (SkillCatalog.ConditionFactory) a -> {
-                    NumberRange range = numberRange(a, 0);
+                    NumberRange range = comparisonRange(comparisonArgument(a, "y-diff", "0",
+                            Map.of("difference", "value", "diff", "value", "d", "value")));
                     return ctx -> coordinateDifference(ctx, 'y', range);
                 }),
                 Map.entry("z-diff", (SkillCatalog.ConditionFactory) a -> {

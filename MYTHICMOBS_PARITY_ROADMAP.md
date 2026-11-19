@@ -1,19 +1,19 @@
 # MythicMobs Parity Roadmap
 
-Non-living trigger update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r54` passes 25 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Its 864 new comparisons verify entity/location
-trigger predicates across nine live, removed and missing-trigger scenes,
-true/false outcomes and imported/direct named/inline execution. Named previews
-agree, and actions retain their original selected targets and origin.
-`isLiving` excludes ArmorStand; absolute health is zero for non-living triggers.
-Missing triggers reject before inversion. Existing 576 condition-dispatch and
-672 location-guard boundary comparisons also pass. `?@` remains a Helstera
-extension; public MM gates bracketed targeter guards behind Premium.
-Other comparison interfaces, remaining generic entity predicates, action suffixes,
-Premium expressions and other versions remain open. Complete Conditions and
-Context Targeters rows remain `mapped-unverified`. See the
-[trigger contract](docs/TRIGGER_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+Comparison-condition update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r56` passes 26 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Its 6,720 new comparisons cover Distance, YDiff,
+FieldOfView, IsCaster and BoundingBoxesOverlap across 21 scenes, five named/inline
+modes, both outcomes and imported/direct execution. Named previews and action
+context agree. Distance uses actual caster/subject coordinates and native float
+precision; view cones use eyes, and pitched box offsets preserve native geometry.
+Unavailable caster interfaces reject before inversion; entity-only predicates
+retain location targets. The native FOV location-filter inversion is preserved.
+Existing 864 non-living trigger, 576 radius dispatch and 672 location-guard
+boundary comparisons also pass. Broader comparisons, dynamic placeholders,
+condition actions, Premium expressions and other versions remain open.
+Complete Conditions and Context Targeters rows remain `mapped-unverified`.
+See the [comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 This is the ordered worklist for closing the compatibility gaps recorded in the
@@ -23,14 +23,16 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after the non-living trigger implementation:
+Immediate continuation after the comparison-condition implementation:
 
 1. Extend native condition dispatch beyond the verified entity/location
    predicate slices for caster, target and living/non-living triggers. Location-targeter radius
    lists now have 672 condition-library/boundary comparisons; the earlier claim that inline guards were
    omitted is corrected: they were rejected at binding. Non-living trigger
-   dispatch now has 864 native comparisons for the listed predicates. Next
-   compare entity/location comparison interfaces, remaining generic entity
+   dispatch has 864 native comparisons; Distance/YDiff/FieldOfView/IsCaster/
+   BoundingBoxesOverlap add 6,720 framework comparisons. Next compare Cuboid,
+   faction/owner/parent/line-of-sight and vehicle interfaces, dynamic distance
+   placeholders, wider view angles, remaining generic entity
    predicates (UUID/name/velocity/passengers), non-living placeholders, condition
    actions beyond true/false and selection offsets/sorting/limits. Audit the remaining
    MythicEntity catalog: five aliases, custom-name priority and
@@ -59,7 +61,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-trigger-dispatch-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `e6cc1c825ad454f4582af294c1ebb7aa28c145c561b8d16c77a645d3f1670948`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,314 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-comparison-dispatch-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `9d75bd8a09ec2a645c5de6b6ad9c24f616613710ce3cd80a69b0aa6d87a5e4af`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,321 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

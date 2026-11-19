@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-trigger-dispatch-strict-20261119-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-trigger-dispatch-strict-20261119-r1.json"
+      "releaseFixtureId": "srv-paper-comparison-dispatch-strict-20261119-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-comparison-dispatch-strict-20261119-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

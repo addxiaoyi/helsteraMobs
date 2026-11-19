@@ -1361,7 +1361,14 @@ public final class SkillService {
                 }
                 boolean all = capturedOperator.equals("all");
                 for (String child : captured) {
-                    boolean passed = registry.testConditionForComposition(child, ctx);
+                    boolean passed;
+                    try {
+                        passed = registry.testConditionForComposition(child, ctx);
+                    } catch (dev.helstera.ai.ConditionDispatchException dispatch) {
+                        if (!dispatch.retained()) throw dispatch;
+                        // An inapplicable location predicate leaves this target in the set.
+                        passed = true;
+                    }
                     if (all && !passed) return false;
                     if (!all && passed) return true;
                 }
@@ -2050,7 +2057,13 @@ public final class SkillService {
                     if (!evaluating.add(def.name)) throw new IllegalStateException("Cyclic skill condition: " + def.name);
                     try {
                         for (String k : captured) {
-                            boolean passed = registry.testConditionForComposition(k, ctx);
+                            boolean passed;
+                            try {
+                                passed = registry.testConditionForComposition(k, ctx);
+                            } catch (dev.helstera.ai.ConditionDispatchException dispatch) {
+                                if (!dispatch.retained()) throw dispatch;
+                                passed = true;
+                            }
                             if (defs.get(def.name) != def) throw new IllegalStateException("Stale skill: " + def.name);
                             if (!passed) return false;
                         }
@@ -2920,7 +2933,7 @@ public final class SkillService {
                     "variable-map-value-gte", "variable-map-value-lte", "variable-map-value-in-range",
                     "variable-map-value-not-in-range",
                     "variable-gte", "variable-lte", "directional-velocity", "distance-from-location",
-                    "distance-from-tracked-location",
+                    "distance-from-tracked-location", "distance", "y-diff", "bounding-boxes-overlap",
                     "has-aura-stacks", "mythic-has-aura", "mythic-has-aura-stacks",
                     "mythic-has-aura-type", "mythic-target-has-aura", "health", "health-percent",
                     "compare-values", "score", "targets",

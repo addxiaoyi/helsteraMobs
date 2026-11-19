@@ -301,8 +301,13 @@ public final class MmConditions {
             return result.translated() ? result : new Mapped(s, false);
         }
         if ("distance".equals(name) && body != null) {
-            Mapped result = compare(body, "distance");
-            return result.translated() ? result : new Mapped(s, false);
+            Map<String, String> arguments = strictValueArguments(body,
+                    Map.of("distance", "value", "d", "value", "value", "value", "amount", "value"), "value");
+            String value = arguments == null ? null : arguments.get("value");
+            if (value == null) return new Mapped(s, false);
+            Mapped result = compare(value, "distance");
+            if (result.translated()) return result;
+            return validNumberRange(value) ? new Mapped("distance " + value, true) : new Mapped(s, false);
         }
         if ("targethealth".equals(name) && body != null) {
             Mapped result = compare(body, "target-health");
@@ -682,8 +687,9 @@ public final class MmConditions {
             return new Mapped(mapped + " distance=" + distance, true);
         }
         if ("xdiff".equals(name) || "ydiff".equals(name) || "zdiff".equals(name)) {
-            String value = firstArgument(body, "difference", "diff", "d");
-            if (value == null) value = normalizeScalar(body);
+            Map<String, String> arguments = strictValueArguments(body,
+                    Map.of("difference", "value", "diff", "value", "d", "value"), "value");
+            String value = arguments == null ? null : arguments.get("value");
             return value == null || !validNumberRange(value) ? new Mapped(s, false)
                     : new Mapped(name.substring(0, 1) + "-diff " + value, true);
         }
@@ -1201,15 +1207,14 @@ public final class MmConditions {
             return new Mapped("is-natural-block", true);
         }
         if ("boundingboxesoverlap".equals(name) || "bbsoverlap".equals(name)) {
-            String offset = keyedArgument(body, "shiftforward", "so", "forwardoffset", "fo", "forward", "f");
-            if (offset == null) offset = normalizeScalar(body);
-            if (offset == null || offset.isBlank()) return new Mapped("bounding-boxes-overlap", true);
-            try {
-                Double.parseDouble(offset);
-                return new Mapped("bounding-boxes-overlap " + offset, true);
-            } catch (NumberFormatException ignored) {
-                return new Mapped(s, false);
-            }
+            Map<String, String> arguments = strictValueArguments(body,
+                    Map.of("shiftforward", "value", "so", "value", "forwardoffset", "value", "fo", "value",
+                            "forward", "value", "f", "value"), "value");
+            if (arguments == null) return new Mapped(s, false);
+            if (arguments.isEmpty()) return new Mapped("bounding-boxes-overlap", true);
+            String offset = arguments.getOrDefault("value", "0");
+            return validFiniteNumber(offset) ? new Mapped("bounding-boxes-overlap " + offset, true)
+                    : new Mapped(s, false);
         }
         if ("fieldofview".equals(name) || "infieldofview".equals(name) || "fov".equals(name)) {
             Map<String, String> arguments = strictFieldOfViewArguments(body);

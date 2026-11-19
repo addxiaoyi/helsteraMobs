@@ -62,13 +62,14 @@ To rerun after building the plugin, choose an unused evidence revision:
 
 ```powershell
 ./mvnw -B -pl helstera-plugin -am verify
-pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision r55 -MobRadiusStrict -VanillaCachePath <verified-vanilla-cache>
+pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision r57 -MobRadiusStrict -VanillaCachePath <verified-vanilla-cache>
 ```
 
 ## Remaining work
 
-Full entity-comparison, location-comparison and entity/location-comparison
-interfaces remain unverified, as do the rest of the condition catalog, action
+Distance, YDiff, FieldOfView, IsCaster and BoundingBoxesOverlap now have scoped
+framework evidence in the [comparison contract](COMPARISON_CONDITION_COMPATIBILITY.md).
+The remaining comparison interfaces remain unverified, as do the rest of the condition catalog, action
 suffixes beyond true/false, placeholders on non-living subjects, Premium
 expressions and other MM/Paper versions. Unknown native conditions are not
 treated as successful: Helstera continues to reject/preserve unsupported input.

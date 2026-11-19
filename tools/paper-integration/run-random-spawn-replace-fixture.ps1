@@ -459,6 +459,18 @@ if ($MobRadiusAudit) {
         status = 'passed'
         observations = @($triggerLines | ForEach-Object { $_.Value }) + @($triggerSummary.Value)
     }
+    $comparisonLines = [regex]::Matches($log, '(?m)^.*COMPARISON_DISPATCH\|condition=[^\r\n]+$')
+    $comparisonSummary = [regex]::Match($log,
+        '(?m)^.*COMPARISON_DISPATCH_SUMMARY\|comparisons=6720\|conditions=16\|scenes=21\|modes=5\|passed=true\s*$')
+    if ($comparisonLines.Count -ne 6720 -or -not $comparisonSummary.Success -or
+            @($comparisonLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete native comparison-condition dispatch evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'condition.comparison-dispatch'
+        status = 'passed'
+        observations = @($comparisonLines | ForEach-Object { $_.Value }) + @($comparisonSummary.Value)
+    }
     $locationLines = [regex]::Matches($log, '(?m)^.*LOCATION_TARGET_GUARD\|scene=[^\r\n]+$')
     $locationSummary = [regex]::Match($log,
         '(?m)^.*LOCATION_TARGET_GUARD_SUMMARY\|comparisons=672\|selectors=7\|aliases=4\|publicNativeGuardApplied=false\|reference=condition-library\|passed=true\s*$')
@@ -503,6 +515,7 @@ $report = [ordered]@{
     fixtureProbeJarSha256 = (Get-FileHash -LiteralPath $probeJar -Algorithm SHA256).Hash.ToLowerInvariant()
     conditionProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     dispatchProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
+    comparisonProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/ComparisonDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     naturalSpawnClientSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'natural-spawn-client.js') -Algorithm SHA256).Hash.ToLowerInvariant()
     randomSpawnConfigSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'RandomSpawns/replace.yml') -Algorithm SHA256).Hash.ToLowerInvariant()
     mythicMobCatalogSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'Mobs/fixture.yml') -Algorithm SHA256).Hash.ToLowerInvariant()

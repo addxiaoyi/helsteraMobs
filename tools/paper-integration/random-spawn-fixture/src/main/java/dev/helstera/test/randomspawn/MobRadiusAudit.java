@@ -335,6 +335,7 @@ final class MobRadiusAudit {
             if (randomRows != 48 || randomSamples != 256) throw new IllegalStateException("Incomplete random audit");
             // Avoid overriding babies of the Zombies already present in this scene.
             MobRadiusDispatchAudit.run(probe, helstera, mythic, caster, (org.bukkit.entity.LivingEntity) custom, center);
+            ComparisonDispatchAudit.run(probe, helstera, mythic, center);
             Entity collision = (Entity) nativeApi.getClass().getMethod("spawnMythicMob", String.class, Location.class)
                     .invoke(nativeApi, "MUSHROOM_COW", center.clone().add(0, 0, 1));
             if (collision == null) throw new IllegalStateException("Native collision mob was not spawned");

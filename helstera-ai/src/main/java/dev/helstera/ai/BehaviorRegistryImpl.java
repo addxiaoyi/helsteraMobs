@@ -73,6 +73,8 @@ public final class BehaviorRegistryImpl implements BehaviorRegistry {
         if (!hasCondition(name)) return false;
         try {
             return testConditionForComposition(name, ctx);
+        } catch (ConditionDispatchException dispatch) {
+            return dispatch.retained();
         } catch (Throwable t) {
             var l = log;
             if (l != null) l.warning("自定义条件 \"" + name + "\" 抛异常，按 false 处理: " + t);
