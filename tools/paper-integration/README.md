@@ -1,31 +1,61 @@
 # Isolated Paper Integration Server
 
-Scoped-variable persistence update (2026-11-19): focused fixture
-`srv-paper-variable-persistence-comparison-20261119-r2` passes 432 direct/imported
-comparisons across three real Paper 1.21.1-133 boots against public MM 5.7.2.
-Caster/target UUID registries, world and global values retain types, locations and
-original deadlines; expired and explicitly unset values stay absent. World transient
-save markers are filtered at shutdown, while native global/persistent-entity behavior
-retains them. Eight entity UUIDs remain stable. Three shutdown snapshots and redacted
-logs are archived; all 12 incomplete/altered-evidence controls are rejected.
-Atomic scoped-registry storage preserves the previous file on invalid writes and
-protects unreadable startup data from shutdown overwrite. Unloaded-world coordinates
-remain available for later resolution. Player reconnect/restart, chunk/world lifecycle,
-non-persistent entity cleanup, broader catalogs and other versions remain open;
-full MythicMobs parity is still incomplete.
-The same artifact passes 2,366 Maven tests and SpotBugs, the 471-probe full strict
-catalog (452 passed, 19 expected rejections), and all 31 focused native regression
-probes in `srv-paper-random-spawn-replace-20261119-r71`. Parity status totals remain
+Player-variable lifecycle update (2026-11-19): focused fixture
+`srv-paper-player-variables-comparison-20261119-r2` passes 740 observations across
+three real Paper 1.21.1-133 boots against public MM 5.7.2. Two real clients verify
+logout/login, offline expiry, typed values and locations, unchanged deadlines,
+explicit unsets, trigger aliases and player isolation through direct/imported actions.
+Quit-event mutations are saved before memory release; an online player's last
+mutation survives shutdown. Independent per-player atomic files protect failed
+writes and malformed data; committed legacy migration and empty tombstones prevent
+stale shared data from returning. Pre/post-shutdown files and redacted server/client
+logs are archived; all 31 incomplete/altered-evidence controls are rejected.
+The same artifact passes 2,373 Maven tests and SpotBugs. Entity/world/global restart
+regression `srv-paper-variable-persistence-comparison-20261119-r3` passes all 432
+observations, eight stable UUIDs and three snapshots; its 12 evidence controls pass.
+Full strict regression `srv-paper-player-variables-strict-20261119-r1` passes
+471 probes (452 passed, 19 expected rejections, zero failed or incomplete).
+Focused native regression `srv-paper-random-spawn-replace-20261119-r72` passes
+all 31 probes on the same plugin artifact; both are separate from the custom
+740-observation player lifecycle report.
+Periodic online autosave, crash recovery, immediate reconnect races, player
+death/respawn, chunk/world lifecycle, broader catalogs and other versions remain open.
+Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
+
+The player lifecycle runner needs Java 21, Maven, Node/Mineflayer (`npm ci --prefix
+tools/paper-integration`) and a Python environment with
+`requirements-player-variables.txt` installed. After building the plugin, choose
+a new revision and a previous fixture directory containing `cache`, `libraries`
+and `versions`:
+
+```bash
+python3 -m pip install -r tools/paper-integration/requirements-player-variables.txt
+python3 tools/paper-integration/run-player-variable-fixture.py \
+  --revision r3 --cache-directory "$CACHE_DIRECTORY"
+python3 tools/paper-integration/test-player-variable-evidence.py \
+  "$FIXTURE_DIRECTORY"
+python3 tools/paper-integration/validate-player-variables.py \
+  tools/paper-integration/reports/paper-1.21.1-player-variables-20261119-r2.json
+```
+
+Run Paper fixtures sequentially because they share port 25731. The player runner
+uses two local offline-auth clients, five observation phases and three actual
+server processes. It requires both player files before stopping each server,
+then checks the shutdown snapshots separately. The second boot keeps one client
+online until shutdown. Only a complete native/runtime comparison is archived;
+`--observe-only` never publishes parity evidence. Archived ZIP validation checks
+each member's hash and contents without needing a server installation. Failure
+logs stay in the fresh fixture directory for diagnosis.
 
 Rebuild with `./mvnw -o -q -pl helstera-plugin -am verify`, then run the native
 registry restart comparison with a fresh revision:
 
 ```bash
 pwsh -NoProfile -File tools/paper-integration/run-variable-persistence-fixture.ps1 \
-  -EvidenceRevision r3 -CacheDirectory srv-paper-random-spawn-replace-20261119-r70
+  -EvidenceRevision r4 -CacheDirectory "$CACHE_DIRECTORY"
 python3 tools/paper-integration/test-variable-persistence-evidence.py \
   "$FIXTURE_DIRECTORY"
 ```
@@ -49,8 +79,8 @@ on this artifact, including 420 variable lifecycle comparisons and six snapshot
 observations. Full strict fixture `srv-paper-skilltree-expiry-strict-20261119-r1` passes
 471 probes (452 passed, 19 expected rejections), with 2,358 Maven tests and SpotBugs.
 This earlier milestone completed the timed persistent SkillTree restart slice.
-Native scoped-registry restart now has the separate evidence above; player lifecycle
-and full MythicMobs parity remain open.
+Native scoped registries and connected-player restart now have separate evidence
+above; remaining lifecycle cases and full MythicMobs parity remain open.
 See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](STARTUP_EVIDENCE.md).
 
 Variable-lifecycle update (2026-11-19): focused strict fixture
@@ -66,8 +96,8 @@ phases and two paths), plus six Paper snapshot-file observations. It retains
 Skill-tree snapshot format 4 preserves absolute deadlines and reads formats 1–3.
 Native location-mechanic deadline behavior and the separate Helstera arithmetic
 extensions are documented. Native entity/world/global graceful restart is covered
-by the newer scoped-registry fixture above; connected players, broader catalogs
-and other versions remain open.
+by the newer scoped-registry fixture above. Connected players have separate evidence
+above; broader catalogs and other versions remain open.
 Full Conditions, Mechanics/Skills and Context Targeters remain `mapped-unverified`.
 See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](STARTUP_EVIDENCE.md).
 
@@ -134,7 +164,7 @@ remain open.
 
 The current strict release catalog has 471 probes (452 passed, 19 expected
 rejections), including 66 numeric/Potion runtime, 41 timing, and 47 Potion
-lifecycle assertions. The current JAR passes 2,366 Maven tests and SpotBugs.
+lifecycle assertions. The current JAR passes 2,373 Maven tests and SpotBugs.
 The earlier lifecycle milestone JAR passes focused
 `srv-paper-potion-mechanic-exploratory-20261117-r18` with 144 assertions:
 28 runtime, 22 timing, 47 imported lifecycle, and 47 native MM 5.7.2 lifecycle
@@ -238,7 +268,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-variable-persistence-strict-20261119-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `1313d2459e5dacf818b457fb543c3e0b40b759a9bc43299b8c4ad66da79a4958`. See the [strict report](reports/paper-1.21.1-variable-persistence-strict-20261119-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,366 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-player-variables-strict-20261119-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `3ebde259eacc8dbc991fc9403dad12d3b8f598ac107d6e19bf9d044a991f465b`. See the [strict report](reports/paper-1.21.1-player-variables-strict-20261119-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,373 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player

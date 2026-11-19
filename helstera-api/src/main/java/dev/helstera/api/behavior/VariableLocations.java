@@ -91,24 +91,38 @@ public final class VariableLocations {
 
     public static Map<String, ExpiringVariables.State<SkillTreeContext.LocationSnapshot>> snapshots() {
         Map<String, ExpiringVariables.State<SkillTreeContext.LocationSnapshot>> result = new java.util.LinkedHashMap<>();
-        VALUES.forEach((key, registry) -> {
-            var state = registry.snapshotWithRetention();
-            Map<String, SkillTreeContext.LocationSnapshot> points = new java.util.LinkedHashMap<>();
-            state.values().forEach((name, value) -> points.put(name, value.snapshot));
-            result.put(key, new ExpiringVariables.State<>(Map.copyOf(points), state.expirations()));
-        });
+        VALUES.forEach((key, registry) -> result.put(key, snapshotScope(key)));
         return Map.copyOf(result);
+    }
+
+    public static ExpiringVariables.State<SkillTreeContext.LocationSnapshot> snapshotScope(String key) {
+        var registry = VALUES.get(key);
+        if (registry == null) return new ExpiringVariables.State<>(Map.of(), Map.of());
+        var state = registry.snapshotWithRetention();
+        Map<String, SkillTreeContext.LocationSnapshot> points = new java.util.LinkedHashMap<>();
+        state.values().forEach((name, value) -> points.put(name, value.snapshot));
+        return new ExpiringVariables.State<>(Map.copyOf(points), state.expirations());
     }
 
     public static void restore(Map<String, ScopedVariableSnapshotStore.Registry> registries) {
         Map<String, ExpiringVariables<StoredLocation>> restored = new java.util.LinkedHashMap<>();
         registries.forEach((key, registry) -> {
-            var values = new ExpiringVariables<StoredLocation>();
-            registry.locations().forEach((name, location) -> values.put(name, new StoredLocation(location),
-                    registry.locationRetention().getOrDefault(name, 0L)));
+            var values = restoredLocations(registry);
             if (!values.isEmpty()) restored.put(key, values);
         });
         VALUES.clear(); VALUES.putAll(restored);
+    }
+
+    public static void restoreScope(String key, ScopedVariableSnapshotStore.Registry registry) {
+        var values = restoredLocations(registry);
+        if (values.isEmpty()) VALUES.remove(key); else VALUES.put(key, values);
+    }
+
+    private static ExpiringVariables<StoredLocation> restoredLocations(ScopedVariableSnapshotStore.Registry registry) {
+        var values = new ExpiringVariables<StoredLocation>();
+        registry.locations().forEach((name, location) -> values.put(name, new StoredLocation(location),
+                registry.locationRetention().getOrDefault(name, 0L)));
+        return values;
     }
 
     public static void clear() { VALUES.clear(); }
@@ -143,7 +157,7 @@ public final class VariableLocations {
 
     /** Caster and target are roles; both address the same entity registry. */
     public static String entityScopeKey(Entity entity) {
-        return entity == null ? null : "entity:" + entityIdentity(entity);
+        return entity == null ? null : (entity instanceof org.bukkit.entity.Player ? "player:" : "entity:") + entityIdentity(entity);
     }
 
     public static String normalizeScope(String rawScope) {

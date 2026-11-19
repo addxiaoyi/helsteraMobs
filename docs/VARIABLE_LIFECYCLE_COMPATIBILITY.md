@@ -10,7 +10,8 @@ import; they never silently become permanent values.
 
 Entity, world, global and skill-tree scalar/location stores expire values on
 lookup, presence checks, enumeration and snapshot reads. Caster, target and
-trigger roles continue to share an entity registry. Expired values behave as
+trigger roles share a UUID registry, with a separate player namespace for player
+entities. Expired values behave as
 absent, so placeholder defaults and variable conditions agree. A new set replaces
 the old deadline; setting without a positive duration makes that value permanent.
 Unset and cleanup remove the value with its deadline. Legacy instance variables
@@ -103,8 +104,8 @@ new duration refreshes the deadline; its `save` flag alone does not change reten
 are validated as true/false, with quoted/case-insensitive values accepted and
 malformed or duplicate flags rejected/preserved by binding/import.
 
-Focused fixture `srv-paper-variable-persistence-comparison-20261119-r2`
-([report](../tools/paper-integration/reports/paper-1.21.1-variable-persistence-20261119-r2.json))
+Focused fixture `srv-paper-variable-persistence-comparison-20261119-r3`
+([report](../tools/paper-integration/reports/paper-1.21.1-variable-persistence-20261119-r3.json))
 passes 432 observations across three real Paper 1.21.1-133 boots.
 The runner covers 18 cases across caster, target, world and
 global registries through direct and imported actions. Eight native persistent cows
@@ -116,8 +117,47 @@ native/runtime equality. Three shutdown snapshots and redacted logs are hashed;
 the evidence validator rejects missing/duplicate rows, lost identities, changed
 deadlines, vacuous absence, wrong values and resaved deleted data.
 
-Connected-player logout/login and restart, chunk/world unload/reload parity,
-crash recovery, non-persistent entity cleanup, nested dynamic variable names,
+Player registries use `player:<uuid>` and independent atomic
+`player-variables/<uuid>.yml` files. Login restores values before join skills;
+logout saves after Helstera quit skills, then releases scalar and location memory.
+Shutdown saves players who remain online and retries previously failed logout
+writes. The shared scoped snapshot excludes player registries. A failed write
+preserves both the previous file and live state; reconnect cannot replace that
+live state with stale disk data. A malformed or foreign-player file is rejected
+and is never overwritten by the failed session. These file operations currently
+run synchronously on the server thread.
+
+On first login after upgrading, a missing player file migrates the matching
+legacy `entity:<uuid>` registry from the shared snapshot. The player file is
+committed before the legacy in-memory registry is removed. An existing empty
+player file is a tombstone and takes precedence over stale shared data, preventing
+explicitly deleted values from returning. Migration failure leaves the legacy
+registry available for retry. This changes the storage layout: older plugin
+builds do not read the new per-player files.
+
+Public MM 5.7.2 player saves retain the transient marker as well as saved,
+negative-duration and unexpired timed values, matching the entity/global column
+above. Deadlines remain absolute through time offline. Native player profiles
+are saved asynchronously on logout and when still online during graceful shutdown;
+the comparison uses those ordinary lifecycle paths without modifying native
+profiles, clocks or save callbacks.
+
+The real-player fixture runs two local offline-auth Mineflayer clients through
+three Paper boots and five observation phases. Its 740 observations include
+720 direct/imported variable comparisons and 20 quit-hook controls. It verifies
+stable UUIDs, typed scalar/location values, unchanged deadlines, offline expiry,
+explicit unsets, trigger aliases, condition agreement and per-player isolation.
+Nine actual logout events release both native and runtime registries. Snapshots
+taken before and after each shutdown verify real disk writes; one player remains
+online with a new value until shutdown to prove the separate online save path.
+The independent validator also accepts the archived report/log ZIP and rejects
+31 missing/altered evidence controls, including stale shutdown files and tampered
+archive members. See the indexed report and hashes in
+[Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
+
+Periodic online autosave, crash recovery, immediate reconnect races, player
+death/respawn, chunk/world unload/reload parity, non-persistent entity cleanup,
+nested dynamic variable names,
 SetVariable expression/default-value semantics, the full arithmetic/location
 mechanic catalog, broader save combinations and other server/MythicMobs versions
 remain open. The shutdown snapshot is not a crash-durable per-mutation journal.

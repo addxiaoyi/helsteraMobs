@@ -608,6 +608,7 @@ public final class SkillExtras {
         var locations = VariableLocations.snapshots();
         java.util.Set<String> keys = new java.util.HashSet<>(SCOPED_VALUES.keySet()); keys.addAll(locations.keySet());
         for (String key : keys) {
+            if (key.startsWith("player:")) continue; // Player files are written on quit and independently on shutdown.
             var values = SCOPED_VALUES.get(key);
             var scalar = values == null ? new ExpiringVariables.State<Object>(Map.of(), Map.of()) : values.snapshotWithRetention();
             var points = locations.get(key);
@@ -615,6 +616,21 @@ public final class SkillExtras {
                     points == null ? Map.of() : points.values(), scalar.expirations(), points == null ? Map.of() : points.expirations()));
         }
         dev.helstera.api.behavior.ScopedVariableSnapshotStore.save(file, result);
+    }
+
+    public static dev.helstera.api.behavior.ScopedVariableSnapshotStore.Registry scopedVariableSnapshot(String key) {
+        var values = SCOPED_VALUES.get(key);
+        var scalar = values == null ? new ExpiringVariables.State<Object>(Map.of(), Map.of()) : values.snapshotWithRetention();
+        var points = VariableLocations.snapshotScope(key);
+        return new dev.helstera.api.behavior.ScopedVariableSnapshotStore.Registry(scalar.values(),
+                points == null ? Map.of() : points.values(), scalar.expirations(), points == null ? Map.of() : points.expirations());
+    }
+
+    public static void restoreScopedVariables(String key, dev.helstera.api.behavior.ScopedVariableSnapshotStore.Registry registry) {
+        var values = new ExpiringVariables<Object>();
+        registry.variables().forEach((name, value) -> values.put(name, value, registry.variableRetention().getOrDefault(name, 0L)));
+        VariableLocations.restoreScope(key, registry);
+        if (values.isEmpty()) SCOPED_VALUES.remove(key); else SCOPED_VALUES.put(key, values);
     }
 
     /** Validate the complete document before replacing any live scope. */
@@ -681,16 +697,11 @@ public final class SkillExtras {
     /** Clears persistent scoped values associated with an entity identity. */
     public static void forgetEntity(org.bukkit.entity.Entity entity) {
         if (entity == null) return;
-        String identity;
         UUID uuid = null;
-        try {
-            uuid = entity.getUniqueId();
-            identity = uuid == null ? Integer.toString(entity.getEntityId()) : uuid.toString();
-        } catch (RuntimeException ignored) {
-            identity = Integer.toString(entity.getEntityId());
-        }
+        try { uuid = entity.getUniqueId(); }
+        catch (RuntimeException ignored) { /* Lightweight entity doubles may have no UUID. */ }
         if (uuid != null) LAST_MOTION.remove(uuid);
-        SCOPED_VALUES.remove("entity:" + identity);
+        SCOPED_VALUES.remove(VariableLocations.entityScopeKey(entity));
     }
 
     /** 变量表快照，供 /helstera debug 查看。 */

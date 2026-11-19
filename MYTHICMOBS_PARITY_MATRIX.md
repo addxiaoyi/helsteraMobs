@@ -1,21 +1,26 @@
 # MythicMobs Parity Matrix
 
-Scoped-variable persistence update (2026-11-19): focused fixture
-`srv-paper-variable-persistence-comparison-20261119-r2` passes 432 direct/imported
-comparisons across three real Paper 1.21.1-133 boots against public MM 5.7.2.
-Caster/target UUID registries, world and global values retain types, locations and
-original deadlines; expired and explicitly unset values stay absent. World transient
-save markers are filtered at shutdown, while native global/persistent-entity behavior
-retains them. Eight entity UUIDs remain stable. Three shutdown snapshots and redacted
-logs are archived; all 12 incomplete/altered-evidence controls are rejected.
-Atomic scoped-registry storage preserves the previous file on invalid writes and
-protects unreadable startup data from shutdown overwrite. Unloaded-world coordinates
-remain available for later resolution. Player reconnect/restart, chunk/world lifecycle,
-non-persistent entity cleanup, broader catalogs and other versions remain open;
-full MythicMobs parity is still incomplete.
-The same artifact passes 2,366 Maven tests and SpotBugs, the 471-probe full strict
-catalog (452 passed, 19 expected rejections), and all 31 focused native regression
-probes in `srv-paper-random-spawn-replace-20261119-r71`. Parity status totals remain
+Player-variable lifecycle update (2026-11-19): focused fixture
+`srv-paper-player-variables-comparison-20261119-r2` passes 740 observations across
+three real Paper 1.21.1-133 boots against public MM 5.7.2. Two real clients verify
+logout/login, offline expiry, typed values and locations, unchanged deadlines,
+explicit unsets, trigger aliases and player isolation through direct/imported actions.
+Quit-event mutations are saved before memory release; an online player's last
+mutation survives shutdown. Independent per-player atomic files protect failed
+writes and malformed data; committed legacy migration and empty tombstones prevent
+stale shared data from returning. Pre/post-shutdown files and redacted server/client
+logs are archived; all 31 incomplete/altered-evidence controls are rejected.
+The same artifact passes 2,373 Maven tests and SpotBugs. Entity/world/global restart
+regression `srv-paper-variable-persistence-comparison-20261119-r3` passes all 432
+observations, eight stable UUIDs and three snapshots; its 12 evidence controls pass.
+Full strict regression `srv-paper-player-variables-strict-20261119-r1` passes
+471 probes (452 passed, 19 expected rejections, zero failed or incomplete).
+Focused native regression `srv-paper-random-spawn-replace-20261119-r72` passes
+all 31 probes on the same plugin artifact; both are separate from the custom
+740-observation player lifecycle report.
+Periodic online autosave, crash recovery, immediate reconnect races, player
+death/respawn, chunk/world lifecycle, broader catalogs and other versions remain open.
+Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](./docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
@@ -34,8 +39,8 @@ on this artifact, including 420 variable lifecycle comparisons and six snapshot
 observations. Full strict fixture `srv-paper-skilltree-expiry-strict-20261119-r1` passes
 471 probes (452 passed, 19 expected rejections), with 2,358 Maven tests and SpotBugs.
 This earlier milestone completed the timed persistent SkillTree restart slice.
-Native scoped-registry restart now has the separate evidence above; player lifecycle
-and full MythicMobs parity remain open.
+Native scoped registries and connected-player restart now have separate evidence
+above; remaining lifecycle cases and full MythicMobs parity remain open.
 See the [variable lifecycle contract](docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Variable-lifecycle update (2026-11-19): focused strict fixture
@@ -51,8 +56,8 @@ phases and two paths), plus six Paper snapshot-file observations. It retains
 Skill-tree snapshot format 4 preserves absolute deadlines and reads formats 1–3.
 Native location-mechanic deadline behavior and the separate Helstera arithmetic
 extensions are documented. Native entity/world/global graceful restart is covered
-by the newer scoped-registry fixture above; connected players, broader catalogs
-and other versions remain open.
+by the newer scoped-registry fixture above. Connected players have separate evidence
+above; broader catalogs and other versions remain open.
 Full Conditions, Mechanics/Skills and Context Targeters remain `mapped-unverified`.
 See the [variable lifecycle contract](docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -286,7 +291,7 @@ mixed player/monster/animal candidates and invalid values. Strict Paper fixture
 angle/length boundaries, and malformed, duplicate, and unknown arguments. The
 broader Context targeters row remains `mapped-unverified`.
 
-Latest strict release evidence: `srv-paper-variable-persistence-strict-20261119-r1` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `1313d2459e5dacf818b457fb543c3e0b40b759a9bc43299b8c4ad66da79a4958`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-variable-persistence-strict-20261119-r1.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,366 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict release evidence: `srv-paper-player-variables-strict-20261119-r1` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `3ebde259eacc8dbc991fc9403dad12d3b8f598ac107d6e19bf9d044a991f465b`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-player-variables-strict-20261119-r1.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,373 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Sunny` aliases `sunny`/`isSunny` now map to `weather-is clear`; `Thundering` aliases `thundering`/`isThundering`/`stormy`/`isStormy` now map to `weather-is thunder`. The importer, `SkillService`, and `ConditionListParser` agree on these names, and malformed or duplicate arguments remain fail-closed. Migration, API, AI, and plugin cross-module tests cover the alias paths and clear/thunder runtime states. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Crouching` aliases `sneaking`/`isCrouching`/`isSneaking`, and `Wearing` aliases `isWearing`/`wielding`/`isWielding`, now map through the importer, `SkillService`, and `ConditionListParser`. The existing `is-sneaking` and `wearing` evaluators are reused; wearing item arguments are strict and unknown, duplicate, or empty values fail closed. Migration, API, AI, and plugin cross-module tests cover Player sneaking, helmet matching, aliases, and preservation. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
@@ -3477,7 +3482,7 @@ both sides of the caster remaining-air threshold through the production
 condition service; its report completes 262 probes (250 passed, 12 expected
 negative controls, zero incomplete). The condition now has strict runtime
 evidence, while the full Conditions catalog remains `mapped-unverified`.
-| Full SkillTree semantics | mapped-unverified | Native entity/world/global shutdown persistence now has 432 direct/imported comparisons across three boots in `srv-paper-variable-persistence-comparison-20261119-r2`, including typed restoration, retained deadlines, world save filtering, explicit unsets and eight stable UUIDs. Player and chunk/world lifecycle remain open. Timed restart fixture `srv-paper-skilltree-expiry-restart-20261119-r1` verifies 115 observations over three real boots, four shutdown snapshots, parent expiry, no deadline reset and no dead-entity resurrection. Retained instance snapshots now prune expired values on load/read/save. Clean two-boot Paper 1.21.1-133 fixture `srv-paper-skilltree-atomic-restart-20261110-r2` creates two persistent mobs with the same ID, verifies distinct UUID snapshots and branch restoration, then confirms a real Bukkit death event deletes only the victim snapshot; focused evidence and redacted boot logs are archived under `tools/paper-integration/reports`. Follow-up `srv-paper-skilltree-dotted-names-20261119-r1` verifies dotted variable/location/branch names and reserved `unlocked` branch restoration with legacy YAML reads. Latest `srv-paper-skilltree-typed-values-20261119-r4` verifies version-3 list/set/nested-map variable persistence, branch state, and real-death cleanup on the rebuilt artifact; evidence hashes are in `tools/paper-integration/STARTUP_EVIDENCE.md`. Historical full strict catalog fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all 422 registered probes. `PersistentMobSkillTreeStoreTest` covers same-ID isolation, UUID-over-legacy precedence, legacy fallback, and single-entity deletion. Earlier Paper 1.21.11 exploratory fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` proves force-loaded chunk loading and stable PDC reattachment. Strict Paper `skillTreeBranches` verifies condition-denied/condition-allowed branch unlock and prerequisite transitions; `skillTreeCastPersistence` verifies named-skill gating and fresh-context execution. Branch metadata is predeclared from loaded skill definitions and condition evaluators are service-local. Complete Mythic SkillTree semantics and broader reload/client parity remain open; see `tools/paper-integration/STARTUP_EVIDENCE.md` |
+| Full SkillTree semantics | mapped-unverified | Native entity/world/global shutdown persistence now has 432 direct/imported comparisons across three boots in `srv-paper-variable-persistence-comparison-20261119-r2`, including typed restoration, retained deadlines, world save filtering, explicit unsets and eight stable UUIDs. Player logout/login, offline expiry and online shutdown now have 740 observations in `srv-paper-player-variables-comparison-20261119-r2`; periodic autosave, immediate reconnect, death/respawn and chunk/world lifecycle remain open. Timed restart fixture `srv-paper-skilltree-expiry-restart-20261119-r1` verifies 115 observations over three real boots, four shutdown snapshots, parent expiry, no deadline reset and no dead-entity resurrection. Retained instance snapshots now prune expired values on load/read/save. Clean two-boot Paper 1.21.1-133 fixture `srv-paper-skilltree-atomic-restart-20261110-r2` creates two persistent mobs with the same ID, verifies distinct UUID snapshots and branch restoration, then confirms a real Bukkit death event deletes only the victim snapshot; focused evidence and redacted boot logs are archived under `tools/paper-integration/reports`. Follow-up `srv-paper-skilltree-dotted-names-20261119-r1` verifies dotted variable/location/branch names and reserved `unlocked` branch restoration with legacy YAML reads. Latest `srv-paper-skilltree-typed-values-20261119-r4` verifies version-3 list/set/nested-map variable persistence, branch state, and real-death cleanup on the rebuilt artifact; evidence hashes are in `tools/paper-integration/STARTUP_EVIDENCE.md`. Historical full strict catalog fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all 422 registered probes. `PersistentMobSkillTreeStoreTest` covers same-ID isolation, UUID-over-legacy precedence, legacy fallback, and single-entity deletion. Earlier Paper 1.21.11 exploratory fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` proves force-loaded chunk loading and stable PDC reattachment. Strict Paper `skillTreeBranches` verifies condition-denied/condition-allowed branch unlock and prerequisite transitions; `skillTreeCastPersistence` verifies named-skill gating and fresh-context execution. Branch metadata is predeclared from loaded skill definitions and condition evaluators are service-local. Complete Mythic SkillTree semantics and broader reload/client parity remain open; see `tools/paper-integration/STARTUP_EVIDENCE.md` |
 
 ## 6. Spawner, Random Spawn, Custom Menu
 
@@ -3578,7 +3583,7 @@ row remains `mapped-unverified` until the declared catalog is covered.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-variable-persistence-strict-20261119-r1` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `1313d2459e5dacf818b457fb543c3e0b40b759a9bc43299b8c4ad66da79a4958`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-variable-placeholders-strict-20261119-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-player-variables-strict-20261119-r1` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `3ebde259eacc8dbc991fc9403dad12d3b8f598ac107d6e19bf9d044a991f465b`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-variable-persistence-strict-20261119-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

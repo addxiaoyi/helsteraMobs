@@ -314,6 +314,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 } catch (java.io.IOException e) {
                     getLogger().log(java.util.logging.Level.SEVERE, "Could not restore scoped variables; disk writes disabled to preserve the file", e);
                 }
+                playerVariables = new PlayerVariablePersistence(this);
                 org.bukkit.plugin.Plugin mythicMobs = getServer().getPluginManager().getPlugin("MythicMobs");
                 dev.helstera.ai.skill.SkillExtras.mythicPackLookup(packId ->
                         mythicMobs == null || !mythicMobs.isEnabled() ? null
@@ -779,6 +780,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         });
         // 拉杆监听已在 AI 块装载完 leverService 后注册，此处只注册插件自身监听
         getServer().getPluginManager().registerEvents(this, this);
+        if (playerVariables != null) playerVariables.start();
         if (randomSpawnService != null) getServer().getPluginManager().registerEvents(randomSpawnService, this);
         if (randomSpawnService != null && randomSpawnService.addSize() > 0
                 && getConfig().getString("random-spawns.generator", "NONE").equalsIgnoreCase("CLUSTER")) {
@@ -968,9 +970,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     private boolean scopedVariablesLoaded;
+    private PlayerVariablePersistence playerVariables;
 
     @Override
     public void onDisable() {
+        if (playerVariables != null) { playerVariables.stop(); playerVariables = null; }
         if (scopedVariablesLoaded) {
             try { dev.helstera.ai.skill.SkillExtras.saveScopedVariables(new java.io.File(getDataFolder(), "scoped-variables.yml")); }
             catch (java.io.IOException e) { getLogger().log(java.util.logging.Level.SEVERE, "Could not save scoped variables; previous file retained", e); }

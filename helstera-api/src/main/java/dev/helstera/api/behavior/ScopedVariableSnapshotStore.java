@@ -113,7 +113,7 @@ public final class ScopedVariableSnapshotStore {
     }
     private static void validateScope(String scope) throws IOException {
         if ("global".equals(scope)) return;
-        if (scope == null || !(scope.startsWith("entity:") || scope.startsWith("world:"))) throw new IOException("invalid variable scope: " + scope);
+        if (scope == null || !(scope.startsWith("entity:") || scope.startsWith("world:") || scope.startsWith("player:"))) throw new IOException("invalid variable scope: " + scope);
         String id = scope.substring(scope.indexOf(':') + 1);
         try { if (!UUID.fromString(id).toString().equals(id)) throw new IllegalArgumentException(); }
         catch (IllegalArgumentException e) { throw new IOException("invalid scope UUID", e); }
