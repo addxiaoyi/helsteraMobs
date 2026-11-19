@@ -1230,8 +1230,7 @@ public final class MmConditions {
             try {
                 double parsedAngle = Double.parseDouble(angle);
                 double parsedRotation = Double.parseDouble(rotation);
-                if (!Double.isFinite(parsedAngle) || !Double.isFinite(parsedRotation)
-                        || parsedAngle < 0 || parsedAngle > 180) return new Mapped(s, false);
+                if (!Double.isFinite(parsedAngle) || !Double.isFinite(parsedRotation)) return new Mapped(s, false);
             } catch (NumberFormatException ignored) {
                 return new Mapped(s, false);
             }

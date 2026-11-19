@@ -1560,8 +1560,10 @@ class SkillConditionsTest {
         assertTrue(extraFactory("field-of-view").create(List.of("a=90", "r=90")).test(context));
         assertThrows(IllegalArgumentException.class,
                 () -> extraFactory("field-of-view").create(List.of("angle=90", "a=45")));
+        assertTrue(extraFactory("field-of-view").create(List.of("angle=181")).test(context));
+        assertFalse(extraFactory("field-of-view").create(List.of("angle=-90")).test(context));
         assertThrows(IllegalArgumentException.class,
-                () -> extraFactory("field-of-view").create(List.of("angle=181")));
+                () -> extraFactory("field-of-view").create(List.of("angle=Infinity")));
         assertThrows(IllegalArgumentException.class,
                 () -> extraFactory("field-of-view").create(List.of("angle=90", "unknown=0")));
     }

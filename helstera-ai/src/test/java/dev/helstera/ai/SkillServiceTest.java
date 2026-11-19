@@ -3301,7 +3301,7 @@ class SkillServiceTest {
                 "altitude{h=1;height=2}", "altitude{height=1;unknown=true}",
                 "altitude{height=1;maxHeight=NaN}", "altitude{height=1;maxHeight=-1}",
                 "field-of-view{unknown=90}", "field-of-view{angle=90;a=45}",
-                "field-of-view{angle=181}", "field-of-view{angle=90;0}",
+                "field-of-view{angle=Infinity}", "field-of-view{angle=90;0}",
                 "looking-at{b=STONE;entity=COW}", "looking-at{b=STONE;d=0}",
                 "looking-at{b=STONE;unknown=true}", "looking-at{STONE;d=5}",
                 "has-potion-effect{type=SPEED;effect=ANY}",

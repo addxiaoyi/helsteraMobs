@@ -45,6 +45,20 @@ normalizes the full facing vector, including pitch, then shifts the caster box
 only along X/Z: flattening before normalization would incorrectly increase the
 offset for pitched casters. The implementation clones the box before shifting.
 
+FieldOfView accepts every finite angle and rotation without clamping or wrapping
+the supplied angle. The predicate compares the measured angle with half that
+value: `a=-90` matches no direction, zero includes exactly forward, and
+large angles such as 720 cover all non-coincident directions. Coincident eyes still
+produce no match. Rotation is passed directly to the native-style Y-axis
+trigonometric calculation, including negative and multiple-turn rotations.
+
+Float precision remains observable at the half-plane and full-circle boundaries.
+A perpendicular subject fails at `a=180` and `a=180.000005`, then passes at
+`a=180.000006`. A directly rearward subject fails at `a=360` and `a=360.00001`,
+then passes at `a=360.00002`. These are measured-angle rounding boundaries;
+there is no special full-circle shortcut. Caster rejection, outcome inversion
+and native matching-location removal remain the same at these wider angles.
+
 Unknown/duplicate named arguments and non-finite numeric inputs fail binding and
 are preserved by migration where unsupported. This is deliberate Helstera input
 validation, not a claim that native malformed-input behavior is identical.
@@ -56,9 +70,12 @@ using cached target distance and its existing positional comparison convention.
 ## Evidence
 
 `ComparisonDispatchAudit` calls native framework methods without replacing
-predicates or licensing checks. It requires 6,720 matching rows:
+predicates or licensing checks. It requires 14,280 matching rows:
 
-- 16 expressions across the five condition families, each with true/false outcome.
+- 34 expressions across the five condition families, each with true/false outcome.
+  The original 16 expressions remain; 18 more cover negative/signed-zero angles,
+  180/360-degree float boundaries, 181/270/720-degree cones, the maximum finite
+  double angle, and positive/negative multiple-turn rotations (7,560 new rows).
 - 21 scenes: self, front/back/above/below/side, float boundary, overlap, pitched
   caster, cross-world, eye-level/below-eye items, removed item/living entity,
   missing trigger, mixed/removed targets, and four explicit location targets.
@@ -76,7 +93,7 @@ After building, use an unused revision to reproduce the focused suite:
 
 ```powershell
 ./mvnw -B -pl helstera-plugin -am verify
-pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision r58 -MobRadiusStrict -VanillaCachePath <verified-vanilla-cache>
+pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision r59 -MobRadiusStrict -VanillaCachePath <verified-vanilla-cache>
 ```
 
 ## Open boundaries
@@ -84,8 +101,10 @@ pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.p
 Cuboid, faction/owner/parent/line-of-sight and vehicle comparisons have additional
 scoped evidence in the [relational contract](RELATIONAL_CONDITION_COMPATIBILITY.md).
 Dynamic distance placeholders, the broader generic entity condition catalog,
-FOV angles beyond the existing 0..180 binding range, condition action suffixes
-beyond true/false, Premium expressions and other MM/Paper versions remain open.
+condition action suffixes beyond true/false, Premium expressions and other
+MM/Paper versions remain open. Wider finite FOV angles have scoped evidence;
+non-living caster combinations and malformed native numeric fallbacks remain
+outside the parity claim.
 The complete Conditions and Context Targeters rows remain `mapped-unverified`.
 
 Public MM 5.7.2 gates bracketed targeter-condition activation behind Premium;

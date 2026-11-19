@@ -1,5 +1,56 @@
 [
   {
+    "fixtureId": "srv-paper-view-angle-strict-20261119-r1",
+    "reportFixtureDirectory": "srv-paper-view-angle-strict-20261119-r1",
+    "pluginSha256": "e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849",
+    "fullReleaseCatalog": true,
+    "report": "tools/paper-integration/reports/paper-1.21.1-view-angle-strict-20261119-r1.json",
+    "reportSha256": "e5e406c1a5cfdb3190bf5b754227231ca44e6981f032e398e96d8333522f9b59",
+    "log": "tools/paper-integration/reports/paper-1.21.1-view-angle-strict-20261119-r1.log.gz",
+    "logSha256": "0100f15bdd5bbe211d7ba77187d80e2d2c1060bec6705503b85a008fcf5246c9",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-view-angle-strict-20261119-r1.client-logs.zip",
+    "clientLogSha256": "18f0c8a88fed07be000e9fb653834cd9f80d4642bdded584ce75cc1aafb213c9"
+  },
+  {
+    "fixtureId": "srv-paper-random-spawn-replace-20261119-r58",
+    "reportFixtureDirectory": "srv-paper-random-spawn-replace-20261119-r58",
+    "pluginSha256": "e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849",
+    "fullReleaseCatalog": false,
+    "report": "tools/paper-integration/reports/paper-1.21.1-random-spawn-replace-20261119-r58.json",
+    "reportSha256": "1cbdabca90c32ece2619c55897977307789078f9195eab1ce29c2ced63380464",
+    "log": "tools/paper-integration/reports/paper-1.21.1-random-spawn-replace-20261119-r58.log.gz",
+    "logSha256": "bcc42b820cfbc74f3c8b143d984679f46c51e8a940bb15e1e94f4917f735b6fb",
+    "focusedProbes": [
+      "randomSpawn.importer",
+      "randomSpawn.types-alternatives",
+      "randomSpawn.add-cluster",
+      "randomSpawn.add-location-conditions",
+      "randomSpawn.add-world-border",
+      "randomSpawn.add-player-conditions",
+      "randomSpawn.player-radius-semantics",
+      "randomSpawn.player-syntax-native-comparison",
+      "randomSpawn.player-syntax-extension-boundary",
+      "randomSpawn.replace",
+      "randomSpawn.condition-control",
+      "randomSpawn.reason-control",
+      "randomSpawn.deny",
+      "randomSpawn.deny-condition-control",
+      "randomSpawn.cooldown-immediate",
+      "randomSpawn.cooldown-expired",
+      "randomSpawn.natural-engine",
+      "mobRadius.native-audit",
+      "mobRadius.native-registration",
+      "mobRadius.dynamic-extension-boundary",
+      "mobRadius.random-native-comparison",
+      "mobRadius.condition-dispatch",
+      "condition.nonliving-trigger-dispatch",
+      "condition.comparison-dispatch",
+      "condition.relational-dispatch",
+      "targeter.location-condition-extension-boundary",
+      "mobRadius.alias-active-lifecycle"
+    ]
+  },
+  {
     "fixtureId": "srv-paper-relational-dispatch-strict-20261119-r1",
     "reportFixtureDirectory": "srv-paper-relational-dispatch-strict-20261119-r1",
     "pluginSha256": "0a53fdf2a7c0ffe90c76d5910a73801c6e4015f3abd66888eb65e16248f4b522",
@@ -9,7 +60,9 @@
     "log": "tools/paper-integration/reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.log.gz",
     "logSha256": "fc2996b895c8ef2f9dff30bdfac7d2480938c0b45baaf2b1c9fdfb4c8dc05dec",
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.client-logs.zip",
-    "clientLogSha256": "9e39d1b814dfa05833e6fbe3cc049400555a28eec330b5715c42cda1ba7259f4"
+    "clientLogSha256": "9e39d1b814dfa05833e6fbe3cc049400555a28eec330b5715c42cda1ba7259f4",
+    "superseded": true,
+    "supersededBy": "srv-paper-view-angle-strict-20261119-r1"
   },
   {
     "fixtureId": "srv-paper-random-spawn-replace-20261119-r57",

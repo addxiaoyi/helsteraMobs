@@ -1044,9 +1044,7 @@ public final class SkillExtras {
         }
         double angle = finiteDouble(angleRaw, "field-of-view angle");
         double rotation = finiteDouble(rotationRaw, "field-of-view rotation");
-        if (angle < 0 || angle > 180) {
-            throw new IllegalArgumentException("field-of-view angle must be between 0 and 180");
-        }
+        // Native MM compares the measured angle with half the supplied value without clamping.
         return new double[]{angle, rotation};
     }
 

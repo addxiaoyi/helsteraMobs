@@ -834,8 +834,7 @@ public final class SkillService {
             try {
                 double parsedAngle = Double.parseDouble(angle);
                 double parsedRotation = Double.parseDouble(rotation);
-                if (!Double.isFinite(parsedAngle) || parsedAngle < 0 || parsedAngle > 180
-                        || !Double.isFinite(parsedRotation)) return null;
+                if (!Double.isFinite(parsedAngle) || !Double.isFinite(parsedRotation)) return null;
             } catch (NumberFormatException ignored) {
                 return null;
             }

@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-relational-dispatch-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `0a53fdf2a7c0ffe90c76d5910a73801c6e4015f3abd66888eb65e16248f4b522`. [Strict report](reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.client-logs.zip) This artifact passes 2,326 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-view-angle-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849`. [Strict report](reports/paper-1.21.1-view-angle-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-view-angle-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-view-angle-strict-20261119-r1.client-logs.zip) This artifact passes 2,329 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,10 +9,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `c630ba6ed56df1f8cceaece9c98d52ca5cadc45ca6e40ac09d95d22c619c07f7`;
-redacted server log SHA-256: `fc2996b895c8ef2f9dff30bdfac7d2480938c0b45baaf2b1c9fdfb4c8dc05dec`;
-redacted client logs SHA-256: `9e39d1b814dfa05833e6fbe3cc049400555a28eec330b5715c42cda1ba7259f4`.
-The preceding `srv-paper-comparison-dispatch-strict-20261119-r1`,
+Current full-report SHA-256: `e5e406c1a5cfdb3190bf5b754227231ca44e6981f032e398e96d8333522f9b59`;
+redacted server log SHA-256: `0100f15bdd5bbe211d7ba77187d80e2d2c1060bec6705503b85a008fcf5246c9`;
+redacted client logs SHA-256: `18f0c8a88fed07be000e9fb653834cd9f80d4642bdded584ce75cc1aafb213c9`.
+The preceding `srv-paper-relational-dispatch-strict-20261119-r1`,
+`srv-paper-comparison-dispatch-strict-20261119-r1`,
 `srv-paper-trigger-dispatch-strict-20261119-r1`,
 `srv-paper-location-guards-strict-20261119-r3`,
 `srv-paper-radius-dispatch-strict-20261119-r1`,
@@ -26,6 +27,41 @@ The preceding `srv-paper-comparison-dispatch-strict-20261119-r1`,
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Wider FieldOfView angles and rotations
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r58` passes all
+27 probes on plugin `e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849`. It extends the comparison
+suite to 14,280 matching rows: the previous 6,720 rows plus 7,560 angle/rotation
+rows. Eighteen additional expressions run across 21 scenes, five named/inline
+modes, true/false outcomes and imported/direct skills. All 6,820 relational
+comparisons and prior radius, non-living-trigger and location-guard checks pass.
+
+Native Paper comparisons cover negative/signed-zero angles, 180/360-degree
+float boundaries, 181/270/720-degree cones, the maximum finite double and
+positive/negative multi-turn rotations. Import and binding no longer impose
+an unsupported 0..180 restriction. The tested `a=-90` matches no direction, and
+large cones still exclude coincident eyes. Float rounding means exactly 180
+can exclude the perpendicular subject and exactly 360 can exclude the rear
+subject. Caster-interface rejection, inverse outcomes, generic triggers and
+native matching-location removal remain intact. Malformed, duplicate, unknown
+and nonfinite arguments remain rejected/preserved, with unit regression coverage.
+See the [comparison contract](../../docs/COMPARISON_CONDITION_COMPATIBILITY.md).
+
+The same artifact passes 2,329 Maven tests with no failures/errors/skips and
+SpotBugs. Full strict fixture `srv-paper-view-angle-strict-20261119-r1` passes
+all 471 probes (452 passed, 19 expected rejections). Initial Maven attempts found
+nested Mockito stubbing and a missing target condition scope in the new tests;
+both setups were corrected before the successful verification. Both Paper
+suites passed on their first attempt. Release audit, version matrix and archive
+credential scan pass.
+This closes the wider-angle boundary only; dynamic distance, relationship
+lifecycle/restart, other condition families and other versions remain open.
+
+- [Focused report](reports/paper-1.21.1-random-spawn-replace-20261119-r58.json), SHA-256
+  `1cbdabca90c32ece2619c55897977307789078f9195eab1ce29c2ced63380464`.
+- [Redacted focused log](reports/paper-1.21.1-random-spawn-replace-20261119-r58.log.gz), SHA-256
+  `bcc42b820cfbc74f3c8b143d984679f46c51e8a940bb15e1e94f4917f735b6fb`.
 
 ## Cuboid and relational comparison dispatch
 

@@ -1,18 +1,16 @@
-Latest full-catalog strict fixture `srv-paper-relational-dispatch-strict-20261119-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `0a53fdf2a7c0ffe90c76d5910a73801c6e4015f3abd66888eb65e16248f4b522`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,326 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-view-angle-strict-20261119-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-view-angle-strict-20261119-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,329 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-Relational-condition update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r57` passes 27 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Its 6,820 new comparisons cover Cuboid, Owner,
-IsParent, FactionSame, LineOfSight and VehicleIsDead across 31 scenes, five
-named/inline modes, both outcomes and imported/direct execution. Cuboid uses
-half-open bounds and native relative/interface precedence; relationships compare
-UUIDs, factions retain case, and view/vehicle conditions use the actual subject.
-The previous 6,720 comparison rows and all radius/trigger controls also pass.
-All 11 entity-comparison classes in the pinned artifact now have scoped framework
-evidence; broader parameters, lifecycle/restart, player faction providers,
-dynamic placeholders, condition actions, Premium expressions and other versions
-remain open. Complete Conditions and Context Targeters rows remain
-`mapped-unverified`. See the [relational contract](docs/RELATIONAL_CONDITION_COMPATIBILITY.md) and
+FieldOfView-angle update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r58` passes 27 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Import and runtime now accept every finite view
+angle, including negative, 181/270/360/720-degree and maximum-double values,
+without clamping or wrapping. Native float boundaries and multi-turn rotations
+are preserved. The comparison suite now has 14,280 matching rows, including
+7,560 new angle rows; all 6,820 relational comparisons and prior radius/trigger
+controls also pass. Dynamic distance placeholders, player faction providers,
+relationship lifecycle/restart, condition actions, Premium expressions and
+other versions remain open. Complete Conditions and Context Targeters rows
+remain `mapped-unverified`. See the [comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md) and
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
@@ -1693,7 +1691,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-relational-dispatch-strict-20261119-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-view-angle-strict-20261119-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1709,7 +1707,7 @@ all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-relational-dispatch-strict-20261119-r1`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `0a53fdf2a7c0ffe90c76d5910a73801c6e4015f3abd66888eb65e16248f4b522`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,326 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-view-angle-strict-20261119-r1`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,329 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
 
@@ -1718,7 +1716,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 727 cited IDs; 619 report files; 17 directories without reports; 91 missing directories; 364 archived release reports. The
+   Current fixture inventory: 729 cited IDs; 621 report files; 17 directories without reports; 91 missing directories; 366 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1902,7 +1900,7 @@ the entire MythicMobs feature catalog.
 - Official `BlockTypeInRadius` now counts exact Bukkit materials in a spherical block radius with Mythic amount/radius ranges; exploratory Paper r87 verifies positive STONE and negative DIRT paths with restoration.
 - Official `FallSpeed` now matches positive downward velocity ranges; exploratory Paper r91 extends the live motion condition probe.
 - Official `DirectionalVelocity` now preserves named x/y/z, absolute-axis, and relative-orientation checks; exploratory Paper r95 extends the motion probe.
-- Official `FieldOfView` now evaluates caster/target view cones with angle and rotation offsets; exploratory Paper r96 verifies forward, side-rejection, and rotated paths.
+- Official `FieldOfView` accepts finite angles and rotation offsets without angle clamping or wrapping. Focused Paper r58 adds 7,560 native comparisons for wider/negative/zero angles, float boundaries and multi-turn rotations; see the [comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md).
 - Official `DistanceFromLocation` now compares explicit target coordinates against x/y/z/world and distance ranges; exploratory Paper r97 verifies exact and out-of-range paths.
 - Official `EnchantingLevel` / `EnchantingExperience` now read explicit target-player level and 0..1 experience progress; exploratory Paper r92 verifies level and progress comparators with restoration.
 - Official `Plugin` / `PluginExists` / `HasPlugin` now check Bukkit PluginManager enabled state, defaulting to `MythicMobs`; strict Paper fixture `srv-paper-plugin-condition-strict-20261114-r1` verifies the enabled Helstera plugin, missing/default-plugin negatives, malformed-input preservation, and completes the 456-probe release catalog. The broader Conditions catalog remains `mapped-unverified`.

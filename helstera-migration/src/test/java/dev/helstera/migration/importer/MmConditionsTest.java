@@ -1041,11 +1041,13 @@ class MmConditionsTest {
         assertEquals("field-of-view 90 0", t("?fieldOfView"));
         assertEquals("field-of-view 90 15", t("?fov{a=90;r=15}"));
         assertTrue(translated("?infieldofview{angle=45}"));
+        assertEquals("field-of-view 270 0", t("?fov{a=270}"));
+        assertEquals("field-of-view -90 -450", t("?fov{a=-90;r=-450}"));
         assertFalse(translated("?fieldOfView{angle=invalid}"));
         for (String invalid : List.of(
                 "?fieldOfView{unknown=90}", "?fieldOfView{angle=90;a=45}",
                 "?fieldOfView{angle=90;rotation=0;extra=1}",
-                "?fieldOfView{angle=90;0}", "?fieldOfView{angle=181}",
+                "?fieldOfView{angle=90;0}", "?fieldOfView{angle=Infinity}",
                 "?fieldOfView{angle=NaN}")) {
             assertUntranslatedPreserved(invalid);
         }

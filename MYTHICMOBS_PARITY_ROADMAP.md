@@ -1,18 +1,16 @@
 # MythicMobs Parity Roadmap
 
-Relational-condition update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r57` passes 27 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Its 6,820 new comparisons cover Cuboid, Owner,
-IsParent, FactionSame, LineOfSight and VehicleIsDead across 31 scenes, five
-named/inline modes, both outcomes and imported/direct execution. Cuboid uses
-half-open bounds and native relative/interface precedence; relationships compare
-UUIDs, factions retain case, and view/vehicle conditions use the actual subject.
-The previous 6,720 comparison rows and all radius/trigger controls also pass.
-All 11 entity-comparison classes in the pinned artifact now have scoped framework
-evidence; broader parameters, lifecycle/restart, player faction providers,
-dynamic placeholders, condition actions, Premium expressions and other versions
-remain open. Complete Conditions and Context Targeters rows remain
-`mapped-unverified`. See the [relational contract](docs/RELATIONAL_CONDITION_COMPATIBILITY.md) and
+FieldOfView-angle update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r58` passes 27 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Import and runtime now accept every finite view
+angle, including negative, 181/270/360/720-degree and maximum-double values,
+without clamping or wrapping. Native float boundaries and multi-turn rotations
+are preserved. The comparison suite now has 14,280 matching rows, including
+7,560 new angle rows; all 6,820 relational comparisons and prior radius/trigger
+controls also pass. Dynamic distance placeholders, player faction providers,
+relationship lifecycle/restart, condition actions, Premium expressions and
+other versions remain open. Complete Conditions and Context Targeters rows
+remain `mapped-unverified`. See the [comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md) and
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
@@ -23,17 +21,18 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after the relational-condition implementation:
+Immediate continuation after the wider FieldOfView implementation:
 
 1. Extend native condition dispatch beyond the verified entity/location
    predicate slices for caster, target and living/non-living triggers. Location-targeter radius
    lists now have 672 condition-library/boundary comparisons; the earlier claim that inline guards were
    omitted is corrected: they were rejected at binding. Non-living trigger
    dispatch has 864 native comparisons; Distance/YDiff/FieldOfView/IsCaster/
-   BoundingBoxesOverlap have 6,720 framework comparisons; Cuboid, faction, owner,
+   BoundingBoxesOverlap now have 14,280 framework comparisons, including 7,560
+   wider-angle/rotation rows; Cuboid, faction, owner,
    parent, line-of-sight and vehicle add 6,820 more. All 11 pinned comparison
    classes have scoped dispatch evidence. Next compare dynamic distance
-   placeholders, wider view angles, player faction providers, relationship
+   placeholders, player faction providers, relationship
    lifecycle/restart, non-living caster combinations and remaining generic entity
    predicates (UUID/name/velocity/passengers), non-living placeholders, condition
    actions beyond true/false and selection offsets/sorting/limits. Audit the remaining
@@ -63,7 +62,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-relational-dispatch-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `0a53fdf2a7c0ffe90c76d5910a73801c6e4015f3abd66888eb65e16248f4b522`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,326 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-view-angle-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `e1c2d2a5570000e9068e27d173089c0fe9c484da06e48c4e054cf604175e7849`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,329 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

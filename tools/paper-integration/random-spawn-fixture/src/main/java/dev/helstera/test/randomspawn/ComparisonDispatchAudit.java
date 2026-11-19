@@ -96,6 +96,15 @@ final class ComparisonDispatchAudit {
                     {"ydiff{d=>0}", "YDiffCondition"},
                     {"fov{a=90}", "FieldOfViewCondition"}, {"fov{a=90;r=90}", "FieldOfViewCondition"},
                     {"fieldofview{a=20}", "FieldOfViewCondition"},
+                    {"fov{a=-90}", "FieldOfViewCondition"}, {"fov{a=0}", "FieldOfViewCondition"},
+                    {"fov{a=-0}", "FieldOfViewCondition"}, {"fov{a=180}", "FieldOfViewCondition"},
+                    {"fov{a=180.000005}", "FieldOfViewCondition"}, {"fov{a=180.000006}", "FieldOfViewCondition"},
+                    {"fov{a=181}", "FieldOfViewCondition"}, {"fov{a=270}", "FieldOfViewCondition"},
+                    {"fov{a=359.99999}", "FieldOfViewCondition"}, {"fov{a=360}", "FieldOfViewCondition"},
+                    {"fov{a=360.00001}", "FieldOfViewCondition"}, {"fov{a=360.00002}", "FieldOfViewCondition"},
+                    {"fov{a=720}", "FieldOfViewCondition"}, {"fov{a=1.7976931348623157E308}", "FieldOfViewCondition"},
+                    {"fov{a=181;r=450}", "FieldOfViewCondition"}, {"fov{a=181;r=-270}", "FieldOfViewCondition"},
+                    {"fov{a=360;r=720}", "FieldOfViewCondition"}, {"fov{a=360;r=-450}", "FieldOfViewCondition"},
                     {"boundingboxesoverlap", "BoundingBoxesOverlapCondition"},
                     {"bbsoverlap{so=4}", "BoundingBoxesOverlapCondition"},
                     {"boundingboxesoverlap{fo=-4}", "BoundingBoxesOverlapCondition"},
@@ -251,7 +260,7 @@ final class ComparisonDispatchAudit {
                     }
                 }
             }
-            int expectedRows = extended ? 6820 : 6720;
+            int expectedRows = extended ? 6820 : 14280;
             if (rows != expectedRows) throw new IllegalStateException("Incomplete comparison dispatch evidence: " + rows);
             probe.getLogger().info(marker + "_SUMMARY|comparisons=" + rows + "|conditions=" + cases.length
                     + "|scenes=" + scenes.size() + "|modes=5|passed=true");

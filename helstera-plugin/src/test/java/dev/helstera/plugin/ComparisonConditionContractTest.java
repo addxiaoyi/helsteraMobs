@@ -133,6 +133,58 @@ class ComparisonConditionContractTest {
         assertTrue(test("!fov{a=90}", point));
     }
 
+    @Test void fieldOfViewAcceptsFiniteAnglesWithoutClampingOrWrapping() {
+        var ctx = context(BehaviorContext.ConditionScope.TARGET);
+        assertFalse(test("fov{a=-90}", ctx));
+        assertTrue(test("!fov{a=-90}", ctx));
+        assertTrue(test("fov{a=0}", ctx), "zero includes exactly forward");
+        assertTrue(test("fov{a=-0}", ctx));
+        when(target.getLocation()).thenReturn(new Location(world, 4, 64, 0));
+        assertTrue(test("fov{a=181}", ctx));
+        assertTrue(test("fov{a=270}", ctx));
+        when(target.getLocation()).thenReturn(new Location(world, 0, 64, -4));
+        assertFalse(test("fov{a=270}", ctx));
+        assertTrue(test("fov{a=720}", ctx), "large angles must not wrap to zero");
+        assertTrue(test("fov{a=1.7976931348623157E308}", ctx));
+        when(target.getLocation()).thenReturn(new Location(world, 0, 64, 0));
+        assertFalse(test("fov{a=720}", ctx), "coincident eyes have no angle, even with a wide cone");
+        assertFalse(test("fov{a=720}", ctx.withConditionScope(BehaviorContext.ConditionScope.CASTER)));
+        assertFalse(test("!fov{a=720}", ctx.withConditionScope(BehaviorContext.ConditionScope.CASTER)));
+        var point = ctx.withLocationTarget(new Location(world, 0, 64, -4))
+                .withConditionScope(BehaviorContext.ConditionScope.TARGET);
+        assertFalse(test("fov{a=720}", point), "native matching-location removal still applies");
+        assertTrue(test("fov{a=-90}", point));
+    }
+
+    @Test void fieldOfViewKeepsFloatBoundariesAndMultiTurnRotation() {
+        var ctx = context(BehaviorContext.ConditionScope.TARGET);
+        when(target.getLocation()).thenReturn(new Location(world, 4, 64, 0));
+        assertFalse(test("fov{a=180}", ctx), "float pi/2 is slightly larger than 90 degrees");
+        assertFalse(test("fov{a=180.000005}", ctx));
+        assertTrue(test("fov{a=180.000006}", ctx));
+        assertTrue(test("fov{a=181;r=450}", ctx));
+        assertTrue(test("fov{a=181;r=-270}", ctx));
+        assertFalse(test("fov{a=181;r=-450}", ctx));
+        when(target.getLocation()).thenReturn(new Location(world, 0, 64, -4));
+        assertFalse(test("fov{a=359.99999}", ctx));
+        assertFalse(test("fov{a=360}", ctx), "float pi is slightly larger than 180 degrees");
+        assertFalse(test("fov{a=360.00001}", ctx));
+        assertTrue(test("fov{a=360.00002}", ctx));
+        assertFalse(test("fov{a=360;r=720}", ctx));
+        assertTrue(test("fov{a=360;r=-450}", ctx));
+    }
+
+    @Test void fieldOfViewStillRejectsNonfiniteAndAmbiguousArguments() {
+        for (String source : List.of("fov{a=NaN}", "fov{a=Infinity}", "fov{a=-Infinity}",
+                "fov{a=1e309}", "fov{r=NaN}", "fov{r=Infinity}", "fov{r=-Infinity}",
+                "fov{a=270;angle=360}", "fov{a=270;r=90;rotation=450}", "fov{a=270;unknown=1}")) {
+            assertNull(skills.bindCondition(source), source);
+            var mapped = MmConditions.translate("?" + source);
+            assertFalse(mapped.translated(), source);
+            assertEquals("?" + source, mapped.condition());
+        }
+    }
+
     @Test void boundingBoxOffsetKeepsNativePitchScaleAndGenericTriggerEntity() {
         var ctx = context(BehaviorContext.ConditionScope.TRIGGER);
         when(caster.getLocation()).thenReturn(new Location(world, 0, 64, 0, 0, 45));

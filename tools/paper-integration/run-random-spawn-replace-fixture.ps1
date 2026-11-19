@@ -461,8 +461,8 @@ if ($MobRadiusAudit) {
     }
     $comparisonLines = [regex]::Matches($log, '(?m)^.*COMPARISON_DISPATCH\|condition=[^\r\n]+$')
     $comparisonSummary = [regex]::Match($log,
-        '(?m)^.*COMPARISON_DISPATCH_SUMMARY\|comparisons=6720\|conditions=16\|scenes=21\|modes=5\|passed=true\s*$')
-    if ($comparisonLines.Count -ne 6720 -or -not $comparisonSummary.Success -or
+        '(?m)^.*COMPARISON_DISPATCH_SUMMARY\|comparisons=14280\|conditions=34\|scenes=21\|modes=5\|passed=true\s*$')
+    if ($comparisonLines.Count -ne 14280 -or -not $comparisonSummary.Success -or
             @($comparisonLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
         throw 'Incomplete native comparison-condition dispatch evidence.'
     }
