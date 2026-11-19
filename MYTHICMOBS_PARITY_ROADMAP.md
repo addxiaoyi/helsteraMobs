@@ -1,18 +1,19 @@
 # MythicMobs Parity Roadmap
 
-Trigger-placeholder update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r62` passes 29 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Trigger name/type, health/max-health/percentage,
-and location families now read the actual trigger, including nonliving and removed
-entities. Plain coordinates use block positions, native outer rounding is ignored,
-and missing/nonfinite data stays unresolved under the documented boundary.
-The new suite checks 1,020 outputs across 34 tokens and 10 scenes, including 86
-explicit boundary observations. Dynamic Distance now passes 14,560 native dispatch
-comparisons, with 4,160 added trigger-expression rows; previous comparison,
-relation and radius controls remain required. Scoped variables, broader placeholder
-families, relationship lifecycle/restart and other versions remain open.
-Full Conditions and Context Targeters remain `mapped-unverified`.
-See the [trigger placeholder contract](docs/TRIGGER_PLACEHOLDER_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+Scoped-variable update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r64` passes 30 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Caster/target/trigger placeholders share entity
+variable storage; skill/world/global reads use the existing action stores.
+Case-sensitive names, native dotted-argument/default behavior, location formatting,
+scalar/location replacement and skill-tree isolation now have focused coverage.
+The suite checks 6,720 outputs across 84 tokens, 10 scenes and direct/imported
+paths: 5,902 equal outputs and 818 documented missing/nonfinite/unmanaged-registry
+boundaries. Dynamic Distance passes 17,680 comparisons, including 3,120 added
+variable-default/unresolved rows. Previous trigger, comparison, relation and radius
+controls remain required. Expiry, persistence, connected-player registries,
+collections, broader placeholders and other versions remain open.
+Full Conditions, Mechanics/Skills and Context Targeters remain `mapped-unverified`.
+See the [variable placeholder contract](docs/VARIABLE_PLACEHOLDER_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 This is the ordered worklist for closing the compatibility gaps recorded in the
@@ -22,7 +23,7 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after trigger placeholder dispatch:
+Immediate continuation after scoped variable placeholders:
 
 1. Extend native condition dispatch beyond the verified entity/location
    predicate slices for caster, target and living/non-living triggers. Location-targeter radius
@@ -32,10 +33,13 @@ Immediate continuation after trigger placeholder dispatch:
    BoundingBoxesOverlap now have 14,280 framework comparisons, including 7,560
    wider-angle/rotation rows; Cuboid, faction, owner,
    parent, line-of-sight and vehicle add 6,820 more. All 11 pinned comparison
-   classes have scoped dispatch evidence. Dynamic Distance has 14,560 comparisons
-   for health/rounding, random and trigger placeholders and whole-target-set failures.
-   Trigger name/type/health/location adds 1,020 output checks (86 documented boundaries).
-   Next compare scoped variables and broader trigger/general placeholder families, player
+   classes have scoped dispatch evidence. Dynamic Distance has 17,680 comparisons
+   for health/rounding, random, trigger and variable-default placeholders and whole-target-set failures.
+   Trigger name/type/health/location retains 1,020 output checks (86 documented boundaries).
+   Scoped variables add 6,720 output checks (818 documented boundaries), shared entity
+   registries and location formatting through direct/imported runtime actions.
+   Next compare variable expiry, persistence, connected-player registries and
+   broader trigger/general placeholder families, player
    faction providers, relationship lifecycle/restart, non-living caster combinations
    and remaining generic entity
    predicates (UUID/name/velocity/passengers), non-living placeholders, condition
@@ -66,7 +70,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-trigger-placeholders-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `326d9cf4ef807bd5739a5aca146cd9835364435b53feaf467e3bfcb8134ef50d`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,341 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-variable-placeholders-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `96f4c3b76ae9cab9fd8f1482dfe054560e7eea0530cc575d527e6237a4b9d1c5`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,348 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

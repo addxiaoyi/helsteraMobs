@@ -87,7 +87,8 @@ public final class Placeholders {
         catch (IllegalArgumentException e) { return null; }
         if (parsed.rounding() == null) return lookupValue(parsed.key(), ctx, numbers);
         // Native TriggerPlaceholder delegates without forwarding its outer numeric config.
-        if (parsed.key().regionMatches(true, 0, "trigger.", 0, 8)) {
+        if (parsed.key().regionMatches(true, 0, "trigger.", 0, 8)
+                || PlaceholderSyntax.isVariableKey(parsed.key())) {
             return lookupValue(parsed.key(), ctx, numbers);
         }
         if (!supportsRounding(parsed.key())) return null;
@@ -114,6 +115,10 @@ public final class Placeholders {
         String scope = dot < 0 ? k : k.substring(0, dot);
         String field = dot < 0 ? "" : k.substring(dot + 1);
 
+        if (field.startsWith("var.") && List.of("caster", "target", "trigger", "skill", "world", "global").contains(scope)) {
+            return variable(ctx, scope, key.substring(dot + 5));
+        }
+
         return switch (scope) {
             case "caster" -> caster(ctx, field, numbers);
             case "target" -> target(ctx, field, numbers);
@@ -129,6 +134,28 @@ public final class Placeholders {
     // ------------------------------------------------------------------
     // 各作用域取值
     // ------------------------------------------------------------------
+
+    private static String variable(BehaviorContext ctx, String scope, String reference) {
+        if (reference.isEmpty()) return null;
+        if (scope.equals("caster") && (!ctx.instanceValid() || ctx.instance().baseEntity().isEmpty())
+                || scope.equals("target") && ctx.targetEntity().isEmpty()
+                || scope.equals("trigger") && ctx.trigger().isEmpty()
+                || scope.equals("world") && dev.helstera.api.behavior.VariableLocations.scopeKey(scope, ctx) == null) return null;
+        // The native entity-variable constructors consume only their first dotted argument.
+        if (List.of("caster", "target", "trigger").contains(scope)) reference = reference.split("\\.", -1)[0];
+        String[] parts = reference.split("\\|");
+        if (parts.length == 0 || parts[0].isEmpty() || reference.contains("|") && parts.length < 2) return null;
+        Object value = SkillExtras.placeholderVariable(ctx, scope, parts[0]);
+        if (value == null) return parts.length > 1 ? parts[1] : null;
+        if (value instanceof Number number && !Double.isFinite(number.doubleValue())) return null;
+        if (value instanceof Location location) {
+            if (location.getWorld() == null || !Double.isFinite(location.getX())
+                    || !Double.isFinite(location.getY()) || !Double.isFinite(location.getZ())) return null;
+            return location.getWorld().getName() + "," + location.getX() + "," + location.getY() + "," + location.getZ();
+        }
+        return value instanceof Number || value instanceof CharSequence || value instanceof Boolean
+                ? value.toString() : null;
+    }
 
     private static String caster(BehaviorContext ctx, String field, DoubleFunction<String> numbers) {
         if (field.isEmpty()) return null;
@@ -292,12 +319,6 @@ public final class Placeholders {
 
     /** Resolves current skill context and skill-tree variables. */
     private static String skill(BehaviorContext ctx, String field, DoubleFunction<String> numbers) {
-        if (field.regionMatches(true, 0, "var.", 0, 4) && field.length() > 4) {
-            String name = field.substring(4);
-            return ctx.skillTree().flatMap(tree -> tree.variable(name))
-                    .filter(value -> value instanceof Number || value instanceof CharSequence || value instanceof Boolean)
-                    .map(Object::toString).orElse(null);
-        }
         String parameterName = field;
         String parameter = ctx.skillTree().flatMap(tree -> tree.variable(parameterName))
                 .filter(value -> value instanceof Number || value instanceof CharSequence || value instanceof Boolean)

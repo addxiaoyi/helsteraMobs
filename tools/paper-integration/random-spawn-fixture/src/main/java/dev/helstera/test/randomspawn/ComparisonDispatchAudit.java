@@ -24,6 +24,7 @@ final class ComparisonDispatchAudit {
     private record Scene(String name, List<LivingEntity> targets, Entity trigger, Location point, float pitch) {}
 
     static void run(JavaPlugin probe, Plugin helstera, Plugin mythic, Location center) throws Exception {
+        VariablePlaceholderAudit.run(probe, helstera, mythic, center);
         TriggerPlaceholderAudit.run(probe, helstera, mythic, center);
         run(probe, helstera, mythic, center, false, false);
         run(probe, helstera, mythic, center, true, false);
@@ -163,6 +164,13 @@ final class ComparisonDispatchAudit {
             if (dynamicDistance) {
                 var expandedCases = new ArrayList<>(Arrays.asList(cases));
                 for (String expression : TriggerPlaceholderAudit.DISTANCES)
+                    expandedCases.add(new String[]{expression, "DistanceCondition"});
+                for (String expression : List.of("distance{d=<global.var.HelsteraDistanceMissing|4>}",
+                        "distance{d=<<global.var.HelsteraDistanceMissing|4>}",
+                        "distance{d=<world.var.HelsteraDistanceMissing|4>}",
+                        "distance{d=<skill.var.HelsteraDistanceMissing|4>}",
+                        "distance{d=<global.var.HelsteraDistanceMissing|4.5>}",
+                        "distance{d=<skill.var.HelsteraDistanceMissing>}"))
                     expandedCases.add(new String[]{expression, "DistanceCondition"});
                 cases = expandedCases.toArray(String[][]::new);
             }
@@ -306,7 +314,7 @@ final class ComparisonDispatchAudit {
                     }
                 }
             }
-            int expectedRows = extended ? 6820 : dynamicDistance ? 14560 : 14280;
+            int expectedRows = extended ? 6820 : dynamicDistance ? 17680 : 14280;
             if (rows != expectedRows) throw new IllegalStateException("Incomplete comparison dispatch evidence: " + rows);
             probe.getLogger().info(marker + "_SUMMARY|comparisons=" + rows + "|conditions=" + cases.length
                     + "|scenes=" + scenes.size() + "|modes=5|passed=true");

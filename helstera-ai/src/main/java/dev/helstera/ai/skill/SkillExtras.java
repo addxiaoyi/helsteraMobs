@@ -657,8 +657,7 @@ public final class SkillExtras {
             identity = Integer.toString(entity.getEntityId());
         }
         if (uuid != null) LAST_MOTION.remove(uuid);
-        SCOPED_VALUES.remove("caster:" + identity);
-        SCOPED_VALUES.remove("target:" + identity);
+        SCOPED_VALUES.remove("entity:" + identity);
     }
 
     /** 变量表快照，供 /helstera debug 查看。 */
@@ -7111,6 +7110,7 @@ public final class SkillExtras {
                                 .map(org.bukkit.entity.Entity::getLocation)
                                 .orElseGet(() -> ctx.origin().orElse(null)));
                         if (location == null) return;
+                        unsetScopedVariable(ctx, ref);
                         if (ref.scope().equals("skill")) {
                             ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location));
                         } else {
@@ -9258,6 +9258,7 @@ public final class SkillExtras {
         if (value instanceof LocationValue locationValue) {
             Location location = resolveLocationValue(ctx, locationValue);
             if (location == null) return;
+            unsetScopedVariable(ctx, ref);
             if (ref.scope().equals("skill")) {
                 ctx.skillTree().ifPresent(tree -> tree.setLocation(ref.name(), location));
             } else {
@@ -9265,6 +9266,7 @@ public final class SkillExtras {
             }
             return;
         }
+        unsetLocation(ctx, ref);
         if (ref.scope().equals("skill")) {
             if (ctx.skillTree().isPresent()) ctx.skillTree().orElseThrow().setVariable(ref.name(), value);
             else if (hasInstance(ctx) && value instanceof Number number) varsOf(id(ctx)).put(ref.name(), number.doubleValue());
@@ -9315,7 +9317,7 @@ public final class SkillExtras {
                     || ctx.skillTree().flatMap(tree -> tree.location(ref.name())).isPresent();
         }
         String key = VariableLocations.scopeKey(ref.scope(), ctx);
-        return key != null && (scopedValuesOf(key).containsKey(ref.name())
+        return key != null && (SCOPED_VALUES.getOrDefault(key, Map.of()).containsKey(ref.name())
                 || VariableLocations.get(ref.scope(), ref.name(), ctx).isPresent());
     }
 
@@ -9332,9 +9334,11 @@ public final class SkillExtras {
         }
         String key = VariableLocations.scopeKey(ref.scope(), ctx);
         if (key != null) {
-            Map<String, Object> values = scopedValuesOf(key);
-            values.remove(ref.name());
-            if (values.isEmpty()) SCOPED_VALUES.remove(key, values);
+            Map<String, Object> values = SCOPED_VALUES.get(key);
+            if (values != null) {
+                values.remove(ref.name());
+                if (values.isEmpty()) SCOPED_VALUES.remove(key, values);
+            }
             VariableLocations.unset(ref.scope(), ref.name(), ctx);
         }
     }
@@ -9378,13 +9382,26 @@ public final class SkillExtras {
             if (value != null) return value;
             Location location = ctx.skillTree().flatMap(tree -> tree.location(ref.name())).orElse(null);
             if (location != null) return location;
-            if (hasInstance(ctx)) return varsOf(id(ctx)).get(ref.name());
+            if (ctx.skillTree().isEmpty() && hasInstance(ctx)) return VARS.getOrDefault(id(ctx), Map.of()).get(ref.name());
             return null;
         }
         String key = VariableLocations.scopeKey(ref.scope(), ctx);
         if (key == null) return null;
-        Object value = scopedValuesOf(key).get(ref.name());
+        Object value = SCOPED_VALUES.getOrDefault(key, Map.of()).get(ref.name());
         return value != null ? value : VariableLocations.get(ref.scope(), ref.name(), ctx).orElse(null);
+    }
+
+    /** Read the action/condition variable store without allocating a registry on a miss. */
+    static Object placeholderVariable(BehaviorContext ctx, String scope, String name) {
+        if (ctx == null || name == null || name.isEmpty()) return null;
+        if (scope.equals("trigger")) {
+            Entity entity = ctx.trigger().orElse(null);
+            String key = VariableLocations.entityScopeKey(entity);
+            if (key == null) return null;
+            Object value = SCOPED_VALUES.getOrDefault(key, Map.of()).get(name);
+            return value != null ? value : VariableLocations.get(entity, name).orElse(null);
+        }
+        return rawVariable(ctx, new VariableRef(name, scope));
     }
 
     private static boolean variableEquals(BehaviorContext ctx, VariableRef ref, String expected) {
@@ -9498,16 +9515,15 @@ public final class SkillExtras {
     }
     private static double varOf(BehaviorContext ctx, String name) {
         if (ctx == null || name.isEmpty()) return Double.NEGATIVE_INFINITY;
-        Object scoped = ctx.skillTree().flatMap(tree -> tree.variable(name)).orElse(null);
+        Object scoped = rawVariable(ctx, new VariableRef(name, "skill"));
         if (scoped instanceof Number number) return number.doubleValue();
-        if (!hasInstance(ctx)) return Double.NEGATIVE_INFINITY;
-        return varsOf(id(ctx)).getOrDefault(name, Double.NEGATIVE_INFINITY);
+        return Double.NEGATIVE_INFINITY;
     }
 
     private static boolean hasVar(BehaviorContext ctx, String name) {
         if (ctx == null || name.isEmpty()) return false;
         return ctx.skillTree().flatMap(tree -> tree.variable(name)).isPresent()
-                || (hasInstance(ctx) && varsOf(id(ctx)).containsKey(name));
+                || (ctx.skillTree().isEmpty() && hasInstance(ctx) && VARS.getOrDefault(id(ctx), Map.of()).containsKey(name));
     }
 
     private static void applyDamage(BehaviorContext ctx, LivingEntity target, double amount) {

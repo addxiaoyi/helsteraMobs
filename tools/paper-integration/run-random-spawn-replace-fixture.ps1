@@ -483,6 +483,18 @@ if ($MobRadiusAudit) {
         status = 'passed'
         observations = @($relationLines | ForEach-Object { $_.Value }) + @($relationSummary.Value)
     }
+    $variablePlaceholderLines = [regex]::Matches($log, '(?m)^.*VARIABLE_PLACEHOLDER\|token=[^\r\n]+$')
+    $variablePlaceholderSummary = [regex]::Match($log,
+        '(?m)^.*VARIABLE_PLACEHOLDER_SUMMARY\|comparisons=6720\|tokens=84\|scenes=10\|modes=4\|paths=2\|boundaries=\d+\|schedulerTicks=\d+\|passed=true\s*$')
+    if ($variablePlaceholderLines.Count -ne 6720 -or -not $variablePlaceholderSummary.Success -or
+            @($variablePlaceholderLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete scoped variable placeholder native comparison evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'placeholder.scoped-variables'
+        status = 'passed'
+        observations = @($variablePlaceholderLines | ForEach-Object { $_.Value }) + @($variablePlaceholderSummary.Value)
+    }
     $triggerPlaceholderLines = [regex]::Matches($log, '(?m)^.*TRIGGER_PLACEHOLDER\|token=[^\r\n]+$')
     $triggerPlaceholderSummary = [regex]::Match($log,
         '(?m)^.*TRIGGER_PLACEHOLDER_SUMMARY\|comparisons=1020\|tokens=34\|scenes=10\|modes=3\|boundaries=86\|schedulerTicks=\d+\|passed=true\s*$')
@@ -497,8 +509,8 @@ if ($MobRadiusAudit) {
     }
     $distanceLines = [regex]::Matches($log, '(?m)^.*DYNAMIC_DISTANCE_DISPATCH\|condition=[^\r\n]+$')
     $distanceSummary = [regex]::Match($log,
-        '(?m)^.*DYNAMIC_DISTANCE_DISPATCH_SUMMARY\|comparisons=14560\|conditions=28\|scenes=26\|modes=5\|passed=true\s*$')
-    if ($distanceLines.Count -ne 14560 -or -not $distanceSummary.Success -or
+        '(?m)^.*DYNAMIC_DISTANCE_DISPATCH_SUMMARY\|comparisons=17680\|conditions=34\|scenes=26\|modes=5\|passed=true\s*$')
+    if ($distanceLines.Count -ne 17680 -or -not $distanceSummary.Success -or
             @($distanceLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
         throw 'Incomplete dynamic distance native comparison evidence.'
     }
@@ -551,6 +563,7 @@ $report = [ordered]@{
     fixtureProbeJarSha256 = (Get-FileHash -LiteralPath $probeJar -Algorithm SHA256).Hash.ToLowerInvariant()
     conditionProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     dispatchProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
+    variablePlaceholderProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     triggerPlaceholderProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/TriggerPlaceholderAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     comparisonProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/ComparisonDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     naturalSpawnClientSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'natural-spawn-client.js') -Algorithm SHA256).Hash.ToLowerInvariant()

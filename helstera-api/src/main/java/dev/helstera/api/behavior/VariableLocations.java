@@ -3,7 +3,6 @@ package dev.helstera.api.behavior;
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
 
 import java.util.Map;
 import java.util.Optional;
@@ -24,7 +23,15 @@ public final class VariableLocations {
     }
 
     public static Optional<Location> get(String scope, String name, BehaviorContext context) {
-        String key = scopeKey(scope, context);
+        return getByKey(scopeKey(scope, context), name);
+    }
+
+    /** Read the same entity registry when it is acting as a nonliving trigger. */
+    public static Optional<Location> get(Entity entity, String name) {
+        return getByKey(entityScopeKey(entity), name);
+    }
+
+    private static Optional<Location> getByKey(String key, String name) {
         if (key == null || name == null || name.isBlank()) return Optional.empty();
         Location location = VALUES.getOrDefault(key, Map.of()).get(name);
         return Optional.ofNullable(location == null ? null : location.clone());
@@ -42,9 +49,7 @@ public final class VariableLocations {
 
     public static void clearEntity(Entity entity) {
         if (entity == null) return;
-        String identity = entityIdentity(entity);
-        VALUES.remove("caster:" + identity);
-        VALUES.remove("target:" + identity);
+        VALUES.remove(entityScopeKey(entity));
     }
 
     public static void clearWorld(World world) {
@@ -64,20 +69,25 @@ public final class VariableLocations {
         if (context == null) return null;
         if (scope.equals("caster")) {
             if (!context.instanceValid()) return null;
-            String identity = context.instance().baseEntity()
-                    .map(VariableLocations::entityIdentity).orElse(null);
-            return identity == null ? null : "caster:" + identity;
+            return context.instance().baseEntity().map(VariableLocations::entityScopeKey).orElse(null);
         }
         if (scope.equals("target")) {
-            return context.targetEntity().map(VariableLocations::entityIdentity)
-                    .map(identity -> "target:" + identity).orElse(null);
+            return context.targetEntity().map(VariableLocations::entityScopeKey).orElse(null);
         }
         if (scope.equals("world")) {
-            Location origin = context.origin().orElse(null);
-            World world = origin == null ? null : origin.getWorld();
+            World world = context.instanceValid()
+                    ? context.instance().baseEntity().map(Entity::getWorld).orElse(null) : null;
+            if (world == null) world = context.trigger().map(Entity::getWorld).orElse(null);
+            // Contexts without entities retain the location-origin extension.
+            if (world == null) world = context.origin().map(Location::getWorld).orElse(null);
             return world == null ? null : "world:" + worldIdentity(world);
         }
         return null;
+    }
+
+    /** Caster and target are roles; both address the same entity registry. */
+    public static String entityScopeKey(Entity entity) {
+        return entity == null ? null : "entity:" + entityIdentity(entity);
     }
 
     public static String normalizeScope(String rawScope) {

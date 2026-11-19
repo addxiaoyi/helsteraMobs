@@ -40,7 +40,8 @@ selected target; and contextless reads. Probe source and artifact hashes are
 recorded with the report. See [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md)
 for the published counts and artifact IDs.
 
-Scoped variables, stats, equipment, threat, velocity/raytrace families and
+Scoped variables have a separate [variable contract](VARIABLE_PLACEHOLDER_COMPATIBILITY.md)
+and native Paper probe. Stats, equipment, threat, velocity/raytrace families and
 player names on a real connected client remain outside this focused evidence.
 Player name priority has a unit test. Full placeholder, Conditions and Context
 Targeters parity is still incomplete.

@@ -6,6 +6,17 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class PlaceholderSyntaxTest {
     @Test
+    void variableDefaultsAreAllowedInsideDynamicComparisonsOnlyAsTokens() {
+        var template = new ComparisonRangeTemplate("0to<global.var.Range|4.5>");
+        assertEquals("0to4.5", template.resolve(token -> "4.5"));
+        assertTrue(PlaceholderSyntax.isToken("<skill.var.伤害|4>"));
+        assertEquals("caster.var.Count|4", PlaceholderSyntax.parse("caster.var.Count|4{r=0}").key());
+        assertThrows(IllegalArgumentException.class, () -> new ComparisonRangeTemplate("4|5"));
+        assertThrows(IllegalArgumentException.class, () -> new ComparisonRangeTemplate("<caster.hp|4>"));
+        assertThrows(IllegalArgumentException.class, () -> template.resolve(token -> "NaN"));
+    }
+
+    @Test
     void parsesRoundingAliasesDefaultAndSegmentConfiguration() {
         assertNull(PlaceholderSyntax.parse("caster.hp").rounding());
         assertEquals(2, PlaceholderSyntax.parse("caster.hp{}").rounding());

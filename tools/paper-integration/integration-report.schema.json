@@ -28,6 +28,7 @@
     "conditionProbeSourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "dispatchProbeSourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "comparisonProbeSourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "variablePlaceholderProbeSourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "triggerPlaceholderProbeSourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "fixtureProbeSourceSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "fixtureProbeJarSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },

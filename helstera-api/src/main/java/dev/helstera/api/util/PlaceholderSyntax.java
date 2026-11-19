@@ -35,8 +35,13 @@ public record PlaceholderSyntax(String key, Integer rounding) {
                 if (rounding > 340) throw invalid();
             }
         }
-        if (!key.matches("[A-Za-z0-9_.:+-]+")) throw invalid();
+        if (!key.matches("[A-Za-z0-9_.:+-]+") && !isVariableKey(key)) throw invalid();
         return new PlaceholderSyntax(key, rounding);
+    }
+
+    /** Variable names and their optional fallback are data, including case and Unicode. */
+    public static boolean isVariableKey(String key) {
+        return key != null && key.matches("(?i)(?:caster|target|trigger|skill|world|global)\\.var\\.[\\p{L}\\p{N}_./:+| -]+");
     }
 
     public static boolean isToken(String text) {

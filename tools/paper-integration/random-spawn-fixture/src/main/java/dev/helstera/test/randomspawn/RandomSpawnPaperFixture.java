@@ -65,6 +65,7 @@ public final class RandomSpawnPaperFixture extends JavaPlugin implements Listene
 
     @Override
     public void onEnable() {
+        VariablePlaceholderAudit.prepare(Bukkit.getPluginManager().getPlugin("MythicMobs"));
         TriggerPlaceholderAudit.prepare(Bukkit.getPluginManager().getPlugin("MythicMobs"));
         probeKey = new NamespacedKey(this, "case");
         Bukkit.getPluginManager().registerEvents(this, this);
