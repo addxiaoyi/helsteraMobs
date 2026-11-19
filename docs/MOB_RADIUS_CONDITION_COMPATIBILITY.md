@@ -178,7 +178,9 @@ A further 672 location-targeter comparisons cover seven scenes and four
 argument aliases, observing the public targeter boundary and comparing retained
 coordinates and action counts with the native condition-library reference on
 imported/direct paths. They do not verify Premium targeter execution.
-Non-living trigger dispatch, condition action suffixes beyond true/false and
+Non-living entity/location trigger predicates now have scoped native evidence; see
+[the trigger contract](TRIGGER_CONDITION_COMPATIBILITY.md). Other trigger
+interfaces, condition action suffixes beyond true/false and
 native interface dispatch for other location predicates (including entity-only
 conditions on locations) remain outside this verified slice. Location-selection
 offsets/sorting/limits and the complete native dispatcher are not yet covered.
@@ -187,7 +189,7 @@ Reproduce the focused strict comparison after building the production JAR:
 
 ```powershell
 pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 `
-  -EvidenceRevision r52 -MobRadiusStrict `
+  -EvidenceRevision r55 -MobRadiusStrict `
   -VanillaCachePath srv-paper-random-spawn-replace-20261119-r21/cache/mojang_1.21.1.jar
 ```
 

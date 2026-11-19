@@ -1,23 +1,19 @@
-Latest full-catalog strict fixture `srv-paper-location-guards-strict-20261119-r3` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `16c347b088cf9a099e7a49de39fd19edd45e07485401a945b671a9249be40bca`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-location-guards-strict-20261119-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,313 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-trigger-dispatch-strict-20261119-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `e6cc1c825ad454f4582af294c1ebb7aa28c145c561b8d16c77a645d3f1670948`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-trigger-dispatch-strict-20261119-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,314 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-Location-targeter condition update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r51` passes 24 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Its 672 new comparisons check the public-build targeter boundary
-and compare filtering against the public native condition library across seven
-scenes, four argument aliases, two type filters, three amounts, true/false
-outcomes and imported/direct execution. Positions are filtered before actions;
-explicit coordinates, variable locations, pins and pin regions retain their
-location context. The existing `Location/Loc/L` coordinate alias `c=x,y,z,yaw,pitch`
-remains valid alongside bracketed `c=[...]` guards. The earlier 576 condition
-dispatch comparisons and radius/RandomSpawns controls also pass.
-Public MM reads bracketed lists but gates their activation behind Premium.
-Its actual selector filter remains unfiltered; Helstera filtering is compared
-separately with native condition-library evaluation. This proves neither
-Premium targeter equivalence nor `?@` syntax, which is a Helstera extension.
-Other native condition interfaces, non-living triggers, action suffixes,
-selection modifiers, Premium expressions and other versions remain open.
-The complete Conditions and Context Targeters rows stay `mapped-unverified`.
-See the [contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+Non-living trigger update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r54` passes 25 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Its 864 new comparisons verify entity/location
+trigger predicates across nine live, removed and missing-trigger scenes,
+true/false outcomes and imported/direct named/inline execution. Named previews
+agree, and actions retain their original selected targets and origin.
+`isLiving` excludes ArmorStand; absolute health is zero for non-living triggers.
+Missing triggers reject before inversion. Existing 576 condition-dispatch and
+672 location-guard boundary comparisons also pass. `?@` remains a Helstera
+extension; public MM gates bracketed targeter guards behind Premium.
+Other comparison interfaces, remaining generic entity predicates, action suffixes,
+Premium expressions and other versions remain open. Complete Conditions and
+Context Targeters rows remain `mapped-unverified`. See the
+[trigger contract](docs/TRIGGER_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 Condition-expression parser update: `SkillService` preserves quoted and nested
@@ -1697,7 +1693,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-location-guards-strict-20261119-r3` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-trigger-dispatch-strict-20261119-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1713,7 +1709,7 @@ all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-location-guards-strict-20261119-r3`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `16c347b088cf9a099e7a49de39fd19edd45e07485401a945b671a9249be40bca`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,313 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-trigger-dispatch-strict-20261119-r1`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `e6cc1c825ad454f4582af294c1ebb7aa28c145c561b8d16c77a645d3f1670948`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,314 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
 
@@ -1722,7 +1718,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 718 cited IDs; 611 report files; 16 directories without reports; 91 missing directories; 356 archived release reports. The
+   Current fixture inventory: 722 cited IDs; 614 report files; 17 directories without reports; 91 missing directories; 359 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

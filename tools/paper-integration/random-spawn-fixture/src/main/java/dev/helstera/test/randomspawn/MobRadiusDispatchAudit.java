@@ -195,6 +195,108 @@ final class MobRadiusDispatchAudit {
             nativeGuards.setAccessible(true);
             var nativeGuardText = nativeTargeter.getDeclaredField("targetConditionString");
             nativeGuardText.setAccessible(true);
+            // Native evaluateTrigger accepts any AbstractEntity; compare real non-living entities too.
+            List<Entity> triggerEntities = new ArrayList<>();
+            int triggerRows = 0;
+            try {
+                Entity itemNear = center.getWorld().dropItem(center, new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE));
+                triggerEntities.add(itemNear);
+                Entity itemFar = center.getWorld().dropItem(center.clone().add(40, 20, 0), new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE));
+                triggerEntities.add(itemFar);
+                Entity arrowNear = center.getWorld().spawn(center, org.bukkit.entity.Arrow.class);
+                triggerEntities.add(arrowNear);
+                Entity arrowFar = center.getWorld().spawn(center.clone().add(40, 20, 0), org.bukkit.entity.Arrow.class);
+                triggerEntities.add(arrowFar);
+                Entity armor = center.getWorld().spawn(center, org.bukkit.entity.ArmorStand.class);
+                triggerEntities.add(armor);
+                Entity removedItem = center.getWorld().dropItem(center, new org.bukkit.inventory.ItemStack(org.bukkit.Material.STONE));
+                triggerEntities.add(removedItem);
+                removedItem.remove();
+                for (Entity entity : triggerEntities) entity.setGravity(false);
+                Map<String, Entity> scenes = new java.util.LinkedHashMap<>();
+                scenes.put("item-near", itemNear); scenes.put("item-far", itemFar);
+                scenes.put("arrow-near", arrowNear); scenes.put("arrow-far", arrowFar);
+                scenes.put("armor", armor); scenes.put("living", custom);
+                scenes.put("removed-item", removedItem); scenes.put("removed-living", removed);
+                scenes.put("missing", null);
+                String[][] cases = {
+                        {"entitytype{t=ITEM}", "EntityTypeCondition"},
+                        {"entitytype{t=ARROW}", "EntityTypeCondition"},
+                        {"isLiving", "IsLivingCondition"},
+                        {"health{h=0}", "HealthCondition"},
+                        {"health{h=>0}", "HealthCondition"},
+                        {"height{h=" + center.getY() + "}", "HeightCondition"},
+                        {"height{h=>" + (center.getY() + 10) + "}", "HeightCondition"},
+                        {"onground", "OnGroundCondition"},
+                        {"world{w=" + center.getWorld().getName() + "}", "WorldCondition"},
+                        {"mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=0}", "MobsInRadiusCondition"},
+                        {"mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=1}", "MobsInRadiusCondition"},
+                        {"mobsInRadius{r=5;t=ZOMBIE;a=0}", "MobsInRadiusCondition"}};
+                for (String[] test : cases) for (boolean outcome : List.of(true, false)) {
+                    String expression = test[0] + " " + outcome;
+                    Class<?> conditionClass = Class.forName("io.lumine.mythic.core.skills.conditions.all." + test[1], true, nativeLoader);
+                    Object config = configImpl.getConstructor(String.class).newInstance(expression);
+                    Object condition = conditionClass.getConstructor(String.class, configType).newInstance(expression, config);
+                    if (test[1].equals("MobsInRadiusCondition")) resolveTypes.invoke(condition,
+                            (Object) new String[]{test[0].contains("HelsteraRadiusAuditMob") ? "HelsteraRadiusAuditMob" : "ZOMBIE"}, config);
+                    for (var scene : scenes.entrySet()) {
+                        Entity trigger = scene.getValue();
+                        Object nativeMeta = metadataImpl.getConstructor(triggerType, skillCaster, abstractEntity)
+                                .newInstance(triggerType.getMethod("get", String.class).invoke(null, "API"), nativeCaster,
+                                        trigger == null ? null : adaptEntity.invoke(null, trigger));
+                        boolean nativePassed = (boolean) conditionClass.getMethod("evaluateTrigger", metadata).invoke(condition, nativeMeta);
+                        for (boolean inline : List.of(false, true)) for (boolean importedPath : List.of(false, true)) {
+                            var yaml = new YamlConfiguration();
+                            String prefix = importedPath ? "dispatch." : "skills.dispatch.";
+                            if (inline) yaml.set(prefix + (importedPath ? "Skills" : "on-decision"),
+                                    List.of("skill{s=observe} ?~" + (outcome ? "" : "!") + test[0]));
+                            else {
+                                yaml.set(prefix + (importedPath ? "TriggerConditions" : "trigger-conditions"),
+                                        List.of(importedPath ? expression : (outcome ? "" : "!") + test[0]));
+                                yaml.set(prefix + (importedPath ? "Skills" : "on-decision"), List.of("skill{s=observe}"));
+                            }
+                            if (importedPath) {
+                                yaml.save(source.toFile());
+                                @SuppressWarnings("unchecked")
+                                List<Map<String, Object>> entries = (List<Map<String, Object>>) importer.getClass()
+                                        .getMethod("convert", Path.class).invoke(importer, source);
+                                var plan = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file"))).findFirst().orElseThrow();
+                                yaml.loadFromString(plan.get("content").toString());
+                            }
+                            yaml.set("skills.observe.on-decision", List.of("radius-dispatch-observe"));
+                            skillsType.getMethod("loadSkills", ConfigurationSection.class).invoke(skills, yaml.getConfigurationSection("skills"));
+                            Object ctx = continuation.invoke(null, model, far, 1.0, -1.0, 0L, "trigger-audit", "payload",
+                                    trigger, List.of(far), center, null);
+                            boolean matched = true;
+                            if (!inline) {
+                                Object preview = skillsType.getMethod("preview", String.class, contextType).invoke(skills, "dispatch", ctx);
+                                matched = (boolean) preview.getClass().getMethod("wouldRun").invoke(preview) == nativePassed;
+                            }
+                            observed.clear();
+                            boolean invoked = (boolean) skillsType.getMethod("castSkill", String.class, contextType).invoke(skills, "dispatch", ctx);
+                            matched &= invoked == (inline || nativePassed) && observed.size() == (nativePassed ? 1 : 0);
+                            if (!observed.isEmpty()) {
+                                Object action = observed.getFirst();
+                                matched &= ((Optional<?>) contextType.getMethod("trigger").invoke(action)).orElse(null) == trigger
+                                        && ((Optional<?>) contextType.getMethod("targetEntity").invoke(action)).orElse(null) == far
+                                        && contextType.getMethod("targets").invoke(action).equals(List.of(far))
+                                        && ((Optional<?>) contextType.getMethod("origin").invoke(action)).orElseThrow().equals(center)
+                                        && ((Optional<?>) contextType.getMethod("payload").invoke(action)).orElseThrow().equals("payload")
+                                        && contextType.getMethod("conditionScope").invoke(action).toString().equals("EXECUTION");
+                            }
+                            probe.getLogger().info("NONLIVING_TRIGGER|scene=" + scene.getKey() + "|condition=" + test[0]
+                                    + "|outcome=" + outcome + "|inline=" + inline + "|path=" + (importedPath ? "imported" : "direct")
+                                    + "|native=" + nativePassed + "|runtime=" + !observed.isEmpty() + "|matched=" + matched);
+                            if (!matched) throw new IllegalStateException("Non-living trigger mismatch: " + scene.getKey() + " " + expression);
+                            triggerRows++;
+                        }
+                    }
+                }
+            } finally {
+                for (Entity entity : triggerEntities) entity.remove();
+            }
+            if (triggerRows != 864) throw new IllegalStateException("Incomplete non-living trigger evidence");
+            probe.getLogger().info("NONLIVING_TRIGGER_SUMMARY|comparisons=" + triggerRows + "|scenes=9|conditions=12|passed=true");
             Object nativePins = mythic.getClass().getMethod("getPinManager").invoke(mythic);
             Object packs = mythic.getClass().getMethod("getPackManager").invoke(mythic);
             Object pack = packs.getClass().getMethod("getBasePack").invoke(packs);

@@ -317,7 +317,7 @@ public final class SkillService {
             }
             if (!def.triggerRequire.isEmpty()) {
                 boolean ok = filtered != null
-                        && filtered.trigger().orElse(null) instanceof org.bukkit.entity.LivingEntity
+                        && filtered.trigger().isPresent()
                         && conditionsPass(def.triggerRequire, triggerConditionContext(filtered));
                 trace.add(new CondTrace("trigger-conditions", ok));
                 if (!ok) allPass = false;
@@ -1652,8 +1652,7 @@ public final class SkillService {
                             if (!registry.testCondition(condition, casterContext)) return;
                         }
                         if (!triggerConditionKeys.isEmpty()) {
-                            if (attempt == null || !(attempt.trigger().orElse(null)
-                                    instanceof org.bukkit.entity.LivingEntity)) return;
+                            if (attempt == null || attempt.trigger().isEmpty()) return;
                             var triggerContext = triggerConditionContext(attempt);
                             for (String condition : triggerConditionKeys) {
                                 if (!registry.testCondition(condition, triggerContext)) return;
@@ -2191,7 +2190,7 @@ public final class SkillService {
         if (!conditionsPass(def.require, inlineCasterConditionContext(ctx))) return false;
         ctx = filterTargetConditions(def.targetRequire, ctx);
         if (ctx == null || (!def.triggerRequire.isEmpty()
-                && (!(ctx.trigger().orElse(null) instanceof org.bukkit.entity.LivingEntity)
+                && (ctx.trigger().isEmpty()
                 || !conditionsPass(def.triggerRequire, triggerConditionContext(ctx))))) return false;
 
         int[] d = depth.get();
@@ -2337,8 +2336,10 @@ public final class SkillService {
             dev.helstera.api.behavior.BehaviorContext ctx) {
         if (ctx == null) return null;
         var trigger = ctx.trigger().orElse(null);
-        if (!(trigger instanceof org.bukkit.entity.LivingEntity living)) return ctx;
-        double ratio = living.getMaxHealth() > 0 ? living.getHealth() / living.getMaxHealth() : 0;
+        org.bukkit.entity.LivingEntity living = trigger instanceof org.bukkit.entity.LivingEntity entity ? entity : null;
+        // A non-living trigger has no active living target or health. Never inherit the selected target.
+        double ratio = living == null ? Double.NaN
+                : living.getMaxHealth() > 0 ? living.getHealth() / living.getMaxHealth() : 0;
         List<org.bukkit.entity.LivingEntity> inherited = ctx.targets();
         return dev.helstera.api.behavior.BehaviorContext.continueExecution(
                 ctx.instance(), living, ratio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),

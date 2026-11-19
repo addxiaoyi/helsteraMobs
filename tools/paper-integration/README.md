@@ -1,23 +1,19 @@
 # Isolated Paper Integration Server
 
-Location-targeter condition update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r51` passes 24 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Its 672 new comparisons check the public-build targeter boundary
-and compare filtering against the public native condition library across seven
-scenes, four argument aliases, two type filters, three amounts, true/false
-outcomes and imported/direct execution. Positions are filtered before actions;
-explicit coordinates, variable locations, pins and pin regions retain their
-location context. The existing `Location/Loc/L` coordinate alias `c=x,y,z,yaw,pitch`
-remains valid alongside bracketed `c=[...]` guards. The earlier 576 condition
-dispatch comparisons and radius/RandomSpawns controls also pass.
-Public MM reads bracketed lists but gates their activation behind Premium.
-Its actual selector filter remains unfiltered; Helstera filtering is compared
-separately with native condition-library evaluation. This proves neither
-Premium targeter equivalence nor `?@` syntax, which is a Helstera extension.
-Other native condition interfaces, non-living triggers, action suffixes,
-selection modifiers, Premium expressions and other versions remain open.
-The complete Conditions and Context Targeters rows stay `mapped-unverified`.
-See the [contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and [Paper evidence](STARTUP_EVIDENCE.md).
+Non-living trigger update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r54` passes 25 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Its 864 new comparisons verify entity/location
+trigger predicates across nine live, removed and missing-trigger scenes,
+true/false outcomes and imported/direct named/inline execution. Named previews
+agree, and actions retain their original selected targets and origin.
+`isLiving` excludes ArmorStand; absolute health is zero for non-living triggers.
+Missing triggers reject before inversion. Existing 576 condition-dispatch and
+672 location-guard boundary comparisons also pass. `?@` remains a Helstera
+extension; public MM gates bracketed targeter guards behind Premium.
+Other comparison interfaces, remaining generic entity predicates, action suffixes,
+Premium expressions and other versions remain open. Complete Conditions and
+Context Targeters rows remain `mapped-unverified`. See the
+[trigger contract](../../docs/TRIGGER_CONDITION_COMPATIBILITY.md) and [Paper evidence](STARTUP_EVIDENCE.md).
 
 
 Paper evidence runners redact web credentials before retaining logs. The plugin
@@ -186,7 +182,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-location-guards-strict-20261119-r3` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `16c347b088cf9a099e7a49de39fd19edd45e07485401a945b671a9249be40bca`. See the [strict report](reports/paper-1.21.1-location-guards-strict-20261119-r3.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,313 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-trigger-dispatch-strict-20261119-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `e6cc1c825ad454f4582af294c1ebb7aa28c145c561b8d16c77a645d3f1670948`. See the [strict report](reports/paper-1.21.1-trigger-dispatch-strict-20261119-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,314 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player

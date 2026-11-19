@@ -312,6 +312,12 @@ public final class SkillCatalog {
         return SpecArgs.bool(args, i, def);
     }
 
+    private static java.util.Optional<Entity> conditionStateEntity(BehaviorContext ctx) {
+        if (ctx == null) return java.util.Optional.empty();
+        if (ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) return ctx.trigger();
+        return ctx.instanceValid() ? ctx.instance().baseEntity() : java.util.Optional.empty();
+    }
+
     /**
      * 内置条件名 -> 工厂。
      *
@@ -465,7 +471,7 @@ public final class SkillCatalog {
                 // is-sneaking：实体是否潜行。用于「潜行时才能触发」的技能。
                 java.util.Map.entry("is-sneaking", (ConditionFactory) a -> {
                     return ctx -> {
-                        var base = ctx.instance().baseEntity().orElse(null);
+                        var base = conditionStateEntity(ctx).orElse(null);
                         if (!(base instanceof LivingEntity le)) return false;
                         try { return le.isSneaking(); } catch (Throwable ignored) { return false; }
                     };
@@ -474,35 +480,35 @@ public final class SkillCatalog {
                 // is-glowing：实体是否发光（通常由外部效果设置）。
                 java.util.Map.entry("is-glowing", (ConditionFactory) a -> {
                     return ctx -> {
-                        var base = ctx.instance().baseEntity().orElse(null);
+                        var base = conditionStateEntity(ctx).orElse(null);
                         if (base == null) return false;
                         try { return base.isGlowing(); } catch (Throwable ignored) { return false; }
                     };
                 }),
 
                 java.util.Map.entry("is-invulnerable", (ConditionFactory) a -> ctx ->
-                        ctx.instance().baseEntity().map(Entity::isInvulnerable).orElse(false)),
+                        conditionStateEntity(ctx).map(Entity::isInvulnerable).orElse(false)),
                 java.util.Map.entry("has-ai", (ConditionFactory) a -> ctx -> {
-                    if (ctx == null || !ctx.instanceValid()) return false;
-                    Entity base = ctx.instance().baseEntity().orElse(null);
+                    if (ctx == null) return false;
+                    Entity base = conditionStateEntity(ctx).orElse(null);
                     return base instanceof org.bukkit.entity.Mob mob && mob.hasAI();
                 }),
                 java.util.Map.entry("has-gravity", (ConditionFactory) a -> ctx ->
-                        ctx != null && ctx.instanceValid()
-                                && ctx.instance().baseEntity().map(Entity::hasGravity).orElse(false)),
+                        ctx != null
+                                && conditionStateEntity(ctx).map(Entity::hasGravity).orElse(false)),
                 java.util.Map.entry("is-silent", (ConditionFactory) a -> ctx ->
-                        ctx != null && ctx.instanceValid()
-                                && ctx.instance().baseEntity().map(Entity::isSilent).orElse(false)),
+                        ctx != null
+                                && conditionStateEntity(ctx).map(Entity::isSilent).orElse(false)),
                 java.util.Map.entry("is-dead", (ConditionFactory) a -> ctx ->
-                        ctx != null && ctx.instanceValid()
-                                && ctx.instance().baseEntity().map(Entity::isDead).orElse(false)),
+                        ctx != null
+                                && conditionStateEntity(ctx).map(Entity::isDead).orElse(false)),
                 java.util.Map.entry("is-alive", (ConditionFactory) a -> ctx ->
-                        ctx != null && ctx.instanceValid()
-                                && ctx.instance().baseEntity()
+                        ctx != null
+                                && conditionStateEntity(ctx)
                                 .map(entity -> entity.isValid() && !entity.isDead()).orElse(false)),
                 java.util.Map.entry("is-valid", (ConditionFactory) a -> ctx ->
-                        ctx != null && ctx.instanceValid()
-                                && ctx.instance().baseEntity().map(Entity::isValid).orElse(false)),
+                        ctx != null
+                                && conditionStateEntity(ctx).map(Entity::isValid).orElse(false)),
 
                 // facing-target：实体当前朝向目标（允许 ±45° 偏差）。
                 // 用于「只在面对目标时才触发」的场合。

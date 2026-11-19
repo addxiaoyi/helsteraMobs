@@ -729,7 +729,7 @@ class SkillNestingTest {
     }
 
     @Test
-    void triggerConditionsRejectMissingOrNonLivingTriggerEvenWhenTargetPasses() {
+    void triggerConditionsDoNotFallBackToSelectedTarget() {
         var target = mock(org.bukkit.entity.Zombie.class);
         var nonLiving = mock(org.bukkit.entity.Item.class);
         var fired = new AtomicInteger();
@@ -755,7 +755,7 @@ class SkillNestingTest {
     }
 
     @Test
-    void inlineTriggerConditionsUseTriggerContextAndRejectMissingOrNonLivingTrigger() {
+    void inlineTriggerConditionsUseTriggerContextAndRejectMissingTrigger() {
         var trigger = mock(org.bukkit.entity.Zombie.class);
         var activeTarget = mock(org.bukkit.entity.Zombie.class);
         var caster = mock(org.bukkit.entity.Zombie.class);
@@ -798,8 +798,8 @@ class SkillNestingTest {
                 null, nonLivingTrigger, List.of(activeTarget), null, null);
         assertTrue(registry.runAction(action, noTrigger));
         assertTrue(registry.runAction(action, nonLiving));
-        assertEquals(1, fired.get(), "missing or non-living trigger must fail closed");
-        assertEquals(1, triggerEvaluations.get(), "trigger conditions must not run without a living trigger");
+        assertEquals(1, fired.get(), "unmatched trigger must not inherit the selected target");
+        assertEquals(2, triggerEvaluations.get(), "non-living triggers are evaluated; missing triggers are not");
 
         registry.registerCondition("reject-trigger", ignored -> false);
         String negatedAction = svc.bindAction("probe-trigger ?~!reject-trigger");

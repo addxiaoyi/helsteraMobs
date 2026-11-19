@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-location-guards-strict-20261119-r3` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `16c347b088cf9a099e7a49de39fd19edd45e07485401a945b671a9249be40bca`. [Strict report](reports/paper-1.21.1-location-guards-strict-20261119-r3.json) · [Redacted server log](reports/paper-1.21.1-location-guards-strict-20261119-r3.log.gz) · [Redacted client logs](reports/paper-1.21.1-location-guards-strict-20261119-r3.client-logs.zip) This artifact passes 2,313 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-trigger-dispatch-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `e6cc1c825ad454f4582af294c1ebb7aa28c145c561b8d16c77a645d3f1670948`. [Strict report](reports/paper-1.21.1-trigger-dispatch-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-trigger-dispatch-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-trigger-dispatch-strict-20261119-r1.client-logs.zip) This artifact passes 2,314 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,10 +9,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `c075014fa80c050008e2ff8d01894e6487a3495a1c35e803f980d759837837ab`;
-redacted server log SHA-256: `d002706e02a8e0ee7bb54d8c5d36059779cfeb96e75ce49096a615685aff87db`;
-redacted client logs SHA-256: `4fbaf5624d043456a5662c1c7a7b2b05599aaf48b4ca04ae93272c510de81353`.
-The preceding `srv-paper-radius-dispatch-strict-20261119-r1`,
+Current full-report SHA-256: `30bd179781e6e2501022b441c0f4eeaf8e1dcd6a40c828b37b2e6b331ac051f8`;
+redacted server log SHA-256: `5a413524b7d33db18872c55a28f39cbdfde1ae19c7cbff150f74119eb9d3a437`;
+redacted client logs SHA-256: `2f4adf0e3382fe82cd395e09d4a956ca2721b07b8e3e2d8ba6eab00e85c7b2a9`.
+The preceding `srv-paper-location-guards-strict-20261119-r3`,
+`srv-paper-radius-dispatch-strict-20261119-r1`,
 `srv-paper-radius-active-strict-20261119-r2`,
 `srv-paper-radius-active-strict-20261119-r1`,
 `srv-paper-random-radius-strict-20261119-r1`,
@@ -23,6 +24,47 @@ The preceding `srv-paper-radius-dispatch-strict-20261119-r1`,
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Non-living trigger condition dispatch
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r54` passes all
+25 probes on plugin `e6cc1c825ad454f4582af294c1ebb7aa28c145c561b8d16c77a645d3f1670948`. Its 864 new native
+comparisons cover 12 expressions, nine scenes, true/false outcomes and imported/
+direct named/inline paths. The native reference calls the actual public MM 5.7.2
+`evaluateTrigger` method with Item, Arrow, ArmorStand, living custom mob, removed
+Item/living entity and missing triggers. Conditions include EntityType, IsLiving,
+Health, Height, OnGround, World and MobsInRadius. Named-skill previews, action
+counts, retained entity targets/origin/payload and ordinary execution scope agree.
+Missing triggers reject before inversion; removed triggers remain eligible for
+predicate evaluation. ArmorStand does not satisfy IsLiving; non-living absolute
+health is zero. This scope does not establish full condition-interface parity.
+
+The final artifact passes 2,314 Maven tests and SpotBugs, and full strict fixture
+`srv-paper-trigger-dispatch-strict-20261119-r1` passes 471 probes (452 passed and 19
+expected rejections). Cross-module regression tests additionally verify event,
+damage-cause, skill-tree and audience preservation and water/basic-state context
+resolution. The latter state checks are not native equivalence claims. Explicit
+caster/skill-origin comparisons preserve their original reference positions.
+The 576 previous scope-dispatch comparisons, 672 position-guard boundary
+comparisons and all radius/RandomSpawns controls remain required and pass.
+See the [trigger contract](../../docs/TRIGGER_CONDITION_COMPATIBILITY.md).
+
+- [Focused report](reports/paper-1.21.1-random-spawn-replace-20261119-r54.json), SHA-256
+  `c67a6ec5f8adc2fb7e0699bac30685f65b55fde51083483536b244f41490d3a8`.
+- [Redacted focused log](reports/paper-1.21.1-random-spawn-replace-20261119-r54.log.gz), SHA-256
+  `c4065204b94f0b730505c944d3a5961bd4f335d7878d3b88525357cf37bd1e46`.
+
+Diagnostic attempt `srv-paper-random-spawn-replace-20261119-r52` passed 576
+new comparisons before a fixture reflection lookup failed: the pinned artifact
+has no `InWaterCondition` class. The suite now uses the actual WorldCondition;
+water state retains unit evidence only. This failed attempt is not release
+evidence. Earlier `srv-paper-random-spawn-replace-20261119-r53` passed the complete
+25-probe focused suite on its original artifact; the final rerun follows the
+review correction preserving explicit caster/origin condition references.
+
+Other condition interfaces, non-living placeholders, action suffixes beyond
+true/false, Premium expressions and other versions remain open. `?@` and
+public-build location guard boundaries retain the extension limitations below.
 
 ## Location condition lists and the public-build boundary
 
@@ -53,7 +95,8 @@ lists, unsupported-condition preservation, query failures under negation, and
 the existing explicit-coordinate `c` alias. The build passes 2,313 Maven tests
 and SpotBugs. Bracketed filtering is an extension relative to this public
 artifact; Premium targeter equivalence is unverified. `?@` is also an extension.
-Other native condition interfaces, non-living triggers, condition action suffixes,
+Non-living trigger predicates are covered by the newer scoped evidence above.
+Other native condition interfaces, condition action suffixes,
 selection modifiers, Premium evaluation and other versions remain unverified.
 No complete catalog row is promoted. See the
 [contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).
@@ -132,7 +175,7 @@ source-hash property. The schema was corrected and r46 reran the unchanged
 production JAR successfully. Diagnostic attempts are not release evidence.
 
 Location/pin radius guards are covered by the newer comparison above.
-Non-living trigger dispatch, other native condition interfaces, condition actions
+Additional trigger interfaces, other native condition interfaces, condition actions
 beyond true/false, Premium expressions and other versions remain open. The full
 Conditions catalog is still `mapped-unverified`; see the
 [compatibility contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).

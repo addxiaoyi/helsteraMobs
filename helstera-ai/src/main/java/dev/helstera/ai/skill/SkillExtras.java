@@ -1207,13 +1207,19 @@ public final class SkillExtras {
         }
     }
 
-    private static LivingEntity conditionEntity(BehaviorContext ctx) {
+    private static Entity conditionSubject(BehaviorContext ctx) {
         if (ctx == null) return null;
+        if (ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
+            return ctx.trigger().orElse(null);
+        }
         LivingEntity target = ctx.targetEntity().orElse(null);
         if (target != null) return target;
-        if (!ctx.instanceValid()) return null;
-        Entity entity = ctx.instance().baseEntity().orElse(null);
-        return entity instanceof LivingEntity living ? living : null;
+        return casterEntity(ctx);
+    }
+
+    private static LivingEntity conditionEntity(BehaviorContext ctx) {
+        Entity subject = conditionSubject(ctx);
+        return subject instanceof LivingEntity living ? living : null;
     }
 
     private static void requireNoConditionArguments(List<String> args, String name) {
@@ -2092,6 +2098,9 @@ public final class SkillExtras {
     }
 
     private static Location conditionLocation(BehaviorContext ctx) {
+        if (ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
+            return ctx.trigger().map(Entity::getLocation).orElse(null);
+        }
         LivingEntity target = targetOnlyEntity(ctx);
         return target == null ? selfLoc(ctx) : target.getLocation();
     }
@@ -2213,10 +2222,7 @@ public final class SkillExtras {
     }
 
     private static boolean entityOrLocationInLiquid(BehaviorContext ctx) {
-        Entity entity = ctx == null ? null : ctx.targetEntity().orElse(null);
-        if (entity == null && ctx != null && ctx.instanceValid()) {
-            entity = ctx.instance().baseEntity().orElse(null);
-        }
+        Entity entity = conditionSubject(ctx);
         if (entity != null) {
             try {
                 if (entity.isInWater() || entity.isInLava()) return true;
@@ -2618,7 +2624,9 @@ public final class SkillExtras {
                             "includeabsorption", "include-absorption", "ia");
                     return ctx -> {
                         LivingEntity entity = conditionEntity(ctx);
-                        if (entity == null) return false;
+                        if (entity == null) return ctx != null
+                                && ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER
+                                && ctx.trigger().isPresent() && compare(0.0, comparison);
                         double health = entity.getHealth()
                                 + (includeAbsorption ? entity.getAbsorptionAmount() : 0.0);
                         return compare(health, comparison);
@@ -2750,9 +2758,13 @@ public final class SkillExtras {
                 }),
 
                 Map.entry("on-ground", noArgumentCondition("on-ground", ctx -> {
+                    if (ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
+                        Entity subject = conditionSubject(ctx);
+                        return subject != null && subject.isOnGround();
+                    }
                     LivingEntity living = selfLiving(ctx).orElse(null);
                     if (living != null) return living.isOnGround();
-                    Location l = selfLoc(ctx);
+                    Location l = conditionOrigin(ctx);
                     if (l == null) return false;
                     try {
                         return l.getBlock().getRelative(0, -1, 0).getType().isSolid();
@@ -2761,11 +2773,15 @@ public final class SkillExtras {
                     }
                 })),
                 Map.entry("in-water", noArgumentCondition("in-water", ctx -> {
+                    if (ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
+                        Entity subject = conditionSubject(ctx);
+                        return subject != null && subject.isInWater();
+                    }
                     if (ctx != null && ctx.instanceValid()) {
                         Entity base = ctx.instance().baseEntity().orElse(null);
                         if (base != null) return base.isInWater();
                     }
-                    Location l = selfLoc(ctx);
+                    Location l = conditionOrigin(ctx);
                     if (l == null) return false;
                     try {
                         Material t = l.getBlock().getType();
@@ -2775,11 +2791,15 @@ public final class SkillExtras {
                     }
                 })),
                 Map.entry("in-lava", noArgumentCondition("in-lava", ctx -> {
+                    if (ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
+                        Entity subject = conditionSubject(ctx);
+                        return subject != null && subject.isInLava();
+                    }
                     if (ctx != null && ctx.instanceValid()) {
                         Entity base = ctx.instance().baseEntity().orElse(null);
                         if (base != null) return base.isInLava();
                     }
-                    Location l = selfLoc(ctx);
+                    Location l = conditionOrigin(ctx);
                     if (l == null) return false;
                     try {
                         return l.getBlock().getType() == Material.LAVA;
@@ -2795,13 +2815,13 @@ public final class SkillExtras {
                 }),
                 Map.entry("standing", (SkillCatalog.ConditionFactory) a -> {
                     double tol = num(a, 0, 0.1);
-                    return ctx -> selfLoc(ctx) != null
-                            && Math.abs(selfLoc(ctx).getY() % 1.0) < tol;
+                    return ctx -> conditionOrigin(ctx) != null
+                            && Math.abs(conditionOrigin(ctx).getY() % 1.0) < tol;
                 }),
                 Map.entry("light-level-below", (SkillCatalog.ConditionFactory) a -> {
                     int level = (int) num(a, 0, 8);
                     return ctx -> {
-                        Location l = selfLoc(ctx);
+                        Location l = conditionOrigin(ctx);
                         if (l == null) return false;
                         try {
                             return l.getBlock().getLightLevel() < level;
@@ -2813,7 +2833,7 @@ public final class SkillExtras {
                 Map.entry("light-level-above", (SkillCatalog.ConditionFactory) a -> {
                     int level = (int) num(a, 0, 8);
                     return ctx -> {
-                        Location l = selfLoc(ctx);
+                        Location l = conditionOrigin(ctx);
                         if (l == null) return false;
                         try {
                             return l.getBlock().getLightLevel() > level;
@@ -2825,7 +2845,7 @@ public final class SkillExtras {
                 Map.entry("light-level", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, "=");
                     return ctx -> {
-                        Location l = selfLoc(ctx);
+                        Location l = conditionOrigin(ctx);
                         if (l == null) return false;
                         try {
                             return compare(l.getBlock().getLightLevel(), comparison);
@@ -2837,7 +2857,7 @@ public final class SkillExtras {
                 Map.entry("sky-light-level", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange range = numberRange(a, 0);
                     return ctx -> {
-                        Location location = selfLoc(ctx);
+                        Location location = conditionOrigin(ctx);
                         return range != null && location != null
                                 && range.contains(location.getBlock().getLightFromSky());
                     };
@@ -2845,7 +2865,7 @@ public final class SkillExtras {
                 Map.entry("light-level-from-blocks", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange range = numberRange(a, 0);
                     return ctx -> {
-                        Location location = selfLoc(ctx);
+                        Location location = conditionOrigin(ctx);
                         return range != null && location != null
                                 && range.contains(location.getBlock().getLightFromBlocks());
                     };
@@ -2854,7 +2874,7 @@ public final class SkillExtras {
                     String want = singleConditionValue(a, "world-is", "",
                             Map.of("world", "value", "w", "value", "name", "value", "value", "value"));
                     return ctx -> {
-                        Location l = selfLoc(ctx);
+                        Location l = conditionOrigin(ctx);
                         return l != null && l.getWorld() != null
                                 && want.equalsIgnoreCase(l.getWorld().getName());
                     };
@@ -2884,7 +2904,7 @@ public final class SkillExtras {
                     String want = singleConditionValue(a, "time-is", "day",
                             Map.of("time", "value", "t", "value", "name", "value", "value", "value"));
                     return ctx -> {
-                        Location l = selfLoc(ctx);
+                        Location l = conditionOrigin(ctx);
                         if (l == null) return false;
                         try {
                             return matchesTime(want, l.getWorld().getTime());
@@ -2896,7 +2916,7 @@ public final class SkillExtras {
                 Map.entry("world-time", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange range = numberRange(a, 0);
                     return ctx -> {
-                        Location location = selfLoc(ctx);
+                        Location location = conditionOrigin(ctx);
                         return range != null && location != null && location.getWorld() != null
                                 && range.contains(Math.floorMod(location.getWorld().getTime(), 24_000L));
                     };
@@ -2905,7 +2925,7 @@ public final class SkillExtras {
                     String want = singleConditionValue(a, "weather-is", "clear",
                             Map.of("weather", "value", "type", "value", "name", "value", "value", "value"));
                     return ctx -> {
-                        Location l = selfLoc(ctx);
+                        Location l = conditionOrigin(ctx);
                         if (l == null) return false;
                         try {
                             return matchesWeather(want, l.getWorld().hasStorm(), l.getWorld().isThundering());
@@ -2930,17 +2950,17 @@ public final class SkillExtras {
                 // thunder separate from ordinary rain so a `raining` gate does
                 // not unexpectedly reject a storm.
                 Map.entry("night", noArgumentCondition("night", ctx -> {
-                    Location location = selfLoc(ctx);
+                    Location location = conditionOrigin(ctx);
                     if (location == null || location.getWorld() == null) return false;
                     return matchesTime("night", location.getWorld().getTime());
                 })),
                 Map.entry("raining", noArgumentCondition("raining", ctx -> {
-                    Location location = selfLoc(ctx);
+                    Location location = conditionOrigin(ctx);
                     return location != null && location.getWorld() != null
                             && location.getWorld().hasStorm();
                 })),
                 Map.entry("thundering", noArgumentCondition("thundering", ctx -> {
-                    Location location = selfLoc(ctx);
+                    Location location = conditionOrigin(ctx);
                     return location != null && location.getWorld() != null
                             && location.getWorld().isThundering();
                 })),
@@ -3030,17 +3050,13 @@ public final class SkillExtras {
                     EntityTypeSelector selector = EntityTypeSelector.parse(String.join(",", a))
                             .orElseThrow(() -> new IllegalArgumentException("invalid entity type selector"));
                     return ctx -> {
-                        Entity entity = ctx == null ? null : ctx.targetEntity().orElse(null);
-                        if (entity == null && ctx != null && ctx.instanceValid()) {
-                            entity = ctx.instance().baseEntity().orElse(null);
-                        }
-                        return selector.matches(entity);
+                        return selector.matches(conditionSubject(ctx));
                     };
                 }),
                 Map.entry("height", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange range = numberRange(a, 0);
                     return ctx -> {
-                        Location location = selfLoc(ctx);
+                        Location location = conditionOrigin(ctx);
                         return range != null && location != null && range.contains(location.getY());
                     };
                 }),
@@ -3075,14 +3091,14 @@ public final class SkillExtras {
                 Map.entry("height-above", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, ">") ;
                     return ctx -> {
-                        Location location = selfLoc(ctx);
+                        Location location = conditionOrigin(ctx);
                         return location != null && compare(location.getY(), comparison);
                     };
                 }),
                 Map.entry("height-below", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, "<");
                     return ctx -> {
-                        Location location = selfLoc(ctx);
+                        Location location = conditionOrigin(ctx);
                         return location != null && compare(location.getY(), comparison);
                     };
                 }),
@@ -3176,7 +3192,8 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("is-living", noArgumentCondition("is-living",
-                        ctx -> conditionEntity(ctx) != null)),
+                        ctx -> conditionEntity(ctx) != null
+                                && conditionEntity(ctx).getType() != org.bukkit.entity.EntityType.ARMOR_STAND)),
                 Map.entry("is-player", noArgumentCondition("is-player",
                         ctx -> conditionEntity(ctx) instanceof Player)),
                 Map.entry("is-mob", noArgumentCondition("is-mob",
@@ -4729,7 +4746,7 @@ public final class SkillExtras {
                     String wanted = singleConditionValue(a, "dimension-is", "",
                             Map.of("dimension", "value", "environment", "value", "env", "value",
                                     "world", "value", "name", "value", "value", "value"));
-                    return ctx -> matchesDimension(selfLoc(ctx), wanted);
+                    return ctx -> matchesDimension(conditionOrigin(ctx), wanted);
                 }),
                 Map.entry("ender-dragon-alive", (SkillCatalog.ConditionFactory) a ->
                         ctx -> {
@@ -4785,7 +4802,7 @@ public final class SkillExtras {
                 Map.entry("players-in-world", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, ">=");
                     return ctx -> {
-                        Location location = selfLoc(ctx);
+                        Location location = conditionOrigin(ctx);
                         return location != null && location.getWorld() != null
                                 && compare(location.getWorld().getPlayers().size(), comparison);
                     };
@@ -4793,7 +4810,7 @@ public final class SkillExtras {
                 Map.entry("mobs-in-world", (SkillCatalog.ConditionFactory) a -> {
                     Comparison comparison = comparison(a, 0, ">=");
                     return ctx -> {
-                        Location location = selfLoc(ctx);
+                        Location location = conditionOrigin(ctx);
                         if (location == null || location.getWorld() == null) return false;
                         long mobs = location.getWorld().getEntities().stream()
                                 .filter(entity -> entity instanceof org.bukkit.entity.Mob mob && mob.isValid())
@@ -4813,14 +4830,14 @@ public final class SkillExtras {
                 Map.entry("y-level-below", (SkillCatalog.ConditionFactory) a -> {
                     double y = num(a, 0, 64);
                     return ctx -> {
-                        Location l = selfLoc(ctx);
+                        Location l = conditionOrigin(ctx);
                         return l != null && l.getY() < y;
                     };
                 }),
                 Map.entry("y-level-above", (SkillCatalog.ConditionFactory) a -> {
                     double y = num(a, 0, 64);
                     return ctx -> {
-                        Location l = selfLoc(ctx);
+                        Location l = conditionOrigin(ctx);
                         return l != null && l.getY() > y;
                     };
                 }),
@@ -5330,7 +5347,7 @@ public final class SkillExtras {
         return args -> {
             requireNoConditionArguments(args, name);
             return ctx -> {
-            Location location = selfLoc(ctx);
+            Location location = conditionOrigin(ctx);
             if (location == null || location.getWorld() == null) return false;
             return matchesTime(name, location.getWorld().getTime());
             };
@@ -5371,7 +5388,7 @@ public final class SkillExtras {
         return args -> {
             requireNoConditionArguments(args, name);
             return ctx -> {
-            Location location = selfLoc(ctx);
+            Location location = conditionOrigin(ctx);
             if (location == null || location.getWorld() == null) return false;
             return matchesWeather(name, location.getWorld().hasStorm(), location.getWorld().isThundering());
             };
@@ -8642,6 +8659,14 @@ public final class SkillExtras {
         }
     }
 
+    private static Location conditionOrigin(BehaviorContext ctx) {
+        if (ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
+            Location location = ctx.trigger().map(Entity::getLocation).orElse(null);
+            return location == null || location.getWorld() == null ? null : location;
+        }
+        return selfLoc(ctx);
+    }
+
     private static Location selfLoc(BehaviorContext ctx) {
         if (ctx == null) return null;
         Location l = ctx.origin().orElse(null);
@@ -8833,6 +8858,9 @@ public final class SkillExtras {
     }
 
     private static java.util.Optional<LivingEntity> selfLiving(BehaviorContext ctx) {
+        if (ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
+            return ctx.trigger().filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast);
+        }
         if (ctx == null || !ctx.instanceValid()) return java.util.Optional.empty();
         var e = ctx.instance().baseEntity().orElse(null);
         return e instanceof LivingEntity le ? java.util.Optional.of(le) : java.util.Optional.empty();

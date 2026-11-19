@@ -447,6 +447,18 @@ if ($MobRadiusAudit) {
         status = 'passed'
         observations = @($dispatchLines | ForEach-Object { $_.Value }) + @($dispatchSummary.Value)
     }
+    $triggerLines = [regex]::Matches($log, '(?m)^.*NONLIVING_TRIGGER\|scene=[^\r\n]+$')
+    $triggerSummary = [regex]::Match($log,
+        '(?m)^.*NONLIVING_TRIGGER_SUMMARY\|comparisons=864\|scenes=9\|conditions=12\|passed=true\s*$')
+    if ($triggerLines.Count -ne 864 -or -not $triggerSummary.Success -or
+            @($triggerLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete non-living trigger native comparison evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'condition.nonliving-trigger-dispatch'
+        status = 'passed'
+        observations = @($triggerLines | ForEach-Object { $_.Value }) + @($triggerSummary.Value)
+    }
     $locationLines = [regex]::Matches($log, '(?m)^.*LOCATION_TARGET_GUARD\|scene=[^\r\n]+$')
     $locationSummary = [regex]::Match($log,
         '(?m)^.*LOCATION_TARGET_GUARD_SUMMARY\|comparisons=672\|selectors=7\|aliases=4\|publicNativeGuardApplied=false\|reference=condition-library\|passed=true\s*$')
