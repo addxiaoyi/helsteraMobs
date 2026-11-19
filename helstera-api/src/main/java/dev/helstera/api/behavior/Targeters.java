@@ -77,6 +77,7 @@ public final class Targeters {
         BUILTIN.put("mobs", Targeters::mobsOnly);
         BUILTIN.put("threat", Targeters::byThreat);
         BUILTIN.put("living", Targeters::living);
+        BUILTIN.put("livinginradius", Targeters::living);
         BUILTIN.put("playersinradius", Targeters::playersOnly);
         BUILTIN.put("mobsinradius", Targeters::mobsOnly);
         BUILTIN.put("entitiesinradius", Targeters::living);
@@ -311,6 +312,9 @@ public final class Targeters {
         }
         scoped = applyFilter(scoped, context.instance(), parsed.filter());
         scoped = applyEntityFilters(scoped, context.instance(), parsed, parsed.args(), expandWorld);
+        if (parsed.name().equals("trigger")) {
+            scoped = scoped.stream().filter(Targeters::isEligibleTrigger).toList();
+        }
         List<LivingEntity> selected = applySort(new ArrayList<>(scoped), context.instance(), parsed.sort());
         return applySkipAndLimit(selected, parsed);
     }
@@ -330,6 +334,30 @@ public final class Targeters {
                     ? List.of(living) : List.of();
         }
         if (name.equals("target")) {
+            if (context.instance() != null) {
+                if (!context.instanceValid()) return List.of();
+                var caster = context.instance().baseEntity().orElse(null);
+                if (caster instanceof org.bukkit.entity.Mob mob) {
+                    try {
+                        LivingEntity currentTarget = mob.getTarget();
+                        if (currentTarget != null) {
+                            return isActiveLiving(currentTarget) ? List.of(currentTarget) : List.of();
+                        }
+                        String state = context.state();
+                        if (context.trigger().orElse(null) == context.targetEntity().orElse(null)
+                                && ("on-kill".equalsIgnoreCase(state)
+                                || "on-kill-player".equalsIgnoreCase(state))) {
+                            // Confirmed-kill dispatch explicitly binds its victim as both
+                            // trigger and target after Bukkit may have cleared the AI target.
+                            return context.targetEntity().filter(Targeters::isActiveLiving)
+                                    .map(target -> List.<LivingEntity>of(target)).orElseGet(List::of);
+                        }
+                        return List.of();
+                    } catch (RuntimeException ignored) {
+                        return List.of();
+                    }
+                }
+            }
             return context.targetEntity().filter(Targeters::isActiveLiving)
                     .map(target -> List.<LivingEntity>of(target))
                     .orElseGet(() -> context.targets().stream()
@@ -484,6 +512,16 @@ public final class Targeters {
         if (entity == null) return false;
         try {
             return entity.isValid() && !entity.isDead();
+        } catch (RuntimeException ignored) {
+            return false;
+        }
+    }
+
+    private static boolean isEligibleTrigger(LivingEntity entity) {
+        if (!(entity instanceof org.bukkit.entity.Player player)) return true;
+        try {
+            return player.getGameMode() != org.bukkit.GameMode.CREATIVE
+                    && player.getGameMode() != org.bukkit.GameMode.SPECTATOR;
         } catch (RuntimeException ignored) {
             return false;
         }
@@ -1364,12 +1402,13 @@ public final class Targeters {
                 && Boolean.FALSE.equals(parsed.targetArmorStands())) return false;
         if (Boolean.FALSE.equals(specificLivingCategoryTarget(entity, parsed))) return false;
         if (!(entity instanceof Player player)) return true;
+        if (Boolean.FALSE.equals(parsed.targetPlayers())) return false;
         Boolean modeFilter = player.getGameMode() == org.bukkit.GameMode.CREATIVE
                 ? parsed.targetCreative()
                 : player.getGameMode() == org.bukkit.GameMode.SPECTATOR
                 ? parsed.targetSpectator() : null;
         if (modeFilter != null) return modeFilter;
-        return !Boolean.FALSE.equals(parsed.targetPlayers());
+        return true;
     }
 
     private static boolean sameFaction(org.bukkit.entity.Entity source, org.bukkit.entity.Entity candidate) {
@@ -1478,17 +1517,23 @@ public final class Targeters {
 
     private static Boolean specificPlayerFilter(String filter, LivingEntity entity, ParsedSpec parsed) {
         if (!(entity instanceof Player player)) return null;
-        return switch (filter) {
-            case "player", "players" -> player.getGameMode() == org.bukkit.GameMode.CREATIVE
-                    && parsed.targetCreative() != null ? parsed.targetCreative()
-                    : player.getGameMode() == org.bukkit.GameMode.SPECTATOR
-                    && parsed.targetSpectator() != null ? parsed.targetSpectator() : parsed.targetPlayers();
-            case "creative" -> player.getGameMode() == org.bukkit.GameMode.CREATIVE
-                    ? parsed.targetCreative() : null;
-            case "spectator" -> player.getGameMode() == org.bukkit.GameMode.SPECTATOR
-                    ? parsed.targetSpectator() : null;
-            default -> null;
-        };
+        if (filter.equals("player") || filter.equals("players")) {
+            if (Boolean.FALSE.equals(parsed.targetPlayers())) return false;
+            if (player.getGameMode() == org.bukkit.GameMode.CREATIVE && parsed.targetCreative() != null) {
+                return parsed.targetCreative();
+            }
+            if (player.getGameMode() == org.bukkit.GameMode.SPECTATOR && parsed.targetSpectator() != null) {
+                return parsed.targetSpectator();
+            }
+            return parsed.targetPlayers();
+        }
+        if (filter.equals("creative")) {
+            return player.getGameMode() == org.bukkit.GameMode.CREATIVE ? parsed.targetCreative() : null;
+        }
+        if (filter.equals("spectator")) {
+            return player.getGameMode() == org.bukkit.GameMode.SPECTATOR ? parsed.targetSpectator() : null;
+        }
+        return null;
     }
 
     static List<LivingEntity> filterPlayers(Collection<? extends org.bukkit.entity.Player> players,

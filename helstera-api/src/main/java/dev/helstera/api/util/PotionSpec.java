@@ -51,8 +51,10 @@ public record PotionSpec(String type, String duration, String level,
         // Preserve the historical Helstera positional duration; Mythic named/default syntax uses 100 ticks.
         String duration = values.getOrDefault("duration", positional > 0 ? "60" : "100");
         String level = values.getOrDefault("level", "0");
-        if (!dynamic(duration)) integer(duration, 1);
-        if (!dynamic(level)) integer(level, 0);
+        NumericExpression.validate(duration);
+        NumericExpression.validate(level);
+        if (!NumericExpression.dynamic(duration)) integer(duration, 1);
+        if (!NumericExpression.dynamic(level)) integer(level, 0);
         return new PotionSpec(type, duration, level,
                 bool(values.getOrDefault("ambient", "false")),
                 bool(values.getOrDefault("particles", "true")),
@@ -96,9 +98,10 @@ public record PotionSpec(String type, String duration, String level,
     public Optional<Resolved> resolve(UnaryOperator<String> resolver) {
         try {
             return Optional.of(new Resolved(normalizeType(resolver.apply(type)),
-                    integer(resolver.apply(duration), 1), integer(resolver.apply(level), 0),
+                    integer(NumericExpression.resolveText(duration, resolver), 1),
+                    integer(NumericExpression.resolveText(level, resolver), 0),
                     ambient, particles, icon, force));
-        } catch (IllegalArgumentException | NullPointerException e) {
+        } catch (IllegalArgumentException | ArithmeticException | NullPointerException e) {
             return Optional.empty();
         }
     }

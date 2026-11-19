@@ -14,7 +14,7 @@
     "pdcWritten": true,
     "persistent": true,
     "log": "paper-1.21.1-execution-audience-restart-20261106-r3-first-boot.log.gz",
-    "logSha256": "eea91b7db72c77dde5ae62e8a22dcf3011a465b4dc423bf9292dc5f0a9caaa1a"
+    "logSha256": "3f59b604d540b624419a59017a4f61dd08577e60f4cb3174609a17bb31e86f82"
   },
   "secondBoot": {
     "result": "passed",
@@ -24,7 +24,7 @@
     "persistent": true,
     "restoredManagedMobCount": 1,
     "log": "paper-1.21.1-execution-audience-restart-20261106-r3-second-boot.log.gz",
-    "logSha256": "bb73f87dba8917651b879e64331255e06bfc051142240be46abb539817a5f144"
+    "logSha256": "9684c51f8add8a429ccb013daa44593df7f26f62476f92ff54364e0c69e2105c"
   },
   "pluginSha256": "6ba52a22a59492ec6d0fe82991d7d27d7298e152e91515974ff615a08091a750",
   "postRestartClientVisibility": "not-tested"

@@ -32,6 +32,44 @@ import static org.mockito.Mockito.*;
 /** Cross-module contract for translated conditions and mechanics used by migration tests. */
 class MigrationRuntimeConditionContractTest {
 
+    @Test
+    void importedPlayerRadiusDefaultsAndPositionalAmountsReachRuntime() {
+        var registry = new BehaviorRegistryImpl();
+        var service = new SkillService(registry, null);
+        var world = mock(org.bukkit.World.class);
+        var player = mock(org.bukkit.entity.Player.class);
+        var origin = new org.bukkit.Location(world, 0, 64, 0);
+        when(player.getLocation()).thenReturn(origin.clone());
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        when(world.getPlayers()).thenReturn(List.of(player));
+        when(world.getNearbyEntities(any(org.bukkit.Location.class), anyDouble(), anyDouble(), anyDouble()))
+                .thenReturn(List.of(player));
+        var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                null, null, 1, -1, 0, "random-spawn", null, null, List.of(), origin);
+        record Case(String source, boolean present, boolean absent) { }
+        var cases = List.of(
+                new Case("?playersInRadius", false, true),
+                new Case("?playersInRadius{radius=4}", false, true),
+                new Case("?playersInRadius 1", true, false),
+                new Case("?playersInRadius >=2", false, false),
+                new Case("?playersInRadius{r=4} <=1", true, true),
+                new Case("?playersInRadius{r=4} >0", true, false),
+                new Case("?playerWithin", true, false),
+                new Case("?playerNotWithin{}", false, true),
+                new Case("?playerWithin{} 4", true, false),
+                new Case("?playerNotWithin 4", false, true));
+        for (var testCase : cases) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(testCase.source());
+            assertTrue(mapped.translated(), testCase.source());
+            String key = service.bindCondition(mapped.condition());
+            assertNotNull(key, service.warnings().toString());
+            assertEquals(testCase.present(), registry.testCondition(key, context), testCase.source());
+            when(player.getLocation()).thenReturn(origin.clone().add(40, 0, 0));
+            assertEquals(testCase.absent(), registry.testCondition(key, context), testCase.source());
+            when(player.getLocation()).thenReturn(origin.clone());
+        }
+    }
+
     /** Context targeters now require test entities to model an active Bukkit entity. */
     private static <T> T mock(Class<T> type) {
         T value = org.mockito.Mockito.mock(type);
@@ -1173,6 +1211,29 @@ class MigrationRuntimeConditionContractTest {
                 "?VariableEquals{var=global.missing" + suffix + ";value=ready}");
         assertTrue(missing.translated());
         assertFalse(registry.testCondition(service.bindCondition(missing.condition()), context));
+
+        String quotedVariable = "quoted" + suffix;
+        String quotedValue = "\"ready; now | later && next || end ) } [ \\\"quoted\\\"\"";
+        String setQuoted = service.bindAction("setvariable{var=skill." + quotedVariable
+                + ";value=" + quotedValue + ";type=STRING}");
+        assertNotNull(setQuoted);
+        assertTrue(registry.runAction(setQuoted, context));
+        var quotedEquals = dev.helstera.migration.importer.MmConditions.translate(
+                "?VariableEquals{var=skill." + quotedVariable + ";value=" + quotedValue + "}");
+        assertTrue(quotedEquals.translated(), quotedEquals.condition());
+        // Compose imported leaves with Helstera syntax; this does not import a Mythic boolean expression.
+        for (String separator : List.of(";", "|")) {
+            String expression = "any{" + missing.condition() + separator
+                    + quotedEquals.condition() + " && !" + missing.condition() + "}";
+            String composedKey = service.bindCondition(expression);
+            assertNotNull(composedKey, expression);
+            assertTrue(registry.testCondition(composedKey, context), expression);
+        }
+        String negatedKey = service.bindCondition("not{" + quotedEquals.condition() + "}");
+        assertNotNull(negatedKey);
+        assertFalse(registry.testCondition(negatedKey, context));
+        assertNull(service.bindCondition(quotedEquals.condition() + " ||"));
+
         for (String invalid : List.of(
                 "?VariableInRange{var=global." + numeric + "}",
                 "?VariableInRange{var=global." + numeric + ";value=45to40}")) {

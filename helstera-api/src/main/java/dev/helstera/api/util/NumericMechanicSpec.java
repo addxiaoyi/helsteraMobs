@@ -117,7 +117,7 @@ public record NumericMechanicSpec(List<String> arguments, int numericCount) {
             }
             if (index >= fields.size()) throw invalid(name, "too many positional arguments");
             if (values.putIfAbsent(index, value) != null) throw invalid(name, "duplicate " + fields.get(index).aliases().getFirst());
-            if (!dynamic(value)) finite(value);
+            NumericExpression.validate(value);
         }
         List<String> normalized = new ArrayList<>();
         for (int i = 0; i < fields.size(); i++) {
@@ -142,17 +142,17 @@ public record NumericMechanicSpec(List<String> arguments, int numericCount) {
         try {
             for (int i = 0; i < numericCount; i++) {
                 String raw = arguments.get(i);
-                String value = dynamic(raw) ? resolver.apply(raw) : raw;
+                String value = dynamic(raw) ? NumericExpression.resolveText(raw, resolver) : raw;
                 finite(value);
                 resolved.set(i, value);
             }
             return Optional.of(List.copyOf(resolved));
-        } catch (IllegalArgumentException | NullPointerException e) {
+        } catch (IllegalArgumentException | ArithmeticException | NullPointerException e) {
             return Optional.empty();
         }
     }
 
-    private static boolean dynamic(String raw) { return PlaceholderSyntax.isToken(raw); }
+    private static boolean dynamic(String raw) { return NumericExpression.dynamic(raw); }
 
     private static void finite(String value) {
         double number = Double.parseDouble(value);

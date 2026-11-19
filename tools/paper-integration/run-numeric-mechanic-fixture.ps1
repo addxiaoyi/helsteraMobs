@@ -92,7 +92,7 @@ try {
             -not (Select-String -LiteralPath $latestLog -Pattern 'Done \(' -Quiet)) {
         throw 'Paper did not finish startup; inspect the retained fixture logs.'
     }
-    $probePattern = '(?m)^.*\[自检\] numeric-mechanic .*passed=true\s*$'
+    $probePattern = '(?m)^.*\[自检\] numeric-mechanic-timing .*passed=true\s*$'
     $probeDeadline = [DateTime]::UtcNow.AddSeconds(30)
     while ([DateTime]::UtcNow -lt $probeDeadline -and -not $process.HasExited -and
             -not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
@@ -119,10 +119,24 @@ $paperMatch = [regex]::Match($logText,
     'This server is running Paper version (.+?) \(Implementing API version (.+?)\)')
 $observationMatch = [regex]::Match($logText,
     '(?m)^.*\[自检\] (numeric-mechanic .*passed=true)\s*$')
+$timingMatch = [regex]::Match($logText,
+    '(?m)^.*\[自检\] (numeric-mechanic-timing .*passed=true)\s*$')
 if (-not $paperMatch.Success -or $paperMatch.Groups[1].Value -notmatch '^1\.21\.1-133(?:-|$)' -or
-        -not $observationMatch.Success -or
+        -not $observationMatch.Success -or -not $timingMatch.Success -or
         -not $logText.Contains('Enabling helsteraMobs v1.0.0')) {
     throw 'Focused report checks found incomplete Paper/plugin startup evidence.'
+}
+$catalog = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'release-probe-catalog.json') -Raw -Encoding utf8 |
+    ConvertFrom-Json
+foreach ($probe in @(
+    @{ id = 'numericMechanicRuntime'; observation = $observationMatch.Groups[1].Value },
+    @{ id = 'numericMechanicTiming'; observation = $timingMatch.Groups[1].Value }
+)) {
+    $required = @($catalog.probes | Where-Object id -eq $probe.id)
+    if ($required.Count -ne 1 -or [string]::IsNullOrWhiteSpace($required[0].requiredObservation) -or
+            $probe.observation -cne $required[0].requiredObservation) {
+        throw "Focused evidence does not satisfy every required assertion for $($probe.id)."
+    }
 }
 $redactedLog = [regex]::Replace($logText,
     '(?i)([?&]token=)[^&\s"''<>]+', '$1[REDACTED]')
@@ -151,11 +165,15 @@ $report = [ordered]@{
     pluginSha256 = $pluginSha256
     paperJarSha256 = (Get-FileHash -LiteralPath $paper -Algorithm SHA256).Hash.ToLowerInvariant()
     log = 'logs/latest.log'
-    expectedProbeIds = @('numericMechanicRuntime')
+    expectedProbeIds = @('numericMechanicRuntime', 'numericMechanicTiming')
     probes = @([ordered]@{
         id = 'numericMechanicRuntime'
         status = 'passed'
         observations = @($observationMatch.Groups[1].Value)
+    }, [ordered]@{
+        id = 'numericMechanicTiming'
+        status = 'passed'
+        observations = @($timingMatch.Groups[1].Value)
     })
 }
 $json = $report | ConvertTo-Json -Depth 8

@@ -11,7 +11,7 @@
     "cooldownAtSpawnTicks": 600,
     "persistedCooldownTicks": 580,
     "log": "paper-1.21.1-spawner-natural-restart-20261106-r1-first-boot.log.gz",
-    "logSha256": "9fd81cee7aab307e5673b959aa5399ea87a9950e67545832f2a968998bfb471f"
+    "logSha256": "17701090b6fed65fe22999350eec2d411d0395bd3c3573bbb71d234bf37e8da9"
   },
   "secondBoot": {
     "result": "passed",
@@ -22,7 +22,7 @@
     "source": "live-scheduler",
     "manualForceCommand": false,
     "log": "paper-1.21.1-spawner-natural-restart-20261106-r1-second-boot.log.gz",
-    "logSha256": "8b677258d41833debfe850682fcbf18a3efd9594920e83d216946fa23c6aee3c"
+    "logSha256": "aab6ed9b45025dc2fe649b7632d4d279af34e4884d4e689fcb585942e7784914"
   },
   "pluginSha256": "1a720c987563702610542daf9cefbe8372c6793ba3718227edadf6ef3ae56026"
 }

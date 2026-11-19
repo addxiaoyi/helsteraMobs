@@ -265,7 +265,11 @@ public final class SkillCatalog {
         if (args == null || args.size() <= index || args.get(index) == null
                 || args.get(index).isBlank()) return ctx -> def;
         String raw = args.get(index).trim();
-        if (raw.indexOf('<') >= 0) {
+        if (raw.startsWith("<") && raw.indexOf('>') == raw.length() - 1) {
+            return ctx -> Placeholders.resolveNumber(raw, ctx, def);
+        }
+        if (dev.helstera.api.util.NumericExpression.dynamic(raw)) {
+            dev.helstera.api.util.NumericExpression.validate(raw);
             return ctx -> Placeholders.resolveNumber(raw, ctx, def);
         }
         double parsed = num(args, index, def);

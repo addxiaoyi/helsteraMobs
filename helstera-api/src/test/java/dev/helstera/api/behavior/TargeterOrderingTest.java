@@ -263,6 +263,10 @@ class TargeterOrderingTest {
         assertEquals(List.of(tamed), Targeters.select("@TamedInRadius", source, candidates, List.of()));
         assertEquals(List.of(tamed), Targeters.select("@NearestTamed", source,
                 List.of(untamed, tamed), List.of()));
+        assertEquals(List.of(monster, animal, villager, tamed, untamed),
+                Targeters.select("@LivingInRadius", source,
+                        List.of(monster, animal, villager, tamed, untamed), List.of()),
+                "official LivingInRadius alias retains all living candidates");
     }
 
     @Test
@@ -573,17 +577,49 @@ class TargeterOrderingTest {
 
         assertEquals(List.of(survival, adventure, spectator, mob), Targeters.select(
                 "@living{targetplayers=true;targetcreative=false}", source, candidates, List.of()));
-        assertEquals(List.of(creative, mob), Targeters.select(
+        assertEquals(List.of(mob), Targeters.select(
                 "@living{targetplayers=false;targetcreative=true}", source, candidates, List.of()));
         assertEquals(List.of(creative), Targeters.select(
                 "@living{target=creative;ignore=creative;targetcreative=true}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{target=creative;ignore=creative;targetcreative=true;targetplayers=false}",
+                source, candidates, List.of()),
+                "targetplayers=false excludes players before game-mode eligibility is considered");
         assertEquals(List.of(spectator), Targeters.select(
                 "@living{target=spectator;ignore=spectator;targetspectator=true}", source, candidates, List.of()));
+        assertEquals(List.of(), Targeters.select(
+                "@living{target=spectator;ignore=spectator;targetspectator=true;targetplayers=false}",
+                source, candidates, List.of()),
+                "targetplayers=false excludes spectators even when the mode flag is enabled");
         assertEquals(List.of(survival, adventure, spectator), Targeters.select(
                 "@living{target=players;targetplayers=true;ignore=players;targetcreative=false}",
                 source, candidates, List.of()));
         assertEquals(List.of(mob), Targeters.select(
                 "@living{target=mob;targetplayers=true}", source, candidates, List.of()));
+    }
+
+    @Test
+    @DisplayName("@Trigger excludes creative and spectator players even when generic mode flags opt them in")
+    void triggerTargeterAppliesMythicPlayerEligibility() {
+        var survival = gameModePlayer(org.bukkit.GameMode.SURVIVAL);
+        var adventure = gameModePlayer(org.bukkit.GameMode.ADVENTURE);
+        var creative = gameModePlayer(org.bukkit.GameMode.CREATIVE);
+        var spectator = gameModePlayer(org.bukkit.GameMode.SPECTATOR);
+        for (var player : List.of(survival, adventure, creative, spectator)) {
+            var context = BehaviorContext.continueExecution(null, player, 1, 2, 0,
+                    "skill", null, player, List.of(player), null, null);
+            boolean eligible = player.getGameMode() == org.bukkit.GameMode.SURVIVAL
+                    || player.getGameMode() == org.bukkit.GameMode.ADVENTURE;
+            assertEquals(eligible ? List.of(player) : List.of(),
+                    Targeters.select("@Trigger", context, List.of(), List.of()));
+            assertEquals(eligible ? List.of(player) : List.of(), Targeters.select(
+                    "@Trigger{targetcreative=true;targetspectator=true}", context, List.of(), List.of()));
+        }
+
+        var survivalContext = BehaviorContext.continueExecution(null, survival, 1, 2, 0,
+                "skill", null, survival, List.of(survival), null, null);
+        assertEquals(List.of(), Targeters.select(
+                "@Trigger{targetplayers=false}", survivalContext, List.of(), List.of()));
     }
 
     @Test
@@ -1029,6 +1065,53 @@ class TargeterOrderingTest {
                 context, List.of(player), List.of()));
         assertEquals(List.of(), Targeters.select("@Target{} > @unknown",
                 context, List.of(player), List.of()));
+    }
+
+    @Test
+    @DisplayName("@Target follows a mob caster's live Bukkit target instead of inheriting the trigger")
+    void targetContextUsesCurrentMobTarget() {
+        var aiTarget = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
+        var trigger = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
+        var caster = proxy(org.bukkit.entity.Mob.class, (method, args) -> switch (method) {
+            case "isValid" -> true;
+            case "isDead" -> false;
+            case "getTarget" -> aiTarget;
+            default -> null;
+        });
+        var instance = proxy(dev.helstera.api.instance.ModelInstance.class, (method, args) -> switch (method) {
+            case "isValid" -> true;
+            case "baseEntity" -> java.util.Optional.of(caster);
+            default -> null;
+        });
+        var context = BehaviorContext.continueExecution(instance, trigger, 1, 2, 0,
+                "skill", null, trigger, List.of(trigger), null, null);
+
+        assertEquals(List.of(aiTarget), Targeters.select("@target", context, List.of(), List.of()));
+
+        var noTargetCaster = proxy(org.bukkit.entity.Mob.class, (method, args) -> switch (method) {
+            case "isValid" -> true;
+            case "isDead" -> false;
+            case "getTarget" -> null;
+            default -> null;
+        });
+        var noTargetInstance = proxy(dev.helstera.api.instance.ModelInstance.class, (method, args) -> switch (method) {
+            case "isValid" -> true;
+            case "baseEntity" -> java.util.Optional.of(noTargetCaster);
+            default -> null;
+        });
+        var inheritedTarget = activeLivingProxy(org.bukkit.entity.LivingEntity.class);
+        var noTargetContext = BehaviorContext.continueExecution(noTargetInstance, inheritedTarget, 1, 2, 0,
+                "skill", null, trigger, List.of(trigger), null, null);
+        assertEquals(List.of(), Targeters.select("@target", noTargetContext, List.of(), List.of()),
+                "a mob without a live AI target does not target an unrelated trigger");
+        var eventBoundContext = BehaviorContext.continueExecution(noTargetInstance, trigger, 1, 2, 0,
+                "skill", null, trigger, List.of(trigger), null, null);
+        assertEquals(List.of(), Targeters.select("@target", eventBoundContext, List.of(), List.of()),
+                "a mob without a live AI target does not fall back to the event-bound recipient");
+        var killContext = BehaviorContext.continueExecution(noTargetInstance, trigger, 1, 2, 0,
+                "on-kill", null, trigger, List.of(trigger), null, null);
+        assertEquals(List.of(trigger), Targeters.select("@target", killContext, List.of(), List.of()),
+                "confirmed-kill dispatch retains its explicitly bound victim");
     }
 
     @Test
@@ -1503,6 +1586,8 @@ class TargeterOrderingTest {
                     case "getGameMode" -> gameMode;
                     case "getType" -> org.bukkit.entity.EntityType.PLAYER;
                     case "getLocation" -> new org.bukkit.Location(null, 0, 0, 0);
+                    case "isValid" -> true;
+                    case "isDead" -> false;
                     case "equals" -> proxy == args[0];
                     case "hashCode" -> System.identityHashCode(proxy);
                     default -> defaultValue(method.getReturnType());

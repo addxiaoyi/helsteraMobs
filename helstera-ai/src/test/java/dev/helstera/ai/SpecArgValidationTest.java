@@ -78,13 +78,18 @@ class SpecArgValidationTest {
     }
 
     @Test
-    @DisplayName("范围条件拒绝负半径、负数数量和分数数量")
+    @DisplayName("范围条件拒绝负数；MobsInRadius 支持 RangedDouble 分数边界")
     void radiusConditionsRejectInvalidBounds() {
         for (String name : List.of("players-in-radius", "entities-in-radius", "mobs-in-radius")) {
             assertThrows(IllegalArgumentException.class,
                     () -> extraCond(name).create(List.of("-1", "8")), name + " 数量不能为负数");
-            assertThrows(IllegalArgumentException.class,
-                    () -> extraCond(name).create(List.of("1.5", "8")), name + " 数量必须为整数");
+            if (!name.equals("mobs-in-radius")) {
+                assertThrows(IllegalArgumentException.class,
+                        () -> extraCond(name).create(List.of("1.5", "8")), name + " 数量必须为整数");
+            } else {
+                extraCond(name).create(List.of("1.5", "8"));
+                extraCond(name).create(List.of(">1.5", "8"));
+            }
             assertThrows(IllegalArgumentException.class,
                     () -> extraCond(name).create(List.of("1", "-1")), name + " 半径不能为负数");
         }

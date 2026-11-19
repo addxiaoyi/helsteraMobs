@@ -1,5 +1,17 @@
 # MythicMobs Parity Roadmap
 
+MobsInRadius correction (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r34` passes 18 probes, including 120
+native/imported/direct-binding mob-radius comparisons and the prior 132 player
+comparisons, all matching. Effective defaults are exact amount zero/radius zero;
+legacy values fill both omitted fields, counts support fractional bounds, and
+caster/location overloads use their distinct type filters. World/custom-provider
+failures remain false under negation. This supersedes older mob-radius defaults
+and population assumptions without closing the complete Conditions catalog.
+See the [contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and
+[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+
+
 This is the ordered worklist for closing the compatibility gaps recorded in the
 [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). It is an evidence-driven roadmap,
 not a promise of identical behavior where Paper has no public API or a feature
@@ -7,7 +19,19 @@ requires another plugin.
 
 ## Baseline
 
-Audited against the matrix on 2026-11-17:
+Immediate continuation after the constant MobsInRadius correction:
+
+1. Establish the supported-version contract for `MobsNearOrigin` and native
+   condition dispatch; distinguish a real native alias from a Helstera extension.
+2. Implement and compare placeholder-backed mob-radius values, then audit
+   MythicEntity aliases and unavailable-provider behavior across composite conditions.
+3. Continue the remaining Conditions and RandomSpawns catalog with native
+   positive/negative comparisons; do not promote the complete rows from focused tests.
+4. Work through the remaining 33 mapped-unverified rows, the two intentionally
+   preserved features and two external-plugin dependencies below, including
+   cross-version Paper evidence and restart/lifecycle coverage.
+
+Audited against the matrix on 2026-11-19:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
@@ -17,7 +41,16 @@ Audited against the matrix on 2026-11-17:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-directional-velocity-strict-20261116-r1` on Paper 1.21.1-133, with 466 probes: 447 passed, 19 expected rejections, and zero failed or incomplete. Its strict production evidence covers MythicMobs `Velocity` and `DirectionalVelocity` mechanics, including regular and directional modes, aliases, dynamic placeholders, invalid-input preservation, and restoration; the catalog also retains HasInventorySpace, Inline Conditions and Altitude evidence, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and the full runtime/client workflows. MythicMobs 5.7.2 has separate focused evidence; the full release fixture does not load MythicMobs. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json].
+The latest full release fixture is `srv-paper-mob-radius-strict-20261119-r2` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `1ea4f5db1d4dec787b349f8c7b7910719793e92e7f8f5e83947e136efcfd60db`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,303 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+
+Condition-expression hardening: `SkillService` recognizes operators only at
+the expression level, leaving quoted strings and nested arguments intact.
+Explicit `;` or `|` lists can contain boolean subexpressions. Malformed groups,
+quotes, and missing operands fail to bind instead of falling back to a leaf.
+`SkillServiceTest` covers positive and negative cases;
+`MigrationRuntimeConditionContractTest` composes imported `VariableEquals`
+leaves using Helstera syntax. Native MythicMobs composition syntax is not
+verified by these tests. The full Conditions catalog remains `mapped-unverified`.
 
 The next targeter contract slice is now implemented in the shared API: spatial
 targeters reject malformed, negative, non-finite, duplicate, and unknown private
@@ -81,7 +114,90 @@ AI, migration, and plugin tests cover direct binding and imported runtime
 paths. No Paper evidence was added, so the Conditions catalog remains
 `mapped-unverified`.
 
-## Next targets after the recipient-context correction (2026-11-17)
+## Next targets after Potion observer/reconnect validation (updated 2026-11-18)
+
+Focused `srv-paper-potion-sync-exploratory-20261117-r5` verifies identical-source
+native MM 5.7.2/imported Haste and Invisibility on a player and Cow: 118 named
+server assertions, 28 real-client checkpoints, 14 comparisons, and six
+reconnections pass. Both effects retain exact quit/join duration traces for both
+backends. The validator has 16 tests and requires actual metadata,
+login packets, spawn/destruction, quit/join duration traces, all acknowledgments,
+and cleanup. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md).
+
+The focused three-boot fixture `srv-paper-potion-restart-strict-20261118-r6`
+now verifies Haste/Invisibility persistence for a player and Cow across one
+restart, then confirms cleared effects stay absent after another restart. This
+closes only that Paper 1.21.1-133/MM 5.7.2 persistence slice; see the
+[restart evidence](tools/paper-integration/reports/paper-1.21.1-potion-restart-strict-20261118-r6.json).
+Continue with remaining effect types and mechanic fields, long-disconnect
+scenarios, Premium execution, native comparison release integration, complete
+Conditions/Mechanics/Targeters catalogs, and other Paper versions. Graphical
+rendering remains unverified. The original full worklist below and all 33 broad
+`mapped-unverified` rows retain their scope.
+
+Aura follow-up: simple named Mythic `onStartSkill`/`onStart`/`os` options now
+import to a runtime callback that casts once when a new Aura state starts and
+does not re-fire for a merged stack. Importer/runtime tests cover the alias,
+target context, first-start behavior, and preservation of inline skill lists.
+Focused Paper 1.21.1-133 + MythicMobs 5.7.2 fixture
+`srv-paper-mythic-pack-strict-20261118-r21` now exercises a Mythic `onStart`
+Aura imported into the production action path. It verifies one dispatch on
+first start, no redispatch on a merged stack, and preservation of the affected
+entity as target context. This narrow callback slice does not promote the broad
+Skills/Mechanics rows. Follow-up fixture `srv-paper-mythic-pack-strict-20261118-r23`
+now additionally verifies imported `onTick`/`onTickSkill` with a 3-tick
+interval, preserved schedule on stack merge, affected-target context, and no
+retained trigger/cancellable event. Importer and runtime tests cover alias,
+invalid interval, inline-skill preservation, tick cadence, expiry, and merge
+behavior. These narrow callback slices do not promote the broad Skills/Mechanics
+rows. Follow-up fixture `srv-paper-mythic-pack-strict-20261119-r1` now also
+verifies imported `onEndSkill`/`onEnd` for explicit removal, the
+`DoEndSkillOnTerminate=false` suppression option, expiry and overwrite, plus
+fresh affected-target context without the prior event. Aura components,
+attachments, charges, and cancellation remain open. See [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md#mythic-aura-onendskill).
+
+Earlier protocol milestone:
+
+Focused `srv-paper-potion-packets-exploratory-20261117-r2` now compares native
+MM 5.7.2 and imported skills on a real client: 84 server assertions, 12 paired
+cases, 24 phases, and 48 packets pass. All eight ambient/particles/icon flag
+combinations, exact duration/level, natural/explicit removal, force ordering,
+and cancelled addition are verified. Sixteen validator contract tests reject
+incorrect or missing evidence. See the [packet contract](docs/POTION_PACKET_COMPATIBILITY.md).
+This establishes protocol delivery; graphical rendering remains unverified.
+
+At that milestone, remaining work included observer/reconnect synchronization and other effect types, the
+remaining numeric mechanic fields, Premium execution, native comparison release
+integration, and other versions. The remaining work packages below still define
+the full completion target; the 33 broad `mapped-unverified` rows retain their
+evidence boundaries.
+
+Earlier lifecycle milestone:
+
+The lifecycle milestone JAR passes 2,261 Maven tests, SpotBugs, and the 471-probe
+strict Paper catalog, including all 47 Potion lifecycle assertions. Focused
+`srv-paper-potion-mechanic-exploratory-20261117-r18` passes 144 assertions:
+28 runtime, 22 timing, 47 imported lifecycle, and 47 native MM 5.7.2 lifecycle
+checks against identical packaged YAML. Report contracts reject omitted or
+false lifecycle assertions and missing cleanup. Remaining work includes client
+rendering, other effect types and event-plugin interactions, remaining
+numeric fields, Premium execution, native release integration, and other versions.
+The 33 broad `mapped-unverified` rows retain their evidence boundaries.
+
+Earlier numeric/timing milestone:
+
+The numeric/timing artifact passes 2,261 Maven tests, SpotBugs, all 470 strict
+Paper probes, the version-matrix check, and the evidence audit against its exact
+JAR hash. The strict catalog now requires all 38 numeric and 28 Potion assertions.
+It also requires 19 numeric and 22 Potion timing assertions for imported live
+delay/repeat execution, changing recipient properties and variables, removed
+targets, invalid-input effect preservation, bounded repeats, cancellation, and
+cleanup. Focused numeric r9 and Potion r13 pass on the same JAR. The earlier
+strict baseline `srv-paper-numeric-potion-strict-20261117-r3` remains archived.
+The same JAR separately passes the 107-assertion native MM 5.7.2 fixture.
+Report contract tests reject omitted probes and incomplete per-field/cleanup
+evidence even when an aggregate success flag is present. The historical
+milestones below retain the tests and artifact boundaries of each earlier slice.
 
 The covered numeric factories now use a shared argument contract through direct
 calls, `SkillService`, and migration. Reordered/omitted fields, explicit target
@@ -127,7 +243,8 @@ Selected dynamic numeric factories and Potion now resolve each recipient's
 parameters independently, preserving execution metadata and inherited target
 lists. Invalid recipient data cannot reuse the first target's values or remove
 an existing Potion effect before validation. Numeric scheduling-hook tests
-verify resolution at each delayed/repeated invocation; live timing is still open.
+verify resolution at each delayed/repeated invocation; real Paper numeric/Potion
+timing is covered by the current timing probes. Other timing interactions remain open.
 See the [recipient contract](docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md#recipient-context).
 The regression suite passes 2,250 tests and SpotBugs. Final-artifact Paper
 fixtures `srv-paper-numeric-mechanic-exploratory-20261117-r4` and
@@ -137,7 +254,18 @@ that invalidate the current or later recipient. The same artifact retains all
 88 MM comparison/regression assertions in
 `srv-paper-percent-health-exploratory-20261117-r10`. These remain exploratory evidence.
 
-1. Complete expressions/math, other placeholder families, and recipient audits
+Shared numeric mechanics, fractional-health mechanics, and Potion duration/level
+now support exp4j expressions with the native 5.7.2 functions/operators and
+rounded placeholders. Syntax validation, whitespace-preserving migration,
+per-recipient execution, invalid-result no-ops, and Potion effect preservation
+have API, AI, migration, and cross-module coverage. Generic single-token numeric
+helpers retain Unicode and arbitrary variable-name support. Full regression
+passes 2,259 tests and SpotBugs. Final-artifact exploratory Paper fixtures numeric
+r6, Potion r10, and percent-health r12 pass 38, 28, and 107 assertions, including 19
+native math-engine comparisons. Premium dynamic numeric skill execution remains
+unverified. See the [expression contract](docs/NUMERIC_EXPRESSION_COMPATIBILITY.md).
+
+1. Extend expressions/math to remaining numeric fields, other placeholder families, and recipient audits
    for remaining mechanics; add actual Premium numeric skill comparison when available.
    Keep the documented invalid-input, locale, and extended-random-range boundaries explicit.
    Audit skill-power/damage modifiers, healing events, and version-specific
@@ -146,12 +274,19 @@ that invalidate the current or later recipient. The same artifact retains all
    the speed comparison uses an eligible survival player and explicit `@Trigger`.
    Keep legacy speed multiplication explicit: imported `modifyspeed` defaults
    to `0`, direct calls to `1`, and `set-tick-speed` scales movement speed.
-2. Extend Potion evidence to delayed/repeated execution, remaining effect-event
-   behavior, expiration/hidden effects, instant effects, and client particles/icons.
-   Reconcile those results with the declared MythicMobs version boundary.
-3. Add the verified Potion, numeric/placeholder, fractional-health, and SetSpeed cases to the full strict release catalog,
-   then run the exact release artifact and the remaining Paper combinations.
-   Numeric delay/repeat timing, player motion/flight physics, complete max-health
+2. Numeric/Potion delayed/repeated recipient resolution is covered by real Paper
+   probes, including changing variables, removed recipients, invalid-input effect
+   preservation, bounded repeats, cancellation, and cleanup. Potion lifecycle
+   now has 47 imported Paper assertions plus the same 47 native MM 5.7.2
+   assertions for expiration, hidden chains, force, cancellation, instant effects,
+   and cleanup. See the [lifecycle contract](docs/POTION_LIFECYCLE_COMPATIBILITY.md).
+   Continue with client particles/icons, remaining effect types and event-plugin
+   combinations, other versions, and the explicit cancelled-force-removal difference.
+3. The full strict catalog now includes the 38 numeric and 28 Potion assertions,
+   verified on the exact release artifact by `srv-paper-numeric-potion-strict-20261117-r4`.
+   Integrate the remaining native fractional-health/placeholder and SetSpeed
+   comparisons into release validation, then run the remaining Paper combinations.
+   Other timing interactions, player motion/flight physics, complete max-health
    variants, and client-observed movement still require focused evidence. Keep broader
    matrix rows open until their complete catalogs meet the contract below.
 
@@ -232,8 +367,14 @@ Matrix rows: `Conditions catalog`, `Full Mythic condition/filter grammar`, and
   compares case-insensitively. The existing imported `setvariable` mechanic can
   populate this variable. Missing metadata, unresolved placeholders, duplicate
   or unknown arguments, and invalid values fail closed; importer, AI, and
-  cross-module tests cover the contract. No new Paper evidence is claimed for
-  this context-variable slice.
+  cross-module tests cover the contract. Focused Paper fixture
+  `srv-paper-mythic-pack-strict-20261118-r18` additionally runs the production
+  importer on the `setvariable` skill, executes its generated action, and checks
+  the shared key variable before verifying direct/imported match and mismatch
+  cases, aliases, the default key, missing metadata, malformed arguments, and
+  unresolved placeholders on Paper 1.21.1-133 with MythicMobs 5.7.2. This
+  remains a narrow evidence slice; the full Conditions catalog is still
+  `mapped-unverified`.
 - Official MythicMobs 5.7.2 `factionsame` now joins `samefaction` as an alias
   for the exact `same-faction` evaluator. Importer, runtime, and cross-module
   tests cover the alias and reject supplied arguments. This closes a naming gap
@@ -467,6 +608,66 @@ border and player gates`, and `Mythic Random Spawns and DropTables`.
   per-instance random mob to DropTable coupling through natural death.
 - Keep randomized observations reproducible where possible and report
   uncertainty rather than promising a fixed distribution from a small sample.
+
+Progress (2026-11-19): `REPLACE`, an event-driven `DENY` subset, and an opt-in
+bounded `ADD/CLUSTER` subset now flow
+from nested `RandomSpawns` file discovery through migration output into the
+runtime service. `REPLACE` covers custom Mythic mob IDs, equal-entry `Type`/
+`Types` alternatives in comma-separated or YAML-list form (repeated entries
+retain their relative weight), chance, priority, cooldown, world/biome/reason
+filters, and conditions; failed custom spawns do not cancel the vanilla event.
+`DENY` cancels matching creature-spawn events, while DENY-with-`Type` is
+preserved as unsupported. `ADD/CLUSTER` is disabled by default and can be
+explicitly enabled; its bounded sampler uses loaded chunks near Survival or
+Adventure players, LAND/SEA, world/biome filters, chance, priority, cooldown,
+and per-cycle/world caps. Candidate-point world, time, and weather conditions
+map through the production location-only context. Entity-dependent and unknown
+ADD conditions still fail closed; explicit weighted syntax, non-default levels, and
+other unmapped options likewise produce no runtime projection. Focused
+importer, runtime, and cross-module contract tests pass. Pinned Paper
+1.21.1-133 fixture `srv-paper-random-spawn-replace-20261119-r16` passes all
+eleven feature probes, including one managed ADD spawn near a real Survival
+player, day/rain/wrong-world rejection controls, a clear-night positive case,
+replacement and DENY controls, cooldown rejection/recovery, and preservation
+of unsupported definitions. Five native Paper `NATURAL` attempts were
+observed on a dark pad with a real player online; the imported DENY rule
+cancelled all five. This
+bounded approximation is not Mythic's exact generator or full RandomSpawns
+parity, and the fixture is not the global strict release catalog; the matrix
+row remains `mapped-unverified`.
+
+Follow-up Paper fixture `srv-paper-random-spawn-replace-20261119-r18` adds a
+world-border negative control for ADD: candidates outside the live Paper border
+are rejected before the spawn adapter is called. Fixture r19 then exercises
+equal-entry YAML-list `Types` alternatives through the production importer and
+runtime; all 13 focused probes pass, with a 10:6 observation over 16 valid events
+from a 1:1 entry pool. Comma syntax and duplicate entries have unit/contract
+coverage. This is not a statistical distribution claim. The runtime unit test
+covers the world-border fail-closed path. The broader terrain, player-distance,
+multi-boot, and native generator gaps remain open. See the [r19 focused
+report](tools/paper-integration/reports/paper-1.21.1-random-spawn-replace-20261119-r19.json).
+
+The subsequent `srv-paper-random-spawn-replace-20261119-r27` passes 17 focused
+probes, including 132 matching native/imported MM 5.7.2 evaluations. It fixes
+omitted player-count amounts to exact zero, legacy positional amounts, and
+zero-distance within/not-within defaults. Duplicate/unknown arguments and
+fractional/overflow counts remain preserved. Inclusive count comparators remain
+documented Helstera extensions; the native parser rejects them. Eleven NATURAL
+attempts are denied after the dark pad's lighting settles. Full Conditions and
+RandomSpawns rows remain open; see the
+[compatibility contract](docs/PLAYER_RADIUS_CONDITION_COMPATIBILITY.md).
+
+Fixture `srv-paper-random-spawn-replace-20261119-r21` adds ADD player-distance
+condition evidence: PlayersInRadius, PlayerWithin and PlayerNotWithin each
+pass independent spawn/reject controls after real condition evaluation.
+All 15 focused probes pass, including four player modes, spherical distance,
+exact zero/one counts and state restoration. Runtime failures remain rejected
+under negation; counts above 513 are not truncated. These correct the pinned
+5.7.2 contract and close the three ADD condition gates, while full generator
+distance rules, terrain, multi-boot and native-algorithm coverage remain open.
+The general strict radius probes now explicitly use Survival and restore the
+prior mode. The same artifact passes all 471 strict release probes in
+`srv-paper-player-radius-strict-20261119-r1`, plus 2,298 Maven tests and SpotBugs.
 
 **Exit:** supported spawner paths have multi-boot natural generation evidence,
 negative gate controls, and documented statistical limits.

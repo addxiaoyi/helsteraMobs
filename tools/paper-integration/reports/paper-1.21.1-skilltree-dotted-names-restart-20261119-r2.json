@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-skilltree-typed-values-20261119-r2",
+  "generatedAtUtc": "2026-11-19T01:24:01.4622135Z",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "pluginSha256": "669f62ef05a4de8a1e8d860ece3cff3a9311bdd815105cb5e9b0e30e4fcc0908",
+  "firstBoot": {
+    "result": "passed",
+    "entities": 2,
+    "snapshotsAfterShutdown": 2,
+    "branchStateSaved": true,
+    "unsupportedVariableRejected": true,
+    "log": "skilltree-write.log"
+  },
+  "secondBoot": {
+    "result": "passed",
+    "uuidMarkersRestored": true,
+    "foundationRestored": true,
+    "prerequisiteRestored": true,
+    "dottedVariableNamesRestored": true,
+    "dottedLocationNamesRestored": true,
+    "reservedAndDottedBranchNamesRestored": true,
+    "listVariableRestored": true,
+    "setVariableRestored": true,
+    "nestedMapVariableRestored": true,
+    "collectionsRestored": true,
+    "advancedBranchUnlocked": true,
+    "log": "skilltree-verify.log"
+  },
+  "entityDeath": {
+    "result": "passed",
+    "deadEntitySnapshotRemoved": true,
+    "survivorSnapshotRetained": true,
+    "snapshotsAfterShutdown": 1
+  }
+}

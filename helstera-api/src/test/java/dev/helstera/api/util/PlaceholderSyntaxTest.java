@@ -33,6 +33,10 @@ class PlaceholderSyntaxTest {
         assertTrue(PlaceholderSyntax.isToken("<caster.hp{r=2}>"));
         assertEquals(-1, PlaceholderSyntax.argumentEquals(" <caster.hp{r=2}>"));
         assertEquals(1, PlaceholderSyntax.argumentEquals("a=<caster.hp{r=2}>"));
+        assertEquals(-1, PlaceholderSyntax.argumentEquals("(<target.hp{r=0}>+1)"));
+        assertEquals(-1, PlaceholderSyntax.argumentEquals("(1==1)"));
+        assertEquals(1, PlaceholderSyntax.argumentEquals("a=(1==1)"));
+        assertEquals(0, PlaceholderSyntax.argumentEquals("=1+2"));
     }
 
     @Test

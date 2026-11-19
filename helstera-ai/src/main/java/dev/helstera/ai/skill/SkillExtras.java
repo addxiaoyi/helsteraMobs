@@ -235,6 +235,21 @@ public final class SkillExtras {
     }
     private static volatile MythicMobTypeQuery mythicMobTypeQuery;
     private static volatile AuraRegistry auraRegistry;
+    @FunctionalInterface
+    public interface AuraStartSkillDispatcher {
+        boolean cast(String skillName, BehaviorContext context);
+    }
+    private static volatile AuraStartSkillDispatcher auraStartSkillDispatcher;
+    @FunctionalInterface
+    public interface AuraTickSkillDispatcher {
+        boolean cast(String skillName, BehaviorContext context);
+    }
+    private static volatile AuraTickSkillDispatcher auraTickSkillDispatcher;
+    @FunctionalInterface
+    public interface AuraEndSkillDispatcher {
+        boolean cast(String skillName, BehaviorContext context);
+    }
+    private static volatile AuraEndSkillDispatcher auraEndSkillDispatcher;
     private static final Map<String, String> AURA_NAME_ARGUMENTS = Map.ofEntries(
             Map.entry("aura", "aura"), Map.entry("auraname", "aura"),
             Map.entry("b", "aura"), Map.entry("buff", "aura"),
@@ -269,7 +284,16 @@ public final class SkillExtras {
             Map.entry("overwritesamecaster", "overwritesamecaster"),
             Map.entry("osc", "overwritesamecaster"), Map.entry("oc", "overwritesamecaster"),
             Map.entry("overwriteall", "overwriteall"), Map.entry("overwrite", "overwriteall"),
-            Map.entry("ow", "overwriteall"));
+            Map.entry("ow", "overwriteall"), Map.entry("onstartskill", "onstartskill"),
+            Map.entry("onstart", "onstartskill"), Map.entry("os", "onstartskill"),
+            Map.entry("ontickskill", "ontickskill"), Map.entry("ontick", "ontickskill"),
+            Map.entry("ot", "ontickskill"), Map.entry("interval", "interval"),
+            Map.entry("i", "interval"), Map.entry("onendskill", "onendskill"),
+            Map.entry("onend", "onendskill"), Map.entry("oe", "onendskill"),
+            Map.entry("doendskillonterminate", "doendskillonterminate"),
+            Map.entry("desot", "doendskillonterminate"),
+            Map.entry("alwaysrunendskill", "doendskillonterminate"),
+            Map.entry("ares", "doendskillonterminate"));
     private static final Map<String, String> AURA_REMOVE_ARGUMENTS = Map.ofEntries(
             Map.entry("aura", "name"), Map.entry("auraname", "name"),
             Map.entry("b", "name"), Map.entry("buff", "name"),
@@ -416,6 +440,18 @@ public final class SkillExtras {
         auraRegistry = registry;
     }
 
+    public static void auraStartSkillDispatcher(AuraStartSkillDispatcher dispatcher) {
+        auraStartSkillDispatcher = dispatcher;
+    }
+
+    public static void auraTickSkillDispatcher(AuraTickSkillDispatcher dispatcher) {
+        auraTickSkillDispatcher = dispatcher;
+    }
+
+    public static void auraEndSkillDispatcher(AuraEndSkillDispatcher dispatcher) {
+        auraEndSkillDispatcher = dispatcher;
+    }
+
     public static void threatLookup(ThreatLookup l) {
         threatLookup = l;
     }
@@ -518,6 +554,9 @@ public final class SkillExtras {
         mythicMobLookup = null;
         mythicMobTypeMatcher = null;
         mythicMobTypeQuery = null;
+        auraStartSkillDispatcher = null;
+        auraTickSkillDispatcher = null;
+        auraEndSkillDispatcher = null;
         audienceMobSelector = null;
         executionAudienceWriter = null;
         auraRegistry = null;
@@ -692,16 +731,6 @@ public final class SkillExtras {
         return range;
     }
 
-    private static NumberRange minimumCountRange(List<String> args, int index, String fallback) {
-        String raw = str(args, index, fallback);
-        NumberRange parsed = nonNegativeCountRange(args, index, fallback);
-        String value = raw.trim();
-        if (value.startsWith(">") || value.startsWith("<")
-                || value.toLowerCase(Locale.ROOT).contains("to")
-                || value.indexOf('-', 1) > 0) return parsed;
-        return new NumberRange(parsed.min(), Double.POSITIVE_INFINITY, true, false);
-    }
-
     private static boolean finiteNonNegative(String raw) {
         try {
             double value = Double.parseDouble(raw.trim());
@@ -742,7 +771,11 @@ public final class SkillExtras {
         if (args == null || args.size() <= index || args.get(index) == null
                 || args.get(index).isBlank()) return ctx -> def;
         String raw = args.get(index).trim();
-        if (raw.indexOf('<') >= 0) {
+        if (raw.startsWith("<") && raw.indexOf('>') == raw.length() - 1) {
+            return ctx -> Placeholders.resolveNumber(raw, ctx, def);
+        }
+        if (dev.helstera.api.util.NumericExpression.dynamic(raw)) {
+            dev.helstera.api.util.NumericExpression.validate(raw);
             return ctx -> Placeholders.resolveNumber(raw, ctx, def);
         }
         double parsed = num(args, index, def);
@@ -4635,7 +4668,7 @@ public final class SkillExtras {
                 // ---- 范围统计 ----
 
                 Map.entry("players-in-radius", (SkillCatalog.ConditionFactory) a -> {
-                    NumberRange amount = minimumCountRange(a, 0, ">0");
+                    NumberRange amount = nonNegativeCountRange(a, 0, ">0");
                     double radius = nonNegativeRadius(a, 1, 32);
                     boolean ignoreSpectator = bool(a, 2, true);
                     return ctx -> amount.contains(countPlayersNear(ctx, radius, ignoreSpectator));
@@ -4646,13 +4679,15 @@ public final class SkillExtras {
                     return ctx -> countNear(ctx, radius, true) >= min;
                 }),
                 Map.entry("mobs-in-radius", (SkillCatalog.ConditionFactory) a -> {
-                    NumberRange amount = minimumCountRange(a, 0, "1");
-                    double radius = nonNegativeRadius(a, 1, 5);
+                    String rawAmount = str(a, 0, "0");
+                    String rawRadius = str(a, 1, "0");
+                    if (a.size() > 3 || !dev.helstera.api.util.MobRadiusSpec.validAmount(rawAmount)
+                            || !dev.helstera.api.util.MobRadiusSpec.validRadius(rawRadius))
+                        throw new IllegalArgumentException("invalid mobs-in-radius arguments");
+                    NumberRange amount = numberRange(List.of(rawAmount), 0);
+                    double radius = Double.parseDouble(rawRadius);
                     Set<String> types = mobTypeFilter(a, 2);
-                    return ctx -> {
-                        java.util.OptionalInt count = countMobsNear(ctx, radius, types);
-                        return count.isPresent() && amount.contains(count.getAsInt());
-                    };
+                    return ctx -> amount.contains(countMobsNear(ctx, radius, types));
                 }),
                 Map.entry("mobs-near-origin", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange amount = nonNegativeCountRange(a, 0, "1");
@@ -4764,12 +4799,13 @@ public final class SkillExtras {
                     };
                 }),
                 Map.entry("player-within", (SkillCatalog.ConditionFactory) a -> {
-                    double radius = num(a, 0, 0);
-                    return ctx -> hasPlayerWithin(ctx, radius);
+                    double radius = nonNegativeRadius(a, 0, 0);
+                    return ctx -> hasPlayerWithin(ctx, radius, false);
                 }),
                 Map.entry("player-not-within", (SkillCatalog.ConditionFactory) a -> {
-                    double radius = num(a, 0, 0);
-                    return ctx -> !hasPlayerWithin(ctx, radius);
+                    double radius = nonNegativeRadius(a, 0, 0);
+                    // Mythic 5.7.2 PlayerNotWithin includes every game mode.
+                    return ctx -> !hasPlayerWithin(ctx, radius, true);
                 }),
                 Map.entry("y-level-below", (SkillCatalog.ConditionFactory) a -> {
                     double y = num(a, 0, 64);
@@ -5453,8 +5489,24 @@ public final class SkillExtras {
                 "debuff", "debuffname", "n", "name");
         String configuredType = keyedArg(args, "auratype", "auragroup", "group", "type", "g");
         String durationRaw = keyedArg(args, "duration", "ticks", "d", "time", "t");
+        String configuredOnStartSkill = keyedArg(args, "onstartskill", "onstart", "os");
+        String configuredOnTickSkill = keyedArg(args, "ontickskill", "ontick", "ot");
+        String configuredOnEndSkill = keyedArg(args, "onendskill", "onend", "oe");
+        String intervalRaw = keyedArg(args, "interval", "i");
+        boolean onEndWhenRemoved = auraBoolean(args, true, "doendskillonterminate",
+                "desot", "alwaysrunendskill", "ares");
         String maxStacksRaw = keyedArg(args, "maxstacks", "ms");
         if (durationRaw != null && !durationRaw.contains("<")) parseAuraTicks(durationRaw, 200);
+        int intervalTicks = parseAuraInterval(intervalRaw);
+        if (configuredOnStartSkill != null && configuredOnStartSkill.isBlank()) {
+            throw new IllegalArgumentException("aura onStartSkill must not be blank");
+        }
+        if (configuredOnTickSkill != null && configuredOnTickSkill.isBlank()) {
+            throw new IllegalArgumentException("aura onTickSkill must not be blank");
+        }
+        if (configuredOnEndSkill != null && configuredOnEndSkill.isBlank()) {
+            throw new IllegalArgumentException("aura onEndSkill must not be blank");
+        }
         int maxStacks = parseAuraCount(maxStacksRaw, 1);
         boolean mergeAll = auraBoolean(args, false, "mergeall", "ma");
         boolean overwriteSameCaster = auraBoolean(args, false, "overwritesamecaster", "osc", "oc");
@@ -5477,13 +5529,52 @@ public final class SkillExtras {
             if (name == null || name.isBlank()) name = "default";
             String type = resolveAuraValue(configuredType, ctx);
             if (configuredType != null && type == null) return;
+            String onStartSkill = resolveAuraValue(configuredOnStartSkill, ctx);
+            if (configuredOnStartSkill != null && (onStartSkill == null || onStartSkill.isBlank())) return;
+            String onTickSkill = resolveAuraValue(configuredOnTickSkill, ctx);
+            if (configuredOnTickSkill != null && (onTickSkill == null || onTickSkill.isBlank())) return;
+            String onEndSkill = resolveAuraValue(configuredOnEndSkill, ctx);
+            if (configuredOnEndSkill != null && (onEndSkill == null || onEndSkill.isBlank())) return;
+            if (onStartSkill != null && auraStartSkillDispatcher == null) return;
+            if (onTickSkill != null && auraTickSkillDispatcher == null) return;
+            if (onEndSkill != null && auraEndSkillDispatcher == null) return;
             Entity caster = ctx.instanceValid() ? ctx.instance().baseEntity().orElse(null) : null;
             UUID casterId = caster == null ? null : caster.getUniqueId();
+            var tickDispatcher = auraTickSkillDispatcher;
+            var endDispatcher = auraEndSkillDispatcher;
             for (LivingEntity target : targetEntities(ctx)) {
                 if (target == null || !target.isValid() || target.isDead()) continue;
                 try {
-                    store.apply(target.getUniqueId(), casterId, name, type, duration, maxStacks,
-                            refreshDuration, mergeSameCaster, mergeAll, overwriteSameCaster, overwriteAll);
+                    BehaviorContext tickContext = onTickSkill == null ? null
+                            : ctx.withoutCancellableEvent().periodicTarget(target);
+                    BehaviorContext endContext = onEndSkill == null ? null : ctx.withoutCancellableEvent();
+                    AuraRegistry.ApplyResult result = store.applyWithResult(
+                            target.getUniqueId(), casterId, name, type, duration, maxStacks,
+                            refreshDuration, mergeSameCaster, mergeAll, overwriteSameCaster, overwriteAll,
+                            intervalTicks, onTickSkill == null ? null : targetId -> {
+                                Entity affected = org.bukkit.Bukkit.getEntity(targetId);
+                                if (!(affected instanceof LivingEntity living)
+                                        || !living.isValid() || living.isDead()) return;
+                                try {
+                                    tickDispatcher.cast(onTickSkill,
+                                            tickContext.periodicTarget(living));
+                                } catch (RuntimeException ignored) {
+                                    SkillFaults.swallow("SkillExtras#mythicAuraTick");
+                                }
+                            }, onEndSkill == null ? null : targetId -> {
+                                Entity affected = org.bukkit.Bukkit.getEntity(targetId);
+                                if (!(affected instanceof LivingEntity living)
+                                        || !living.isValid() || living.isDead()) return;
+                                try {
+                                    endDispatcher.cast(onEndSkill, endContext.auraEndTarget(living));
+                                } catch (RuntimeException ignored) {
+                                    SkillFaults.swallow("SkillExtras#mythicAuraEnd");
+                                }
+                            }, onEndWhenRemoved);
+                    AuraStartSkillDispatcher dispatcher = auraStartSkillDispatcher;
+                    if (result.started() && onStartSkill != null && dispatcher != null) {
+                        dispatcher.cast(onStartSkill, ctx.withTargetEntity(target));
+                    }
                 } catch (RuntimeException ignored) {
                     SkillFaults.swallow("SkillExtras#mythicAura");
                 }
@@ -5579,6 +5670,17 @@ public final class SkillExtras {
             return value;
         } catch (NumberFormatException error) {
             throw new IllegalArgumentException("invalid aura maxStacks: " + raw, error);
+        }
+    }
+
+    private static int parseAuraInterval(String raw) {
+        if (raw == null || raw.isBlank()) return 1;
+        try {
+            int interval = Integer.parseInt(raw.trim());
+            if (interval < 1) throw new IllegalArgumentException("aura interval must be positive");
+            return interval;
+        } catch (NumberFormatException error) {
+            throw new IllegalArgumentException("invalid aura interval: " + raw, error);
         }
     }
 
@@ -9459,66 +9561,93 @@ public final class SkillExtras {
         return n;
     }
 
-    private static int countPlayersNear(BehaviorContext ctx, double radius, boolean ignoreSpectator) {
-        Location me = selfLoc(ctx);
-        if (me == null || !Double.isFinite(radius) || radius < 0) return 0;
+    private static int countPlayersNear(BehaviorContext ctx, double radius, boolean ignoredIgnoreSpectator) {
+        Location me = requirePlayerQueryLocation(selfLoc(ctx));
         int count = 0;
-        try {
-            for (Entity entity : me.getWorld().getNearbyEntities(me, radius, radius, radius)) {
-                if (entity instanceof Player player
-                        && (!ignoreSpectator || player.getGameMode() != GameMode.SPECTATOR)) {
-                    count++;
-                    if (count > 512) break;
-                }
+        // Query failures must propagate through NOT/composition to the registry's
+        // fail-closed boundary; treating an unavailable count as zero grants <=0.
+        for (Entity entity : me.getWorld().getNearbyEntities(me, radius, radius, radius)) {
+            // MythicMobs 5.7.2's PlayersInRadius predicate excludes both creative
+            // and spectator players, including when ignoreSpectator=false. Keep the
+            // parsed argument for import compatibility; the pinned implementation
+            // does not use it during its entity predicate.
+            if (entity instanceof Player player
+                    && player.getGameMode() != GameMode.SPECTATOR
+                    && player.getGameMode() != GameMode.CREATIVE) {
+                Location at = requirePlayerQueryLocation(player.getLocation());
+                if (at.getWorld().equals(me.getWorld()) && at.distanceSquared(me) <= radius * radius) count++;
             }
-        } catch (Throwable ignored) {
-            SkillFaults.swallow("SkillExtras#countPlayersNear");
         }
         return count;
     }
 
-    private static java.util.OptionalInt countMobsNear(
-            BehaviorContext ctx, double radius, Set<String> types) {
-        int n = 0;
-        try {
-            Location me = selfLoc(ctx);
-            if (me == null || !Double.isFinite(radius) || radius < 0) {
-                return java.util.OptionalInt.empty();
-            }
-            Entity source = ctx != null && ctx.instanceValid()
-                    ? ctx.instance().baseEntity().orElse(null) : null;
-            for (Entity entity : me.getWorld().getNearbyEntities(me, radius, radius, radius)) {
-                if (entity != source && entity instanceof org.bukkit.entity.Mob mob && mob.isValid()
-                        && (types.isEmpty() || matchesMobType(entity, types))) {
-                    n++;
-                }
-            }
-        } catch (Throwable ignored) {
-            SkillFaults.swallow("SkillExtras#countMobsNear");
-            return java.util.OptionalInt.empty();
+    private static Location requirePlayerQueryLocation(Location location) {
+        if (location == null || location.getWorld() == null
+                || !Double.isFinite(location.getX()) || !Double.isFinite(location.getY())
+                || !Double.isFinite(location.getZ())) {
+            throw new IllegalStateException("Player radius condition requires a valid location");
         }
-        return java.util.OptionalInt.of(n);
+        return location;
     }
 
-    private static boolean matchesMobType(Entity entity, Set<String> wanted) {
-        if (entity == null || wanted == null || wanted.isEmpty()) return false;
-        org.bukkit.entity.EntityType entityType = entity.getType();
-        String nativeName = entityType == null ? "" : entityType.name();
-        String nativeKey = "";
-        if (entityType instanceof org.bukkit.Keyed keyed && keyed.getKey() != null) {
-            nativeKey = keyed.getKey().toString();
+    private static int countMobsNear(
+            BehaviorContext ctx, double radius, Set<String> types) {
+        if (ctx == null) throw new IllegalStateException("MobsInRadius requires a context");
+        Location center = ctx.targetLocation().orElse(null);
+        Entity source = null;
+        if (center == null && ctx.instance() != null) {
+            if (!ctx.instanceValid()) throw new IllegalStateException("MobsInRadius caster is unavailable");
+            source = ctx.instance().baseEntity().orElseThrow(
+                    () -> new IllegalStateException("MobsInRadius caster has no entity"));
+            center = source.getLocation();
+        } else if (center == null) {
+            center = ctx.origin().orElse(null);
         }
-        for (String type : wanted) {
-            if (type.equalsIgnoreCase(nativeName) || type.equalsIgnoreCase(nativeKey)) return true;
-            MythicMobTypeMatcher matcher = mythicMobTypeMatcher;
-            if (matcher != null) {
-                try {
-                    if (matcher.matches(entity, type, true)) return true;
-                } catch (Throwable ignored) {
-                    // An unavailable optional integration must never broaden a type filter.
-                }
+        center = requireMobRadiusLocation(center);
+        Set<org.bukkit.entity.EntityType> vanilla = new java.util.HashSet<>();
+        Set<String> custom = new java.util.LinkedHashSet<>();
+        MythicMobTypeQuery query = mythicMobTypeQuery;
+        for (String type : types) {
+            boolean bukkitType = false;
+            try {
+                vanilla.add(nativeEntityType(type));
+                bukkitType = true;
+            } catch (IllegalArgumentException ignored) {
+                // Custom names need a working registry, including when the population is zero.
             }
+            if (query != null && query.isKnownType(type)) custom.add(type);
+            else if (!bukkitType) throw new IllegalStateException("Unavailable MythicMob type: " + type);
         }
+        java.util.UUID sourceId = source == null ? null : source.getUniqueId();
+        int count = 0;
+        for (Entity entity : center.getWorld().getNearbyEntities(center, radius, radius, radius)) {
+            if (entity == source || sourceId != null && sourceId.equals(entity.getUniqueId())) continue;
+            Location at = requireMobRadiusLocation(entity.getLocation());
+            if (!center.getWorld().equals(at.getWorld()) || center.distanceSquared(at) > radius * radius) continue;
+            // The pinned native metadata path accepts vanilla entity types (including ArmorStands).
+            // Its location overload only accepts registered MythicMobs; it has no vanilla shortcut.
+            if (source != null && vanilla.contains(entity.getType())
+                    || matchesMobRadiusCustomType(entity, custom, query)) count++;
+        }
+        return count;
+    }
+
+    private static Location requireMobRadiusLocation(Location location) {
+        if (location == null || location.getWorld() == null
+                || !Double.isFinite(location.getX()) || !Double.isFinite(location.getY())
+                || !Double.isFinite(location.getZ()))
+            throw new IllegalStateException("MobsInRadius requires a valid location");
+        return location;
+    }
+
+    private static boolean matchesMobRadiusCustomType(Entity entity, Set<String> types, MythicMobTypeQuery query) {
+        boolean unavailable = false;
+        for (String type : types) {
+            java.util.Optional<Boolean> match = query.matches(entity, type);
+            if (match == null || match.isEmpty()) unavailable = true;
+            else if (match.get()) return true;
+        }
+        if (unavailable) throw new IllegalStateException("MobsInRadius type lookup unavailable");
         return false;
     }
 
@@ -9683,21 +9812,17 @@ public final class SkillExtras {
         return false;
     }
 
-    private static boolean hasPlayerWithin(BehaviorContext ctx, double radius) {
-        if (!Double.isFinite(radius) || radius < 0) return false;
+    private static boolean hasPlayerWithin(BehaviorContext ctx, double radius, boolean allGameModes) {
         LivingEntity target = targetOnlyEntity(ctx);
-        Location origin = target == null ? selfLoc(ctx) : target.getLocation();
-        if (origin == null || origin.getWorld() == null) return false;
+        Location origin = requirePlayerQueryLocation(target == null ? selfLoc(ctx) : target.getLocation());
         double squared = radius * radius;
-        try {
-            return org.bukkit.Bukkit.getOnlinePlayers().stream()
-                    .filter(player -> player.getGameMode() != GameMode.SPECTATOR)
-                    .filter(player -> player.getWorld().equals(origin.getWorld()))
-                    .anyMatch(player -> player.getLocation().distanceSquared(origin) <= squared);
-        } catch (Throwable ignored) {
-            SkillFaults.swallow("SkillExtras#hasPlayerWithin");
-            return false;
+        for (Player player : origin.getWorld().getPlayers()) {
+            if (!allGameModes && (player.getGameMode() == GameMode.SPECTATOR
+                    || player.getGameMode() == GameMode.CREATIVE)) continue;
+            Location at = requirePlayerQueryLocation(player.getLocation());
+            if (at.getWorld().equals(origin.getWorld()) && at.distanceSquared(origin) <= squared) return true;
         }
+        return false;
     }
 
     private static java.util.OptionalDouble targetAiDistance(BehaviorContext ctx) {

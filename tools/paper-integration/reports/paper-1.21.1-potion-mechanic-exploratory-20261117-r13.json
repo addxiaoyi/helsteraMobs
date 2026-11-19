@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T11:33:04.4327227Z",
+  "fixtureDirectory": "srv-paper-potion-mechanic-exploratory-20261117-r13",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "04457bdeac3c7ba27674de96a0b45c77e39fcd344d8062b45aebbe060e54b056",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "potionMechanicRuntime",
+    "potionMechanicTiming"
+  ],
+  "probes": [
+    {
+      "id": "potionMechanicRuntime",
+      "status": "passed",
+      "observations": [
+        "potion-mechanic active-entities=true invalid-preserved=true imported-default=true default-cast=true default=true target-isolation=true aliases-flags=true dynamic=true normal-retains-stronger=true force-replaces-stronger=true cancelled-removal=true invalid-dynamic-type=true invalid-dynamic-ticks=true invalid-dynamic-level=true negative-dynamic-level=true self=true multiple-targets=true expression-recipient-duration-level=true expression-invalid-preserves-existing=true recipient-duration-level=true self-recipient-context=true recipient-type=true recipient-invalid-first-preserves-effect=true recipient-invalid-second-preserves-effect=true recipient-context-preserved=true callback-removes-later-recipient=true callback-removes-current-recipient=true cleanup=true passed=true"
+      ]
+    },
+    {
+      "id": "potionMechanicTiming",
+      "status": "passed",
+      "observations": [
+        "potion-mechanic-timing active-entities=true imported-binding=true delayed-cast=true no-early-mutation=true delay-latest-recipients=true delay-live-effects=true first-execution-isolation=true repeat-latest-recipients=true invalid-repeat-preserves-effect=true invalid-repeat-does-not-block-later=true first-recipient-removed=true removed-recipient-skipped=true repeat-latest-variable=true original-context-preserved=true active-targets-refreshed=true repeat-isolation=true repeat-count-bounded=true invalid-delay-cast=true invalid-delay-preserves-state=true cancel-pending-cast=true cancelled-delay-no-mutation=true cleanup=true passed=true"
+      ]
+    }
+  ]
+}

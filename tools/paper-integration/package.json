@@ -4,12 +4,16 @@
   "version": "1.0.0",
   "description": "Disposable Minecraft client for Paper integration scenarios",
   "scripts": {
-    "test:menu": "node menu-client-test.js 127.0.0.1 25731"
+    "test:menu": "node menu-client-test.js 127.0.0.1 25731",
+    "test:potion-packets": "node --test test-potion-packet-contract.js",
+    "test:potion-sync": "node --test test-potion-sync-contract.js",
+    "test:potion-restart": "node --test test-potion-restart-contract.js"
   },
   "devDependencies": {
     "mineflayer": "^4.33.0"
   },
   "dependencies": {
-    "minecraft-data": "^3.119.0"
+    "minecraft-data": "^3.119.0",
+    "prismarine-nbt": "2.8.0"
   }
 }

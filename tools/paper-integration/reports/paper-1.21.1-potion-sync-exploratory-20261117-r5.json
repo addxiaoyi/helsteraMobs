@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T14:56:49.8767902Z",
+  "fixtureDirectory": "srv-paper-potion-sync-exploratory-20261117-r5",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "f1d298440bdd9c5170fa5b88c242031b570bae02a63cd2839111b2c96854eb5e",
+  "externalPlugin": "MythicMobs 5.7.2 (Modrinth FTWvGuE5)",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "sharedSourceSha256": "2e106858e34f044c9de95e19eb2f97940d707346349968013981ec6931809b38",
+  "clientSourceSha256": "122ed902947e038346abb9f5978009abbf8d4e3dbb21500edce77907c0434946",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "clientLog": "potion-sync-client.log",
+  "syncContractSha256": "c362b206d9d098b950e9a079d9b796b6cdfe20521b42b36bdecaa91cadd203c6",
+  "evidenceValidatorSha256": "e53b00ae2cb3238e874805ab2c3032f49cd19c7f96b226e4ff03003b1a844a5e",
+  "runnerSha256": "99ed5bf468d1ccccdbfd480d9f157a18f7b98c36cfd0d58aefd31c855ceb5381",
+  "serverAssertionCount": 118,
+  "clientComparisons": 14,
+  "clientCheckpoints": 28,
+  "clientReconnections": 6,
+  "playerMode": "SURVIVAL (restored after probe)",
+  "expectedProbeIds": [
+    "potionSyncRuntime",
+    "potionSyncClient"
+  ],
+  "probes": [
+    {
+      "id": "potionSyncRuntime",
+      "status": "passed",
+      "observations": [
+        "potion-sync source-identical=true source-imported=true players-clean=true native-live-owner-haste-cast=true native-live-owner-invisible-cast=true native-live-owner-initial-state=true native-live-cow-haste-cast=true native-live-cow-invisible-cast=true native-live-cow-initial-state=true native-live-owner-state=true native-live-cow-state=true native-live-isolation=true native-live-ack-owner=true native-live-ack-watcher=true native-watcher-rejoin-quit=true native-watcher-rejoin-rejoin=true native-watcher-rejoin-owner-state=true native-watcher-rejoin-cow-state=true native-watcher-rejoin-isolation=true native-watcher-rejoin-ack-owner=true native-watcher-rejoin-ack-watcher=true native-owner-rejoin-quit=true native-owner-rejoin-rejoin=true native-owner-rejoin-persisted-duration=true native-owner-rejoin-owner-state=true native-owner-rejoin-cow-state=true native-owner-rejoin-isolation=true native-owner-rejoin-ack-owner=true native-owner-rejoin-ack-watcher=true native-changed-owner-cast=true native-changed-owner-initial-state=true native-changed-cow-cast=true native-changed-cow-initial-state=true native-changed-owner-state=true native-changed-cow-state=true native-changed-isolation=true native-changed-ack-watcher=true native-changed-ack-owner=true native-hidden-owner-cast=true native-hidden-owner-initial-state=true native-hidden-cow-cast=true native-hidden-cow-initial-state=true native-hidden-owner-state=true native-hidden-cow-state=true native-hidden-isolation=true native-hidden-ack-watcher=true native-hidden-ack-owner=true native-cleared-owner-state=true native-cleared-cow-state=true native-cleared-isolation=true native-cleared-ack-watcher=true native-cleared-ack-owner=true native-clean-rejoin-quit=true native-clean-rejoin-rejoin=true native-clean-rejoin-persisted-duration=true native-clean-rejoin-owner-state=true native-clean-rejoin-cow-state=true native-clean-rejoin-isolation=true native-clean-rejoin-ack-watcher=true native-clean-rejoin-ack-owner=true imported-live-owner-haste-cast=true imported-live-owner-invisible-cast=true imported-live-owner-initial-state=true imported-live-cow-haste-cast=true imported-live-cow-invisible-cast=true imported-live-cow-initial-state=true imported-live-owner-state=true imported-live-cow-state=true imported-live-isolation=true imported-live-ack-owner=true imported-live-ack-watcher=true imported-watcher-rejoin-quit=true imported-watcher-rejoin-rejoin=true imported-watcher-rejoin-owner-state=true imported-watcher-rejoin-cow-state=true imported-watcher-rejoin-isolation=true imported-watcher-rejoin-ack-watcher=true imported-watcher-rejoin-ack-owner=true imported-owner-rejoin-quit=true imported-owner-rejoin-rejoin=true imported-owner-rejoin-persisted-duration=true imported-owner-rejoin-owner-state=true imported-owner-rejoin-cow-state=true imported-owner-rejoin-isolation=true imported-owner-rejoin-ack-owner=true imported-owner-rejoin-ack-watcher=true imported-changed-owner-cast=true imported-changed-owner-initial-state=true imported-changed-cow-cast=true imported-changed-cow-initial-state=true imported-changed-owner-state=true imported-changed-cow-state=true imported-changed-isolation=true imported-changed-ack-owner=true imported-changed-ack-watcher=true imported-hidden-owner-cast=true imported-hidden-owner-initial-state=true imported-hidden-cow-cast=true imported-hidden-cow-initial-state=true imported-hidden-owner-state=true imported-hidden-cow-state=true imported-hidden-isolation=true imported-hidden-ack-watcher=true imported-hidden-ack-owner=true imported-cleared-owner-state=true imported-cleared-cow-state=true imported-cleared-isolation=true imported-cleared-ack-watcher=true imported-cleared-ack-owner=true imported-clean-rejoin-quit=true imported-clean-rejoin-rejoin=true imported-clean-rejoin-persisted-duration=true imported-clean-rejoin-owner-state=true imported-clean-rejoin-cow-state=true imported-clean-rejoin-isolation=true imported-clean-rejoin-ack-owner=true imported-clean-rejoin-ack-watcher=true cleanup=true assertions=118 passed=true"
+      ]
+    },
+    {
+      "id": "potionSyncClient",
+      "status": "passed",
+      "observations": [
+        "PAPER_POTION_SYNC_CLIENT passed=true comparisons=14 checkpoints=28 reconnections=6"
+      ]
+    }
+  ]
+}

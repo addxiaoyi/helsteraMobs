@@ -49,7 +49,7 @@ try {
     & (Join-Path $PSScriptRoot 'run-server.ps1') @runParams
 
     $writeLog = Join-Path $fixturePath 'logs/latest.log'
-    if (-not (Select-String -LiteralPath $writeLog -Pattern 'skilltree-restart stage=write result=passed mob-id=skilltree_probe entities=2 .*foundation-unlocked=true' -Quiet)) {
+    if (-not (Select-String -LiteralPath $writeLog -Pattern 'skilltree-restart stage=write result=passed mob-id=skilltree_probe entities=2 .*foundation-unlocked=true unsupported-value-rejected=true' -Quiet)) {
         throw 'First boot did not persist the SkillTree probe state'
     }
     $snapshotDirectory = Join-Path $fixturePath 'plugins/helsteraMobs/skill-trees'
@@ -70,7 +70,7 @@ try {
     $verifyLog = Join-Path $fixturePath 'logs/latest.log'
     $verifyEvidenceLog = Join-Path $fixturePath 'skilltree-verify.log'
     Copy-Item -LiteralPath $verifyLog -Destination $verifyEvidenceLog -Force
-    if (-not (Select-String -LiteralPath $verifyLog -Pattern 'skilltree-restart stage=verify result=passed mob-id=skilltree_probe entities=2 uuid-markers=true foundation-restored=true prerequisite-restored=true advanced-unlocked=true' -Quiet)) {
+    if (-not (Select-String -LiteralPath $verifyLog -Pattern 'skilltree-restart stage=verify result=passed mob-id=skilltree_probe entities=2 uuid-markers=true foundation-restored=true prerequisite-restored=true dotted-names-restored=true collections-restored=true advanced-unlocked=true' -Quiet)) {
         throw 'Second boot did not independently restore both UUID SkillTree snapshots'
     }
     if (-not (Select-String -LiteralPath $verifyLog -Pattern 'skilltree-restart stage=death result=passed mob-id=skilltree_probe .*entity-dead=true removed-snapshot=true survivor-snapshot=true' -Quiet)) {
@@ -106,6 +106,7 @@ try {
             entities = 2
             snapshotsAfterShutdown = 2
             branchStateSaved = $true
+            unsupportedVariableRejected = $true
             log = 'skilltree-write.log'
         }
         secondBoot = [ordered]@{
@@ -113,6 +114,13 @@ try {
             uuidMarkersRestored = $true
             foundationRestored = $true
             prerequisiteRestored = $true
+            dottedVariableNamesRestored = $true
+            dottedLocationNamesRestored = $true
+            reservedAndDottedBranchNamesRestored = $true
+            listVariableRestored = $true
+            setVariableRestored = $true
+            nestedMapVariableRestored = $true
+            collectionsRestored = $true
             advancedBranchUnlocked = $true
             log = 'skilltree-verify.log'
         }

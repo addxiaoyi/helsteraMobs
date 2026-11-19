@@ -1,0 +1,39 @@
+packet_default:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2} @Trigger
+packet_flags_0:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2;ambient=false;particles=false;icon=false} @Trigger
+packet_flags_1:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2;ambient=true;particles=false;icon=false} @Trigger
+packet_flags_2:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2;ambient=false;particles=true;icon=false} @Trigger
+packet_flags_3:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2;ambient=true;particles=true;icon=false} @Trigger
+packet_flags_4:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2;ambient=false;particles=false;icon=true} @Trigger
+packet_flags_5:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2;ambient=true;particles=false;icon=true} @Trigger
+packet_flags_6:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2;ambient=false;particles=true;icon=true} @Trigger
+packet_flags_7:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2;ambient=true;particles=true;icon=true} @Trigger
+packet_expire:
+  Skills:
+  - potion{type=HASTE;duration=8;level=0;ambient=true;particles=false;icon=true} @Trigger
+packet_force_base:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2} @Trigger
+packet_force:
+  Skills:
+  - potion{type=HASTE;duration=60;level=1;ambient=true;particles=false;icon=false;force=true} @Trigger
+packet_cancel:
+  Skills:
+  - potion{type=HASTE;duration=80;level=2} @Trigger

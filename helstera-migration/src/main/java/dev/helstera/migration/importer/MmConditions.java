@@ -124,6 +124,8 @@ public final class MmConditions {
             "amount", "amount", "a", "amount",
             "radius", "radius", "r", "radius", "distance", "radius", "d", "radius",
             "ignorespectator", "ignore-spectator", "is", "ignore-spectator");
+    private static final Map<String, String> PLAYER_DISTANCE_ARGUMENTS = Map.of(
+            "distance", "distance", "d", "distance", "radius", "distance", "r", "distance");
     private static final Map<String, String> MOBS_IN_RADIUS_ARGUMENTS = Map.of(
             "types", "types", "type", "types", "t", "types",
             "amount", "amount", "a", "amount",
@@ -239,15 +241,35 @@ public final class MmConditions {
                     : new Mapped(s, false);
         }
 
+        if (dev.helstera.api.util.MobRadiusSpec.supports(t)) {
+            try {
+                return new Mapped(dev.helstera.api.util.MobRadiusSpec.parse(t).runtime(), true);
+            } catch (IllegalArgumentException invalid) {
+                return new Mapped(s, false);
+            }
+        }
+
         // 去掉 {…} 参数块，只留条件名参与匹配
         String head = t;
         String body = null;
         int brace = t.indexOf('{');
         if (brace >= 0 || t.indexOf('}') >= 0) {
-            if (!hasBalancedParameterBlock(t, brace)) return new Mapped(s, false);
-            head = t.substring(0, brace).trim();
             int close = t.lastIndexOf('}');
+            String suffix = close < 0 ? "" : t.substring(close + 1).trim();
+            String positionalKey = brace <= 0 ? null : playerRadiusPositionalKey(t.substring(0, brace));
+            if (close < 0 || (!suffix.isEmpty() && (positionalKey == null
+                    || !Character.isWhitespace(t.charAt(close + 1))
+                    || suffix.chars().anyMatch(Character::isWhitespace)
+                    || !(positionalKey.equals("amount") ? validNonNegativeIntegerCountRange(suffix)
+                    : validRadius(suffix))))
+                    || !hasBalancedParameterBlock(t.substring(0, close + 1), brace)) {
+                return new Mapped(s, false);
+            }
+            head = t.substring(0, brace).trim();
             body = t.substring(brace + 1, close).trim();
+            // The legacy conditionVar follows the parameter block. Duplicate values are
+            // preserved for review instead of silently choosing between aliases.
+            if (!suffix.isEmpty()) body += (body.isEmpty() ? "" : ";") + positionalKey + "=" + suffix;
         } else {
             int separator = t.indexOf(' ');
             if (separator > 0) {
@@ -549,7 +571,7 @@ public final class MmConditions {
             return radiusCondition(body, "entities-in-radius");
         }
         if ("mobsinradius".equals(name)) {
-            return mobsInRadiusCondition(body, s);
+            return new Mapped(s, false);
         }
         if ("mobsnearorigin".equals(name)) {
             return mobsNearOriginCondition(body, s);
@@ -2056,31 +2078,27 @@ public final class MmConditions {
     }
 
     private static Mapped playersInRadiusCondition(String body, String original) {
-        Map<String, String> arguments = strictValueArguments(body, PLAYERS_IN_RADIUS_ARGUMENTS, "radius");
+        // A bare comparison is a positional amount, not an assignment (e.g. >=2).
+        if (body != null) {
+            body = java.util.Arrays.stream(body.split(";", -1))
+                    .map(String::trim)
+                    .map(part -> part.startsWith(">") || part.startsWith("<") ? "amount=" + part : part)
+                    .collect(java.util.stream.Collectors.joining(";"));
+        }
+        Map<String, String> arguments = strictValueArguments(body, PLAYERS_IN_RADIUS_ARGUMENTS, "amount");
         if (arguments == null) return new Mapped(original, false);
         String radius = arguments.getOrDefault("radius", "32");
-        String amount = arguments.getOrDefault("amount", ">0");
+        // MM 5.7.2 passes SkillCondition.conditionVar (initially "0") before
+        // the constructor's >0 fallback to LineConfig.getString.
+        String amount = arguments.getOrDefault("amount", "0");
         String ignoreSpectator = normalizedBoolean(arguments.getOrDefault("ignore-spectator", "true"));
-        if (!validRadius(radius) || !validNonNegativeCountRange(amount) || ignoreSpectator == null) {
+        if (!validRadius(radius) || !validNonNegativeIntegerCountRange(amount)
+                || !amount.matches("(?:(?:>=|<=|>|<)?[0-9]+|[0-9]+(?:to|-)[0-9]+)")
+                || ignoreSpectator == null) {
             return new Mapped(original, false);
         }
         return new Mapped("players-in-radius " + amount.trim() + " " + radius.trim()
                 + " " + ignoreSpectator, true);
-    }
-
-    private static Mapped mobsInRadiusCondition(String body, String original) {
-        Map<String, String> arguments = strictValueArguments(body, MOBS_IN_RADIUS_ARGUMENTS, "radius");
-        if (arguments == null) return new Mapped(original, false);
-        String radius = arguments.getOrDefault("radius", "5");
-        String amount = arguments.getOrDefault("amount", "1");
-        String types = arguments.get("types");
-        if (!validRadius(radius) || !validNonNegativeCountRange(amount)
-                || types != null && !validEntityTypeList(types)) {
-            return new Mapped(original, false);
-        }
-        String mapped = "mobs-in-radius " + amount.trim() + " " + radius.trim();
-        if (types != null) mapped += " " + types.trim();
-        return new Mapped(mapped, true);
     }
 
     private static Mapped mobsNearOriginCondition(String body, String original) {
@@ -2481,11 +2499,20 @@ public final class MmConditions {
     }
 
     private static Mapped radiusOnlyCondition(String body, String runtimeName, String original) {
-        String value = firstArgument(body, "distance", "d", "radius", "r");
-        if (value == null) value = normalizeScalar(body);
+        Map<String, String> arguments = strictValueArguments(body, PLAYER_DISTANCE_ARGUMENTS, "distance");
+        if (arguments == null) return new Mapped(original, false);
+        String value = arguments.getOrDefault("distance", "0");
         return validRadius(value)
                 ? new Mapped(runtimeName + " " + value, true)
                 : new Mapped(original, false);
+    }
+
+    private static String playerRadiusPositionalKey(String head) {
+        return switch (head.trim().toLowerCase(Locale.ROOT).replace("_", "").replace("-", "")) {
+            case "playersinradius", "playerinradius", "pir" -> "amount";
+            case "playerwithin", "playerswithin", "playernotwithin", "playersnotwithin" -> "distance";
+            default -> null;
+        };
     }
 
     /** Radius arguments are concrete distances, never silent default values. */

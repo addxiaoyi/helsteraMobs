@@ -351,7 +351,9 @@ spawners:
     max-per-player: 1
     min-players: 0
     players-radius: 32.0
-    enabled: true
+    # Manual first/second force calls test the cumulative player quota.
+    # Prevent the natural scheduler from consuming it before those assertions.
+    enabled: false
   cooldown_probe:
     mob: emberling
     world: ""

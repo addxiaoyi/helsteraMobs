@@ -56,7 +56,17 @@ function Assert-ReportShape($report, $schema) {
 }
 
 try {
+    $timingCases = @(
+        @{ id = 'numericMechanicTiming'; prefix = 'numeric-mechanic-timing'; observation = 'numeric-mechanic-timing active-entities=true imported-binding=true delayed-cast=true no-early-mutation=true delay-latest-recipients=true first-execution-isolation=true repeat-latest-recipients=true first-recipient-removed=true removed-recipient-skipped=true repeat-latest-variable=true original-context-preserved=true active-targets-refreshed=true repeat-isolation=true repeat-count-bounded=true invalid-delay-cast=true invalid-delay-preserves-state=true cancel-pending-cast=true cancelled-delay-no-mutation=true cleanup=true passed=true' },
+        @{ id = 'potionMechanicTiming'; prefix = 'potion-mechanic-timing'; observation = 'potion-mechanic-timing active-entities=true imported-binding=true delayed-cast=true no-early-mutation=true delay-latest-recipients=true delay-live-effects=true first-execution-isolation=true repeat-latest-recipients=true invalid-repeat-preserves-effect=true invalid-repeat-does-not-block-later=true first-recipient-removed=true removed-recipient-skipped=true repeat-latest-variable=true original-context-preserved=true active-targets-refreshed=true repeat-isolation=true repeat-count-bounded=true invalid-delay-cast=true invalid-delay-preserves-state=true cancel-pending-cast=true cancelled-delay-no-mutation=true cleanup=true passed=true' }
+    )
+    $timingCases += @{ id = 'potionLifecycle'; prefix = 'potion-lifecycle'; observation = 'potion-lifecycle source-ready=true active-entities=true chunks-ticking=true expiry-cast=true expiry-flags=true expiry-event=true expiry-removed=true hidden-base=true hidden-stronger=true hidden-restored=true hidden-duration-elapsed=true hidden-eventual-expiry=true forced-hidden-setup=true forced-replacement=true forced-removal-event=true forced-no-resurrection=true forced-stays-expired=true cancel-added-cast=true cancel-added-event=true cancel-added-no-effect=true cancel-changed-setup=true cancel-changed-cast=true cancel-changed-event=true cancel-changed-preserved=true cancel-expiration-cast=true cancel-expiration-event=true cancel-expiration-retained=true uncancelled-expiration=true instant-health-cast=true instant-health-pending=true instant-health-cow=true instant-health-undead=true instant-health-expired=true instant-damage-cast=true instant-damage-pending=true instant-damage-cow=true instant-damage-undead=true instant-damage-expired=true cancel-instant-cast=true cancel-instant-event=true cancel-instant-preserved=true cancel-health-cast=true cancel-health-damage-event=true cancel-health-regain-event=true cancel-health-preserved=true target-isolation=true cleanup=true passed=true' }
     $lines = @(
+        "[Server thread/INFO]: [helsteraMobs] [自检] $($timingCases[2].observation)",
+        "[Server thread/INFO]: [helsteraMobs] [自检] $($timingCases[0].observation)",
+        "[Server thread/INFO]: [helsteraMobs] [自检] $($timingCases[1].observation)",
+        '[Server thread/INFO]: [helsteraMobs] [自检] numeric-mechanic active-entities=true invalid-preserved=true imported-binding=true reordered=true omitted=true force-no-vertical=true force-only-vertical=true radial-default-radius=true melee-default-damage=true absolute-damage=true heal-target=true set-health-target=true self-heal=true dynamic=true dynamic-noop-14=true dynamic-noop-15=true dynamic-noop-16=true speed-target=true status-target=true invalid-health-noop=true invalid-direct=true expression-rounded-recipients=true expression-comparison=true expression-vector=true expression-no-partial-mutation=true expression-fraction=true expression-isolation=true recipient-rounded-heal=true recipient-multiple-arguments=true recipient-damage=true recipient-speed=true recipient-status-truncates=true recipient-invalid-first=true recipient-invalid-second=true recipient-maximum=true recipient-context-preserved=true recipient-removed-first=true cleanup=true passed=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] potion-mechanic active-entities=true invalid-preserved=true imported-default=true default-cast=true default=true target-isolation=true aliases-flags=true dynamic=true normal-retains-stronger=true force-replaces-stronger=true cancelled-removal=true invalid-dynamic-type=true invalid-dynamic-ticks=true invalid-dynamic-level=true negative-dynamic-level=true self=true multiple-targets=true expression-recipient-duration-level=true expression-invalid-preserves-existing=true recipient-duration-level=true self-recipient-context=true recipient-type=true recipient-invalid-first-preserves-effect=true recipient-invalid-second-preserves-effect=true recipient-context-preserved=true callback-removes-later-recipient=true callback-removes-current-recipient=true cleanup=true passed=true',
         'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
         '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
         '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
@@ -120,7 +130,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-server-conditions paper-primary=true paper-alias=true exact=true exact-negative=true after-inclusive=true after-exclusive-rejected=true after-higher-rejected=true before-inclusive=true before-exclusive-rejected=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] imported-coordinate-difference-condition primary-mapped=true alias-mapped=true x-positive=true y-positive=true z-positive=true out-of-range-rejected=true invalid-preserved=true result=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] imported-population-conditions players-online-mapped=true online-alias-mapped=true players-world-mapped=true mobs-world-mapped=true players-online-negative-mapped=true online-alias-negative-mapped=true players-world-negative-mapped=true mobs-world-negative-mapped=true players-online-positive=true online-alias-positive=true players-world-positive=true mobs-world-positive=true players-online-negative=true online-alias-negative=true players-world-negative=true mobs-world-negative=true invalid-preserved=true result=true',
-        '[Server thread/INFO]: [helsteraMobs] [自检] imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true',
+        '[Server thread/INFO]: [helsteraMobs] [自检] imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true helstera-composition=true malformed-composition-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] [自检] attack-cooldown-placeholder result=true in-range=true recharging=true caster=0.5 target=0.5 aliases=true non-player-unresolved=true absorption=true absorption-aliases=true absorption-zero=true non-player-absorption=true absorption-restored=true scoped-entity-type=true scoped-display=true scoped-coordinates=true scoped-distance-squared=true scoped-display-restored=true scoped-food-stats=true non-human-food-stats-unresolved=true food-stats-restored=true',
         '[Server thread/INFO]: [helsteraMobs] target-fluids-delayed imported=true water=true lava=true in-liquid-water=true in-liquid-lava=true in-liquid-waterlogged=true in-liquid-dry=true invalid-preserved=true restored=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] imported-mobs-in-chunk-condition default-zero=true range-positive=true zero-negative=true invalid-preserved=true passed=true',
@@ -189,7 +199,7 @@ try {
         '[Server thread/INFO]: [helsteraMobs] damage-imported mapped=true entity-damage=true attacker-name=true attacker-equipment=true environmental-damage=true environmental-no-trigger=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] damage-attribution player-present=true player-attack=true target-is-player=true environmental-no-trigger=true restored=true passed=true',
         '[Server thread/INFO]: absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true',
-        '[Server thread/INFO]: radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-excluded=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true',
+        '[Server thread/INFO]: radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-included=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-zero=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true',
         '[Server thread/INFO]: moisture-condition-details hydrated=true hydrated-range=true partial=true partial-range=true dry=true non-farmland=true imported=true imported-alias=true imported-range=true restored=true passed=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-imported result=true reduced=true condition-rejected=true invalid-rejected=true',
         '[Server thread/INFO]: [helsteraMobs] immunity-native-invalid result=true false-rejected=true null-rejected=true unknown-rejected=true null-modifier-rejected=true',
@@ -468,6 +478,29 @@ try {
     $schema = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'integration-report.schema.json') -Raw -Encoding utf8 |
         ConvertFrom-Json
     Assert-ReportShape $report $schema
+    $numericParserTemp = Join-Path $temp 'numeric-potion-parser'
+    New-Item -ItemType Directory -Path (Join-Path $numericParserTemp 'logs') -Force | Out-Null
+    foreach ($parserCase in @(
+        @{ id = 'numericMechanicRuntime'; prefix = 'numeric-mechanic' },
+        @{ id = 'potionMechanicRuntime'; prefix = 'potion-mechanic' }
+    ) + $timingCases) {
+        Assert-True (($report.probes | Where-Object id -eq $parserCase.id).status -eq 'passed') `
+            "report parser recognizes every assertion for $($parserCase.id)"
+        $numericParserLines = @($lines | Where-Object { $_.Contains("[自检] $($parserCase.prefix) ") })
+        foreach ($failedField in @('invalid-preserved', 'imported-binding', 'repeat-latest-recipients',
+                'hidden-restored', 'instant-health-undead', 'cancel-expiration-retained', 'cleanup') | Where-Object {
+            $numericParserLines -match "$_=true"
+        }) {
+            $failedNumericLines = @($numericParserLines | ForEach-Object {
+                $_ -replace "$failedField=true", "$failedField=false"
+            })
+            Set-Content -LiteralPath (Join-Path $numericParserTemp 'logs/latest.log') -Value $failedNumericLines -Encoding utf8
+            & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $numericParserTemp | Out-Null
+            $numericParserReport = Get-Content -LiteralPath (Join-Path $numericParserTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+            Assert-True (($numericParserReport.probes | Where-Object id -eq $parserCase.id).status -eq 'not-observed') `
+                "report parser rejects $($parserCase.id) $failedField=false even with passed=true"
+        }
+    }
     $messageTemp = Join-Path $temp 'message-client-fixture'
     New-Item -ItemType Directory -Path (Join-Path $messageTemp 'logs') -Force | Out-Null
     Set-Content -LiteralPath (Join-Path $messageTemp 'logs/latest.log') -Value 'imported-message-client dispatched=true' -Encoding utf8
@@ -756,7 +789,7 @@ try {
         'absorption-player-condition imported=true dispatched=true positive=true exact=true negative=true observed=true restored=true passed=true') 'real Player absorption condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'radiusConditions').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'radiusConditions').observations[0] -ceq
-        'radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-excluded=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true') 'Paper radius condition probe'
+        'radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-included=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-zero=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true') 'Paper radius condition probe'
     Assert-True (($report.probes | Where-Object id -eq 'moistCondition').status -eq 'passed' -and
         ($report.probes | Where-Object id -eq 'moistCondition').observations[0] -ceq
         'moisture-condition-details hydrated=true hydrated-range=true partial=true partial-range=true dry=true non-farmland=true imported=true imported-alias=true imported-range=true restored=true passed=true') 'Paper Moist condition probe'
@@ -1242,6 +1275,15 @@ try {
     }
     Assert-True $missingFullCatalogRejected 'full release gate rejects omitted Potion probes'
     $fullCatalogReport = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'reports/paper-1.21.1-imported-drop-contract-20261102.json') -Raw -Encoding utf8 | ConvertFrom-Json
+    foreach ($entry in @(
+        @{ id = 'numericMechanicRuntime'; observation = 'numeric-mechanic active-entities=true invalid-preserved=true imported-binding=true reordered=true omitted=true force-no-vertical=true force-only-vertical=true radial-default-radius=true melee-default-damage=true absolute-damage=true heal-target=true set-health-target=true self-heal=true dynamic=true dynamic-noop-14=true dynamic-noop-15=true dynamic-noop-16=true speed-target=true status-target=true invalid-health-noop=true invalid-direct=true expression-rounded-recipients=true expression-comparison=true expression-vector=true expression-no-partial-mutation=true expression-fraction=true expression-isolation=true recipient-rounded-heal=true recipient-multiple-arguments=true recipient-damage=true recipient-speed=true recipient-status-truncates=true recipient-invalid-first=true recipient-invalid-second=true recipient-maximum=true recipient-context-preserved=true recipient-removed-first=true cleanup=true passed=true' },
+        @{ id = 'potionMechanicRuntime'; observation = 'potion-mechanic active-entities=true invalid-preserved=true imported-default=true default-cast=true default=true target-isolation=true aliases-flags=true dynamic=true normal-retains-stronger=true force-replaces-stronger=true cancelled-removal=true invalid-dynamic-type=true invalid-dynamic-ticks=true invalid-dynamic-level=true negative-dynamic-level=true self=true multiple-targets=true expression-recipient-duration-level=true expression-invalid-preserves-existing=true recipient-duration-level=true self-recipient-context=true recipient-type=true recipient-invalid-first-preserves-effect=true recipient-invalid-second-preserves-effect=true recipient-context-preserved=true callback-removes-later-recipient=true callback-removes-current-recipient=true cleanup=true passed=true' }
+    ) + $timingCases) {
+        $fullCatalogReport.expectedProbeIds += $entry.id
+        $fullCatalogReport.probes += [pscustomobject]@{
+            id = $entry.id; status = 'passed'; observations = @($entry.observation)
+        }
+    }
     $fullCatalogFreeInventory = @($fullCatalogReport.probes | Where-Object id -eq 'freeInventorySlotCondition')
     if ($fullCatalogFreeInventory.Count -ne 1) { throw 'Synthetic full catalog report must contain freeInventorySlotCondition.' }
     $fullCatalogFreeInventory[0].observations = @(
@@ -1341,7 +1383,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'radiusConditions'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-excluded=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
+        id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-included=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-zero=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedPlayerKillsCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -1769,7 +1811,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'importedVariableConditions'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'importedVariableConditions'; status = 'passed'; observations = @('imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true')
+        id = 'importedVariableConditions'; status = 'passed'; observations = @('imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true helstera-composition=true malformed-composition-rejected=true')
     }
     $fullCatalogReport.expectedProbeIds += 'importedFreeInventorySlotCondition'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -1890,7 +1932,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'targeterArgumentValidation'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'targeterArgumentValidation'; status = 'passed'; observations = @('targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-priority=true target-spectator-disabled=true')
+        id = 'targeterArgumentValidation'; status = 'passed'; observations = @('targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-player-disabled-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-player-disabled-priority=true target-spectator-disabled=true')
     }
     $fullCatalogReport.expectedProbeIds += 'coneTargeterFamilies'
     $fullCatalogReport.probes += [pscustomobject]@{
@@ -2075,6 +2117,50 @@ try {
     }
     Assert-True $disabledPluginRejected 'full release catalog alone rejects a disabled plugin'
     $fullCatalogReport.pluginEnabled = $originalPluginEnabled
+    $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+    foreach ($numericId in @('numericMechanicRuntime', 'potionMechanicRuntime',
+            'numericMechanicTiming', 'potionMechanicTiming', 'potionLifecycle')) {
+        $numericProbe = @($fullCatalogReport.probes | Where-Object id -eq $numericId)
+        Assert-True ($numericProbe.Count -eq 1) "synthetic full catalog contains $numericId"
+        $numericObservations = $numericProbe[0].observations
+        $numericMutations = @('false-assertion', 'missing-assertion', 'missing-cleanup')
+        if ($numericId -eq 'potionLifecycle') {
+            $numericMutations += @('missing-hidden-effect', 'false-instant-effect', 'missing-cancellation')
+        }
+        foreach ($mutation in $numericMutations) {
+            $numericProbe[0].observations = @($numericObservations | ForEach-Object {
+                switch ($mutation) {
+                    'false-assertion' { $_ -replace 'active-entities=true', 'active-entities=false' }
+                    'missing-assertion' { $_ -replace 'active-entities=true ', '' }
+                    'missing-cleanup' { $_ -replace 'cleanup=true ', '' }
+                    'missing-hidden-effect' { $_ -replace 'hidden-restored=true ', '' }
+                    'false-instant-effect' { $_ -replace 'instant-health-undead=true', 'instant-health-undead=false' }
+                    'missing-cancellation' { $_ -replace 'cancel-expiration-retained=true ', '' }
+                }
+            })
+            $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+            $numericRejected = $false
+            try {
+                & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+                    -RequireTargetPaperVersion -RequireFullReleaseCatalog
+            } catch { $numericRejected = $_.Exception.Message -match "required observation for ${numericId}:" }
+            Assert-True $numericRejected "full release gate rejects $numericId $mutation even with passed=true"
+        }
+        $numericProbe[0].observations = $numericObservations
+        $originalNumericExpected = $fullCatalogReport.expectedProbeIds
+        $originalNumericProbes = $fullCatalogReport.probes
+        $fullCatalogReport.expectedProbeIds = @($originalNumericExpected | Where-Object { $_ -ne $numericId })
+        $fullCatalogReport.probes = @($originalNumericProbes | Where-Object { $_.id -ne $numericId })
+        $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
+        $numericMissingRejected = $false
+        try {
+            & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
+                -RequireTargetPaperVersion -RequireFullReleaseCatalog
+        } catch { $numericMissingRejected = $_.Exception.Message -match "required release probe: $numericId " }
+        Assert-True $numericMissingRejected "full release gate rejects $numericId omitted from both report catalogs"
+        $fullCatalogReport.expectedProbeIds = $originalNumericExpected
+        $fullCatalogReport.probes = $originalNumericProbes
+    }
     $fullCatalogReport | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $fullCatalogPath -Encoding utf8
     $altitudeProbe = @($fullCatalogReport.probes | Where-Object id -eq 'altitudeCondition')
     Assert-True ($altitudeProbe.Count -eq 1) 'synthetic full catalog contains the Altitude condition probe'
@@ -3901,7 +3987,7 @@ try {
     try {
         & (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $fullCatalogPath `
             -RequireTargetPaperVersion -RequireFullReleaseCatalog
-    } catch { $badImportedVariableRejected = $_.Exception.Message -match 'required observation for importedVariableConditions' }
+    } catch { $badImportedVariableRejected = $_.Exception.Message -match 'lacks required observation for importedVariableConditions' }
     Assert-True $badImportedVariableRejected 'full release gate rejects incomplete imported variable scope evidence'
     $importedVariableProbe.observations = $importedVariableObservations
     $fullCatalogReport.expectedProbeIds = @($fullCatalogReport.expectedProbeIds | Where-Object { $_ -ne 'importedVariableConditions' })

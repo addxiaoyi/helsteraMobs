@@ -57,8 +57,8 @@ public record PercentHealthSpec(boolean healing, String fraction, boolean curren
         }
         String fraction = values.getOrDefault("fraction", "0.1");
         String maximum = values.getOrDefault("maxoverheal", "0");
-        if (!dynamic(fraction)) finite(fraction);
-        if (!dynamic(maximum)) finite(maximum);
+        NumericExpression.validate(fraction);
+        NumericExpression.validate(maximum);
         return new PercentHealthSpec(healing, fraction, bool(values.getOrDefault("currenthealth", "false")),
                 bool(values.getOrDefault("overheal", "false")), maximum);
     }
@@ -70,23 +70,15 @@ public record PercentHealthSpec(boolean healing, String fraction, boolean curren
 
     public Optional<Resolved> resolve(UnaryOperator<String> resolver) {
         try {
-            double amount = finite(dynamic(fraction) ? resolver.apply(fraction) : fraction);
-            double maximum = finite(dynamic(maxOverheal) ? resolver.apply(maxOverheal) : maxOverheal);
+            double amount = NumericExpression.resolve(fraction, resolver);
+            double maximum = NumericExpression.resolve(maxOverheal, resolver);
             return Optional.of(new Resolved(amount, maximum));
-        } catch (IllegalArgumentException | NullPointerException e) {
+        } catch (IllegalArgumentException | ArithmeticException | NullPointerException e) {
             return Optional.empty();
         }
     }
 
     public record Resolved(double fraction, double maxOverheal) { }
-
-    private static boolean dynamic(String value) { return PlaceholderSyntax.isToken(value); }
-
-    private static double finite(String value) {
-        double number = Double.parseDouble(value);
-        if (!Double.isFinite(number)) throw invalid("non-finite value");
-        return number;
-    }
 
     private static boolean bool(String value) {
         return switch (value.toLowerCase(Locale.ROOT)) {

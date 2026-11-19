@@ -77,6 +77,8 @@ public final class HelsteraCommand implements TabExecutor {
         s.sendMessage("§b/helstera skill list|info <名>|preview <名> [血量%] §7- 技能预览（不执行动作）");
         s.sendMessage("§b/helstera spawner list|force <id> [数量]|toggle <id>|reload §7- 刷怪点");
         s.sendMessage("§b/helstera web start [0.0.0.0] §7- 启动网页(加0.0.0.0允许远程)");
+        s.sendMessage("§b/helstera web link §7- 游戏内管理员获取临时访问链接（不会打印到服务端日志）");
+        s.sendMessage("§b/helstera web rotate §7- 立即撤销旧链接并轮换令牌");
         s.sendMessage("§b/helstera web doctor §7- 网页打不开时自检(地址/防火墙/端口映射)");
         s.sendMessage("§b/helstera web firewall §7- 一键放行 Windows 防火墙端口");
         s.sendMessage("§b/helstera debug [render|animation|network|ai|skills|integrations] §7- 调试");
@@ -440,12 +442,41 @@ public final class HelsteraCommand implements TabExecutor {
         }
         String action = args.length > 1 ? args[1] : "status";
         switch (action) {
+            case "link" -> {
+                if (!(s instanceof Player)) {
+                    s.sendMessage("§c为避免令牌进入控制台日志，请在游戏内以 helstera.web 权限执行 /helstera web link。");
+                    return;
+                }
+                if (!ws.webRunning()) {
+                    s.sendMessage("§c网页开发器未运行，请先执行 /helstera web start。");
+                    return;
+                }
+                s.sendMessage("§a网页开发器访问链接: http://" + ws.webHost() + ":" + ws.webPort()
+                        + "/?token=" + ws.webToken());
+                return;
+            }
+            case "rotate" -> {
+                if (!(s instanceof Player)) {
+                    s.sendMessage("§c为避免令牌进入控制台日志，请在游戏内以 helstera.web 权限执行 /helstera web rotate。");
+                    return;
+                }
+                boolean wasRunning = ws.webRunning();
+                String replacement = ws.webRotateToken();
+                if (wasRunning) {
+                    s.sendMessage("§a旧网页令牌已立即撤销。新访问链接: http://" + ws.webHost() + ":"
+                            + ws.webPort() + "/?token=" + replacement);
+                } else {
+                    s.sendMessage("§a旧网页令牌已撤销，新令牌已保存。启动网页服务后执行 /helstera web link 获取链接。");
+                }
+                return;
+            }
             case "start" -> {
                 try {
                     String hostArg = args.length > 2 ? args[2] : null;
                     ws.webStart(hostArg);
                     s.sendMessage("§a网页开发器已启动（监听 " + ws.webHost() + "）: http://"
-                            + ws.webHost() + ":" + ws.webPort() + "/ 令牌: " + ws.webToken());
+                            + ws.webHost() + ":" + ws.webPort() + "/");
+                    if (s instanceof Player) s.sendMessage("§7访问链接请执行 /helstera web link（不会写入服务端日志）。");
                 } catch (Exception e) {
                     s.sendMessage("§c启动失败: " + e.getMessage());
                 }
@@ -462,6 +493,7 @@ public final class HelsteraCommand implements TabExecutor {
             case "doctor", "check", "diag" -> {
                 s.sendMessage("§b== 网页开发器自检 ==");
                 for (String line : ws.webDoctor()) s.sendMessage("§7" + line);
+                if (s instanceof Player) s.sendMessage("§7游戏内管理员可执行 /helstera web link 获取带访问令牌的链接。");
                 return;
             }
             case "firewall", "fix" -> {
@@ -474,8 +506,7 @@ public final class HelsteraCommand implements TabExecutor {
                         + " §7监听 " + ws.webHost() + ":" + ws.webPort());
                 if (ws.webRunning()) {
                     s.sendMessage("§7本机地址: http://127.0.0.1:" + ws.webPort() + "/");
-                    s.sendMessage("§7令牌: " + ws.webToken());
-                    s.sendMessage("§7远端请用 §f/helstera web doctor §7列出真实可访问地址");
+                    s.sendMessage("§7游戏内管理员可执行 §f/helstera web link §7获取访问链接；§f/helstera web doctor §7提供网络诊断");
                 }
             }
         }
@@ -1553,7 +1584,7 @@ var ai = plugin.ai();
                 case "bossbar" -> out.addAll(List.of());
                 case "spawner" -> out.addAll(List.of("list", "force", "toggle", "reload"));
                 case "menu" -> out.addAll(List.of("status", "open"));
-                case "web" -> out.addAll(List.of("start", "stop", "status", "doctor", "firewall"));
+                case "web" -> out.addAll(List.of("start", "stop", "status", "link", "rotate", "doctor", "firewall"));
                 case "debug" -> out.addAll(List.of("render", "animation", "network", "ai", "skills", "integrations"));
                 case "pack" -> out.addAll(List.of("build", "apply", "apply-all"));
             }

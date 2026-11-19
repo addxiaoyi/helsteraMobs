@@ -64,6 +64,16 @@ final class PluginBridge implements HelsteraBridge {
     }
 
     @Override
+    public String webRotateToken() {
+        var ws = requireWeb();
+        String replacement = dev.helstera.web.WebServerService.newToken();
+        plugin.getConfig().set("web.token", replacement);
+        plugin.saveConfig();
+        ws.replaceToken(replacement);
+        return replacement;
+    }
+
+    @Override
     public void webStart(String host) throws Exception {
         var ws = requireWeb();
         if (host != null) ws.start(host);

@@ -1,0 +1,7 @@
+ContextTargeterFixtureCaster:
+  Type: ZOMBIE
+  Options:
+    PreventOtherDrops: true
+    PreventSunburn: true
+  Modules:
+    ThreatTable: false

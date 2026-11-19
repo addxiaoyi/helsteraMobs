@@ -1,6 +1,6 @@
 param(
     [ValidatePattern('^r[1-9][0-9]*$')]
-    [string]$EvidenceRevision = 'r11',
+    [string]$EvidenceRevision = 'r18',
     [string]$PaperJarPath = '',
     [string]$MythicMobsJarPath = ''
 )
@@ -94,6 +94,8 @@ $configPath = Join-Path $helsteraData 'config.yml'
 $configText = [System.IO.File]::ReadAllText($configPath)
 $configText = [regex]::Replace($configText, '(?m)^  self-test-mythic-pack-condition:\s*false\s*$',
     '  self-test-mythic-pack-condition: true')
+$configText = [regex]::Replace($configText, '(?m)^  self-test-mythic-key-id:\s*false\s*$',
+    '  self-test-mythic-key-id: true')
 if ($configText -notmatch '(?m)^  self-test-mythic-pack-condition:\s*true\s*$') {
     $configText = [regex]::Replace($configText, '(?m)^  self-test:\s*false\s*$',
         "  self-test: false`n  self-test-mythic-pack-condition: true", 1)
@@ -126,13 +128,25 @@ try {
         throw 'Paper or MythicMobs did not finish startup; inspect the retained fixture logs.'
     }
     $probeDeadline = [DateTime]::UtcNow.AddSeconds(30)
-    $probePattern = 'mythic-pack-condition actual-version=2\.4\.1 .*premium-api-available=true .*premium-arguments-preserved=true premium-runtime-arguments-rejected=true mythic-mob-api-available=true mythic-mob-oracle-positive=true mythic-mob-oracle-negative=true mythic-mob-runtime-positive=true mythic-mob-runtime-negative=true mythic-mob-imported-positive=true mythic-mob-imported-negative=true ismm-alias-positive=true ismm-alias-negative=true mythic-mob-radius-type-positive=true mythic-mob-radius-type-negative=true mythic-mob-imported-radius-type-positive=true mythic-mob-imported-radius-type-negative=true mythic-mob-radius-type-list-positive=true mythic-mob-imported-radius-type-list-positive=true mythic-mob-radius-type-case-positive=true mythic-mob-imported-radius-type-case-positive=true mythic-mob-origin-type-positive=true mythic-mob-origin-type-negative=true mythic-mob-imported-origin-type-positive=true mythic-mob-imported-origin-type-negative=true mythic-mob-origin-type-list-positive=true mythic-mob-origin-type-case-positive=true mythic-mob-origin-range-positive=true mythic-mob-origin-unknown-type-rejected=true mythic-mob-type-exact-positive=true mythic-mob-type-exact-substring-rejected=true mythic-mob-type-contains-positive=true mythic-mob-type-contains-negative=true mythic-mob-type-imported-exact-positive=true mythic-mob-type-imported-exact-substring-rejected=true mythic-mob-type-imported-contains-positive=true mythic-mob-type-imported-contains-negative=true passed=true'
+    $probePattern = 'mythic-pack-condition actual-version=2\.4\.1 .*premium-api-available=true .*premium-arguments-preserved=true premium-runtime-arguments-rejected=true mythic-mob-api-available=true mythic-mob-oracle-positive=true mythic-mob-oracle-negative=true mythic-mob-runtime-positive=true mythic-mob-runtime-negative=true mythic-mob-imported-positive=true mythic-mob-imported-negative=true ismm-alias-positive=true ismm-alias-negative=true mythic-mob-radius-type-positive=true mythic-mob-radius-type-negative=true mythic-mob-imported-radius-type-positive=true mythic-mob-imported-radius-type-negative=true mythic-mob-radius-type-list-positive=true mythic-mob-imported-radius-type-list-positive=true mythic-mob-radius-type-case-positive=true mythic-mob-imported-radius-type-case-positive=true mythic-mob-origin-type-positive=true mythic-mob-origin-type-negative=true mythic-mob-imported-origin-type-positive=true mythic-mob-imported-origin-type-negative=true mythic-mob-origin-type-list-positive=true mythic-mob-origin-type-case-positive=true mythic-mob-origin-range-positive=true mythic-mob-origin-unknown-type-rejected=true mythic-mob-type-exact-positive=true mythic-mob-type-exact-substring-rejected=true mythic-mob-type-contains-positive=true mythic-mob-type-contains-negative=true mythic-mob-type-imported-exact-positive=true mythic-mob-type-imported-exact-substring-rejected=true mythic-mob-type-imported-contains-positive=true mythic-mob-type-imported-contains-negative=true mythic-aura-start-skill=true mythic-aura-tick-skill=true mythic-aura-end-skill=true passed=true'
+    $keyIdPattern = 'mythic-key-id variable-set=true imported-variable-set=true direct-positive=true direct-negative=true aliases-positive=true aliases-negative=true default-positive=true default-mismatch=true missing-rejected=true malformed-preserved=true unresolved-rejected=true passed=true'
+    $auraStartPattern = 'mythic-aura-start-skill first-start-dispatched=true merge-did-not-redispatch=true target-context-preserved=true passed=true'
+    $auraTickPattern = 'mythic-aura-tick-skill interval-respected=true merge-kept-schedule=true target-context-preserved=true event-context-cleared=true passed=true'
+    $auraEndPattern = 'mythic-aura-end-skill removal-honored=true removal-suppressed=true expiry-dispatched=true overwrite-dispatched=true target-context-preserved=true event-context-cleared=true passed=true'
     while ([DateTime]::UtcNow -lt $probeDeadline -and -not $process.HasExited -and
-            -not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
+            (-not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet) -or
+             -not (Select-String -LiteralPath $latestLog -Pattern $keyIdPattern -Quiet) -or
+             -not (Select-String -LiteralPath $latestLog -Pattern $auraStartPattern -Quiet) -or
+             -not (Select-String -LiteralPath $latestLog -Pattern $auraTickPattern -Quiet) -or
+             -not (Select-String -LiteralPath $latestLog -Pattern $auraEndPattern -Quiet))) {
         Start-Sleep -Milliseconds 250
     }
-    if (-not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
-        throw 'The Mythic pack/type condition Paper probe did not pass; inspect the retained fixture logs.'
+    if (-not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet) -or
+            -not (Select-String -LiteralPath $latestLog -Pattern $keyIdPattern -Quiet) -or
+            -not (Select-String -LiteralPath $latestLog -Pattern $auraStartPattern -Quiet) -or
+            -not (Select-String -LiteralPath $latestLog -Pattern $auraTickPattern -Quiet) -or
+            -not (Select-String -LiteralPath $latestLog -Pattern $auraEndPattern -Quiet)) {
+        throw 'The Mythic pack/type, KeyId, or Aura lifecycle Paper probe did not pass; inspect the retained fixture logs.'
     }
     $process.StandardInput.WriteLine('stop')
     $process.StandardInput.Flush()
@@ -152,8 +166,20 @@ $paperMatch = [regex]::Match($logText,
     'This server is running Paper version (.+?) \(Implementing API version (.+?)\)')
 $observationMatch = [regex]::Match($logText,
     '(?m)^.*\[自检\] (mythic-pack-condition actual-version=.*passed=true)\s*$')
+$keyIdObservationMatch = [regex]::Match($logText,
+    '(?m)^.*\[自检\] (mythic-key-id variable-set=.*passed=true)\s*$')
+$auraStartObservationMatch = [regex]::Match($logText,
+    '(?m)^.*\[自检\] (mythic-aura-start-skill first-start-dispatched=.*passed=true)\s*$')
+$auraTickObservationMatch = [regex]::Match($logText,
+    '(?m)^.*\[自检\] (mythic-aura-tick-skill interval-respected=.*passed=true)\s*$')
+$auraEndObservationMatch = [regex]::Match($logText,
+    '(?m)^.*\[自检\] (mythic-aura-end-skill removal-honored=.*passed=true)\s*$')
 if (-not $paperMatch.Success -or $paperMatch.Groups[1].Value -notmatch '^1\.21\.1-133(?:-|$)' -or
         -not $observationMatch.Success -or
+        -not $keyIdObservationMatch.Success -or
+        -not $auraStartObservationMatch.Success -or
+        -not $auraTickObservationMatch.Success -or
+        -not $auraEndObservationMatch.Success -or
         -not $logText.Contains('Enabling MythicMobs') -or
         -not $logText.Contains('Enabling helsteraMobs v1.0.0')) {
     throw 'Focused report checks found incomplete Paper/plugin startup evidence.'
@@ -164,6 +190,18 @@ $redactedLog = [regex]::Replace($redactedLog,
     '(?i)([?&]token=)[^&\s"''<>]+', '$1[REDACTED]')
 $redactedLog = [regex]::Replace($redactedLog,
     '(?i)(__cf_bm=)[^;\s"''<>]+', '$1[REDACTED]')
+$redactedLog = [regex]::Replace($redactedLog,
+    '(?im)(令牌|token)(\s*[:=]\s*)[A-Za-z0-9._~-]+', '$1$2[REDACTED]')
+$verifiedRedaction = [regex]::Replace($redactedLog,
+    '(?i)([?&]token=)[^&\s"''<>]+', '$1[REDACTED]')
+$verifiedRedaction = [regex]::Replace($verifiedRedaction,
+    '(?i)(__cf_bm=)[^;\s"''<>]+', '$1[REDACTED]')
+$verifiedRedaction = [regex]::Replace($verifiedRedaction,
+    '(?im)(令牌|token)(\s*[:=]\s*)[A-Za-z0-9._~-]+', '$1$2[REDACTED]')
+if ($verifiedRedaction -cne $redactedLog) {
+    throw 'Log redaction is incomplete; refusing to archive the Paper log.'
+}
+[System.IO.File]::WriteAllText($latestLog, $redactedLog, [System.Text.UTF8Encoding]::new($false))
 $gzipFile = [System.IO.File]::Open($logArchivePath, [System.IO.FileMode]::CreateNew)
 try {
     $gzip = [System.IO.Compression.GzipStream]::new($gzipFile,
@@ -183,6 +221,10 @@ $report = [ordered]@{
     paperApiVersion = $paperMatch.Groups[2].Value
     pluginEnabled = $true
     pluginSha256 = $pluginSha256
+    runnerSha256 = (Get-FileHash -LiteralPath $PSCommandPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    conditionProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $root `
+        'helstera-plugin/src/main/java/dev/helstera/plugin/HelsteraPlugin.java') `
+        -Algorithm SHA256).Hash.ToLowerInvariant()
     paperJarSha256 = (Get-FileHash -LiteralPath $paper -Algorithm SHA256).Hash.ToLowerInvariant()
     externalPlugin = 'MythicMobs 5.7.2 (Modrinth version FTWvGuE5)'
     externalPluginSource = $mythicUrl
@@ -190,17 +232,36 @@ $report = [ordered]@{
     externalPluginSha256 = $actualMythicSha256
     externalPluginSha512 = $actualMythicSha512
     log = 'logs/latest.log'
-    expectedProbeIds = @('mythicMobTypeAndPackConditions')
+    expectedProbeIds = @('mythicMobTypeAndPackConditions', 'mythicKeyIdCondition',
+        'mythicAuraStartSkill', 'mythicAuraTickSkill', 'mythicAuraEndSkill')
     probes = @([ordered]@{
         id = 'mythicMobTypeAndPackConditions'
         status = 'passed'
         observations = @($observationMatch.Groups[1].Value)
+    }, [ordered]@{
+        id = 'mythicKeyIdCondition'
+        status = 'passed'
+        observations = @($keyIdObservationMatch.Groups[1].Value)
+    }, [ordered]@{
+        id = 'mythicAuraStartSkill'
+        status = 'passed'
+        observations = @($auraStartObservationMatch.Groups[1].Value)
+    }, [ordered]@{
+        id = 'mythicAuraTickSkill'
+        status = 'passed'
+        observations = @($auraTickObservationMatch.Groups[1].Value)
+    }, [ordered]@{
+        id = 'mythicAuraEndSkill'
+        status = 'passed'
+        observations = @($auraEndObservationMatch.Groups[1].Value)
     })
 }
 $json = $report | ConvertTo-Json -Depth 8
 [System.IO.File]::WriteAllText((Join-Path $server 'integration-report.json'), $json + "`n",
     [System.Text.UTF8Encoding]::new($false))
 [System.IO.File]::WriteAllText($reportPath, $json + "`n", [System.Text.UTF8Encoding]::new($false))
+& (Join-Path $PSScriptRoot 'assert-report-complete.ps1') -ReportPath $reportPath `
+    -RequireTargetPaperVersion -ExpectedPaperVersion '1.21.1' -ExpectedPaperBuild '1.21.1-133'
 $reportSha256 = (Get-FileHash -LiteralPath $reportPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $logSha256 = (Get-FileHash -LiteralPath $logArchivePath -Algorithm SHA256).Hash.ToLowerInvariant()
 Write-Output "Focused MythicMobs Paper probe passed: $fixtureId"

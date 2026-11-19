@@ -1,0 +1,18 @@
+ct_trigger:
+  Skills:
+  - setspeed{m=2} @Trigger
+ct_modes_on:
+  Skills:
+  - setspeed{m=2} @Trigger{targetcreative=true;targetspectator=true}
+ct_modes_off:
+  Skills:
+  - setspeed{m=2} @Trigger{targetcreative=false;targetspectator=false}
+ct_players_off:
+  Skills:
+  - setspeed{m=2} @Trigger{targetplayers=false;targetcreative=true;targetspectator=true}
+ct_living_players_off:
+  Skills:
+  - setspeed{m=2} @LivingInRadius{r=32;targetplayers=false;targetcreative=true;targetspectator=true}
+ct_target:
+  Skills:
+  - setspeed{m=2} @Target

@@ -2095,7 +2095,7 @@ class SkillConditionsTest {
     }
 
     @Test
-    @DisplayName("PlayersInRadius uses official defaults, count ranges and spectator-only exclusion")
+    @DisplayName("PlayersInRadius uses the pinned Mythic 5.7.2 defaults and game-mode predicate")
     void playersInRadiusUsesMythicDefaultsAndGameModeSemantics() {
         var world = mock(World.class);
         var origin = new Location(world, 0, 64, 0);
@@ -2105,6 +2105,9 @@ class SkillConditionsTest {
         when(spectator.getGameMode()).thenReturn(org.bukkit.GameMode.SPECTATOR);
         when(creative.getGameMode()).thenReturn(org.bukkit.GameMode.CREATIVE);
         when(survival.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        for (Player player : List.of(spectator, creative, survival)) {
+            when(player.getLocation()).thenReturn(origin.clone().add(1, 0, 0));
+        }
         when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
                 org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
                 .thenReturn(List.of(spectator, creative, survival));
@@ -2112,10 +2115,13 @@ class SkillConditionsTest {
                 null, List.of(), origin);
 
         var defaultCondition = extraFactory("players-in-radius").create(List.of());
-        assertTrue(defaultCondition.test(context), "creative and survival count; spectators are ignored by default");
+        assertTrue(defaultCondition.test(context), "survival players count; creative and spectators are excluded");
         org.mockito.Mockito.verify(world).getNearbyEntities(origin, 32, 32, 32);
         assertFalse(extraFactory("players-in-radius").create(List.of(">2", "32", "true")).test(context));
-        assertTrue(extraFactory("players-in-radius").create(List.of("2to3", "32", "false")).test(context));
+        assertFalse(extraFactory("players-in-radius").create(List.of("2to3", "32", "false")).test(context),
+                "the pinned 5.7.2 predicate excludes creative and spectator players regardless of the flag");
+        assertFalse(extraFactory("players-in-radius").create(List.of("0")).test(context));
+        assertTrue(extraFactory("players-in-radius").create(List.of("1")).test(context));
         assertFalse(extraFactory("players-in-radius").create(List.of("<0", "32", "true")).test(context));
         assertThrows(IllegalArgumentException.class,
                 () -> extraFactory("players-in-radius").create(List.of("2to1")));
@@ -2126,128 +2132,70 @@ class SkillConditionsTest {
     }
 
     @Test
-    @DisplayName("MobsInRadius uses official defaults and matches native and Mythic type filters")
-    void mobsInRadiusMatchesFilteredTypesAndFailsClosed() throws Exception {
-        SkillExtras.resetRuntimeHooks();
+    void playerRadiusQueriesUseSpheresAndNeverTurnUnavailableCountsIntoPermission() {
         var world = mock(World.class);
         var origin = new Location(world, 0, 64, 0);
-        org.bukkit.entity.Mob zombie = mock(org.bukkit.entity.Mob.class);
-        org.bukkit.entity.Mob skeleton = mock(org.bukkit.entity.Mob.class);
-        org.bukkit.entity.Mob custom = mock(org.bukkit.entity.Mob.class);
-        LivingEntity armorStand = mock(org.bukkit.entity.ArmorStand.class);
-        when(zombie.isValid()).thenReturn(true);
-        when(skeleton.isValid()).thenReturn(true);
-        when(custom.isValid()).thenReturn(true);
-        when(armorStand.isValid()).thenReturn(true);
-        when(zombie.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
-        when(skeleton.getType()).thenReturn(org.bukkit.entity.EntityType.SKELETON);
-        when(custom.getType()).thenReturn(org.bukkit.entity.EntityType.COW);
-        when(armorStand.getType()).thenReturn(org.bukkit.entity.EntityType.ARMOR_STAND);
-        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
-                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
-                .thenReturn(List.of(zombie, skeleton, custom, armorStand));
-        var context = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
+        var context = BehaviorContext.execution(null, null, 1, -1, 0, "IDLE", null,
                 null, List.of(), origin);
+        Player player = mock(Player.class);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.SURVIVAL);
+        when(player.getLocation()).thenReturn(origin.clone().add(3, 4, 0));
+        when(world.getPlayers()).thenReturn(List.of(player));
+        when(world.getNearbyEntities(origin, 5, 5, 5)).thenReturn(List.of(player));
+        var registry = new BehaviorRegistryImpl();
+        var skills = new dev.helstera.ai.skill.SkillService(registry, null);
+        var within = skills.bindCondition("player-within 5");
+        var outside = skills.bindCondition("player-not-within 5");
+        var count = skills.bindCondition("players-in-radius >0 5 true");
+        var empty = skills.bindCondition("players-in-radius <=0 5 true");
+        var negated = skills.bindCondition("!players-in-radius >0 5 true");
+        var negatedWithin = skills.bindCondition("!player-within 5");
+        for (String key : List.of(within, outside, count, empty, negated, negatedWithin)) assertNotNull(key);
+        assertTrue(registry.testCondition(within, context));
+        assertFalse(registry.testCondition(outside, context));
+        assertTrue(registry.testCondition(count, context));
+        when(player.getLocation()).thenReturn(origin.clone().add(5, 0, 5));
+        assertFalse(registry.testCondition(within, context));
+        assertTrue(registry.testCondition(outside, context));
+        assertFalse(registry.testCondition(count, context), "a cube corner is outside the sphere");
+        assertTrue(registry.testCondition(empty, context));
+        assertTrue(registry.testCondition(negated, context));
 
-        assertTrue(zombie instanceof LivingEntity);
-        assertTrue(zombie.isValid());
-        assertEquals(4, world.getNearbyEntities(origin, 5, 5, 5).size());
-        var defaults = extraFactory("mobs-in-radius").create(List.of());
-        assertTrue(defaults.test(context));
-        assertFalse(extraFactory("mobs-in-radius").create(List.of("4", "5")).test(context),
-                "ArmorStands are living entities but are not Bukkit Mobs");
-        org.mockito.Mockito.verify(world, org.mockito.Mockito.atLeastOnce())
-                .getNearbyEntities(origin, 5, 5, 5);
-        assertTrue(extraFactory("mobs-in-radius").create(List.of("2", "5", "ZOMBIE,SKELETON"))
-                .test(context));
-        assertFalse(extraFactory("mobs-in-radius").create(List.of("1", "5", "UNKNOWN_MOB"))
-                .test(context));
-
-        SkillExtras.mythicMobTypeMatcher((entity, type, exact) ->
-                entity == custom && exact && type.equalsIgnoreCase("ForestGuardian"));
-        assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "ForestGuardian"))
-                .test(context));
-        assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "UNKNOWN_MOB,ForestGuardian"))
-                .test(context), "multiple type filters should match any configured type");
-        assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5", "forestguardian"))
-                .test(context), "Mythic internal-name matching should be case-insensitive");
-        SkillExtras.mythicMobTypeMatcher((entity, type, exact) -> {
-            throw new IllegalStateException("API unavailable");
-        });
-        assertFalse(extraFactory("mobs-in-radius").create(List.of("1", "5", "ForestGuardian"))
-                .test(context));
-        assertThrows(IllegalArgumentException.class,
-                () -> extraFactory("mobs-in-radius").create(List.of("1", "5", "ZOMBIE,,SKELETON")));
-        assertThrows(IllegalArgumentException.class,
-                () -> extraFactory("mobs-in-radius").create(List.of("1", "5", "ZOMBIE SKELETON")));
-        SkillExtras.resetRuntimeHooks();
-    }
-
-    @Test
-    @DisplayName("MobsInRadius excludes its caster and fails closed when its count is unavailable")
-    void mobsInRadiusExcludesCasterAndFailsClosed() {
-        SkillExtras.resetRuntimeHooks();
-        var world = mock(World.class);
-        var origin = new Location(world, 0, 64, 0);
-        var instance = mock(ModelInstance.class);
-        org.bukkit.entity.Mob caster = mock(org.bukkit.entity.Mob.class);
-        org.bukkit.entity.Mob nearby = mock(org.bukkit.entity.Mob.class);
-        when(instance.isValid()).thenReturn(true);
-        when(instance.baseEntity()).thenReturn(java.util.Optional.of(caster));
-        when(caster.isValid()).thenReturn(true);
-        when(nearby.isValid()).thenReturn(true);
-        when(caster.getType()).thenReturn(org.bukkit.entity.EntityType.ZOMBIE);
-        when(nearby.getType()).thenReturn(org.bukkit.entity.EntityType.SKELETON);
-        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
-                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
-                .thenReturn(List.of(caster, nearby));
-        var context = BehaviorContext.execution(instance, null, 1.0, -1, 0, "IDLE", null,
-                null, List.of(), origin);
-
-        assertTrue(extraFactory("mobs-in-radius").create(List.of("1", "5")).test(context));
-        assertFalse(extraFactory("mobs-in-radius").create(List.of("2", "5")).test(context),
-                "the caster must not count as a nearby Mob");
-        assertFalse(extraFactory("mobs-in-radius").create(List.of("<=0", "5")).test(ctx()),
-                "missing context must not satisfy an upper-bound comparison");
-
-        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
-                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
-                .thenThrow(new IllegalStateException("nearby entity query unavailable"));
-        assertFalse(extraFactory("mobs-in-radius").create(List.of("<=0", "5")).test(context),
-                "query failures must not be interpreted as a valid zero count");
-        SkillExtras.resetRuntimeHooks();
-    }
-
-    @Test
-    @DisplayName("MobsInRadius counts every matching Mob beyond the former 512 entity cap")
-    void mobsInRadiusCountsMoreThan512Entities() {
-        SkillExtras.resetRuntimeHooks();
-        var world = mock(World.class);
-        var origin = new Location(world, 0, 64, 0);
-        var entities = new java.util.ArrayList<Entity>();
-        for (int index = 0; index < 513; index++) {
-            org.bukkit.entity.Mob mob = (org.bukkit.entity.Mob) java.lang.reflect.Proxy.newProxyInstance(
-                    org.bukkit.entity.Mob.class.getClassLoader(),
-                    new Class<?>[]{org.bukkit.entity.Mob.class},
-                    (proxy, method, arguments) -> switch (method.getName()) {
-                        case "isValid" -> true;
-                        case "getType" -> org.bukkit.entity.EntityType.ZOMBIE;
-                        case "hashCode" -> System.identityHashCode(proxy);
-                        case "equals" -> proxy == arguments[0];
-                        case "toString" -> "mob-" + System.identityHashCode(proxy);
-                        default -> throw new UnsupportedOperationException(method.getName());
-                    });
-            entities.add(mob);
+        when(player.getLocation()).thenReturn(origin);
+        for (var mode : List.of(org.bukkit.GameMode.CREATIVE, org.bukkit.GameMode.SPECTATOR)) {
+            when(player.getGameMode()).thenReturn(mode);
+            assertFalse(registry.testCondition(within, context), "5.7.2 PlayerWithin excludes " + mode);
+            assertFalse(registry.testCondition(outside, context), "5.7.2 PlayerNotWithin includes " + mode);
         }
-        when(world.getNearbyEntities(any(Location.class), org.mockito.ArgumentMatchers.anyDouble(),
-                org.mockito.ArgumentMatchers.anyDouble(), org.mockito.ArgumentMatchers.anyDouble()))
-                .thenReturn(entities);
-        var context = BehaviorContext.execution(null, null, 1.0, -1, 0, "IDLE", null,
-                null, List.of(), origin);
+        when(world.getPlayers()).thenReturn(List.of());
+        assertTrue(registry.testCondition(outside, context), "a successful empty query permits not-within");
+        when(world.getPlayers()).thenThrow(new IllegalStateException("query unavailable"));
+        when(world.getNearbyEntities(origin, 5, 5, 5)).thenThrow(new IllegalStateException("query unavailable"));
+        for (String key : List.of(within, outside, count, empty, negated, negatedWithin)) {
+            assertFalse(registry.testCondition(key, context), "query failure must fail closed: " + key);
+            assertFalse(registry.testCondition(key, ctx()), "missing location must fail closed: " + key);
+        }
+        for (String name : List.of("player-within", "player-not-within")) {
+            for (String radius : List.of("-1", "NaN", "Infinity")) {
+                assertThrows(IllegalArgumentException.class, () -> extraFactory(name).create(List.of(radius)));
+            }
+        }
+    }
 
-        assertTrue(extraFactory("mobs-in-radius").create(List.of("513", "5")).test(context));
-        assertFalse(extraFactory("mobs-in-radius").create(List.of(">513", "5")).test(context));
-        SkillExtras.resetRuntimeHooks();
+    @Test
+    void playerRadiusCountDoesNotTruncateAt512() {
+        var world = mock(World.class);
+        var origin = new Location(world, 0, 64, 0);
+        Player player = mock(Player.class);
+        when(player.getLocation()).thenReturn(origin);
+        when(player.getGameMode()).thenReturn(org.bukkit.GameMode.ADVENTURE);
+        when(world.getNearbyEntities(origin, 5, 5, 5))
+                .thenReturn(java.util.Collections.nCopies(514, player));
+        var context = BehaviorContext.execution(null, null, 1, -1, 0, "IDLE", null,
+                null, List.of(), origin);
+        assertFalse(extraFactory("players-in-radius").create(List.of("<=513", "5")).test(context));
+        assertFalse(extraFactory("players-in-radius").create(List.of("513", "5")).test(context));
+        assertTrue(extraFactory("players-in-radius").create(List.of("514", "5")).test(context));
     }
 
     @Test

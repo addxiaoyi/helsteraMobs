@@ -116,6 +116,144 @@ class SkillTreeContextTest {
     }
 
     @Test
+    void snapshotStorePreservesDottedNamesAndReservedBranchNames() throws Exception {
+        SkillTreeContext tree = new SkillTreeContext(null, null);
+        tree.setVariable("skill.counter", 12);
+        tree.setLocation("mythic.tracked-location", new Location(null, 4, 5, 6, 7, 8));
+        tree.defineBranch("unlocked", java.util.Set.of());
+        tree.defineBranch("route.advanced", java.util.Set.of("unlocked"));
+        assertTrue(tree.unlockBranch("unlocked"));
+
+        var file = Files.createTempFile("skill-tree-dotted", ".yml").toFile();
+        try {
+            SkillTreeSnapshotStore.save(file, tree.snapshot());
+            var loaded = SkillTreeSnapshotStore.load(file);
+
+            assertEquals(12, ((Number) loaded.variables().get("skill.counter")).intValue());
+            assertEquals(4, loaded.locations().get("mythic.tracked-location").x());
+            assertEquals(java.util.Set.of("unlocked"),
+                    loaded.branchRequirements().get("route.advanced"));
+            assertTrue(loaded.branchRequirements().containsKey("unlocked"));
+            assertEquals(java.util.Set.of("unlocked"), loaded.unlockedBranches());
+        } finally {
+            assertTrue(file.delete());
+        }
+    }
+
+    @Test
+    void snapshotStoreRoundTripsListSetAndNestedMapVariableValues() throws Exception {
+        SkillTreeContext tree = new SkillTreeContext(null, null);
+        var mutableList = new java.util.ArrayList<Object>(java.util.List.of("red", 7, false));
+        tree.setVariable("skill.list", mutableList);
+        tree.setVariable("skill.set", new java.util.LinkedHashSet<>(java.util.List.of("birch", "oak")));
+        tree.setVariable("skill.map", new java.util.LinkedHashMap<>(java.util.Map.of(
+                "dotted.key", java.util.Map.of("enabled", true),
+                "unlocked", java.util.List.of("root", "advanced"))));
+        var snapshot = tree.snapshot();
+        mutableList.add("mutated-after-snapshot");
+
+        var file = Files.createTempFile("skill-tree-collections", ".yml").toFile();
+        try {
+            SkillTreeSnapshotStore.save(file, snapshot);
+            var loaded = SkillTreeSnapshotStore.load(file);
+
+            assertEquals(java.util.List.of("red", 7, false), loaded.variables().get("skill.list"));
+            assertEquals(java.util.Set.of("birch", "oak"), loaded.variables().get("skill.set"));
+            assertEquals(java.util.Map.of("dotted.key", java.util.Map.of("enabled", true),
+                    "unlocked", java.util.List.of("root", "advanced")),
+                    loaded.variables().get("skill.map"));
+            assertThrows(UnsupportedOperationException.class,
+                    () -> ((java.util.List<?>) snapshot.variables().get("skill.list")).clear());
+        } finally {
+            assertTrue(file.delete());
+        }
+    }
+
+    @Test
+    void snapshotStoreStillReadsLegacyYamlSnapshots() throws Exception {
+        var file = Files.createTempFile("skill-tree-legacy", ".yml").toFile();
+        try {
+            Files.writeString(file.toPath(), """
+                    variables:
+                      marker: legacy
+                    locations:
+                      origin:
+                        world: null
+                        x: 1.0
+                        y: 2.0
+                        z: 3.0
+                        yaw: 4.0
+                        pitch: 5.0
+                    branches:
+                      root:
+                        requires: []
+                      unlocked:
+                        - root
+                    damage-tags: []
+                    """);
+
+            var loaded = SkillTreeSnapshotStore.load(file);
+            assertEquals("legacy", loaded.variables().get("marker"));
+            assertEquals(1.0, loaded.locations().get("origin").x());
+            assertEquals(java.util.Set.of("root"), loaded.unlockedBranches());
+            assertEquals(java.util.Set.of(), loaded.branchRequirements().get("root"));
+        } finally {
+            assertTrue(file.delete());
+        }
+    }
+
+    @Test
+    void snapshotStoreReadsPreviousEncodedScalarFormat() throws Exception {
+        var file = Files.createTempFile("skill-tree-format-two", ".yml").toFile();
+        try {
+            Files.writeString(file.toPath(), """
+                    snapshot-format: 2
+                    variables:
+                      entries:
+                        k001:
+                          name: skill.counter
+                          value: 9
+                    locations:
+                      entries: {}
+                    branches:
+                      entries: {}
+                      unlocked: []
+                    damage-tags: []
+                    """);
+
+            var loaded = SkillTreeSnapshotStore.load(file);
+            assertEquals(9, ((Number) loaded.variables().get("skill.counter")).intValue());
+        } finally {
+            assertTrue(file.delete());
+        }
+    }
+
+    @Test
+    void snapshotStoreRejectsCollectionsInPreviousEncodedScalarFormat() throws Exception {
+        var file = Files.createTempFile("skill-tree-format-two-invalid", ".yml").toFile();
+        try {
+            Files.writeString(file.toPath(), """
+                    snapshot-format: 2
+                    variables:
+                      entries:
+                        k001:
+                          name: skill.list
+                          value: [one, two]
+                    locations:
+                      entries: {}
+                    branches:
+                      entries: {}
+                      unlocked: []
+                    damage-tags: []
+                    """);
+
+            assertThrows(java.io.IOException.class, () -> SkillTreeSnapshotStore.load(file));
+        } finally {
+            assertTrue(file.delete());
+        }
+    }
+
+    @Test
     void snapshotStoreKeepsPreviousFileWhenNewSnapshotCannotBeSerialized() throws Exception {
         var directory = Files.createTempDirectory("skill-tree-atomic");
         var file = directory.resolve("persistent.yml").toFile();

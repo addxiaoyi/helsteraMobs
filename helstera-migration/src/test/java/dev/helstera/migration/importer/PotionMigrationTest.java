@@ -43,6 +43,18 @@ class PotionMigrationTest {
     }
 
     @Test
+    void expressionWhitespaceAndInlineOptionsSurviveSkillAndMobMigration() throws Exception {
+        for (String folder : List.of("Skills", "Mobs")) {
+            var entries = convert(folder, List.of(
+                    "potion{t=HASTE;d=(20 + <target.hp{r=0}>);l=max(1, 2)} @Target"));
+            String prefix = folder.equals("Skills") ? "skills.probe" : "mob";
+            assertEquals(List.of("effect-targets HASTE \"(20 + <target.hp{r=0}>)\" \"max(1, 2)\" @target"),
+                    output(entries).getStringList(prefix + ".on-decision"));
+            assertFalse(entries.stream().anyMatch(e -> "WARN".equals(e.get("severity"))), entries.toString());
+        }
+    }
+
+    @Test
     void invalidSourcesStayPreservedAndWarnForSkillsAndMobs() throws Exception {
         List<String> invalid = List.of("potion{type=UNKNOWN}", "potion{type=}", "potion{duration=NaN}",
                 "potion{duration=0}", "potion{level=-1}", "potion{force=maybe}",

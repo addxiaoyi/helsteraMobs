@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T13:53:13.2767776Z",
+  "fixtureDirectory": "srv-paper-potion-packets-exploratory-20261117-r2",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "755ee93f0eee84b531326e98d4d0bad8e78dfd4864a5549d83dbf9318fe910a9",
+  "externalPlugin": "MythicMobs 5.7.2 (Modrinth FTWvGuE5)",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "sharedSourceSha256": "b02b136e04d4c2369fac85d34bab5ffd46f358c267e975e7eeac8347f97c127e",
+  "clientSourceSha256": "337a20d2922e057d1724035d6d810247a2201b30bf01312961485954d7704d23",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "clientLog": "potion-packet-client.log",
+  "packetContractSha256": "4f23a445c0d8ec192805b0657c736e23e85861b7f2238567a4bbe539f1c9372b",
+  "runnerSha256": "0abd1df9f6af669f54b800d5714fa937d9b00728ec5beb9a361cd12d97d62861",
+  "serverAssertionCount": 84,
+  "clientComparisons": 12,
+  "clientPhases": 24,
+  "clientPackets": 48,
+  "playerMode": "SURVIVAL (restored after probe)",
+  "expectedProbeIds": [
+    "potionPacketRuntime",
+    "potionPacketClient"
+  ],
+  "probes": [
+    {
+      "id": "potionPacketRuntime",
+      "status": "passed",
+      "observations": [
+        "potion-packets source-identical=true source-imported=true recipient-clean=true survival-recipient=true native-packet_default-cast=true native-packet_default-effect=true native-packet_default-removed=true native-packet_flags_0-cast=true native-packet_flags_0-effect=true native-packet_flags_0-removed=true native-packet_flags_1-cast=true native-packet_flags_1-effect=true native-packet_flags_1-removed=true native-packet_flags_2-cast=true native-packet_flags_2-effect=true native-packet_flags_2-removed=true native-packet_flags_3-cast=true native-packet_flags_3-effect=true native-packet_flags_3-removed=true native-packet_flags_4-cast=true native-packet_flags_4-effect=true native-packet_flags_4-removed=true native-packet_flags_5-cast=true native-packet_flags_5-effect=true native-packet_flags_5-removed=true native-packet_flags_6-cast=true native-packet_flags_6-effect=true native-packet_flags_6-removed=true native-packet_flags_7-cast=true native-packet_flags_7-effect=true native-packet_flags_7-removed=true native-packet_expire-cast=true native-packet_expire-effect=true native-packet_expire-removed=true native-packet_force-base-cast=true native-packet_force-base-effect=true native-packet_force-cast=true native-packet_force-effect=true native-packet_force-removal-event=true native-packet_force-removed=true native-packet_cancel-cast=true native-packet_cancel-event=true native-packet_cancel-absent=true imported-packet_default-cast=true imported-packet_default-effect=true imported-packet_default-removed=true imported-packet_flags_0-cast=true imported-packet_flags_0-effect=true imported-packet_flags_0-removed=true imported-packet_flags_1-cast=true imported-packet_flags_1-effect=true imported-packet_flags_1-removed=true imported-packet_flags_2-cast=true imported-packet_flags_2-effect=true imported-packet_flags_2-removed=true imported-packet_flags_3-cast=true imported-packet_flags_3-effect=true imported-packet_flags_3-removed=true imported-packet_flags_4-cast=true imported-packet_flags_4-effect=true imported-packet_flags_4-removed=true imported-packet_flags_5-cast=true imported-packet_flags_5-effect=true imported-packet_flags_5-removed=true imported-packet_flags_6-cast=true imported-packet_flags_6-effect=true imported-packet_flags_6-removed=true imported-packet_flags_7-cast=true imported-packet_flags_7-effect=true imported-packet_flags_7-removed=true imported-packet_expire-cast=true imported-packet_expire-effect=true imported-packet_expire-removed=true imported-packet_force-base-cast=true imported-packet_force-base-effect=true imported-packet_force-cast=true imported-packet_force-effect=true imported-packet_force-removal-event=true imported-packet_force-removed=true imported-packet_cancel-cast=true imported-packet_cancel-event=true imported-packet_cancel-absent=true caster-isolation=true cleanup=true assertions=84 passed=true"
+      ]
+    },
+    {
+      "id": "potionPacketClient",
+      "status": "passed",
+      "observations": [
+        "PAPER_POTION_PACKET_CLIENT passed=true comparisons=12 phases=24 packets=48"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-19T13:02:45.6435614Z",
+  "fixtureDirectory": "srv-paper-random-spawn-replace-20261119-r33",
+  "evidenceMode": "release",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "externalPlugin": "MythicMobs 5.7.2",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "runnerSha256": "a7bd2fc63cb255f2d8f1624b1e5a120774736be7b95232ba522a390e3f09a9e2",
+  "fixtureProbeSourceSha256": "f849614c50b5b600bca7fe856d6f01fe3d5bcb3b13ad39562e313d6098d9cb09",
+  "fixtureProbeJarSha256": "8475412420f0a0d57c0ef2ac74227bcf58d9a40415d2782d2383c434b13a6c88",
+  "conditionProbeSourceSha256": "11bddb127b7a86d55a3bb4507cef67b332f160cbb664bafa3ba6b35d12c9521f",
+  "naturalSpawnClientSha256": "e350680f64801874b1dfdc478dea74208f2a25c0b2cbd30914d42b4582717c3c",
+  "randomSpawnConfigSha256": "9fffef81ad8f10b34882e65565ba5e774916425ef924fbe5d694f57f91173ce8",
+  "mythicMobCatalogSha256": "54d4bf163e0bf1c20b1002b9b414f8d0212f1698188a0696624bfb47341f2630",
+  "nativeMobConfigSha256": "9014668ef82f90417623bfac2ae0125566e923078a47af062cf94b607f48b47e",
+  "replacementMobConfigSha256": "260bf1742f4219c38ab80e32170b6ce3f940fc4395ba58cc6fea8cdfa88efff2",
+  "conditionGuardMobConfigSha256": "2db3ca08a14fda7f7b3b7794b28815c9054d211f8c2dcbcd77a4d8e20d72cfda",
+  "pluginSha256": "baf9633db610aee957105ced7e77193a8b657e19ab1d7800defd0653e20ee6e4",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "randomSpawn.importer",
+    "randomSpawn.types-alternatives",
+    "randomSpawn.add-cluster",
+    "randomSpawn.add-location-conditions",
+    "randomSpawn.add-world-border",
+    "randomSpawn.add-player-conditions",
+    "randomSpawn.player-radius-semantics",
+    "randomSpawn.player-syntax-native-comparison",
+    "randomSpawn.player-syntax-extension-boundary",
+    "randomSpawn.replace",
+    "randomSpawn.condition-control",
+    "randomSpawn.reason-control",
+    "randomSpawn.deny",
+    "randomSpawn.deny-condition-control",
+    "randomSpawn.cooldown-immediate",
+    "randomSpawn.cooldown-expired",
+    "randomSpawn.natural-engine",
+    "mobRadius.native-audit"
+  ],
+  "probes": [
+    {
+      "id": "randomSpawn.importer",
+      "status": "passed",
+      "observations": [
+        "[13:02:36] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_IMPORT|passed=true|mappedDefinitions=16|unsupportedActions=1|unsupportedTypedDeny=true|addConditionPreserved=true|resolvedTypes=true|mappedConditions=true|typesAlternatives=true"
+      ]
+    },
+    {
+      "id": "randomSpawn.types-alternatives",
+      "status": "passed",
+      "observations": [
+        "[13:02:36] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_TYPES|passed=true|alternatives=7:9|validEvents=16/16"
+      ]
+    },
+    {
+      "id": "randomSpawn.add-cluster",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD|passed=true|generator=CLUSTER|position=LAND|spawned=1|before=1|after=2|playerMode=SURVIVAL"
+      ]
+    },
+    {
+      "id": "randomSpawn.add-location-conditions",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD_CONDITIONS|passed=true|predicates=world,time,weather|day-spawned=0|rainy-night-spawned=0|clear-night-spawned=1|wrong-world-spawned=0|before=2|after=3"
+      ]
+    },
+    {
+      "id": "randomSpawn.add-world-border",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD_BORDER|passed=true|spawned=0|before=6|after=6"
+      ]
+    },
+    {
+      "id": "randomSpawn.add-player-conditions",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD_PLAYER|id=playercountadd|passed=true|condition=players-in-radius >0 64 true|expected=1|spawned=1|before=3|after=4|evaluated=1",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD_PLAYER|id=playercountrejectedadd|passed=true|condition=players-in-radius >0 1 true|expected=0|spawned=0|before=4|after=4|evaluated=1",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD_PLAYER|id=playerwithinadd|passed=true|condition=player-within 64|expected=1|spawned=1|before=4|after=5|evaluated=1",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD_PLAYER|id=playerdistanceconditionaladd|passed=true|condition=player-within 1|expected=0|spawned=0|before=5|after=5|evaluated=1",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD_PLAYER|id=playernotwithinadd|passed=true|condition=player-not-within 1|expected=1|spawned=1|before=5|after=6|evaluated=1",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_ADD_PLAYER|id=playernotwithinrejectedadd|passed=true|condition=player-not-within 64|expected=0|spawned=0|before=6|after=6|evaluated=1"
+      ]
+    },
+    {
+      "id": "randomSpawn.player-radius-semantics",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_PLAYER_MODE|mode=SURVIVAL|passed=true|count-default,count-include-spectator,within,not-within,count-zero,count-one=true,true,true,false,false,true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_PLAYER_MODE|mode=ADVENTURE|passed=true|count-default,count-include-spectator,within,not-within,count-zero,count-one=true,true,true,false,false,true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_PLAYER_MODE|mode=CREATIVE|passed=true|count-default,count-include-spectator,within,not-within,count-zero,count-one=false,false,false,false,true,false",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_PLAYER_MODE|mode=SPECTATOR|passed=true|count-default,count-include-spectator,within,not-within,count-zero,count-one=false,false,false,false,true,false",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_PLAYER_SPHERE|passed=true|radius=1|offset=0.9,0,0.9",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_PLAYER_SEMANTICS|passed=true|mode-restored=true"
+      ]
+    },
+    {
+      "id": "randomSpawn.player-syntax-native-comparison",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playersInRadius|runtime=players-in-radius 0 32 true|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playersInRadius{r=4}|runtime=players-in-radius 0 4 true|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playersInRadius 1|runtime=players-in-radius 1 32 true|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playersInRadius >1|runtime=players-in-radius >1 32 true|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playersInRadius{r=4} <2|runtime=players-in-radius <2 4 true|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playersInRadius{r=4} >0|runtime=players-in-radius >0 4 true|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playersInRadius{r=4;a=1;is=false}|runtime=players-in-radius 1 4 false|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playerWithin|runtime=player-within 0|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playerNotWithin{}|runtime=player-not-within 0|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playerWithin{} 4|runtime=player-within 4|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_CASE|source=playerNotWithin 4|runtime=player-not-within 4|comparisons=12|mismatches=0",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_NATIVE|passed=true|cases=11|comparisons=132|mismatches=0|mode-restored=true"
+      ]
+    },
+    {
+      "id": "randomSpawn.player-syntax-extension-boundary",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_EXTENSION|source=playersInRadius >=2|nativeRejected=true|importedBound=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] PLAYER_SYNTAX_EXTENSION|source=playersInRadius{r=4} <=1|nativeRejected=true|importedBound=true"
+      ]
+    },
+    {
+      "id": "randomSpawn.replace",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=replace|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=1"
+      ]
+    },
+    {
+      "id": "randomSpawn.condition-control",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=condition-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.reason-control",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=reason-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.deny",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=deny|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.deny-condition-control",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=deny-condition-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.cooldown-immediate",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=cooldown-immediate|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.cooldown-expired",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=cooldown-expired|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=1"
+      ]
+    },
+    {
+      "id": "randomSpawn.natural-engine",
+      "status": "passed",
+      "observations": [
+        "[13:02:39] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_NATURAL_WINDOW|enabled=true|playerReady=true|padDistance=40|doMobSpawning=true|spawnMonsters=true|blockLight=0",
+        "[13:02:44] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_NATURAL_CASE|passed=true|reason=NATURAL|observed=15|cancelled=15|playerReady=true|blockLight=0"
+      ]
+    },
+    {
+      "id": "mobRadius.native-audit",
+      "status": "passed",
+      "observations": [
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius|mode=location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius|mode=location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius|mode=target-location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius|mode=target-location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5}|mode=location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5}|mode=location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5}|mode=target-location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5}|mode=target-location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;a=0}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;a=0}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;a=0}|mode=location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;a=0}|mode=location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;a=0}|mode=target-location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;a=0}|mode=target-location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1}|mode=caster|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1}|mode=caster|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=2}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=2}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=2}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=2}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=2}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=2}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=3}|mode=caster|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=3}|mode=caster|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=3}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=3}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=3}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=3}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ARMOR_STAND;a=1}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ARMOR_STAND;a=1}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ARMOR_STAND;a=1}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ARMOR_STAND;a=1}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ARMOR_STAND;a=1}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ARMOR_STAND;a=1}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=>1.5}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=>1.5}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=>1.5}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=>1.5}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=>1.5}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=>1.5}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=<2.5}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=<2.5}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=<2.5}|mode=location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=<2.5}|mode=location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=<2.5}|mode=target-location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=<2.5}|mode=target-location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1to2}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1to2}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1to2}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1to2}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1to2}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE;a=1to2}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE} 2|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE} 2|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE} 2|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE} 2|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE} 2|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE} 2|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE} >1|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE} >1|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE} >1|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE} >1|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE} >1|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE} >1|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius 2|mode=caster|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius 2|mode=caster|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius 2|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius 2|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius 2|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius 2|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE}|mode=location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE}|mode=location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE}|mode=target-location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE}|mode=target-location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE;a=2}|mode=caster|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE;a=2}|mode=caster|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE;a=2}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE;a=2}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE;a=2}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{t=ZOMBIE;a=2}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=1;t=ZOMBIE;a=1}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=1;t=ZOMBIE;a=1}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=1;t=ZOMBIE;a=1}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=1;t=ZOMBIE;a=1}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=1;t=ZOMBIE;a=1}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=1;t=ZOMBIE;a=1}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=1}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=1}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=1}|mode=location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=1}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=1}|mode=target-location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=1}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=0}|mode=caster|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=0}|mode=caster|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=0}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=0}|mode=location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=0}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=HelsteraRadiusAuditMob;a=0}|mode=target-location|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=3}|mode=caster|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=3}|mode=caster|offset=40.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=3}|mode=location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=3}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=3}|mode=target-location|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=3}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=1}|mode=caster|offset=0.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=1}|mode=caster|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=1}|mode=location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=1}|mode=location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=1}|mode=target-location|offset=0.0|mapped=true|bound=true|native=true|imported=true|direct=true|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT|source=mobsInRadius{r=5;t=ZOMBIE,HelsteraRadiusAuditMob;a=1}|mode=target-location|offset=40.0|mapped=true|bound=true|native=false|imported=false|direct=false|matched=true",
+        "[13:02:38] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] MOB_RADIUS_AUDIT_SUMMARY|observations=120|mismatches=0|cleanup=true"
+      ]
+    }
+  ]
+}

@@ -421,14 +421,18 @@ try {
         $originalSpawners = [System.IO.File]::ReadAllText($spawnerPath)
         $headers = @{ Authorization = 'Bearer paper-web-probe' }
         $endpoint = 'http://127.0.0.1:18765/api/spawners/reload'
+        $loopbackOptions = @{}
+        if ((Get-Command Invoke-RestMethod).Parameters.ContainsKey('NoProxy')) {
+            $loopbackOptions.NoProxy = $true
+        }
         try {
             [System.IO.File]::WriteAllText($spawnerPath, 'spawners: [broken')
-            $invalid = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -Body '{}' -ContentType 'application/json'
+            $invalid = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -Body '{}' -ContentType 'application/json' @loopbackOptions
             if ($invalid.ok -ne $false) { throw 'Web reload accepted invalid spawner YAML' }
         } finally {
             [System.IO.File]::WriteAllText($spawnerPath, $originalSpawners)
         }
-        $valid = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -Body '{}' -ContentType 'application/json'
+        $valid = Invoke-RestMethod -Method Post -Uri $endpoint -Headers $headers -Body '{}' -ContentType 'application/json' @loopbackOptions
         if ($valid.ok -ne $true -or @($valid.spawners).Count -eq 0) {
             throw 'Web reload did not restore valid spawners'
         }

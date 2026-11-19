@@ -26,6 +26,84 @@ class NumericMechanicContractTest {
     @TempDir Path root;
 
     @Test
+    void importedTimedFormulaRefreshesRecipientsVariablesAndCancellation() throws Exception {
+        Path source = Files.createDirectories(root.resolve("Skills")).resolve("timing.yml");
+        Files.writeString(source, """
+                timed:
+                  Skills: ['heal{a=(<target.hp>/2+<skill.var.offset>);delay=4;repeat=2;repeatinterval=4} @Targets']
+                """);
+        var entries = new MythicMobsImporter().convert(source, root);
+        assertTrue(entries.stream().noneMatch(e -> "WARN".equals(e.get("severity"))));
+        var plan = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file"))).findFirst().orElseThrow();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+        var service = new SkillService(new BehaviorRegistryImpl(), null);
+        service.loadSkills(yaml.getConfigurationSection("skills"));
+        assertTrue(service.warnings().isEmpty());
+        var caster = mock(LivingEntity.class);
+        var first = mock(LivingEntity.class);
+        var second = mock(LivingEntity.class);
+        var instance = mock(ModelInstance.class);
+        var origin = new Location(mock(World.class), 0, 64, 0);
+        when(instance.isValid()).thenReturn(true);
+        when(instance.baseEntity()).thenReturn(Optional.of(caster));
+        when(instance.location()).thenReturn(origin);
+        for (var entity : List.of(first, second)) {
+            when(entity.isValid()).thenReturn(true);
+            when(entity.getMaxHealth()).thenReturn(20.0);
+            when(entity.getWorld()).thenReturn(origin.getWorld());
+            when(entity.getLocation()).thenReturn(origin.clone().add(2, 0, 0));
+            when(entity.getHealth()).thenReturn(2.0);
+        }
+        var tree = new SkillTreeContext(first, List.of(first, second), origin);
+        tree.setVariable("offset", 0);
+        var context = BehaviorContext.continueExecution(instance, first, 0.1, 2, 0,
+                "test", null, first, List.of(first, second), origin, tree);
+        var pending = new java.util.ArrayDeque<Runnable>();
+        var delays = new java.util.ArrayList<Long>();
+        dev.helstera.ai.skill.SkillCatalog.taskScheduler((task, delay) -> {
+            pending.add(task);
+            delays.add(delay);
+            return true;
+        });
+        try {
+            assertTrue(service.castSkill("timed", context));
+            verify(first, never()).setHealth(anyDouble());
+            verify(second, never()).setHealth(anyDouble());
+            when(first.getHealth()).thenReturn(4.0);
+            when(second.getHealth()).thenReturn(6.0);
+            pending.remove().run();
+            verify(first).setHealth(6);
+            verify(second).setHealth(9);
+            when(first.getHealth()).thenReturn(8.0);
+            when(second.getHealth()).thenReturn(10.0);
+            pending.remove().run();
+            verify(first).setHealth(12);
+            verify(second).setHealth(15);
+            clearInvocations(first, second);
+            when(first.isValid()).thenReturn(false);
+            when(second.getHealth()).thenReturn(12.0);
+            tree.setVariable("offset", 1);
+            pending.remove().run();
+            verify(first, never()).setHealth(anyDouble());
+            verify(second).setHealth(19);
+            assertTrue(pending.isEmpty());
+            assertEquals(List.of(4L, 4L, 4L), delays);
+            assertEquals(List.of(first, second), context.targets());
+            assertSame(first, context.targetEntity().orElseThrow());
+            assertEquals(List.of(second), tree.targets());
+            assertTrue(service.castSkill("timed", context));
+            service.forget(instance.instanceId());
+            clearInvocations(first, second);
+            pending.remove().run();
+            assertTrue(pending.isEmpty());
+            verify(second, never()).setHealth(anyDouble());
+            verify(caster, never()).setHealth(anyDouble());
+        } finally {
+            dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
+        }
+    }
+
+    @Test
     void importedHealthPlaceholdersKeepSmallValuesAndOfficialUnits() throws Exception {
         Path source = Files.createDirectories(root.resolve("Skills")).resolve("precision.yml");
         Files.writeString(source, """
@@ -121,6 +199,62 @@ class NumericMechanicContractTest {
         verify(target).setHealth(6.255);
         verify(second).setHealth(10.5);
         assertEquals(List.of(target, second), tree.targets());
+    }
+
+    @Test
+    void importedExpressionsPreserveWhitespaceRoundingAndRecipientIsolation() throws Exception {
+        Path source = Files.createDirectories(root.resolve("Skills")).resolve("expressions.yml");
+        Files.writeString(source, """
+                heal_math:
+                  Skills: ['heal{a=max(1, <target.hp{r=0}> / 2)} @Targets']
+                compare_math:
+                  Skills: ['setfire{(<target.hp> >= 4) * 20} @Targets']
+                fraction_math:
+                  Skills: ['healpercent{m=(<target.hp> / 20)} @Targets']
+                potion_math:
+                  Skills: ['potion{t=HASTE;d=(20 + <target.hp>);l=(<target.hp> / 2)} @Targets']
+                invalid_result:
+                  Skills: ['knockback{power=(2+3);y=(1/0)} @Targets']
+                invalid_source:
+                  Skills: ['heal{a=max(1)} @Target', 'potion{d=(1+)} @Target']
+                """);
+        var entries = new MythicMobsImporter().convert(source, root);
+        var plan = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file"))).findFirst().orElseThrow();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
+        assertEquals(List.of("heal{a=max(1)} @Target", "potion{d=(1+)} @Target"),
+                yaml.getStringList("skills.invalid_source.unsupported"));
+        assertEquals(2, entries.stream().filter(e -> "WARN".equals(e.get("severity"))).count());
+        var service = new SkillService(new BehaviorRegistryImpl(), null);
+        service.loadSkills(yaml.getConfigurationSection("skills"));
+        assertTrue(service.warnings().isEmpty(), service.warnings().toString());
+        var world = mock(World.class);
+        var target = mock(LivingEntity.class);
+        var other = mock(LivingEntity.class);
+        var origin = new Location(world, 0, 64, 0);
+        for (var entity : List.of(target, other)) {
+            when(entity.isValid()).thenReturn(true);
+            when(entity.getWorld()).thenReturn(world);
+            when(entity.getLocation()).thenReturn(origin);
+            when(entity.getMaxHealth()).thenReturn(20.0);
+        }
+        when(target.getHealth()).thenReturn(3.125);
+        when(other.getHealth()).thenReturn(8.0);
+        var tree = new SkillTreeContext(target, List.of(target, other), origin);
+        var context = BehaviorContext.continueExecution(null, target, 1, -1, 0, "expressions", null,
+                target, List.of(target, other), origin, tree);
+        assertTrue(service.castSkill("heal_math", context));
+        verify(target).setHealth(4.625);
+        verify(other).setHealth(12);
+        assertTrue(service.castSkill("compare_math", context));
+        verify(target).setFireTicks(0);
+        verify(other).setFireTicks(20);
+        assertTrue(service.castSkill("fraction_math", context));
+        verify(target).setHealth(6.25);
+        verify(other).setHealth(16);
+        assertTrue(service.castSkill("invalid_result", context));
+        verify(target, never()).setVelocity(any());
+        verify(other, never()).setVelocity(any());
+        assertEquals(List.of(target, other), tree.targets());
     }
 
     @Test

@@ -54,6 +54,7 @@ public final class PotionMechanicProbe {
             var caster = entities.get(0);
             var target = entities.get(1);
             var control = entities.get(2);
+            caster.setTarget(target);
             require(checks, "active-entities", entities.stream().allMatch(Zombie::isValid));
             instance = instances.bind("example/emberling", caster, SpawnOptions.defaults().persistent(false));
             root = Files.createTempDirectory("helstera-potion-");
@@ -76,6 +77,10 @@ public final class PotionMechanicProbe {
                         Skills: ['potion{t=SPEED;d=30;l=<target.absorption>;force=true} @Targets']
                       recipient_type:
                         Skills: ['potion{t=<target.name>;d=35;l=1;force=true} @Targets']
+                      expression:
+                        Skills: ['potion{t=HASTE;d=(20 + <target.hp{r=0}>);l=max(1, <target.hp>/2);force=true} @Targets']
+                      expression_invalid:
+                        Skills: ['potion{t=HASTE;d=(1/0);l=1;force=true} @Targets']
                       invalid:
                         Skills:
                           - 'potion{type=UNKNOWN} @Target'
@@ -151,6 +156,12 @@ public final class PotionMechanicProbe {
             control.getAttribute(Attribute.GENERIC_MAX_HEALTH).setBaseValue(30);
             target.setHealth(2);
             control.setHealth(4);
+            require(checks, "expression-recipient-duration-level", skills.castSkill("expression", context)
+                    && effect(target, PotionEffectType.HASTE, 22, 1, false, true, true)
+                    && effect(control, PotionEffectType.HASTE, 24, 2, false, true, true));
+            require(checks, "expression-invalid-preserves-existing", skills.castSkill("expression_invalid", context)
+                    && effect(target, PotionEffectType.HASTE, 22, 1, false, true, true)
+                    && effect(control, PotionEffectType.HASTE, 24, 2, false, true, true));
             require(checks, "recipient-duration-level", skills.castSkill("recipients", context)
                     && effect(target, PotionEffectType.HASTE, 20, 2, false, true, true)
                     && effect(control, PotionEffectType.HASTE, 30, 4, false, true, true));
@@ -239,6 +250,11 @@ public final class PotionMechanicProbe {
         StringBuilder observation = new StringBuilder("[自检] potion-mechanic");
         checks.forEach((name, value) -> observation.append(' ').append(name).append('=').append(value));
         plugin.getLogger().info(observation + error + " passed=" + checks.values().stream().allMatch(Boolean.TRUE::equals));
+        TimedRecipientProbe.run(plugin, instances, true);
+        PotionLifecycleProbe.run(plugin, instances, false);
+        if (plugin.getConfig().getBoolean("debug.self-test-potion-lifecycle-native", false)) {
+            PotionLifecycleProbe.run(plugin, instances, true);
+        }
     }
 
     private static void require(LinkedHashMap<String, Boolean> checks, String name, boolean passed) {

@@ -45,9 +45,11 @@ public record PlaceholderSyntax(String key, Integer rounding) {
         catch (IllegalArgumentException e) { return false; }
     }
 
-    /** An equals sign inside a positional placeholder belongs to its inline configuration. */
+    /** Only a leading argument key owns '=', not inline placeholder options or comparisons. */
     public static int argumentEquals(String text) {
-        return text.trim().startsWith("<") ? -1 : text.indexOf('=');
+        int equals = text.indexOf('=');
+        if (equals <= 0) return equals;
+        return text.substring(0, equals).trim().matches("[\\p{L}_][\\p{L}\\p{N}_.:-]*") ? equals : -1;
     }
 
     private static IllegalArgumentException invalid() {

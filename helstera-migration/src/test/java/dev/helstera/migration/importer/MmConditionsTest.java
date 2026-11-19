@@ -437,9 +437,9 @@ class MmConditionsTest {
     @DisplayName("范围、随机和战斗条件映射到已有运行时 evaluator")
     void runtimeBackedUtilityConditionsMap() {
         assertEquals("in-combat", t("?inCombat"));
-        assertEquals("players-in-radius >0 10 true", t("?playersInRadius{r=10}"));
+        assertEquals("players-in-radius 0 10 true", t("?playersInRadius{r=10}"));
         assertEquals("entities-in-radius 2 12", t("?entitiesInRadius{count=2;radius=12}"));
-        assertEquals("mobs-in-radius 1 8", t("?mobsInRadius{radius=8}"));
+        assertEquals("mobs-in-radius 0 8", t("?mobsInRadius{radius=8}"));
         assertEquals("players-online >5", t("?playersOnline{amount=>5}"));
         assertEquals("players-in-world >=2", t("?playersInWorld{a=>=2}"));
         assertEquals("mobs-in-world <=20", t("?mobsInWorld{amount=<=20}"));
@@ -476,18 +476,18 @@ class MmConditionsTest {
     }
 
     @Test
-    @DisplayName("PlayersInRadius and MobsInRadius preserve official defaults and supported filters")
+    @DisplayName("PlayersInRadius uses MM 5.7.2 conditionVar defaults and supports population filters")
     void officialRadiusPopulationConditionsMapDefaultsAndFilters() {
-        assertEquals("players-in-radius >0 32 true", t("?playersInRadius"));
+        assertEquals("players-in-radius 0 32 true", t("?playersInRadius"));
         assertEquals("players-in-radius >=2 12 false", t(
                 "?playerInRadius{amount=>=2;radius=12;is=false}"));
         assertEquals("players-in-radius 1to4 8 true", t("?pir{a=1to4;r=8}"));
-        assertEquals("mobs-in-radius 1 5", t("?mobsInRadius"));
+        assertEquals("mobs-in-radius 0 0", t("?mobsInRadius"));
         assertEquals("mobs-in-radius 2to4 9 ZOMBIE,SKELETON", t(
                 "?mobsInRadius{types=ZOMBIE,SKELETON;amount=2to4;r=9}"));
         assertEquals("mobs-in-radius 1to2 7 ZOMBIE", t(
                 "?mobsInRadius{t=ZOMBIE;a=1to2;radius=7}"));
-        assertEquals("mobs-in-radius 1 5 ForestGuardian", t(
+        assertEquals("mobs-in-radius 0 0 ForestGuardian", t(
                 "?mobsInRadius{t=ForestGuardian}"));
 
         for (String invalid : List.of(
@@ -500,6 +500,35 @@ class MmConditionsTest {
                 "?mobsInRadius{types=ZOMBIE,,SKELETON}",
                 "?mobsInRadius{types=ZOMBIE SKELETON}",
                 "?mobsInRadius{unknown=ZOMBIE}")) {
+            assertUntranslatedPreserved(invalid);
+        }
+    }
+
+    @Test
+    void playerRadiusConditionsUseLegacyPositionalValuesAndStrictArguments() {
+        assertEquals("player-within 0", t("?playerWithin"));
+        assertEquals("player-not-within 0", t("?playerNotWithin{}"));
+        assertEquals("player-within 4", t("?playerWithin 4"));
+        assertEquals("player-not-within 4", t("?playerNotWithin{} 4"));
+        assertEquals("player-within 4", t("?playersWithin{r=4}"));
+        assertEquals("players-in-radius 2 32 true", t("?playersInRadius 2"));
+        assertEquals("players-in-radius >=2 32 true", t("?pir >=2"));
+        assertEquals("players-in-radius <=2 8 true", t("?playerInRadius{r=8} <=2"));
+        assertEquals("players-in-radius 1to3 8 true", t("?playersInRadius{r=8} 1to3"));
+        assertEquals("!players-in-radius 0 32 true", t("?!playersInRadius"));
+        for (String invalid : List.of(
+                "?playerWithin{d=4;distance=4}", "?playerNotWithin{radius=1;r=2}",
+                "?playerWithin{d=4;unknown=1}", "?playerWithin{unknown=4}",
+                "?playerWithin{d=}", "?playerWithin{d=4;}", "?playerWithin{d=4} 4",
+                "?playerWithin{} 1;d=2", "?playerWithin{} NaN", "?playerWithin{} 4 extra",
+                "?playerWithin{}4", "?playersInRadius{r=4}>0",
+                "?playersInRadius{a=1;amount=2}", "?playersInRadius{r=1;d=2}",
+                "?playersInRadius{is=true;ignoreSpectator=false}", "?playersInRadius{a=1} 2",
+                "?playersInRadius{unknown=2}", "?playersInRadius >=NaN",
+                "?playersInRadius 1.5", "?playersInRadius 1.0", "?playersInRadius 1e1",
+                "?playersInRadius 2147483648", "?playersInRadius 1to2.5",
+                "?playersInRadius{r=8} <=2 extra", "?playersInRadius{r=8} 1;r=4",
+                "?health{amount=10} 2")) {
             assertUntranslatedPreserved(invalid);
         }
     }

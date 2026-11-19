@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-19T03:18:55.6216229Z",
+  "fixtureDirectory": "srv-paper-random-spawn-replace-20261119-r4",
+  "evidenceMode": "release",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "runnerSha256": "b6db2fd221092df926ee07c6b74d479136caf899556d4d1d4ca9d1917378e326",
+  "fixtureProbeSourceSha256": "67db0d550a04fad38ccc68cd76d2afb4ce0b1bb243489edeed97e739db0801ee",
+  "fixtureProbeJarSha256": "a75288de3c6ff0267ce8354a8f045890ed74a730a59a1a189caf0b1cfb36654d",
+  "randomSpawnConfigSha256": "f2616bd8c3184e4154dcaaf0691932ab38ca2fbccc84188c9a220c14e18814ce",
+  "replacementMobConfigSha256": "260bf1742f4219c38ab80e32170b6ce3f940fc4395ba58cc6fea8cdfa88efff2",
+  "conditionGuardMobConfigSha256": "2db3ca08a14fda7f7b3b7794b28815c9054d211f8c2dcbcd77a4d8e20d72cfda",
+  "pluginSha256": "dd10cc5615cb96eacb76c84f6166de64d89e9f731cb48311233919be7945e279",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "randomSpawn.replace",
+    "randomSpawn.condition-control",
+    "randomSpawn.reason-control",
+    "randomSpawn.cooldown-immediate",
+    "randomSpawn.cooldown-expired"
+  ],
+  "probes": [
+    {
+      "id": "randomSpawn.replace",
+      "status": "passed",
+      "observations": [
+        "[03:18:54] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=replace|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=1"
+      ]
+    },
+    {
+      "id": "randomSpawn.condition-control",
+      "status": "passed",
+      "observations": [
+        "[03:18:54] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=condition-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.reason-control",
+      "status": "passed",
+      "observations": [
+        "[03:18:54] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=reason-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.cooldown-immediate",
+      "status": "passed",
+      "observations": [
+        "[03:18:54] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=cooldown-immediate|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.cooldown-expired",
+      "status": "passed",
+      "observations": [
+        "[03:18:54] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=cooldown-expired|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=1"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,574 @@
 # Paper Startup Evidence
 
+Latest full-catalog fixture `srv-paper-mob-radius-strict-20261119-r2` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `1ea4f5db1d4dec787b349f8c7b7910719793e92e7f8f5e83947e136efcfd60db`. [Strict report](reports/paper-1.21.1-mob-radius-strict-20261119-r2.json) · [Redacted server log](reports/paper-1.21.1-mob-radius-strict-20261119-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-mob-radius-strict-20261119-r2.client-logs.zip) This artifact passes 2,303 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+
+Credential handling: archived logs are redacted, and current plugin startup and
+network diagnostics omit web tokens. A game administrator with
+`helstera.web` can obtain a link in-game with `/helstera web link` or revoke
+previous links with `/helstera web rotate`. New generated tokens contain 256
+bits of randomness. If an older log may have exposed a live token, rotate it
+after deploying the updated plugin.
+
+Current full-report SHA-256: `e69092d994e339b5fb8557b45ff29f4c330c92efef856ff93a2df71d78451e8a`;
+redacted server log SHA-256: `7482c01720fa8a931ca98bf8780dcf3d16dc766a347adfaeac133a19d44f9c2e`;
+redacted client logs SHA-256: `0e0f98c2b2029a2517bfe9c2378436cafa27245781eafb9d5910cc84fa3e746d`.
+The preceding `srv-paper-player-syntax-strict-20261119-r2` report remains archived in the release manifest.
+
+Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
+
+Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## MobsInRadius native comparison
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r34` passes
+18 probes on the production artifact. Its 20 mob-condition forms across caster,
+location and explicit-location contexts, each at offsets 0 and 40, produce
+**120 native/imported/direct-binding comparisons with zero differences**.
+The scene includes ordinary Zombies, a spherical-corner negative, an ArmorStand
+and an API-spawned custom MythicMob. Effective zero defaults, coupled legacy
+values, exact/fractional counts, type lists and cleanup are covered. The
+existing 132 player-condition comparisons and syntax-extension checks also pass.
+The native NATURAL window observes 7/7 cancellations at block light 0; type
+alternatives appear 7:9 over 16 valid events, without a distribution claim.
+
+The baseline exploratory `srv-paper-random-spawn-replace-20261119-r30` observed
+30 mismatches in 48 vanilla comparisons on the prior artifact. It is diagnostic
+evidence and is not in the release manifest. Earlier five-block/minimum-count
+and unconditional ArmorStand-exclusion claims are superseded. Full Conditions
+parity remains open; see the [compatibility contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r34.json), SHA-256
+  `49ad97a509565bc699aece8244df6ac38536edadc0e2d8ac10a5f5e42407a771`.
+- [Redacted log](reports/paper-1.21.1-random-spawn-replace-20261119-r34.log.gz), SHA-256
+  `83970504ff2368db60e845f1642e89a62204910c75723d541541149d8e9d939a`.
+- Plugin SHA-256: `1ea4f5db1d4dec787b349f8c7b7910719793e92e7f8f5e83947e136efcfd60db`.
+  The report records the pinned MM/Paper artifacts, runner, both probe sources,
+  fixture JAR and native mob configuration hashes.
+
+The preceding `srv-paper-random-spawn-replace-20261119-r32` remains archived;
+r34 repeats all comparisons on the final full-release artifact.
+
+## Player radius syntax and native comparison
+
+Focused fixture `srv-paper-random-spawn-replace-20261119-r27` passes 17 probes.
+It compares 11 imported condition forms with the real MythicMobs 5.7.2 condition
+constructors and evaluators across four game modes and offsets 0, 1, and 40:
+**132 comparisons, zero mismatches**. Omitted PlayersInRadius amounts are exact
+zero; positional values are amounts, including after a radius block.
+PlayerWithin/PlayerNotWithin omit to distance zero. Two separate checks confirm
+native 5.7.2 rejects inclusive count comparators while Helstera retains them as
+extensions. This verifies the selected condition forms, not native skill/event
+dispatch or the complete condition catalog.
+
+The runner keeps imported RandomSpawns source outside MM's live configuration,
+waits for the dark pad's light update before enabling sampling, and observes
+11/11 native NATURAL attempts cancelled by DENY. All previous ADD, replacement,
+cooldown, world-border and mode controls pass; YAML-list alternatives appear
+9:7 in 16 events from a configured 1:1 pool, without a distribution claim.
+An optional vanilla cache is validated against Paper's embedded SHA-256 before
+startup. Unit and contract tests cover duplicate/unknown arguments, malformed
+ranges, fractional/overflow counts, and exact defaults. Full Conditions and
+RandomSpawns parity remains open. See the
+[compatibility contract](../../docs/PLAYER_RADIUS_CONDITION_COMPATIBILITY.md).
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r27.json), SHA-256
+  `8b2e8dce2e15ee87041e9583ea19390546ddae3430160ad8733b9984fcf4bf0d`.
+- [Redacted server log](reports/paper-1.21.1-random-spawn-replace-20261119-r27.log.gz), SHA-256
+  `23933b35b772896ca8439a491067129834bd153bbdf65f2fab8ff6a65b0498c1`.
+- Plugin SHA-256: `24dc335541ad220e0b918488e039a3a9a8b0b0121de91d7d697fc5aa44006468`;
+  runner SHA-256: `312d277d1e2d61c6b2e2cc4280f2f1c3d4a3da7dd84cce03fbc2f8dffa330c72`;
+  probe source SHA-256: `dc331032d1f92c0cabf2f01c7d80f88d7fa0c7cea53998455ac9d7b9682d4d28`;
+  probe JAR SHA-256: `31ec19a9131a07ce6fc78f8321d4a800a7e2d09d2f65ea1d7513b035bcc79590`.
+- Pinned MythicMobs 5.7.2 SHA-256:
+  `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+The preceding `srv-paper-random-spawn-replace-20261119-r26` remains archived;
+r27 revalidates the final parser artifact, including the added missing-space
+rejection covered by unit tests.
+
+## MythicMobs 5.7.2 context-targeter comparison
+
+Focused exploratory fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
+compares the production importer/runtime against the same skills executed by
+MythicMobs 5.7.2 on Paper 1.21.1-133. All 23 named observations match: `@Trigger`
+excludes Creative/Spectator players even when mode flags opt in, respects
+`targetplayers=false`, and includes Survival/Adventure players; mob `@Target`
+selects the current Bukkit AI target, rejects a different inherited target, and
+rejects missing/non-Mob AI targets. A manual cast with no AI target rejects an
+event-bound recipient on both paths, including when that recipient is also the
+trigger. Cleanup passed. Confirmed-kill runtime retains its explicitly bound
+victim in unit tests; this focused fixture does not compare native `~onKill`
+dispatch. The full Context Targeters catalog remains `mapped-unverified`.
+
+- [Focused report](reports/paper-1.21.1-context-eligibility-exploratory-20261118-r8.json),
+  SHA-256 `d1cf68e484acb3f9afecf27996c3f99f39e6bbae50ffdbe9eae3fcfa4a2c4404`.
+- [Redacted server log](reports/paper-1.21.1-context-eligibility-exploratory-20261118-r8.log.gz),
+  SHA-256 `cd45f1181610ba8e384b21cbcbce045393a00670da40a7ea64eaa77b9a7a3580`.
+- Plugin SHA-256: `fff24386ae840e40311c485482c2a88bfbfb4a9acfc4fcc2f7cb5ca14b6b271f`;
+  runner SHA-256: `8d2323e154c15b58a804f687a12a11972bdd1b2c363b3418a0cf996016db8ca0`;
+  probe source SHA-256: `05833dca7c56b829dad82a576b4021a47cb7def6b7973b21af652323e9925fe7`.
+- Paper SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`;
+  MythicMobs 5.7.2 SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+Reproduce after `./mvnw -q verify` and `npm ci --prefix tools/paper-integration`
+with `pwsh -NoProfile -File tools/paper-integration/run-context-targeter-fixture.ps1
+-EvidenceRevision rN` (choose a fresh revision).
+
+## Numeric-expression refresh on the rebuilt artifact
+
+Paper 1.21.1-133 revalidation on 2026-11-18 uses the same rebuilt plugin
+SHA-256 `aac2ffcbd1dcf5711998311dd82aed0ed70e73869d32126b98de339ce233b72d` and
+pinned Paper SHA-256
+`39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`:
+
+- Numeric fixture `srv-paper-numeric-mechanic-exploratory-20261118-r1` passes
+  38 runtime and 19 timing assertions. Coverage includes rounded recipient
+  formulas, comparison/vector paths, no partial mutation, refreshed recipient
+  values and variables during delay/repeat, removal, cancellation, and cleanup.
+  [Report](reports/paper-1.21.1-numeric-mechanic-exploratory-20261118-r1.json),
+  SHA-256 `2ebaa042618054694cee176ad4deb1013ad722f51836155c5d5d2fc2c7c9ad77`;
+  [redacted log](reports/paper-1.21.1-numeric-mechanic-exploratory-20261118-r1.log.gz),
+  SHA-256 `d284d782f5e70bd13eff6c29afbe392010051f7775b5d6d65aa6fa4ffb4245fe`.
+- Potion fixture `srv-paper-potion-mechanic-exploratory-20261118-r1` passes
+  28 runtime, 22 timing, and 47 lifecycle assertions. Per-recipient duration/
+  level expressions execute independently; invalid formulas preserve active
+  effects. [Report](reports/paper-1.21.1-potion-mechanic-exploratory-20261118-r1.json),
+  SHA-256 `e4210a35214da953b9e667ca63ad884f7e598e793a4bb9afc6ac01fcae773320`;
+  [redacted log](reports/paper-1.21.1-potion-mechanic-exploratory-20261118-r1.log.gz),
+  SHA-256 `028f4bc5e7fed996e19b827a61fa90965393366ee745ebe784b84642f7aff4f9`.
+- Percent-health fixture `srv-paper-percent-health-exploratory-20261118-r1`
+  passes 107 assertions with MythicMobs 5.7.2. Nineteen deterministic formulas
+  match the pinned native exp4j engine; this does not bypass MM Free's Premium
+  gate for dynamic numeric skill execution.
+  [Report](reports/paper-1.21.1-percent-health-exploratory-20261118-r1.json),
+  SHA-256 `1a454c476648d35113add25828f0180c5937482f182f08fa814361e8e2159ace`;
+  [redacted log](reports/paper-1.21.1-percent-health-exploratory-20261118-r1.log.gz),
+  SHA-256 `81fee863972bc0798c6e87dd13ac4efaa43943c8a75c3c449a63d501691191cd`.
+
+All three reports are focused exploratory evidence for the build identified in
+this section. The complete Mechanics/Skills catalogs, Premium execution, other
+Paper/MM versions, and remaining numeric mechanic fields remain open.
+
+## Mythic Aura onStartSkill
+
+Focused fixture `srv-paper-mythic-pack-strict-20261118-r21` passed on Paper
+1.21.1-133 with MythicMobs 5.7.2. It imports a Mythic Aura mechanic using the
+`onStart` alias into the production action path, then verifies the named skill
+dispatches once on first application, does not redispatch when a same-caster
+stack merges, and retains the affected entity in target context. The fixture
+also retains the existing Mythic mob-type/pack and KeyId probes; all three
+focused probes passed. This is not full Skills/Mechanics catalog coverage and
+does not establish `onTickSkill`, `onEndSkill`, or Aura components.
+
+- [Focused report](reports/paper-1.21.1-mythic-pack-condition-strict-20261118-r21.json),
+  SHA-256 `1beb454582133881520712f74bb7c2cf33eb472d72867c11ca37f34a239ded6c`.
+- [Redacted server log](reports/paper-1.21.1-mythic-pack-condition-strict-20261118-r21.log.gz),
+  SHA-256 `e983329fb505d97e809228a0497b8367e1641368a034eb16f54902f971983907`.
+- Plugin SHA-256: `7aba663e2af747a231b02b8b17e4e66a01f2f9cb52bea9a6f0640edb0e6cf500`;
+  probe source SHA-256: `d0873c14ae525f76e387cbb7b3191de6d342457740f62bb856106d3e4eb0dbc9`;
+  runner SHA-256: `cf1298aa34375e43430ed075aef1081937e5ebd298cd3d74e71eccee022a9c88`.
+- Paper SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`;
+  MythicMobs 5.7.2 SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+Reproduce with `pwsh -NoProfile -File
+tools/paper-integration/run-mythic-pack-condition-fixture.ps1 -EvidenceRevision
+rN` (choose a fresh revision).
+
+## Mythic Aura onTickSkill
+
+Focused fixture `srv-paper-mythic-pack-strict-20261118-r23` passed on Paper
+1.21.1-133 with MythicMobs 5.7.2. The imported Aura `onTick` alias with
+`interval=3` dispatches at the configured cadence, a same-caster stack merge
+does not reset the active schedule, and the skill receives the affected entity
+without the original trigger or cancellable event. The fixture also reruns the
+existing Mythic mob-type/pack, KeyId, and onStart probes; all four focused
+probes passed. Previous focused run r22 exercised the same slice before a
+small re-entrant-removal guard was added to the callback dispatcher. This does
+not cover the complete Mechanics/Skills catalogs or
+Aura end callbacks, components, attachments, charges, and cancellation.
+
+- [Focused report](reports/paper-1.21.1-mythic-pack-condition-strict-20261118-r23.json),
+  SHA-256 `f0e79a7eef26605da56e3af9bef3e034f5e2fe2cc0ae2981856e4310b4b4f5fb`.
+- [Redacted server log](reports/paper-1.21.1-mythic-pack-condition-strict-20261118-r23.log.gz),
+  SHA-256 `f2f46892145420ed79e72f8ffa1bbb833a6400ce3b32c3915ac987842ccc6284`.
+- Plugin SHA-256: `a7d470d974145411a0fec38806de9d306e35a558e0891b46458704328fe82026`;
+  probe source SHA-256: `86cf31bd94bf045865ae5d2ce8866cf236fbb2a6df1f7115474691dc98dca9e3`;
+  runner SHA-256: `d1647a6bc6ba8839766872973419fc3d7e7160342e1ffc812072d0706efa4491`.
+- Paper SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`;
+  MythicMobs 5.7.2 SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+Reproduce with `pwsh -NoProfile -File
+tools/paper-integration/run-mythic-pack-condition-fixture.ps1 -EvidenceRevision
+rN` (choose a fresh revision).
+
+## Mythic Aura onEndSkill
+
+Focused fixture `srv-paper-mythic-pack-strict-20261119-r1` passed on Paper
+1.21.1-133 with MythicMobs 5.7.2. Imported `onEndSkill`/`onEnd` callbacks run
+once on explicit removal when enabled, honor `DoEndSkillOnTerminate=false`
+(`desot`), run on natural expiry and overwrite replacement, and receive the
+affected entity without the originating event or trigger. The fixture also
+reruns the existing Mythic mob-type/pack, KeyId, Aura start and Aura tick
+probes. This is a narrow Aura lifecycle slice, not full Skills/Mechanics
+catalog coverage; Aura components, attachments, charges, and event cancellation
+remain open.
+
+- [Focused report](reports/paper-1.21.1-mythic-pack-condition-strict-20261119-r1.json),
+  SHA-256 `5866bb3e7ece47a5402b36124139678f0130317c17e8bcac9435566db95e7c98`.
+- [Redacted server log](reports/paper-1.21.1-mythic-pack-condition-strict-20261119-r1.log.gz),
+  SHA-256 `a3bf394c6d26576f2e2908a17584fc65a6e56563d3267d4d748cb2a9f80ac5e0`.
+- Plugin SHA-256: `f672cd1bf32c889830489c3a6a3fb0fdecd76980eda887415956260901e19144`;
+  probe source SHA-256: `9610df138a43bdb6da95889b99311a3e7827e1373553944d7059b78ee5d7405b`;
+  runner SHA-256: `28d212af46dd5c4c1729e37103712e2a4775950384b017dd7ec3d126a3e7cbb8`.
+- Paper SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`;
+  MythicMobs 5.7.2 SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+Reproduce with `pwsh -NoProfile -File
+tools/paper-integration/run-mythic-pack-condition-fixture.ps1 -EvidenceRevision
+rN` (choose a fresh revision).
+
+## Mythic KeyId skill-tree condition
+
+Focused fixture `srv-paper-mythic-pack-strict-20261118-r18` passed on Paper
+1.21.1-133 with MythicMobs 5.7.2. The `mythicKeyIdCondition` probe runs the
+production importer on a Mythic `setvariable` skill, executes the generated
+Helstera action, and verifies the shared skill-tree key variable. It then checks
+direct runtime and imported `MythicKeyId`, `keyid`, and `ariKeyId` match/mismatch
+cases, the `minecraft:attack` default, absent metadata, malformed argument
+preservation/rejection, and unresolved placeholders. Both named probes passed
+and the compressed server log contains only redacted access tokens. This does
+not update the 471-probe full release report or promote the complete Conditions
+catalog.
+
+- [Focused report](reports/paper-1.21.1-mythic-pack-condition-strict-20261118-r18.json),
+  SHA-256 `1526e304ed7f8667d01c27f15eaa3dc2085c152158037bc08693b820db9af2d0`.
+- [Redacted server log](reports/paper-1.21.1-mythic-pack-condition-strict-20261118-r18.log.gz),
+  SHA-256 `f682765bf642ca509a3ac3562bb24b45e1c1299bd8511b83b25f8fb5b8a20436`.
+- Plugin SHA-256: `aac2ffcbd1dcf5711998311dd82aed0ed70e73869d32126b98de339ce233b72d`;
+  probe source SHA-256: `5b82fd13cb6a7ae028b703a11b6f40d51bcd5fbd0a1a7ac711acb52c1363b155`;
+  runner SHA-256: `05e0a0e038f7b67c8c912cdd8ff01c7dc4f31451f9a9ac5b9c4129ad06fa9c09`.
+- Paper SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`;
+  MythicMobs 5.7.2 SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+The public MythicMobs build reports Premium disabled. A Premium-enabled server,
+other Paper/MM versions, and full Conditions catalog coverage remain unverified.
+
+## Potion three-boot restart persistence
+
+Focused fixture `srv-paper-potion-restart-strict-20261118-r6` passes prepare,
+verify-clear and clean boots on Paper 1.21.1-133 with MythicMobs 5.7.2. It
+verifies native player and imported Cow effects, stable UUIDs, ticking saved
+durations, effect removal, no resurrection after the third boot, and two-client
+login/removal packet state. All six NBT/client contract tests pass. This is
+focused evidence and does not replace or update the 471-probe full-catalog
+strict release report below.
+
+- [Focused report](reports/paper-1.21.1-potion-restart-strict-20261118-r6.json),
+  SHA-256 `d2c2dd9d83662c76f60dc5f7e1ae7fd780a5633357e5d28fbf3fc8f44f781376`.
+- [Redacted server logs](reports/paper-1.21.1-potion-restart-strict-20261118-r6.log.gz),
+  SHA-256 `95c503e4e37719bd08120b6b5e174a59cefb60de23a1b51cfd75a18b0e6826cf`.
+- [Redacted two-client logs](reports/paper-1.21.1-potion-restart-strict-20261118-r6.client.log.gz),
+  SHA-256 `29fcaeec820d6a219c57c30e2f0702546c3834b850019752b184882c22397e0e`.
+- Plugin SHA-256: `1af0d7521e93e65757a516cfb005a24bea179e732b3ed8fe22070c9feadbc7fa`;
+  Paper SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`;
+  MythicMobs 5.7.2 SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+The report stores probe, client, runner and contract hashes. The NBT contract
+normalizes omitted Minecraft defaults (such as amplifier 0 and true optional
+flags) without accepting malformed values or missing active effects. Broader
+Potion/Mechanics parity and other Paper/MM versions remain open.
+
+The November 17 release JAR passes 2,261 Maven tests with zero failures/errors/skips and
+SpotBugs (`./mvnw -B -pl helstera-plugin -am verify`, finished
+2026-11-17T14:53:29Z). Its plugin SHA is shared by the strict and focused reports:
+
+- Plugin SHA-256: `f1d298440bdd9c5170fa5b88c242031b570bae02a63cd2839111b2c96854eb5e`.
+- [Strict report](reports/paper-1.21.1-potion-sync-strict-20261117-r3.json):
+  SHA-256 `e1ceae60cc658e77516cb7f8961f989a69107f35c0bb5f53aaf515ad7afdc3e3`.
+- [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261117-r3.log.gz):
+  SHA-256 `9d7ac0692fe73c6d611b9c12705b626a2298d76001ff93d313aff846ce9b822a`.
+- [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261117-r3-client-logs.tar.gz):
+  SHA-256 `8288ea1b08bf06254c04164b59338eccbffaaefc59e118ac827ce4e593ab8eff`.
+
+Focused `srv-paper-potion-sync-exploratory-20261117-r5` passes 118 named server
+assertions, 28 two-client checkpoints, 14 native/imported comparisons, and six
+reconnections. Identical packaged YAML applies Haste and Invisibility to a real
+survival player and Cow through native MM 5.7.2 and the production importer.
+Ordinary observer metadata, late tracking, exact remaining-duration login
+packets, forced replacement, hidden particles, explicit clearing, clean
+reconnects, and player mode/location restoration pass.
+
+All eight required duration traces are present. For both backends and both
+effects, the owner quits with 1170 ticks and rejoins with 1169; the clean
+reconnect observations are zero. The pinned Paper logout path ticks once after
+`PlayerQuitEvent` and before saving player data. Sixteen validator tests reject
+incomplete or incorrect observations; full event replay also passes on the
+archived server/client logs.
+
+- [Focused report](reports/paper-1.21.1-potion-sync-exploratory-20261117-r5.json):
+  SHA-256 `61234f382f4a6b81f5e2cae65ccb07cdcdee4eca7475732ba1421ea54e79b887`.
+- [Redacted focused server log](reports/paper-1.21.1-potion-sync-exploratory-20261117-r5.log.gz):
+  SHA-256 `988c27f733bee91734d50e6cb140f0ef417a83229e3e6a7b992f4173a9d98040`.
+- [Redacted protocol client log](reports/paper-1.21.1-potion-sync-exploratory-20261117-r5.client.log.gz):
+  SHA-256 `40565706b47adf5918b5034d542b4db8ea800a69c4fe5d8bb7f0eda1907e8e7a`.
+- [Shared packaged YAML](../../helstera-plugin/src/main/resources/probes/potion-sync-skills.yml):
+  SHA-256 `2e106858e34f044c9de95e19eb2f97940d707346349968013981ec6931809b38`.
+- MM 5.7.2 Modrinth `FTWvGuE5`:
+  SHA-256 `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+The focused report records client, synchronization-contract, evidence-validator,
+runner, Paper, and external-plugin hashes. These establish protocol and server
+state; graphical rendering, other effects, long disconnects, Premium execution,
+complete catalogs, and other versions remain unverified. The separate three-boot
+fixture above covers the narrower Potion restart-persistence case.
+See the [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md).
+All 33 broad `mapped-unverified` rows retain their status.
+
+Previous focused `srv-paper-potion-sync-exploratory-20261117-r4` and full-catalog
+`srv-paper-potion-sync-strict-20261117-r1` passed on plugin SHA-256
+`c019ff4a4621a57acc2f5962d913a7c8f708094b4bf8c417faa4682a67a37e8d`.
+They predate the added Invisibility duration traces and position-restoration
+checks; they do not verify the latest source. The older strict report and log
+hashes remain indexed in [release-evidence.json](release-evidence.json).
+Strict `srv-paper-potion-sync-strict-20261117-r2` timed out before server startup
+while downloading vanilla; it has no integration report. The passing r3 run
+uses the validated cache whose SHA-256 is
+`e3bc55693e93cda0188f2e60aea28113fc647c5e85a15fa3d1b347349231b4bb`,
+as declared by the pinned Paperclip download identity. Local diagnostic files
+are retained.
+
+Previous packet milestone:
+
+Previous full-catalog fixture `srv-paper-potion-packets-strict-20261117-r1` passed the full strict gate on Paper 1.21.1-133: 471 registered probes, 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and every previous runtime, timing, and client workflow. This fixture does not load MythicMobs.
+
+The exact release JAR passes 2,261 Maven tests with zero failures/errors/skips
+and SpotBugs (`./mvnw -B -pl helstera-plugin -am verify`, finished
+2026-11-17T13:45:51Z). The same JAR passes the focused native/imported MM 5.7.2
+Potion packet comparison below. Native packet evidence is exploratory and is
+separate from the strict release catalog.
+
+- Plugin SHA-256: `755ee93f0eee84b531326e98d4d0bad8e78dfd4864a5549d83dbf9318fe910a9`.
+- [Strict report](reports/paper-1.21.1-potion-packets-strict-20261117-r1.json):
+  SHA-256 `19bf3a1268a48eb9fc8158789dec8b66b78ae8b378ce5ae8861b40c85fc3234b`.
+- [Redacted server log](reports/paper-1.21.1-potion-packets-strict-20261117-r1.log.gz):
+  SHA-256 `523a9e9ef76641e40916e024a530a6f1270559d694f61c8c72c2aeed657ea875`.
+- [Redacted client logs](reports/paper-1.21.1-potion-packets-strict-20261117-r1-client-logs.tar.gz):
+  SHA-256 `cc51cf62d36d331ed015d2ca24649bd9acd322500e3040d1e80c54dde2dc1a6d`.
+
+Focused `srv-paper-potion-packets-exploratory-20261117-r2` passes 84 named server
+assertions and 12 native/imported client comparisons across 24 phases and 48
+actual effect/removal packets. It covers all eight ambient/particles/icon flag
+combinations, exact Haste duration/amplifier, explicit and natural removal,
+ordered forced replacement, cancelled addition producing no packet, caster
+isolation, and complete cleanup. The production importer and pinned MM execute
+the same packaged YAML against a real survival client.
+
+- [Focused report](reports/paper-1.21.1-potion-packets-exploratory-20261117-r2.json):
+  SHA-256 `e0591de3f225d0a04907b52f1563e4ad03d6436f253ab17221cab287e90f3bfc`.
+- [Redacted focused server log](reports/paper-1.21.1-potion-packets-exploratory-20261117-r2.log.gz):
+  SHA-256 `c6bbc098a9bd016bee5cdd73f793a6e33b2207f79cc1a6946fb75c4a60c1b614`.
+- [Redacted protocol client log](reports/paper-1.21.1-potion-packets-exploratory-20261117-r2.client.log.gz):
+  SHA-256 `a5a4940eeab46c6a352a4f6811e40ea99088e20a5cafee6723cdd55282c69d67`.
+- [Shared packaged YAML](../../helstera-plugin/src/main/resources/probes/potion-packet-skills.yml):
+  SHA-256 `b02b136e04d4c2369fac85d34bab5ffd46f358c267e975e7eeac8347f97c127e`.
+- MM 5.7.2 Modrinth `FTWvGuE5`:
+  SHA-256 `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+The report also records client, validator, and runner source hashes. Sixteen
+validator tests reject wrong/missing/reordered packets, incorrect fields and
+recipients, broken force ordering, packets after cancellation, incomplete phases,
+and aggregate success without observations. Runner guards reject an invalid
+vanilla cache before writing and refuse existing evidence revisions. Initial
+packet r1 timed out downloading vanilla before server startup; it is retained
+locally as diagnostics. The passing run uses a cache whose SHA-256 matches
+the pinned Paperclip download identity.
+
+See the [packet contract](../../docs/POTION_PACKET_COMPATIBILITY.md) for
+reproduction and exact flags. These packets establish protocol delivery.
+Graphical rendering, other effect types,
+Premium execution, other versions, and complete catalogs remain open. No broad
+Parity Matrix status changes.
+
+Previous lifecycle milestone:
+
+Previous full-catalog fixture `srv-paper-potion-lifecycle-strict-20261117-r3` passed the full strict gate on Paper 1.21.1-133: 471 registered probes, 452 passed, 19 expected rejections, zero failed or incomplete. It adds the required 47-assertion `potionLifecycle` probe to every previous runtime, timing, and client workflow. This fixture does not load MythicMobs.
+
+The exact release JAR passes 2,261 Maven tests with zero failures/errors/skips
+and SpotBugs (`./mvnw -B -pl helstera-plugin -am verify`, finished
+2026-11-17T13:04:18Z). Report contract tests reject false/missing lifecycle
+assertions, missing hidden-effect or cancellation checks, missing cleanup, and
+omitted probes. This lifecycle artifact remains archived; the current version
+matrix and latest release manifest entry identify the newer packet-probe JAR above.
+
+- Plugin SHA-256: `4c10a1d1f6fc314d21c49bad012296fbf5c4ce64bc13a8cda69248d64a7f6393`.
+- [Strict report](reports/paper-1.21.1-potion-lifecycle-strict-20261117-r3.json):
+  SHA-256 `31cfa600ac7e4a1d17e4516bb61fb59d54f503daac1deda092d51477dab6e194`.
+- [Redacted server log](reports/paper-1.21.1-potion-lifecycle-strict-20261117-r3.log.gz):
+  SHA-256 `2c03828600fcdbb05bf909ba4c8ce23ecacc22adac0d719bc2204f903613b6af`.
+- [Redacted client logs](reports/paper-1.21.1-potion-lifecycle-strict-20261117-r3-client-logs.tar.gz):
+  SHA-256 `a1f8cd6d18e43abe4294335db25f3f18a0894db3d7f2c9dfdac02c0cb5c8f740`.
+
+The same JAR passes focused `srv-paper-potion-mechanic-exploratory-20261117-r18`
+with 144 assertions: 28 runtime, 22 timing, 47 imported lifecycle, and the same
+47 lifecycle assertions executed by MM 5.7.2. The two recorded event traces match.
+
+- [Focused report](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r18.json):
+  SHA-256 `473ab3fd17470c2c775ad3e11a74d8c7cd67cf63be0cc22d01965e9cc62083cf`.
+- [Redacted focused log](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r18.log.gz):
+  SHA-256 `fc595fda9c8a254540fc2883a4b9a4774d023d611c2b98975a213e6d1a42470a`.
+- [Shared packaged YAML](../../helstera-plugin/src/main/resources/probes/potion-lifecycle-skills.yml):
+  SHA-256 `d93839db4a7889d09d1dfe99def1dd04cffd55e1f69656342434033c7f02d46d`.
+- MM 5.7.2 Modrinth `FTWvGuE5`:
+  SHA-256 `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
+
+The [lifecycle contract](../../docs/POTION_LIFECYCLE_COMPATIBILITY.md) covers
+expiry, hidden-effect restoration and elapsed duration, force clearing a hidden
+chain, cancelled additions/changes/expiry, instant HEAL/HARM on ordinary and
+undead entities, health-event cancellation, isolation, and cleanup. The probe
+pins chunks until cleanup and waits for `ENTITY_TICKING` before applying effects.
+Distance despawning and sunlight cannot remove its Zombie recipient.
+
+Initial focused r14/r15 diagnosed selector and chunk-readiness assumptions;
+r16/r17 passed on earlier probe JARs. Initial strict r1 also exposed distance
+despawning and random Zombie armor affecting the existing tagged-damage
+threshold; r2 exposed natural spawning consuming a cumulative player quota
+before its manual assertion. The final fixture clears probe armor and disables
+automatic generation only for the manual player-quota probe. Existing natural
+scheduler checks remain required. Failed runs are retained locally as diagnostics.
+
+The native fixture is exploratory. It does not prove Premium numeric execution,
+every effect/client interaction, other versions, or equivalence when forced
+removal is cancelled. The broad matrix statuses remain unchanged.
+
+Previous numeric/Potion timing milestone:
+
+Previous full-catalog fixture `srv-paper-numeric-potion-strict-20261117-r4` passed the full strict gate on Paper 1.21.1-133: 470 registered probes, 451 passed, 19 expected rejections, zero failed or incomplete. The catalog now requires `numericMechanicRuntime` (38 assertions) and `potionMechanicRuntime` (28), including imported formulas, per-recipient resolution, rounding, fractional healing, invalid-result no-ops, effect preservation, callback invalidation, and cleanup. The original 466 probes retain their full server/client workflows. This release fixture does not load MythicMobs.
+
+The exact production artifact passes 2,261 Maven tests with zero failures,
+errors, or skips, plus SpotBugs (`./mvnw -B -pl helstera-plugin -am verify`,
+finished 2026-11-17T11:32:23Z). It restores the execution-option duplicate
+diagnostic for strict mechanic parsing. The food-stat probe now checks the raw
+promoted float and explicitly rounded exhaustion values. Report contract tests
+reject failed/missing numeric or Potion assertions, missing cleanup, and omitted
+probes even if the report claims `passed=true`. The audit contract tests pass.
+
+- Plugin SHA-256: `04457bdeac3c7ba27674de96a0b45c77e39fcd344d8062b45aebbe060e54b056`.
+- [Strict report](reports/paper-1.21.1-numeric-potion-strict-20261117-r4.json):
+  SHA-256 `eb9b3c2f81a46c85861a24f88d6f53386749a8f06a9e53e3e4ecc4d046c271e2`.
+- [Redacted server log](reports/paper-1.21.1-numeric-potion-strict-20261117-r4.log.gz):
+  SHA-256 `293e765eb806f8080bb112855b0024035c7a559f79dfda6b16274f7270c02535`.
+- [Redacted client logs](reports/paper-1.21.1-numeric-potion-strict-20261117-r4-client-logs.tar.gz):
+  SHA-256 `230b128b2cd8753c03bdc36cf66262026235e02dc9707a3ae59273a40dad68cd`.
+
+The release manifest and version matrix identify this exact artifact/report.
+Both live timing probes are required: `numericMechanicTiming` has 19 assertions
+and `potionMechanicTiming` has 22. They use the production importer/binder and
+Bukkit scheduler for a four-tick delay and two four-tick repeats. The Potion
+event recorder observes applications at exactly start+4, +8, and +12 ticks,
+including requested duration and per-recipient level before vanilla ticks effects.
+Checks cover changed health, absorption, and shared variables; removed first
+recipients; invalid delayed/repeated inputs preserving effects; original context
+retention and refreshed active targets; bounded repeats; `forget` cancellation;
+entity/file cleanup; and release of temporary plugin chunk tickets. Holding
+those tickets prevents unloaded chunks from invalidating a server-only probe.
+Focused runners now wait for timing cleanup and compare every assertion with
+the release catalog before archiving success.
+
+The same artifact passes these focused Paper 1.21.1-133 fixtures without MM:
+
+| Fixture | Assertions | Report SHA-256 | Redacted log SHA-256 |
+| --- | --- | --- | --- |
+| `srv-paper-numeric-mechanic-exploratory-20261117-r9` | 38 runtime + 19 timing | `cd70a21f8dbb713c1674b069833afbe5de821aa2d4a2ecfa7822055b67a668ae` | `829b8a59b32c0c8ca6ffc4c11b1704ea3c289da52f08e58585b50ace8c360104` |
+| `srv-paper-potion-mechanic-exploratory-20261117-r13` | 28 runtime + 22 timing | `8cd0ad3db32fce0720880e7ddd66867240b9cae2ef68bc3cc315541cc8c5816f` | `cb26e89f57f34b8644418a0e08b978ebed492649fef0f8ae9f15b230ea3245af` |
+
+[Numeric report](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r9.json),
+[numeric log](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r9.log.gz),
+[Potion report](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r13.json),
+and [Potion log](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r13.log.gz)
+retain all observed fields. Initial diagnostic numeric r7 and Potion r11/r12
+failed because the fixture did not pin the relevant entity/area assumptions;
+they are retained locally and are not release evidence. Numeric r8 passed on
+the earlier probe JAR; r9 and Potion r13 identify the final JAR above. The prior
+strict r3 artifact and reports remain archived in the release manifest.
+
+The same artifact also passes all 107 assertions in focused MM 5.7.2 fixture
+`srv-paper-percent-health-exploratory-20261117-r14`, including 19 native
+math-engine comparisons. [Native report](reports/paper-1.21.1-percent-health-exploratory-20261117-r14.json)
+SHA-256: `18b5a175f9c06bca4be0e9908ae7bb374cc2c52e1e6e47114816e6c31628749b`;
+[redacted native log](reports/paper-1.21.1-percent-health-exploratory-20261117-r14.log.gz)
+SHA-256: `bcf53d4b609e42e13b37ff121c79065f5e4afc21c512bc15d6bcfb476d86ea25`.
+MM artifact and shared-source YAML hashes below remain unchanged. This focused
+comparison remains exploratory and does not verify Premium numeric execution.
+
+Run the [strict workflow](README.md) with an unused `PAPER_INTEGRATION_DIR`, all
+seven required workflows, and `-Strict`. The runner bypasses configured HTTP
+proxies for loopback Web reload calls on PowerShell versions exposing `-NoProxy`.
+Native fractional-health/placeholder and SetSpeed comparisons remain separate
+focused evidence; Premium dynamic numeric execution, other timing interactions,
+client effects, other versions, and broader catalogs remain open.
+
+Numeric-expression follow-up (2026-11-17) passes on Paper 1.21.1-133.
+The final implementation and probes pass the full 2,259-test regression suite
+with zero failures/errors/skips and SpotBugs using
+`./mvnw -B -pl helstera-plugin -am verify` (finished 2026-11-17T09:27:55Z).
+This includes compatibility coverage for Unicode and arbitrary variable names
+in generic single-token numeric helpers. All three fixtures below use the same
+final plugin SHA-256:
+`dff5a510c2df8006a62db42e2e402e455da0a2e4116145eacfd6cde9902c3fbf`.
+Paper bootstrap SHA-256 remains
+`39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+
+- `srv-paper-numeric-mechanic-exploratory-20261117-r6`: 38 assertions.
+  Imported whitespace-containing formulas resolve independently for two real
+  recipients: rounded healing, comparison-controlled fire ticks, arithmetic
+  knockback vectors, and fractional-health healing. A division-by-zero vertical
+  field leaves both velocity components untouched; invalid formula source is
+  preserved with warnings. Earlier defaults, recipient/isolation controls, and
+  cleanup remain covered.
+  [Report](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r6.json)
+  SHA-256 `91759bc04a9cd09218a5cc613a578f2f09896d833d8b21e4c23a64d94f2b4ff9`;
+  [redacted log](reports/paper-1.21.1-numeric-mechanic-exploratory-20261117-r6.log.gz)
+  SHA-256 `6058900ca844146a94eab143dda637266fd40a0d3672a9a013fe83c2dd10e2f3`.
+- `srv-paper-potion-mechanic-exploratory-20261117-r10`: 28 assertions.
+  Imported formulas produce HASTE duration/level `22/1` and `24/2` for different
+  recipients. An invalid duration formula preserves both existing effects
+  despite `force=true`. Defaults, flags, cancellation/removal callbacks,
+  invalid-recipient isolation, inherited targets, and cleanup remain covered.
+  [Report](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r10.json)
+  SHA-256 `bf383a8dcfe92587d57f76b17d915728e2ba24f36a323b3c6e8a40a67bedd5da`;
+  [redacted log](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r10.log.gz)
+  SHA-256 `b45fbd56b7b207ebe8f742b13182070f94e92014883a577c85cb8c495912b66d`.
+- `srv-paper-percent-health-exploratory-20261117-r12`: 107 assertions with
+  MM 5.7.2. Nineteen deterministic formulas match the loaded native exp4j
+  0.4.8 engine with MM's own function/operator arrays, including power/unary
+  precedence, implicit multiplication, functions, modulo, scientific notation,
+  all five comparisons, chained comparisons, and fixed-bound `random`.
+  These direct engine comparisons do not bypass the Premium boundary of a
+  native numeric skill. The original 88 static skill/string/random/imported
+  dynamic/edition/event/isolation/cleanup assertions remain covered.
+  [Report](reports/paper-1.21.1-percent-health-exploratory-20261117-r12.json)
+  SHA-256 `92ff090bc52c6c05feb2fd3bda657e844bec08b8d4320989aa2e74767acab5e2`;
+  [redacted log](reports/paper-1.21.1-percent-health-exploratory-20261117-r12.log.gz)
+  SHA-256 `6d42fefdc3a6a51a8f07bc6dfc15c35be1e6fdec992082a05c154e2ec26bdf49`.
+
+MM SHA-256 remains
+`9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`;
+shared native/imported source YAML SHA-256 remains
+`d98ed24427557c31bd2dedbd07e0cc26ded69f7ee82584802a1ec7514a19c1f8`.
+The first two fixtures run without MM. The native engine comparison is separate
+from Premium-enabled numeric skill execution, which remains unverified.
+Potion's exact bounded integer contract is retained; native integer truncation
+parity is not claimed. Remaining numeric fields, live timing/client effects,
+versions, and strict integration remain open. These exploratory reports do not
+replace the full strict catalog or promote broad matrix rows. See the
+[expression contract](../../docs/NUMERIC_EXPRESSION_COMPATIBILITY.md).
+
+Reproduce with `./mvnw -B -pl helstera-plugin -am verify`, then run the numeric,
+Potion, and percent-health fixture scripts sequentially with fresh revisions
+(`r7`, `r11`, and `r13`, respectively). Supply the pinned MM JAR to the last
+runner via `-MythicMobsJarPath`. Each runner uses a fresh isolated server,
+disables the web UI, checks artifact hashes, and archives redacted logs.
+
 Recipient-context follow-up (2026-11-17) passes on Paper 1.21.1-133. The
 production implementation passes the full 2,250-test regression suite, with
 zero failures/errors/skips, and SpotBugs. Subsequent probe-only fixture setup
@@ -50,7 +619,8 @@ but the MM Free Premium gate still prevents native dynamic numeric skill parity
 claims. Seven new unit tests cover independent numeric recipients, all-field
 validation, stale/removed/dead entities, event/audience/trigger metadata,
 inherited targets, radial query count, and delayed/repeated resolution with
-changed health at execution time. Live Paper delay/repeat timing is not covered.
+changed health at execution time. This earlier milestone did not cover live
+Paper delay/repeat timing; the current timing fixtures above do.
 Literal-only numeric factory paths retain existing lifecycle behavior; remaining
 mechanics need separate recipient audits. See the
 [recipient contract](../../docs/NUMERIC_PLACEHOLDER_COMPATIBILITY.md#recipient-context).
@@ -296,27 +866,27 @@ and [log](reports/paper-1.21.1-potion-mechanic-exploratory-20261117-r4.log.gz)
 remain archived. Revision r5 additionally includes the suffix-validation fix
 covered by the final regression suite and corresponds to the plugin hash above.
 
-Latest full-catalog fixture `srv-paper-directional-velocity-strict-20261116-r1` passed the full strict gate on Paper 1.21.1-133: 466 registered probes, 447 passed, 19 expected rejections, zero failed or incomplete. Its catalog verifies `Velocity` and `DirectionalVelocity`, including regular and directional modes, aliases, dynamic placeholders, invalid-input preservation, and restoration; it also retains strict HasInventorySpace, Inline Conditions and Altitude evidence, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and full client workflows. Plugin SHA-256: `cc50507ce75b3365152f6c0897787acdff8682b65bae0337770ced1853496916`. Report: [paper-1.21.1-directional-velocity-strict-20261116-r1.json](reports/paper-1.21.1-directional-velocity-strict-20261116-r1.json), SHA-256 `513d11381a20cc6382d11e3d1cb12d595c48a25b79b5d534f735c29628073d29`. Compressed token-redacted server log: [paper-1.21.1-directional-velocity-strict-20261116-r1.log.gz](reports/paper-1.21.1-directional-velocity-strict-20261116-r1.log.gz), SHA-256 `69e1362e6d47746a7990062ed04e95acb6b993ef6e6df09dccff61c1fa0a072b`; client log archive: [paper-1.21.1-directional-velocity-strict-20261116-r1-client-logs.tar.gz](reports/paper-1.21.1-directional-velocity-strict-20261116-r1-client-logs.tar.gz), SHA-256 `6a60847bc9a9b437b1a4ec8cf7c4766b88471e1cb0f0e21697fb60c5c702d456`.
+Previous full-catalog fixture `srv-paper-directional-velocity-strict-20261116-r1` passed the full strict gate on Paper 1.21.1-133: 466 registered probes, 447 passed, 19 expected rejections, zero failed or incomplete. Its catalog verifies `Velocity` and `DirectionalVelocity`, including regular and directional modes, aliases, dynamic placeholders, invalid-input preservation, and restoration; it also retains strict HasInventorySpace, Inline Conditions and Altitude evidence, interactable client cancellation, spawning-distance client movement, ShowHealth delivery, player-scoped spawner limits, and full client workflows. Plugin SHA-256: `cc50507ce75b3365152f6c0897787acdff8682b65bae0337770ced1853496916`. Report: [paper-1.21.1-directional-velocity-strict-20261116-r1.json](reports/paper-1.21.1-directional-velocity-strict-20261116-r1.json), SHA-256 `513d11381a20cc6382d11e3d1cb12d595c48a25b79b5d534f735c29628073d29`. Compressed token-redacted server log: [paper-1.21.1-directional-velocity-strict-20261116-r1.log.gz](reports/paper-1.21.1-directional-velocity-strict-20261116-r1.log.gz), SHA-256 `c9fccfc06f25be4e00764ee01fe1a33665e310cb75b08d80dd81c063516776e6`; client log archive: [paper-1.21.1-directional-velocity-strict-20261116-r1-client-logs.tar.gz](reports/paper-1.21.1-directional-velocity-strict-20261116-r1-client-logs.tar.gz), SHA-256 `6a60847bc9a9b437b1a4ec8cf7c4766b88471e1cb0f0e21697fb60c5c702d456`.
 
-Focused exploratory fixture `srv-paper-targeter-context-alias-strict-20261115-r3` ran the production plugin on Paper 1.21.1-133 with two real Mineflayer players. The `context-targeter-chain` self-test verifies `@nearestConditionalTarget` hyphen and underscore aliases, the Mythic `condition`/`c` argument aliases, chained condition filtering, and fail-closed rejection of unknown, duplicate, empty, and malformed private arguments. The report records 454 probes: 434 passed, 19 observed expected rejections, and one unrelated `not-observed` probe. This is focused exploratory evidence, not a full-catalog release run, so the Context Targeters row and complete Conditions catalog remain `mapped-unverified`. Plugin SHA-256: `3e30ff137249d0361cb8d796b791da8b9ac757dcc99935210f604abb2a95fc67`. Report: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.json](reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.json), SHA-256 `7fea79bd34a2cd6f6a1d339f00c85ee51a7b9f4e781549c62948470da49826dc`. Compressed token-redacted server log: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz](reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz), SHA-256 `df05235cd9e9da01e0f396311805e29679ffac6f744ebb99de4a4016718ac883`.
+Focused exploratory fixture `srv-paper-targeter-context-alias-strict-20261115-r3` ran the production plugin on Paper 1.21.1-133 with two real Mineflayer players. The `context-targeter-chain` self-test verifies `@nearestConditionalTarget` hyphen and underscore aliases, the Mythic `condition`/`c` argument aliases, chained condition filtering, and fail-closed rejection of unknown, duplicate, empty, and malformed private arguments. The report records 454 probes: 434 passed, 19 observed expected rejections, and one unrelated `not-observed` probe. This is focused exploratory evidence, not a full-catalog release run, so the Context Targeters row and complete Conditions catalog remain `mapped-unverified`. Plugin SHA-256: `3e30ff137249d0361cb8d796b791da8b9ac757dcc99935210f604abb2a95fc67`. Report: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.json](reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.json), SHA-256 `7fea79bd34a2cd6f6a1d339f00c85ee51a7b9f4e781549c62948470da49826dc`. Compressed token-redacted server log: [paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz](reports/paper-1.21.1-context-targeter-alias-strict-20261115-r3.log.gz), SHA-256 `d7da241c0fae6b42fd05e4efebe6cbca3f9fb10831f464dcd7428232576fe3a3`.
 
-Focused fixture `srv-paper-modify-damage-strict-20261115-r4` passed on Paper 1.21.1-133. It converts Mythic `modifyDamage`/`modDamage` lines into production mob configurations and verifies real event-scoped mutation: `ENTITY_ATTACK` additive damage becomes `6.0`, a `FIRE` selector leaves the `4.0` attack unchanged, `ALL` setter produces `3.0`, and malformed lines remain preserved with warnings. Plugin SHA-256: `fbd06de3b38abee6e1c994e3435cccdbb18cf2320c68b9df55542ff0a3d8f9d7`. Report: [paper-1.21.1-modify-damage-strict-20261115-r4.json](reports/paper-1.21.1-modify-damage-strict-20261115-r4.json), SHA-256 `efbe2ce8a23f0dbb980f653d98dbb97a4317d7f210faca830550944547e99332`; compressed redacted log: [paper-1.21.1-modify-damage-strict-20261115-r4.log.gz](reports/paper-1.21.1-modify-damage-strict-20261115-r4.log.gz), SHA-256 `9777c9aaa2783d5f5fe695bb4881f011ce25f2aaa51cfbeb7fb0aaea485b84b7`. This is exploratory evidence, not a full-catalog release run.
+Focused fixture `srv-paper-modify-damage-strict-20261115-r4` passed on Paper 1.21.1-133. It converts Mythic `modifyDamage`/`modDamage` lines into production mob configurations and verifies real event-scoped mutation: `ENTITY_ATTACK` additive damage becomes `6.0`, a `FIRE` selector leaves the `4.0` attack unchanged, `ALL` setter produces `3.0`, and malformed lines remain preserved with warnings. Plugin SHA-256: `fbd06de3b38abee6e1c994e3435cccdbb18cf2320c68b9df55542ff0a3d8f9d7`. Report: [paper-1.21.1-modify-damage-strict-20261115-r4.json](reports/paper-1.21.1-modify-damage-strict-20261115-r4.json), SHA-256 `efbe2ce8a23f0dbb980f653d98dbb97a4317d7f210faca830550944547e99332`; compressed redacted log: [paper-1.21.1-modify-damage-strict-20261115-r4.log.gz](reports/paper-1.21.1-modify-damage-strict-20261115-r4.log.gz), SHA-256 `9480ce56d0f22a3d259a0f40e17a0a69634b180c951662ae5a0f5f74621668a8`. This is exploratory evidence, not a full-catalog release run.
 
-Latest focused MythicMobs fixture `srv-paper-mythic-pack-strict-20261115-r13` passed on Paper 1.21.1-133 with MythicMobs 5.7.2. The direct and imported `MobsInRadius` paths now verify native and custom type filters at the origin, default exact matching, inclusive amount ranges, comma-separated lists, case-insensitive names, and unknown-type rejection; direct/imported `MythicMobType` exact and substring modes plus the MythicMobs API identity oracle also passed. The public build reports Premium false, so Premium-enabled behavior remains unverified. This is focused evidence, not the full release catalog. Plugin SHA-256: `4773347d963645ad142d4295cc1bb4cfc49604755ab156892f7a1a47998a060f`. Report: [paper-1.21.1-mythic-pack-condition-strict-20261115-r13.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.json), SHA-256 `fa88fec0a12b7d7193c26c1d351bd3fca0dc1d37b91ee05410a0857f41adb17a`. Compressed token-redacted server log: [paper-1.21.1-mythic-pack-condition-strict-20261115-r13.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.log.gz), SHA-256 `59f5a50f30c85132e7e59993d1bc879b1b48b5e4b21be6f88d21024decf5fbd7`.
+Previous focused MythicMobs radius/type fixture `srv-paper-mythic-pack-strict-20261115-r13` passed on Paper 1.21.1-133 with MythicMobs 5.7.2. The direct/imported `MobsInRadius` tests covered native/custom types, ranges, lists, casing, and unknown-type rejection; direct/imported `MythicMobType` exact/substring modes and the MythicMobs API identity oracle also passed. Premium-enabled behavior remains unverified. Plugin SHA-256: `4773347d963645ad142d4295cc1bb4cfc49604755ab156892f7a1a47998a060f`. Report: [paper-1.21.1-mythic-pack-condition-strict-20261115-r13.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.json), SHA-256 `fa88fec0a12b7d7193c26c1d351bd3fca0dc1d37b91ee05410a0857f41adb17a`. Compressed token-redacted server log: [paper-1.21.1-mythic-pack-condition-strict-20261115-r13.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261115-r13.log.gz), SHA-256 `a3f7d770a1ca0dce22ddc8851a3bd07ca640b228a9367e9182a8c567c96a5b83`.
 
 Previous focused MythicMobs radius fixture `srv-paper-mythic-pack-strict-20261115-r9` passed on Paper 1.21.1-133 with MythicMobs 5.7.2. The API oracle identified the API-spawned `SkeletalMinion` and rejected the vanilla Zombie; direct and imported `MobsInRadius` matched the single internal name, rejected unrelated `CaveWraith`, accepted a mixed list containing `SkeletalMinion`, and matched the lowercase `skeletalminion` spelling. Its evidence and hashes remain indexed below.
 
 Previous focused MythicMobs radius fixture `srv-paper-mythic-pack-strict-20261115-r8` verified the initial single-name positive/negative internal-name paths. Its report and hashes remain indexed in `release-evidence.json`.
 
-Previous strict fixture `srv-paper-has-item-matcher-strict-20261115-r1` passed the full strict gate on Paper 1.21.1-133: 456 registered probes, 437 passed, 19 expected rejections, and zero failed or incomplete. `hasItemCondition` verifies real-player short and namespaced Bukkit item tags, wildcard material names, missing-tag rejection, loose/strict metadata matching, inclusive amount ranges, imported `HasItem` and `TargetHasItem`, preserved unsupported `vanillaonly=true`, and inventory restoration. The run also passed the two-client menu/audience workflows, web spawner reload, interactables, and real Potion consumption. Plugin SHA-256: `665fccd0c9daaac68a634f52fdeeafc48194d81c2ea41061f9e02f3cf228c4e9`. Report: [paper-1.21.1-has-item-matcher-strict-20261115-r1.json](reports/paper-1.21.1-has-item-matcher-strict-20261115-r1.json), SHA-256 `0b18966b17a41a30187c75cfbe9a5a21fa80ca92341f389e219431973ef6c338`. Compressed token-redacted server log: [paper-1.21.1-has-item-matcher-strict-20261115-r1.log.gz](reports/paper-1.21.1-has-item-matcher-strict-20261115-r1.log.gz), SHA-256 `0ad980f1f40c19ef063d8f16fcff7f240f3f785f26e08a0906a77439296ba1aa`; client log archive: [paper-1.21.1-has-item-matcher-strict-20261115-r1-client-logs.tar.gz](reports/paper-1.21.1-has-item-matcher-strict-20261115-r1-client-logs.tar.gz), SHA-256 `26563cd256a1d5e7082b38694b90ccc5e8dd12b4a88c2db3a9015da433a58511`. External custom-item wildcard expansion and block-state selectors are not covered.
+Previous strict fixture `srv-paper-has-item-matcher-strict-20261115-r1` passed the full strict gate on Paper 1.21.1-133: 456 registered probes, 437 passed, 19 expected rejections, and zero failed or incomplete. `hasItemCondition` verifies real-player short and namespaced Bukkit item tags, wildcard material names, missing-tag rejection, loose/strict metadata matching, inclusive amount ranges, imported `HasItem` and `TargetHasItem`, preserved unsupported `vanillaonly=true`, and inventory restoration. The run also passed the two-client menu/audience workflows, web spawner reload, interactables, and real Potion consumption. Plugin SHA-256: `665fccd0c9daaac68a634f52fdeeafc48194d81c2ea41061f9e02f3cf228c4e9`. Report: [paper-1.21.1-has-item-matcher-strict-20261115-r1.json](reports/paper-1.21.1-has-item-matcher-strict-20261115-r1.json), SHA-256 `0b18966b17a41a30187c75cfbe9a5a21fa80ca92341f389e219431973ef6c338`. Compressed token-redacted server log: [paper-1.21.1-has-item-matcher-strict-20261115-r1.log.gz](reports/paper-1.21.1-has-item-matcher-strict-20261115-r1.log.gz), SHA-256 `3ec0d061089382c6b0764521b28b1ec6bbf65cc9496ad70db00cc39ce598dc28`; client log archive: [paper-1.21.1-has-item-matcher-strict-20261115-r1-client-logs.tar.gz](reports/paper-1.21.1-has-item-matcher-strict-20261115-r1-client-logs.tar.gz), SHA-256 `26563cd256a1d5e7082b38694b90ccc5e8dd12b4a88c2db3a9015da433a58511`. External custom-item wildcard expansion and block-state selectors are not covered.
 
-Previous strict fixture `srv-paper-plugin-condition-strict-20261114-r1` passed the full strict gate on Paper 1.21.1-133: 456 registered probes, 437 passed, 19 expected rejections, and zero failed or incomplete. The `importedPluginCondition` observation verifies Mythic `Plugin`, `PluginExists`, and `HasPlugin` aliases against Bukkit's live PluginManager: enabled Helstera matches; the default `MythicMobs` name and another missing plugin reject; malformed and duplicate input remains preserved. Helstera was the only feature plugin loaded, so this proves the enabled and absent-plugin paths for that isolated environment, not arbitrary plugin combinations. Plugin SHA-256: `3640472adf65330bfd3754c35e50faed4ff9143929c260f055efc99e2676282a`. Report: [paper-1.21.1-imported-plugin-condition-strict-20261114-r1.json](reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1.json), SHA-256 `20c5db39fbe13a7ba12b8e273ceb3d2a7213c83b21dcbc3ebcfb3b3102e849ab`. Compressed token-redacted server log: [paper-1.21.1-imported-plugin-condition-strict-20261114-r1.log.gz](reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1.log.gz), SHA-256 `8d5b5b49ec4510d57267bf71e247455de9e97366aad7dbd028498cd8510de4dd`; client log archive: [paper-1.21.1-imported-plugin-condition-strict-20261114-r1-client-logs.tar.gz](reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1-client-logs.tar.gz), SHA-256 `8010ddfc62b8b468fc384345486d10dc5a763ca25d1f77bc8d01ed1faed541c7`. Archived server logs redact web-token query values.
+Previous strict fixture `srv-paper-plugin-condition-strict-20261114-r1` passed the full strict gate on Paper 1.21.1-133: 456 registered probes, 437 passed, 19 expected rejections, and zero failed or incomplete. The `importedPluginCondition` observation verifies Mythic `Plugin`, `PluginExists`, and `HasPlugin` aliases against Bukkit's live PluginManager: enabled Helstera matches; the default `MythicMobs` name and another missing plugin reject; malformed and duplicate input remains preserved. Helstera was the only feature plugin loaded, so this proves the enabled and absent-plugin paths for that isolated environment, not arbitrary plugin combinations. Plugin SHA-256: `3640472adf65330bfd3754c35e50faed4ff9143929c260f055efc99e2676282a`. Report: [paper-1.21.1-imported-plugin-condition-strict-20261114-r1.json](reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1.json), SHA-256 `20c5db39fbe13a7ba12b8e273ceb3d2a7213c83b21dcbc3ebcfb3b3102e849ab`. Compressed token-redacted server log: [paper-1.21.1-imported-plugin-condition-strict-20261114-r1.log.gz](reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1.log.gz), SHA-256 `c456411bf4f7b3ecbaa41f94188f4469e1d5b79e490be9f387fc2d84f22c484a`; client log archive: [paper-1.21.1-imported-plugin-condition-strict-20261114-r1-client-logs.tar.gz](reports/paper-1.21.1-imported-plugin-condition-strict-20261114-r1-client-logs.tar.gz), SHA-256 `8010ddfc62b8b468fc384345486d10dc5a763ca25d1f77bc8d01ed1faed541c7`. Archived server logs redact web-token query values.
 
-Focused MythicMobs condition fixture `srv-paper-mythic-pack-strict-20261114-r7` passed on Paper 1.21.1-133 with MythicMobs 5.7.2. MythicMobs' `BukkitAPIHelper#isMythicMob(Entity)` oracle returned true for an API-spawned `SkeletalMinion` and false for a vanilla Bukkit Zombie; Helstera's direct runtime condition and imported `IsMythicMob` / `IsMM` aliases matched both outcomes. The same probe rechecked active pack/version behavior and Premium aliases; the public build reports Premium false, so the Premium-enabled state remains unverified. This is focused evidence, not the full Conditions release catalog, and it covers only this Paper/MythicMobs combination. MythicMobs JAR SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`; SHA-512: `d297fe2bf4fa651b6fed87be2c9d5112129f78b5309ac4716e44e2fbe84308e5d6e2b5939b4c39b5e1b5c42ab2c5d7628498b5cfa9ad0faea24561cdfafdd2a0`. Helstera plugin SHA-256: `3aaf8ee7ab555625b0ca66e23220b79107bc9c748227ee104f430d973f0a3d6f`. Report: [paper-1.21.1-mythic-pack-condition-strict-20261114-r7.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.json), SHA-256 `2f8726f3147f341d2ae23f972782e7919f40c90945975c2a9cc85ac929d64438`. Compressed token-redacted server log: [paper-1.21.1-mythic-pack-condition-strict-20261114-r7.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.log.gz), SHA-256 `b53b64112b976815ba563fe5a07c12c46db432877479926175094591a35f11ff`.
+Focused MythicMobs condition fixture `srv-paper-mythic-pack-strict-20261114-r7` passed on Paper 1.21.1-133 with MythicMobs 5.7.2. MythicMobs' `BukkitAPIHelper#isMythicMob(Entity)` oracle returned true for an API-spawned `SkeletalMinion` and false for a vanilla Bukkit Zombie; Helstera's direct runtime condition and imported `IsMythicMob` / `IsMM` aliases matched both outcomes. The same probe rechecked active pack/version behavior and Premium aliases; the public build reports Premium false, so the Premium-enabled state remains unverified. This is focused evidence, not the full Conditions release catalog, and it covers only this Paper/MythicMobs combination. MythicMobs JAR SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`; SHA-512: `d297fe2bf4fa651b6fed87be2c9d5112129f78b5309ac4716e44e2fbe84308e5d6e2b5939b4c39b5e1b5c42ab2c5d7628498b5cfa9ad0faea24561cdfafdd2a0`. Helstera plugin SHA-256: `3aaf8ee7ab555625b0ca66e23220b79107bc9c748227ee104f430d973f0a3d6f`. Report: [paper-1.21.1-mythic-pack-condition-strict-20261114-r7.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.json), SHA-256 `2f8726f3147f341d2ae23f972782e7919f40c90945975c2a9cc85ac929d64438`. Compressed token-redacted server log: [paper-1.21.1-mythic-pack-condition-strict-20261114-r7.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r7.log.gz), SHA-256 `f55f152370356b3172cfe238fec7a58d7f12ae04bf4025870bba82b5fba6bb68`.
 
-Focused MythicMobs condition fixture `srv-paper-mythic-pack-strict-20261114-r6` passed on Paper 1.21.1-133 with MythicMobs 5.7.2. Alongside active pack and version assertions, it reads the live `MythicBukkit.isVolatile()` state and confirms imported `Premium`, `IsPremium`, and `IsCool` all match it; malformed parameters remain preserved by import and are rejected by direct runtime binding. The tested public artifact reports `premium-state=false`, so a true Premium-enabled server state is not covered. MythicMobs JAR SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`; SHA-512: `d297fe2bf4fa651b6fed87be2c9d5112129f78b5309ac4716e44e2fbe84308e5d6e2b5939b4c39b5e1b5c42ab2c5d7628498b5cfa9ad0faea24561cdfafdd2a0`. Helstera plugin SHA-256: `0937c9e70632d40c0db1e3460bcf151278ca8c4d336f73e65e5dbbbf5d269e71`. Report: [paper-1.21.1-mythic-pack-condition-strict-20261114-r6.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r6.json), SHA-256 `29925077856575a105fc16c61b28a3ba4d1a589eae94cdbbc7dbe48c4b893766`. Compressed token-redacted server log: [paper-1.21.1-mythic-pack-condition-strict-20261114-r6.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r6.log.gz), SHA-256 `1c3d694909b0f1e4fd7828b745d8f8d19b727ba1da34ec3b4434ac466208b76d`. The server logged missing MythicLib; no MythicLib-dependent behavior is claimed.
+Focused MythicMobs condition fixture `srv-paper-mythic-pack-strict-20261114-r6` passed on Paper 1.21.1-133 with MythicMobs 5.7.2. Alongside active pack and version assertions, it reads the live `MythicBukkit.isVolatile()` state and confirms imported `Premium`, `IsPremium`, and `IsCool` all match it; malformed parameters remain preserved by import and are rejected by direct runtime binding. The tested public artifact reports `premium-state=false`, so a true Premium-enabled server state is not covered. MythicMobs JAR SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`; SHA-512: `d297fe2bf4fa651b6fed87be2c9d5112129f78b5309ac4716e44e2fbe84308e5d6e2b5939b4c39b5e1b5c42ab2c5d7628498b5cfa9ad0faea24561cdfafdd2a0`. Helstera plugin SHA-256: `0937c9e70632d40c0db1e3460bcf151278ca8c4d336f73e65e5dbbbf5d269e71`. Report: [paper-1.21.1-mythic-pack-condition-strict-20261114-r6.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r6.json), SHA-256 `29925077856575a105fc16c61b28a3ba4d1a589eae94cdbbc7dbe48c4b893766`. Compressed token-redacted server log: [paper-1.21.1-mythic-pack-condition-strict-20261114-r6.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r6.log.gz), SHA-256 `3a63887ded942232695ee9d1f2a86e679a031492133d02933587589b519b5a21`. The server logged missing MythicLib; no MythicLib-dependent behavior is claimed.
 
-Focused MythicMobs pack-condition fixture `srv-paper-mythic-pack-strict-20261114-r5` passed its 11 imported-condition assertions on Paper 1.21.1-133 with MythicMobs 5.7.2. It verifies active pack discovery, case-sensitive IDs, missing-pack rejection, exact version equality, dotted-integer lower/equal/upper and componentwise boundaries, and malformed/duplicate source preservation. This focused report does not run or replace the full release catalog, and it does not establish other MythicMobs/Paper versions or MythicLib-dependent features. MythicMobs was obtained from [Modrinth version FTWvGuE5](https://modrinth.com/plugin/mythicmobs/version/FTWvGuE5), licensed All Rights Reserved and used only in this local test. JAR SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`; SHA-512: `d297fe2bf4fa651b6fed87be2c9d5112129f78b5309ac4716e44e2fbe84308e5d6e2b5939b4c39b5e1b5c42ab2c5d7628498b5cfa9ad0faea24561cdfafdd2a0`. Report: [paper-1.21.1-mythic-pack-condition-strict-20261114-r5.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r5.json), SHA-256 `d574262eea778979a35f1f56e3714bb9b3cfa3ec19ea22e9154546462e0425d3`. Compressed token-redacted server log: [paper-1.21.1-mythic-pack-condition-strict-20261114-r5.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r5.log.gz), SHA-256 `7d8a74b2851f260953cff2f04dfc87a4a2dd5f24dde3dfd2414b68b74fbe2b62`. The server logged a missing MythicLib dependency, so no MythicLib-dependent adapter behavior is claimed.
+Focused MythicMobs pack-condition fixture `srv-paper-mythic-pack-strict-20261114-r5` passed its 11 imported-condition assertions on Paper 1.21.1-133 with MythicMobs 5.7.2. It verifies active pack discovery, case-sensitive IDs, missing-pack rejection, exact version equality, dotted-integer lower/equal/upper and componentwise boundaries, and malformed/duplicate source preservation. This focused report does not run or replace the full release catalog, and it does not establish other MythicMobs/Paper versions or MythicLib-dependent features. MythicMobs was obtained from [Modrinth version FTWvGuE5](https://modrinth.com/plugin/mythicmobs/version/FTWvGuE5), licensed All Rights Reserved and used only in this local test. JAR SHA-256: `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`; SHA-512: `d297fe2bf4fa651b6fed87be2c9d5112129f78b5309ac4716e44e2fbe84308e5d6e2b5939b4c39b5e1b5c42ab2c5d7628498b5cfa9ad0faea24561cdfafdd2a0`. Report: [paper-1.21.1-mythic-pack-condition-strict-20261114-r5.json](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r5.json), SHA-256 `d574262eea778979a35f1f56e3714bb9b3cfa3ec19ea22e9154546462e0425d3`. Compressed token-redacted server log: [paper-1.21.1-mythic-pack-condition-strict-20261114-r5.log.gz](reports/paper-1.21.1-mythic-pack-condition-strict-20261114-r5.log.gz), SHA-256 `d06d7c817b7020986920d409274d77a94274a632122b6833d8366f1c42cd8297`. The server logged a missing MythicLib dependency, so no MythicLib-dependent adapter behavior is claimed.
 
 Previous strict fixture `srv-paper-food-stats-strict-20261114-r1` passed 455 registered probes and verified scoped Player food level, saturation, and exhaustion, non-player rejection, and restoration. Its report and hashes remain indexed in `release-evidence.json` as historical evidence.
 
@@ -328,13 +898,13 @@ Focused external-plugin contract fixture `paper-1.21.1-vault-economy-contract-20
 
 Previous fixture `srv-paper-inline-condition-strict-20261112-r1` passed the full strict gate on Paper 1.21.1-133: 455 registered probes, 436 passed, 19 expected rejections, and zero failed or incomplete. The `inlineConditionScopes` probe verifies caster-scoped `?condition`, living-trigger-scoped `?~condition`, and fail-closed missing/non-living triggers using real Paper entities; runtime tests separately verify `?~!condition` negation. Plugin SHA-256: `3cd83778bb9e926c60aa8ae7c6e0627aa703f80aa520a057c7e9b518e784357d`. Report: [paper-1.21.1-inline-condition-scopes-strict-20261112-r1.json](reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1.json), SHA-256 `016e6a034b1860d81b377d705220b97c7322430f37d5dec1b113cc3b50763891`. Compressed redacted server log: [paper-1.21.1-inline-condition-scopes-strict-20261112-r1.log.gz](reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1.log.gz), SHA-256 `3cb7a9b2454459e69e4d15dd5542487650fda4f4926d16b1eac72debe32bfe21`; client log archive: [paper-1.21.1-inline-condition-scopes-strict-20261112-r1-client-logs.tar.gz](reports/paper-1.21.1-inline-condition-scopes-strict-20261112-r1-client-logs.tar.gz), SHA-256 `358e4b071969c72d4bf725ce1a36aed72f6ac5cbd76c53b0ac6b29ff5caf6970`. Archived logs redact token labels and web-token query values.
 
-Previous fixture `srv-paper-prevent-vanilla-damage-strict-20261112-r3` passed the full strict gate on Paper 1.21.1-133: 454 registered probes, 435 passed, 19 expected rejections, and zero failed or incomplete. `preventVanillaDamageImported` verifies an actual Paper Arrow hit from an imported managed mob: direct and projectile damage are zero without cancellation and protected health is unchanged; explicit false and malformed controls take damage, and malformed input remains preserved. Plugin SHA-256: `a0c4de2db28f02f6dc42dedc3476f245ed4e69ce9b5311beedb9759fdd62e587`. Report: [paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json](paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json), SHA-256 `c5bc75e667cd2e30e48c15eaf056eede99b38721c188adee6338c044aa652063`. Compressed redacted server log: [paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.log.gz](paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.log.gz), SHA-256 `eed3913090f7687b6d0378bc8d5d8749ea41d9477adfea7d0349f74a2bac2d90`; client log archive: [paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3-client-logs.tar.gz](paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3-client-logs.tar.gz), SHA-256 `a83de667884bfeebac2d0f5137e2fb52fde12733b0c223c07b007bf692756a4b`. Archived logs redact token labels and web-token query values.
+Previous fixture `srv-paper-prevent-vanilla-damage-strict-20261112-r3` passed the full strict gate on Paper 1.21.1-133: 454 registered probes, 435 passed, 19 expected rejections, and zero failed or incomplete. `preventVanillaDamageImported` verifies an actual Paper Arrow hit from an imported managed mob: direct and projectile damage are zero without cancellation and protected health is unchanged; explicit false and malformed controls take damage, and malformed input remains preserved. Plugin SHA-256: `a0c4de2db28f02f6dc42dedc3476f245ed4e69ce9b5311beedb9759fdd62e587`. Report: [paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json](reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.json), SHA-256 `c5bc75e667cd2e30e48c15eaf056eede99b38721c188adee6338c044aa652063`. Compressed redacted server log: [paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.log.gz](reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3.log.gz), SHA-256 `9e3dc16d0f542180f3e97bd6464d85ee31ca7e95cf5659ca7a222ad5dbe24a31`; client log archive: [paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3-client-logs.tar.gz](reports/paper-1.21.1-prevent-vanilla-damage-strict-20261112-r3-client-logs.tar.gz), SHA-256 `a83de667884bfeebac2d0f5137e2fb52fde12733b0c223c07b007bf692756a4b`. Archived logs redact token labels and web-token query values.
 
 Previous fixture `srv-paper-prevent-attack-strict-20261112-r1` passed the full strict gate with 453 probes (434 passed, 19 expected rejections); its report and hashes remain indexed in `release-evidence.json`.
 
 Previous fixture `srv-paper-explosion-options-strict-20261112-r2` passed all 449 probes (430 passed, 19 expected rejections) and verifies imported blanket and cause-specific projectile/explosion protections with false and malformed-value controls; its report and hashes remain indexed in `release-evidence.json`.
 
-Previous fixture `srv-paper-fire-protection-strict-20261112-r2` passed the full strict gate on Paper 1.21.1-133: 448 registered probes, 429 passed, 19 expected rejections, and zero failed or incomplete. `fireProtectionOptionsImported` verifies production import and readback for Mythic `Options.PreventFire` and `Options.PreventFireCauses`: blanket protection cancels combustion and fire-tick damage, the `FIRE_TICK` filter allows unlisted `FIRE`, and false, cross-cause, and malformed-value controls behave as expected. Plugin SHA-256: `e0ad5ee136b66cc45cf2b1754a962737cc5d2cdf02637cbee5fe19568ba17875`. Report: [paper-1.21.1-fire-protection-options-strict-20261112-r2.json](reports/paper-1.21.1-fire-protection-options-strict-20261112-r2.json), SHA-256 `a9641d754ac2f6bd2e6314bcd116a3eb68d92278dc90efcc79f4df5947f3be8e`. Compressed redacted server log: [paper-1.21.1-fire-protection-options-strict-20261112-r2.log.gz](reports/paper-1.21.1-fire-protection-options-strict-20261112-r2.log.gz), SHA-256 `215e5930577c3bf5ea3b4266f94a4b323c8c04957a2a89855d2c925c7b611bf5`. Client log archive: [paper-1.21.1-fire-protection-options-strict-20261112-r2-client-logs.tar.gz](reports/paper-1.21.1-fire-protection-options-strict-20261112-r2-client-logs.tar.gz), SHA-256 `aa028cedac5a4e9a43af7082a7c8425efcde8ddf12c089f3584e70279ef828d9`. Archived logs redact web-token query values.
+Previous fixture `srv-paper-fire-protection-strict-20261112-r2` passed the full strict gate on Paper 1.21.1-133: 448 registered probes, 429 passed, 19 expected rejections, and zero failed or incomplete. `fireProtectionOptionsImported` verifies production import and readback for Mythic `Options.PreventFire` and `Options.PreventFireCauses`: blanket protection cancels combustion and fire-tick damage, the `FIRE_TICK` filter allows unlisted `FIRE`, and false, cross-cause, and malformed-value controls behave as expected. Plugin SHA-256: `e0ad5ee136b66cc45cf2b1754a962737cc5d2cdf02637cbee5fe19568ba17875`. Report: [paper-1.21.1-fire-protection-options-strict-20261112-r2.json](reports/paper-1.21.1-fire-protection-options-strict-20261112-r2.json), SHA-256 `a9641d754ac2f6bd2e6314bcd116a3eb68d92278dc90efcc79f4df5947f3be8e`. Compressed redacted server log: [paper-1.21.1-fire-protection-options-strict-20261112-r2.log.gz](reports/paper-1.21.1-fire-protection-options-strict-20261112-r2.log.gz), SHA-256 `66d8c799cb4f3d0b2b57e4eb3a558f94cced5f970257238607d4798389abb369`. Client log archive: [paper-1.21.1-fire-protection-options-strict-20261112-r2-client-logs.tar.gz](reports/paper-1.21.1-fire-protection-options-strict-20261112-r2-client-logs.tar.gz), SHA-256 `aa028cedac5a4e9a43af7082a7c8425efcde8ddf12c089f3584e70279ef828d9`. Archived logs redact web-token query values.
 
 Previous fixture `srv-paper-prevent-mob-kill-drops-strict-20261111-r1` passed all 446 probes and verifies imported `Options.PreventMobKillDrops`; its report and hashes remain indexed in `release-evidence.json`.
 
@@ -348,7 +918,7 @@ Previous fixture `srv-paper-environmental-damage-options-strict-20261111-r2` pas
 
 Previous fixture `srv-paper-prevent-random-equipment-strict-20261111-r1` passed the full strict gate with 442 registered probes. Its `preventRandomEquipmentImported` probe verifies the production equipment ordering and malformed-value preservation; the report and hashes remain indexed in `release-evidence.json`.
 
-Previous fixture `srv-paper-show-health-strict-20261111-r3` passed the full strict gate on Paper 1.21.1-133: 438 registered probes, 419 passed, 19 expected rejections, and zero failed or incomplete. `showHealthDelivery` verifies Mythic import, 10% threshold messages, quiet within-band behavior, healing re-arm, and the configured radius; `showHealthClientDelivery` verifies the nearby client receives messages and the outside client receives none. Plugin SHA-256: `0bed79263904c411058a785591da9d15c783a524515495ecc83aca4377499e45`. Report: [paper-1.21.1-show-health-strict-20261111-r3.json](reports/paper-1.21.1-show-health-strict-20261111-r3.json), SHA-256 `5dc746980a9b0ec1582fab99ba0fe4a59bcda5a8b42c69ae5`. Compressed redacted server log: [paper-1.21.1-show-health-strict-20261111-r3.log.gz](reports/paper-1.21.1-show-health-strict-20261111-r3.log.gz), SHA-256 `9a2ac48f6869553e7319649a6c72889a9b00aeffa37a9bbf20abd6f31df8ca1f`. Client log archive: [paper-1.21.1-show-health-strict-20261111-r3-client-logs.tar.gz](reports/paper-1.21.1-show-health-strict-20261111-r3-client-logs.tar.gz), SHA-256 `d184bcfead62eef5c8bf3a1a59a5d7b3f95fe5675db3ecf39d9e4d442d693629`.
+Previous fixture `srv-paper-show-health-strict-20261111-r3` passed the full strict gate on Paper 1.21.1-133: 438 registered probes, 419 passed, 19 expected rejections, and zero failed or incomplete. `showHealthDelivery` verifies Mythic import, 10% threshold messages, quiet within-band behavior, healing re-arm, and the configured radius; `showHealthClientDelivery` verifies the nearby client receives messages and the outside client receives none. Plugin SHA-256: `0bed79263904c411058a785591da9d15c783a524515495ecc83aca4377499e45`. Report: [paper-1.21.1-show-health-strict-20261111-r3.json](reports/paper-1.21.1-show-health-strict-20261111-r3.json), SHA-256 `5dc746980a9b0ec1582fab99ba0fe4a59bcda5a8b42c69ae5`. Compressed redacted server log: [paper-1.21.1-show-health-strict-20261111-r3.log.gz](reports/paper-1.21.1-show-health-strict-20261111-r3.log.gz), SHA-256 `5ba52ba5f676978543a6f965290695d7357cb4a16a602eb659c1a9c65ba86971`. Client log archive: [paper-1.21.1-show-health-strict-20261111-r3-client-logs.tar.gz](reports/paper-1.21.1-show-health-strict-20261111-r3-client-logs.tar.gz), SHA-256 `d184bcfead62eef5c8bf3a1a59a5d7b3f95fe5675db3ecf39d9e4d442d693629`.
 
 Previous fixture `srv-paper-villager-options-strict-20261111-r4` verified imported Villager `Type`, `Profession`, `Level`, and `HasTrades`; its report and hashes remain in `release-evidence.json` as historical evidence.
 
@@ -370,7 +940,7 @@ preserved with warnings. Plugin SHA-256: `8741a5d35063e64995121457a09f4c05f476cd
 Report: [paper-1.21.1-panda-options-strict-20261111-r1.json](reports/paper-1.21.1-panda-options-strict-20261111-r1.json), SHA-256:
 `bc1f819e540d62ab67adaa5281486806d134f5bc496dc60aca6e6d9aabcae08f`. Compressed redacted server log:
 [paper-1.21.1-panda-options-strict-20261111-r1.log.gz](reports/paper-1.21.1-panda-options-strict-20261111-r1.log.gz), SHA-256:
-`792b763964fad80a6e67daafe18beaf0f45511a8bd80a4a315c30dcc2c1eac00`. Client log archive:
+`799e7a0509e86e7c553680d16773b69d08949d58f093f2a442c7a1fa8776824d`. Client log archive:
 [paper-1.21.1-panda-options-strict-20261111-r1-client-logs.tar.gz](reports/paper-1.21.1-panda-options-strict-20261111-r1-client-logs.tar.gz), SHA-256:
 `c4f87648dbc2924a2d5fac3d8877bdb6c3e7db36eb6d610c2e63ef66eef2b3d0`. Archived logs redact token query values.
 
@@ -394,7 +964,7 @@ SHA-256: `6a2811b446426eeb3bc4eb18946143f92a2a68ebc55fb1cc28e6d478ba9a8779`.
 Report: [paper-1.21.1-tameable-families-strict-20261111-r3.json](reports/paper-1.21.1-tameable-families-strict-20261111-r3.json), SHA-256:
 `d0b88acdb37fa8d6d16c7a15c026f4ba8ed1165f20f85b920754b72ca3c2c588`. Compressed
 redacted server log: [paper-1.21.1-tameable-families-strict-20261111-r3.log.gz](reports/paper-1.21.1-tameable-families-strict-20261111-r3.log.gz), SHA-256:
-`1b260435899d38a402d0554635aa3e0526b3b1c57b08565fc7c0972daeb04ed3`. Client
+`793ead7b2518bd9da1feba1ae10add7b8be644f0c05a99dc223e15a3a5bd24e9`. Client
 log archive: [paper-1.21.1-tameable-families-strict-20261111-r3-client-logs.tar.gz](reports/paper-1.21.1-tameable-families-strict-20261111-r3-client-logs.tar.gz), SHA-256:
 `9b77621c915f2d4532b3e83365b55383a4a4d055edbd071c32d5850d3ddb487c`. Archived
 logs redact token query values.
@@ -408,7 +978,7 @@ three families alongside Wolf coverage. Plugin SHA-256:
 [paper-1.21.1-tameable-families-strict-20261111-r2.json](reports/paper-1.21.1-tameable-families-strict-20261111-r2.json), SHA-256:
 `55b72d54b7c6ee8bd4e26bb2f3acf9282121a7f1b86944cabcec4631edc6e560`. Compressed redacted server log:
 [paper-1.21.1-tameable-families-strict-20261111-r2.log.gz](reports/paper-1.21.1-tameable-families-strict-20261111-r2.log.gz), SHA-256:
-`772f5a3d435bef6f288904dff214416f1aee31d6513a4aaddcaf531dbe6a03a5`. Client log archive:
+`892839610c28660bc804fa9dc5a67ae0328a6c96a09dad742fbf067fad2aac0e`. Client log archive:
 [paper-1.21.1-tameable-families-strict-20261111-r2-client-logs.tar.gz](reports/paper-1.21.1-tameable-families-strict-20261111-r2-client-logs.tar.gz), SHA-256:
 `fe5862e38e12c2560eec32fc05e2a4116c593ba71654e6516eda7bdaf4aa4712`. Archived logs redact token query values.
 
@@ -420,7 +990,7 @@ production spawning it reads back Horse saddle/diamond armor, Donkey chest
 true/false, and Pig/Strider saddle true/false controls. Horse color, style,
 domestication, and jump-strength controls also pass. Plugin SHA-256: `e1bc4e9c44c5fc1e80dfbba1d0b72dd2e9cab8cbc92648e291e9fb9734e46198`. Report:
 [paper-1.21.1-steerable-saddles-strict-20261111-r1.json](reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.json), SHA-256: `4c69994a9e71990e8cedf290e5cb3198029d8863e0c792d89cfb2272fd40052c`. Compressed redacted server log:
-[paper-1.21.1-steerable-saddles-strict-20261111-r1.log.gz](reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.log.gz), SHA-256: `4558322cbebc9660b2df2fa350ba57a9db5582d3a38d30efbc849c08bfc8708a`. Client log archive:
+[paper-1.21.1-steerable-saddles-strict-20261111-r1.log.gz](reports/paper-1.21.1-steerable-saddles-strict-20261111-r1.log.gz), SHA-256: `2c8ec9ba3e3feb221fc6d69fcecf44806911d4f044dfbb33f0cac261892dd412`. Client log archive:
 [paper-1.21.1-steerable-saddles-strict-20261111-r1-client-logs.tar.gz](reports/paper-1.21.1-steerable-saddles-strict-20261111-r1-client-logs.tar.gz), SHA-256: `f31df7258b7c0c86c4ace8538d42b1422e457b3a50ef65037a28119682f8d92d`. Archived logs redact token values.
 
 Previous fixture `srv-paper-horse-inventory-options-strict-20261111-r2` passed the full strict gate on Paper 1.21.1-133:
@@ -435,7 +1005,7 @@ incomplete. The `visibilityOptions` probe imports Mythic `VisibleByDefault`,
 `Invisible`, and `AlwaysShowName` and reads back all configured values from a
 production-spawned Zombie alongside inverse controls. Plugin SHA-256: `24bf2350158faee75b207eef24dae2595a3cf1a5d49d1a2d3364e46eeedec28e`. Report:
 [paper-1.21.1-visibility-options-strict-20261111-r1.json](reports/paper-1.21.1-visibility-options-strict-20261111-r1.json), SHA-256: `7c561d6c17a0286665f25b44847f96d3c11c39a8ecf4f44c6bab8ea951aafbb3`. Compressed server log:
-[paper-1.21.1-visibility-options-strict-20261111-r1.log.gz](reports/paper-1.21.1-visibility-options-strict-20261111-r1.log.gz), SHA-256: `6e3d42664ed31c347424487026afe1478da7a653f55d2ab5a9e0eb955499313e`. Client log archive:
+[paper-1.21.1-visibility-options-strict-20261111-r1.log.gz](reports/paper-1.21.1-visibility-options-strict-20261111-r1.log.gz), SHA-256: `a10ebcdb2ee5860d5b460b17dc6f6d27cdfdc01eaa8570bff07449277780bd57`. Client log archive:
 [paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz](reports/paper-1.21.1-visibility-options-strict-20261111-r1-client-logs.tar.gz), SHA-256: `83ec7374154df5b654b8d2050cee28362f6ff088a240a50f7a88381eab95954b`. Archived logs redact web-token query values.
 
 Previous fixture `srv-paper-armor-stand-options-strict-20261110-r2` passed the full strict gate on Paper 1.21.1-133:
@@ -447,7 +1017,7 @@ preservation through production spawning. Plugin SHA-256: `ff6f2348a447f8c59a014
 [paper-1.21.1-armor-stand-options-strict-20261110-r2.json](reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.json), SHA-256:
 `8b28de85386dc89cbfcb059fa8e503b7f0591599942663f59e983d59e0597cc4`. Compressed server log:
 [paper-1.21.1-armor-stand-options-strict-20261110-r2.log.gz](reports/paper-1.21.1-armor-stand-options-strict-20261110-r2.log.gz), SHA-256:
-`ee780cbe8d705c4a0111dcf600f4c5cf93b226e017151b712b228ec1d644f51e`. Client log archive:
+`dcd3c4d0e8d8110fbf946cb94b9c0aef47c602d7d2a161e70b02f4ea907f859c`. Client log archive:
 [paper-1.21.1-armor-stand-options-strict-20261110-r2-client-logs.tar.gz](reports/paper-1.21.1-armor-stand-options-strict-20261110-r2-client-logs.tar.gz), SHA-256:
 `c6d6285990378124e5475f6241a1adcd795f6fca52efc74e91362f7cf75e2eea`. Archived logs redact web-token query values.
 
@@ -459,7 +1029,7 @@ preservation through production spawning. Plugin SHA-256: `17551be8a9046434ee5e9
 [paper-1.21.1-armor-stand-options-strict-20261110-r1.json](reports/paper-1.21.1-armor-stand-options-strict-20261110-r1.json), SHA-256:
 `690e45a7844c794197f76d7b56377335393a27a070acc7eb23c1b49357608e27`. Compressed server log:
 [paper-1.21.1-armor-stand-options-strict-20261110-r1.log.gz](reports/paper-1.21.1-armor-stand-options-strict-20261110-r1.log.gz), SHA-256:
-`18c167b7eb595794c54df80397abbdb0a2e5382dd6dc494cbf033a7225d825ff`. Client log archive:
+`bd2e7ce2ccd157b7bdcf0462399f35b4e74ef095dd2294d4e1ff42d162d048a1`. Client log archive:
 [paper-1.21.1-armor-stand-options-strict-20261110-r1-client-logs.tar.gz](reports/paper-1.21.1-armor-stand-options-strict-20261110-r1-client-logs.tar.gz), SHA-256:
 `6736e2a80ea58931a49c659a45266fdabad7351a6432646431aea5cb0ec0cc83`. Archived logs redact web-token query values.
 
@@ -477,7 +1047,7 @@ Full catalog report:
 `cfe39a77a327a0d33b8712328a66729dd94cffcbc908b32fadc317643146beff`.
 Compressed server log:
 [paper-1.21.1-gravity-scope-strict-20261110-r1.log.gz](reports/paper-1.21.1-gravity-scope-strict-20261110-r1.log.gz), SHA-256:
-`f0fa7558ade541cbb8405f00051f9f3659ad00240af5a37649688fc07e465e4c`. Client
+`485cc42b4cf4f221ae90fa423a087f4af299d72a84cd32106e03438e5dd423a2`. Client
 log archive:
 [paper-1.21.1-gravity-scope-strict-20261110-r1-client-logs.tar.gz](reports/paper-1.21.1-gravity-scope-strict-20261110-r1-client-logs.tar.gz), SHA-256:
 `d2bb78f4922aab53dc77e9b87ac9cc0cace8821ebdb1f7b5e07179b142c9c96f`.
@@ -556,7 +1126,7 @@ catalog report:
 [paper-1.21.1-target-fluids-import-strict-20261110-r2.json](reports/paper-1.21.1-target-fluids-import-strict-20261110-r2.json), SHA-256:
 `1acc1bc8f127373babf65e8de4e5f1462caa94a81bd3d6ccbddad2979eb3ed1c`.
 Compressed server log SHA-256:
-`21951459c56e5e62e0fd2ee09f0fc063cde0018d39c08cb1fc5aea7beb3f87a4`.
+`5ce9f41fb7da2c9d9022f72929253b918e71c63ab821725a830f7526794deffa`.
 Client log archive SHA-256:
 `5af51dcd4c2ec750acf2cb964d2d2313fa8e0049e4a7df186ce9202fa22e192c`.
 Archived logs replace web-token query values with `[REDACTED]`.
@@ -572,7 +1142,7 @@ catalog report:
 [paper-1.21.1-invulnerable-condition-strict-20261110-r3.json](reports/paper-1.21.1-invulnerable-condition-strict-20261110-r3.json), SHA-256:
 `36c6c1ba33c4cb32a572a08950b115f237fd8aeebb435d1f345275637511fe91`.
 Compressed server log SHA-256:
-`24ff14d79ab2d12124255eec3f6bd48bda1cae23354da82acd619d892e1ae6d9`.
+`153bd7e0b2ddc50fc62a548cddf83ce160ee286aad3b4bf8a610c138e520da6d`.
 Client log archive SHA-256:
 `543fa484f9c9a82ed2926bf15cf950c4e9f36a69bfb5af1d24f0a024048e34df`.
 Archived logs replace web-token query values with `[REDACTED]`.
@@ -592,7 +1162,7 @@ catalog report:
 [paper-1.21.1-grounded-condition-strict-20261110-r3.json](reports/paper-1.21.1-grounded-condition-strict-20261110-r3.json), SHA-256:
 `084df9b5e22e339aa3aea70109d8a0ae78b7018acdf59e623b0a2a41df5c7807`.
 Compressed server log SHA-256:
-`c66a002c1331587260d53970d10eaa9e748d49f75297994944303fae4632233b`.
+`9f2d19b20bb0221b487ef6dd4abc140bfdd0be2731246522620346fa742c9a51`.
 Client log archive SHA-256:
 `c28e37035b017b80b95eca43a6d659871245dfee6f9362a79a050bbdd89d35b9`.
 Archived logs replace web-token query values with `[REDACTED]`.
@@ -604,7 +1174,7 @@ expected rejections, and zero failed or incomplete. Plugin SHA-256:
 [paper-1.21.1-worldguard-strict-20261110-r2.json](reports/paper-1.21.1-worldguard-strict-20261110-r2.json), SHA-256:
 `840f9dca50dad598ab079fc99961466f68c3d3acb5a17b3a91f0d016259b0b2b`.
 Compressed server log SHA-256:
-`2b016ef0d755d9fbd88eb60bd3532c195977cb711e35017d572d54ff998ab2bc`.
+`9f791dc7cba60d086bb21d7ea7eb668ab31c6c0d5b7a42ff29cd9ab74daeee3c`.
 Client log archive SHA-256:
 `40b3b5409d356d1b58b3a2a7da9f7a1e77b484fb1552f8d51bc006b478efc5cb`.
 
@@ -654,11 +1224,51 @@ Full-catalog report:
 [paper-1.21.1-skilltree-atomic-snapshot-strict-20261110-r1.json](reports/paper-1.21.1-skilltree-atomic-snapshot-strict-20261110-r1.json), SHA-256:
 `a55999e80d9ce52c33d80087890f2d02e69f524f3bff4a29e7793caddfbf1e30`.
 Compressed server log SHA-256:
-`4f51b57ce1f686e3c171e1ea98e3d8728c34c85af9193d49ea733af739b34028`.
+`10cb573e34cf3d97b92bf020d2cd3c5841b3dc8e375c0210385a37b38bfc8d5b`.
 Client log archive SHA-256:
 `455b078ee0a04e2802db91207d98649e6b6cdc26cc3fb1daa6c74caa68fcbb20`.
 Archived logs redact web-token query values. Complete Mythic SkillTree
 semantics remain open.
+
+The focused Paper 1.21.1-133 restart fixture
+`srv-paper-skilltree-dotted-names-20261119-r1` extends that lifecycle check to
+snapshot key collisions: two same-ID persistent mobs retain dotted variable and
+location names, the reserved branch name `unlocked`, and a dotted dependent
+branch across shutdown/restart; the dependent branch unlocks after restore, and
+a real death removes only its entity snapshot. The backward-compatible snapshot
+reader also passes a legacy YAML fixture. This is a persistence-format repair,
+not completion of the full SkillTree catalog. Report:
+[paper-1.21.1-skilltree-dotted-names-restart-20261119-r1.json](reports/paper-1.21.1-skilltree-dotted-names-restart-20261119-r1.json)
+(SHA-256 `2774ee82ca61f55e28d91ebe3b6435c948f9e6184bbcb344a38161cfa95cda1b`);
+[redacted two-boot logs](reports/paper-1.21.1-skilltree-dotted-names-restart-20261119-r1-logs.zip)
+(SHA-256 `e3dbdcd534556801abce19e350bdf3fa03fffce1b109c3c32fbf8f71fdb5d2bb`).
+Paper JAR SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`;
+plugin JAR SHA-256: `c6f1a2d4b102ae76377ceb2c1b3e9140a31d3832efab9fd7b90ceb8d8015c134`.
+Re-archive a successful fixture with
+`pwsh -NoProfile -File tools/paper-integration/archive-skilltree-restart-evidence.ps1 -FixtureDirectory srv-paper-skilltree-dotted-names-20261119-r1 -EvidenceRevision r1`.
+
+Typed SkillTree snapshot follow-up `srv-paper-skilltree-typed-values-20261119-r4`
+verifies format-v3 persistence of scalar, list, set, and nested string-key map
+variables across two Paper boots, alongside dotted/reserved names and branch
+state. The same fixture confirms a real entity death removes only that UUID's
+snapshot. Unit coverage also verifies legacy YAML and format-v2 scalar reads,
+rejects collections in format v2, and preserves the prior file after an invalid
+write. Recursive values are immutable and bounded; unsupported objects and
+non-finite numbers are rejected. This focused result does not establish full
+Mythic SkillTree parity. The complete offline Maven `verify` and SpotBugs passed
+for the reported plugin artifact.
+
+- [Focused report](reports/paper-1.21.1-skilltree-dotted-names-restart-20261119-r4.json),
+  SHA-256 `080be2416b61e66a18ae0c6aadcf703357de5646a40f3572f809694d3eb21126`.
+- [Redacted two-boot logs](reports/paper-1.21.1-skilltree-dotted-names-restart-20261119-r4-logs.zip),
+  SHA-256 `e2cde0212ea439cef4f5817669d22cb0682fc15de1d6d56c5be1767760ba71e5`.
+- Plugin SHA-256: `272d7a99d3f7a6ec8e18fbc0a133f436379b78c16a5c5c22b530bdb2ca675ff7`;
+  Paper 1.21.1-133 SHA-256: `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
+
+Reproduce from a clean build using
+`pwsh -NoProfile -File tools/paper-integration/test-skilltree-restart.ps1 -FixtureName srv-paper-skilltree-typed-values-<unique>`
+and archive with `archive-skilltree-restart-evidence.ps1`, choosing a fresh
+evidence revision.
 
 Previous strict fixture `srv-paper-on-timer-import-strict-20261110-r1`
 verified imported 2- and 5-tick Timer branches aligned to the Paper global
@@ -680,7 +1290,7 @@ Report:
 [paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.json](reports/paper-1.21.1-mythic-native-stats-imported-strict-20261110-r1.json), SHA-256:
 `adb22fdbb2d5a76e2459da0a2b3e2b6a2519b70900b97246b4c583376845b426`.
 Compressed server log SHA-256:
-`50c70b7efe9cf1a50b9537bcf790095ed40af741ed806dfec72367e4bcf50a44`.
+`6c7b81a87e076ce16e22d934818ed86840115106793be7fc884e037be0d4c8b8`.
 Client log archive SHA-256:
 `95c1ce7cbcd5d9939e50db95b04ef28b0d5f6b75bf6d1068d9ad5fe357af5747`.
 Plugin SHA-256:
@@ -697,7 +1307,7 @@ scopes after an attack, verifies dash and underscore spellings, checks the
 [paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1.json](reports/paper-1.21.1-attack-cooldown-placeholder-strict-20261110-r1.json), SHA-256:
 `2c8fe8fdd97659e81969db61a516347e04adf1e9b9ee2a9396f328f2924dd45d`.
 Compressed server log SHA-256:
-`4a3a4506f443837f183929ec0c3e3c98531d1aaaff8437f153eb0d622304a2f2`.
+`eebe1714d71439b13b6df514fd898c4554170b0f35819357aba7f4e385f28c6b`.
 Client log archive SHA-256:
 `aa964b4a5fd07abb9d845179d277deca380a8d92b1af41c0f7440ba9bbcdd858`.
 Plugin SHA-256:
@@ -724,7 +1334,7 @@ are preserved; both controls read `0.0`. Report:
 [paper-1.21.1-armor-toughness-stats-imported-strict-20261110-r1.json](reports/paper-1.21.1-armor-toughness-stats-imported-strict-20261110-r1.json), SHA-256:
 `c5b90d9f0d0bfb9296ecad2c5ee21753c07fb052e46ebe6709dff4d865f2c3e1`.
 Compressed server log SHA-256:
-`a516596c72afb53659bd3454fbe78e9f277d86e3926bd2570c6edab68bf88a0b`.
+`b85c67287f9df3453b52c0b10ca7b0cab5222761f40bf2812f916f11b064a781`.
 Client log archive SHA-256:
 `e8064ae881928a126f030c0f270fd0c4c046388497a2376dea9b08a7b8a60931`.
 Plugin SHA-256:
@@ -745,7 +1355,7 @@ server log:
 client logs:
 `reports/paper-1.21.1-target-of-target-strict-20261110-r1-client-logs.tar.gz`.
 Report SHA-256: `5c1f7a26e05ae6f7916edbc32dbec3578fe8421151ec4ed0ce1a2b127de08931`;
-server log SHA-256: `51f8e3f79c062dfe4453432cd7f4158dbb154c79f9538c5826fdf88ecc02986c`;
+server log SHA-256: `eb06afc4963d39c017b738d2f36053f3db2950c8b451956c200e1ab4b2b10333`;
 client log SHA-256: `d21860769abb9c604830033440f597eb86f59850d6177791eb075e4f65538799`;
 plugin SHA-256: `bfd1679b795176965f0d44b8fe9e1a9c38e3a561c042bee4c03817aba0e2641d`.
 
@@ -761,7 +1371,7 @@ imported mapping, and entity-snapshot restoration. Report:
 [paper-1.21.1-moving-condition-strict-20261110-r1.json](reports/paper-1.21.1-moving-condition-strict-20261110-r1.json), SHA-256:
 `db1e07b1e29aea7a2d19d12f7717a4c29af85d60a24a1dfb8251f090bd41ec33`.
 Compressed server log SHA-256:
-`b8fc4de7049ea979f91feed5133cb49a78d1b3bc8f8d765e030d1dc06ca98289`.
+`32f983e843f137a5e44f8736b284cee8d6e30b50f4c3ff6cd75f221f53eea7e6`.
 Client log archive SHA-256:
 `114a55e80e5c6932c4697115557ded8ee31f8e52b4de9f4f643108fd0ca526fa`.
 Plugin SHA-256:
@@ -785,7 +1395,7 @@ missing-context fail-closed behavior, and malformed-input preservation. Report:
 [paper-1.21.1-local-difficulty-strict-20261110-r1.json](reports/paper-1.21.1-local-difficulty-strict-20261110-r1.json), SHA-256:
 `b9f67d908b00da2c3bb9528d43a62001fe17223b35c317d531f108af7cbc4ccd`.
 Compressed server log SHA-256:
-`289fe8fb85a4fc96b48ebcb13c55260e4de4cb290ad1738abf77f9c6643f3c08`.
+`f7e559e7103de67d5b28e9a1a4f912a961551f2e35280fec2615c9bbc628a567`.
 Client log archive SHA-256:
 `86d9d29ccb72f3c2ed9b44affc34588003120b86b5810fb3206926bc7849a051`.
 Plugin SHA-256:
@@ -801,7 +1411,7 @@ placeholders, `last-signal`, and invalid-selector preservation. Report:
 [paper-1.21.1-imported-signal-strict-20261109-r3.json](reports/paper-1.21.1-imported-signal-strict-20261109-r3.json), SHA-256:
 `3345c7db2a19eef0c3248978dda4b6788740f07f616e3dea9f1073d38a7b260b`.
 Compressed server log SHA-256:
-`c3ae3dfb00a764751eb032fabc04e94a3d50831cfdf8246f0be907095cfd63f9`.
+`c8fb76bb25d9d6b9d659b435c33f80f75c40116a2ce54c8b03d1a9cc38eeffed`.
 Client log archive SHA-256:
 `0d931326df2927909fee1a53bf43b2d758262c70708543e763f3e2fde612edc6`.
 Plugin SHA-256:
@@ -818,7 +1428,7 @@ Report:
 [paper-1.21.1-on-kill-import-strict-20261109-r4.json](reports/paper-1.21.1-on-kill-import-strict-20261109-r4.json), SHA-256:
 `c1062a32c3c1c8516e126318c0e9b4b27dda5726b2444a69e95ce6f8195edd98`.
 Compressed server log SHA-256:
-`17acceef90b621d19a5aa7d94dca71191200e84219197221863ea11a34f5dd69`.
+`4ee5cdc42f1670015403900f1a7283a6f21f87da87bc7e2343487d876b3fd58e`.
 Client log archive SHA-256:
 `61ab0439730df8d99b7950b06de14e5c84c4ae4feba765d57debbea8e44b7c1b`.
 Plugin SHA-256:
@@ -841,7 +1451,7 @@ control becomes a Stray. Report:
 [paper-1.21.1-skeleton-conversion-strict-20261109-r3.json](reports/paper-1.21.1-skeleton-conversion-strict-20261109-r3.json), SHA-256:
 `e05d3572b7e677920c6a96ae2205980110966f3135e0f887e11a4bc965202481`.
 Compressed server log SHA-256:
-`402d04ee441e01b61ed6ff417b4575e5c90667e6ebdf4f6105d0fbc8be1814e0`.
+`8a506529c09026d1eaaf6f43d4bf895c1d2fb36a8b56029fc51688d85c5436a6`.
 Client log archive SHA-256:
 `d776bea38518b3b622511dbcbdae0ef2bd59d6f354f582c55d1b11aa44d7aac5`.
 Plugin SHA-256:
@@ -861,7 +1471,7 @@ endpoint reversal, and `finished=false` after the patrol loop. Report:
 [paper-1.21.1-route-patrol-strict-20261109-r2.json](reports/paper-1.21.1-route-patrol-strict-20261109-r2.json), SHA-256:
 `f90115c90dad9d8883a2b6a592008488c9a2c27693f09ec3adbd04da3d8c7f5a`.
 Compressed server log SHA-256:
-`05d87c11f3a35addb63bd4402cf738b60bb2e957c2e2b2c6a0a4abf842d9721f`.
+`f61dcdbb33e0d00fc1f0e71c7e8872b2631f07c968736a6ca757d26a2db48433`.
 Client log archive SHA-256:
 `f5b1fb7b78b13ec58b4bc4a83f509c64943cfe5bbceedba6915727dcdb56f3c1`.
 Plugin SHA-256:
@@ -881,7 +1491,7 @@ Report:
 [paper-1.21.1-jockey-import-strict-20261109-r1.json](reports/paper-1.21.1-jockey-import-strict-20261109-r1.json), SHA-256:
 `7c7a72ed0ff4388cc3b7bcd72e3f400d99d2daa8f1861c9d8c2f68edb57f5686`.
 Compressed server log SHA-256:
-`6a1f90c8d6798b65e161001ec0ed8d0671350d5b1162ef9b6970749c4132a163`.
+`b4c09aff0614549edc7973592424fa83d21176ed3c8683159d1669d892fae6fe`.
 Client log archive SHA-256:
 `1149e4c748f8b4cbe43b2866d8c6de1fc41000f9970b8b778ce2dd4350375f48`.
 Plugin SHA-256:
@@ -898,7 +1508,7 @@ configuration. Report:
 [paper-1.21.1-can-pickup-import-strict-20261109-r2.json](reports/paper-1.21.1-can-pickup-import-strict-20261109-r2.json), SHA-256:
 `2a46d23de86aeed5ba958bbdf846bc0933d6f1e3a294e60c364d2e300552ece6`.
 Compressed server log SHA-256:
-`04cfa7a5539a6afc90d04225fd6e4a25eb52c0892eba3b030d5f5c1f35bc3256`.
+`3fd3072467a05df0e56c82e63f4a85566b8f3a7d817534a6cc54ea9495e808c9`.
 Client log archive SHA-256:
 `05495f7b0553102158c18f188024888ce3025fe15cc350516f83dda929258dad`.
 Plugin SHA-256:
@@ -915,7 +1525,7 @@ production spawning. Report:
 [paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json](reports/paper-1.21.1-rabbit-killer-bunny-strict-20261109-r1.json), SHA-256:
 `346f7d364eb108394e69f195a47f0b801895b6699c126de7409d2572a8c7ebec`.
 Compressed server log SHA-256:
-`f162cb02493c9f6e422ed23c2903c9a6d0dce1a9e887a6c60a61a5372a4b3b80`.
+`542d00e9065c4d3d4961e849494a2dde3704e9088029d5dade6e8ce3a7abccd2`.
 Client log archive SHA-256:
 `5281e2ed2243c2b5bcff39c5126ec49485052b3eabac6d42e5e83d4df6a1aa24`.
 Plugin SHA-256:
@@ -941,7 +1551,7 @@ fail-closed fallback, reload, and state restoration. Report:
 [paper-1.21.1-mythic-stats-strict-20261109-r2.json](reports/paper-1.21.1-mythic-stats-strict-20261109-r2.json), SHA-256:
 `fdf9057a4b8740e89791fc182b4c0c00b75833c9dbbed90de02e01c7f53f45ab`.
 Compressed server log SHA-256:
-`209e93efeaf3750d687d20dd66202336c527848f2ef579caf2942252497269d2`.
+`d1b1077387eef7358910206d7f2ed785fd0a3ea7ff35c64e2ba1d60262e7e1e6`.
 Client log archive SHA-256:
 `3fa1cd8199cbb00946a2c5e5fd830734c129300d597053686cb05630fd65516a`.
 Plugin SHA-256:
@@ -959,7 +1569,7 @@ Report:
 [paper-1.21.1-attributes-composite-strict-20261109-r1.json](reports/paper-1.21.1-attributes-composite-strict-20261109-r1.json), SHA-256:
 `0067e5b18a36b60805879a8146b1d61f12965263d9e223e24b566df1c280d16e`.
 Compressed server log SHA-256:
-`8796f48b46ff7386918a596e7fdeb31a6a2109ad8e7cf7edda2d6fab2581e483`.
+`a497ac77db986864ae57a65f4c6e70ac547fe6e6b5eae163cf11e19671729dd9`.
 Client log archive SHA-256:
 `adf9d205b30aaeadedbbfd85c71219d3fbbfbddcf98079684712652ca1458927`.
 Plugin SHA-256:
@@ -989,7 +1599,7 @@ passes. Report:
 [paper-1.21.1-population-conditions-strict-20261108-r2.json](reports/paper-1.21.1-population-conditions-strict-20261108-r2.json), SHA-256:
 `67d7b23a3e96802fcf990e3a5e5c8315ef62429ea78d5cb4fffb20339f93b976`.
 Compressed server log SHA-256:
-`854f4cd7c680b95f0c8cfd5e07ba2929a0ba7fc95bfdab229c478aff252e0ac5`.
+`b7bafca1925c3cebca7f6e1f7a5312b2bddd954a83c3d5abff067de0109d9f70`.
 Client log archive SHA-256:
 `bb3fcd1c276b4c4bb8b956baf2d47dd1f7dbdbd8069048c5756d879b1a6bf86e`.
 Plugin SHA-256:
@@ -1008,7 +1618,7 @@ relationship paths. Report:
 [paper-1.21.1-coordinate-difference-strict-20261108-r1.json](reports/paper-1.21.1-coordinate-difference-strict-20261108-r1.json), SHA-256:
 `feb7799cbbcb65ef558060b07e677545aae4e7e7c64c1be54a95604146c85996`.
 Compressed server log SHA-256:
-`c7ca0ca90c3c81f264761814377a9b07eae0653ff72791732ab6a1441cf147d7`.
+`58f49e3489a42ce88cedb87f7e3ed0a08c9d0d24f4d0fab5849ab748f96df315`.
 Client log archive SHA-256:
 `5a9b63011d17e95f4ced0b8f7907cb1103f2856d33553202d4e53829afdc3aa3`.
 Plugin SHA-256:
@@ -1025,7 +1635,7 @@ rejection through the production targeter path. Report:
 [paper-1.21.1-context-targeter-relations-strict-20261108-r2.json](reports/paper-1.21.1-context-targeter-relations-strict-20261108-r2.json), SHA-256:
 `d72a3fe89dbb17623219ae53b36fb07acde0a5a9bc257fe3ac06b598aca35800`.
 Compressed server log SHA-256:
-`eb6bb8c73c1c89026be4ad80d55c04e3f4e587c6aee1c9855df119ba54c84d6b`.
+`68e75061602fa74020a7900d8fc2f4862a92bd62e413923a773e916a2f36f1b0`.
 Client log archive SHA-256:
 `9a3f6dd620f6f671c1030e91a55df989b1df576117fc1991d51eb493f7c4624b`.
 Plugin SHA-256:
@@ -1042,7 +1652,7 @@ release catalog. Report:
 [paper-1.21.1-player-kills-import-strict-20261108-r1.json](reports/paper-1.21.1-player-kills-import-strict-20261108-r1.json), SHA-256:
 `cddad86f19b04c40ca23b364e5a0e223b056c65d358e05ed5f67d5f3e6c38ee1`.
 Compressed server log SHA-256:
-`200fcc96689150b381dd31240b69dcfb20e68b6ae653bb1db26c4e55781da647`.
+`2efbe0e253e7d021fd6b6ce5e1d898131204545ad3e5127df57810e87505cec7`.
 Client log archive SHA-256:
 `0d079eb950937c4b8e1f935e490c5d9eddbdc3dfaadc04c0c06952d8b7f539d1`.
 Plugin SHA-256:
@@ -1058,7 +1668,7 @@ negative real-entity controls, and the native-AI Bee stinger workflow. Report:
 [paper-1.21.1-radius-conditions-strict-20261108-r2.json](reports/paper-1.21.1-radius-conditions-strict-20261108-r2.json), SHA-256:
 `dfcec3d4becd5b3f89f9001448f48122e607a85ec289c7bca6ab85cb8ecd9195`.
 Compressed server log SHA-256:
-`f24fb2eb03777d39b58c72f9caee9ede1e32eb36030985f1e3e175d0f38ba994`.
+`643a30acd1757d1773596de2077fa4e904167f6552a51db99295e88f8e47c8ea`.
 Client log archive SHA-256:
 `bd28e895cc1c7a8988b7d9272992e47fffa7efcab23f032a72fa70722b4cf57d`.
 Plugin SHA-256:
@@ -1089,7 +1699,7 @@ invalid-input preservation with warnings. Report:
 [paper-1.21.1-mythic-teleport-strict-20261107-r1.json](reports/paper-1.21.1-mythic-teleport-strict-20261107-r1.json), SHA-256:
 `ceefa59fa0b73dce20cca9e1e41cc6cef3536bca4c695c9ffaadd704dacd6406`.
 Compressed server log SHA-256:
-`9f0ca63ee7298281007f08befbf9faa4b5be71981471e02c20c29cb0330ab70e`.
+`8c51b5b6df9c3358edd22a2101e6d13ff1fe98b9664f84a79f9fb36602daeacc`.
 Client log archive SHA-256:
 `20ebcf32379083b80384b2993c00a706f718f58d4176ed25b0b7fea9a2247c24`.
 Plugin SHA-256:
@@ -1105,7 +1715,7 @@ flags and the game rule were restored before cleanup. Report:
 [paper-1.21.1-slime-natural-strict-20261107-r1.json](reports/paper-1.21.1-slime-natural-strict-20261107-r1.json), SHA-256:
 `2b267ee50d929f69a93f8a8257f11c089c855e1b240e6c635fd4dc8d0ee6ae1c`.
 Compressed server log SHA-256:
-`7cfed098c088ee17ffd9d724c3f9fcd52123d23e7aa1b9ddf18a302553f78109`.
+`3c5cf8d95a82ca3bd764a738301aad27c3092dcf625b7b2de09b6c10a9a30b01`.
 Client log archive SHA-256:
 `6d74829591cf38ae24c50b5132c3d5f4e3bac18b15437f69e5709c02e86bfea3`.
 Plugin SHA-256:
@@ -1121,7 +1731,7 @@ permission-bearing tester and includes the guest) and faction exclusion
 [paper-1.21.1-audience-filter-negative-strict-20261107-r1.json](reports/paper-1.21.1-audience-filter-negative-strict-20261107-r1.json), SHA-256:
 `a16283dff27ac196d2a36199718c62686d8032ee6481dfe0916f57c438458738`.
 Compressed server log SHA-256:
-`fadb071034fde242dd4a748acafc7cc88407b101639f61439115e779a0fd47d5`.
+`d7f04191318173b9c424b4dc3cc91d09528bc9c6a25d68b293c7574fb831985d`.
 Client log archive SHA-256:
 `e6148a8360062ebb535ea6c9dec71ff5c659e6dfbc1f5e50d06d734994f7f8e2`.
 Plugin SHA-256:
@@ -1139,7 +1749,7 @@ for effective-state verification. Report:
 [paper-1.21.1-entity-flags-strict-20261107-r3.json](reports/paper-1.21.1-entity-flags-strict-20261107-r3.json), SHA-256:
 `4add60fd513d716fd8bfbb26cb6e141691ff5db580e8ef9c54b98a80d3424dc5`.
 Compressed server log SHA-256:
-`f620af4b3bae75a07b05614ba2c33aafab9006c7d896dfc324af6d983e10f501`.
+`c74d67cb222c08cd9f896e61c936b10215e4018a9431958b90d108e8abcfe0eb`.
 Client log archive SHA-256:
 `9c0e10957d681ca11040c8f614e493967c4a1da21b1a51ed6d1453352f70b073`.
 Plugin SHA-256:
@@ -1154,7 +1764,7 @@ Zombie were cancelled, while the control event was uncancelled and retained
 [paper-1.21.1-prevent-sunburn-strict-20261107-r4.json](reports/paper-1.21.1-prevent-sunburn-strict-20261107-r4.json), SHA-256:
 `7dcdb9a10f0a5a62388f9578db3fd9d88d4417cea8e7ffb44dcce675203e3bbc`.
 Compressed server log SHA-256:
-`1505578b95892313569cbb95256f162dd6c9de63cf85ecd74806808e8d62b23c`.
+`af72fa9eaaf00385895368f31a2c7503fd052da745314024be96006b1dfa67fa`.
 Client log archive SHA-256:
 `4c4baf391ffee276d4f635163402b5719b5cf5fc663825f55d9327ba05ca0e79`.
 Plugin SHA-256:
@@ -1170,7 +1780,7 @@ remains stung. Report:
 [paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json](reports/paper-1.21.1-bee-stinger-loss-strict-20261107-r6.json), SHA-256:
 `a19476296ade4ac370e358a4b83d5f994d190f8cd871686f2bb9b68ab9fa1571`.
 Compressed server log SHA-256:
-`915608e2bd587075ed8336c2098699fa343732a1ef3a60c738f21a65d68930e9`.
+`c1aae1977c412e0b08edf64c4ffa7ec7b98242fcace5a02a6674a412fb3fe6aa`.
 Client log archive SHA-256:
 `be17f8a8a1c9263ed98866d3f5eb64d06bd1c655a5972c8380190ec2b509a270`.
 Plugin SHA-256:
@@ -1184,7 +1794,7 @@ a contrasting control. Report:
 [paper-1.21.1-horse-options-strict-20261107-r1.json](reports/paper-1.21.1-horse-options-strict-20261107-r1.json), SHA-256:
 `6c4c3a516d999fa409817075491db62d5d479db5b33a139672f75e4673faae6a`.
 Compressed server log SHA-256:
-`c69e91fd105f7e230ae703e8398a74334637e555a8bb9b15e7179a4e3818970a`.
+`c442a37fff5a47001bdb2f765344904acc1f5e88b6bd7aa75a7c0e67bcf98ddc`.
 Client log archive SHA-256:
 `655667e0946236116aed9f46ec0090a2aca37b51ebd430afa389893ff0b5397d`.
 Plugin SHA-256:
@@ -1198,7 +1808,7 @@ checks a white, unshorn control. Report:
 [paper-1.21.1-sheep-options-strict-20261107-r1.json](reports/paper-1.21.1-sheep-options-strict-20261107-r1.json), SHA-256:
 `eea8fd2e6462b636425882145048d0de6ed9887b43a416aa7517e6f6cb93ad14`.
 Compressed server log SHA-256:
-`a58fe3c1c709a112ea5bcd2a7669fc8d8fdccc495b748413664f86ab86e73092`.
+`9ec8943a561b545b01f33b22525f26f5c2c1f873a405ff533ea36c842a21fac2`.
 Client log archive SHA-256:
 `279d6430528ce8315c8a094f97071a9b2ef57a597b62e8e1a78ee3faa053e1d2`.
 Plugin SHA-256:
@@ -1217,7 +1827,7 @@ state, and protected/control explosion behavior. Report:
 [paper-1.21.1-creeper-options-strict-20261107-r1.json](reports/paper-1.21.1-creeper-options-strict-20261107-r1.json), SHA-256:
 `4088b4c42abe7521ee5f16e1323fa94198dd40c7d354906a738c9883ce1ce6e3`.
 Compressed server log SHA-256:
-`590c2089132ada56a988d8eb0feced244afe66469b8a9588fd76c51a7a0f190d`.
+`36962bc3efd1c47afbbd268079104918f34bfdf87de2347509a91d9aa0cc5a3e`.
 Client log archive SHA-256:
 `204ec5f413a0f6cc2f1de0b20f837733c09d78571963968988d4360bc1116986`.
 Plugin SHA-256:
@@ -1232,7 +1842,7 @@ family reached both endpoints. Report:
 [paper-1.21.1-entity-size-range-strict-20261107-r1.json](reports/paper-1.21.1-entity-size-range-strict-20261107-r1.json), SHA-256:
 `83d12f6314ce4a4a8138f514003d8c91ada0dcad3269de2612aabc8d289db8b9`.
 Compressed server log SHA-256:
-`77e1e201502888f79bbd04eb0d3914c955d5263f9f846f285a014564e618c5a1`.
+`6859d50876cc9f18918859967f5ffc523bb0d875a0a0b5849811554d3ec9b202`.
 Client log archive SHA-256:
 `40072bdb7eb2d1b78bf0f9492af57941a7a989bf54c23d802980fdddf4a71dd2`.
 Plugin SHA-256:
@@ -1253,7 +1863,7 @@ verifies imported `TrackLocation`, `@TrackedLocation`,
 [paper-1.21.1-tracked-location-strict-20261107-r1.json](reports/paper-1.21.1-tracked-location-strict-20261107-r1.json), SHA-256:
 `b86a69aeeb3dde890b3845785fda47137faafc758484e697b68c3e066df4b41d`.
 Compressed server log SHA-256:
-`bff27f5dcfbf4d1760c5ae3ec4fa388d924303303f3ad558fedbc05941b9ae6c`.
+`7af4c8cb0e0c87c97c276d7364a930d38f1e48dc8b86b798d80e0b6bd95d30e4`.
 Client log archive SHA-256:
 `fa1c49ec2656490216b16349494e25cafe08ffabf4acddcb90836bbf3e2f8d74`.
 Plugin SHA-256:
@@ -1270,7 +1880,7 @@ validation, and per-variant DropTables through natural Bukkit death. Report:
 [paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json](reports/paper-1.21.1-mythic-spawner-biome-strict-20261107-r2.json), SHA-256:
 `db1364e2628752d8264afb3ed777d14ecf30cd2a10743456445ffc112657e205`.
 Compressed server log SHA-256:
-`e754a66da9244e1749ddf463c5aebf82458935729c45437ac44b5f19a5b41284`.
+`1cb412868545ad173a6f0cb8ef017cd88674004ee870bc3a3f60b75327fb38cb`.
 Client log archive SHA-256:
 `2f7b7c4e3df3f74e8fe0dca73949ee2f474d96672ab840cdeeb7885634bd830a`.
 Plugin SHA-256:
@@ -1290,7 +1900,7 @@ original loot state is restored.
 Report SHA-256:
 `5e6dcf481074465073601a50236253d1d7d7a4d3c931eb8f3d155ddd4c8726fe`.
 Compressed server log SHA-256:
-`2b9e75a0bfa37bd6d032483e1b1766c979e370a87f832921de65279da586ea45`.
+`1ad678ff40409bc9443222f4cc3bc9e24f1d84cd86641135ddf26fc30a15b138`.
 Client log archive SHA-256:
 `cf77597a648d6a584aa0d6362b5938c64ac21aef3d0e81a73892414eceaf80ef`.
 Plugin SHA-256: `773367e232f2c48f5b96876c3572ad486e3918e84c3cfbe7fe925866c353202a`.
@@ -1319,7 +1929,7 @@ visible only to the member client.
 Report SHA-256:
 `a9da1ae78d324b01ceafdeb93c0e31b08783763020d3f6f0d3964c25a308824e`.
 Compressed server log SHA-256:
-`86a4b02339b0bb955339e32ec88ab04678582b0734ce819222903639df444019`.
+`e79115a7bd273b31ef8a186e94238473ec722a161e4340df0f93cd75ead43f6a`.
 Client log archive SHA-256:
 `beee7dbf361bf8c3acc4907ac3f9fa3925c2da34c47c2b8ff574646510686db2`.
 Plugin SHA-256: `5aa37479c888f3e77aaef920ee0920a32b97d16cf7df6f6cd047d59334dc9e0f`.
@@ -1332,9 +1942,9 @@ had no clients, so post-restart member/outsider visibility is not claimed.
 Report SHA-256:
 `705b216133dee0e40ec46d72c96886fa0803da193d866566f813527004137573`.
 First-boot compressed log SHA-256:
-`eea91b7db72c77dde5ae62e8a22dcf3011a465b4dc423bf9292dc5f0a9caaa1a`.
+`3f59b604d540b624419a59017a4f61dd08577e60f4cb3174609a17bb31e86f82`.
 Second-boot compressed log SHA-256:
-`bb73f87dba8917651b879e64331255e06bfc051142240be46abb539817a5f144`.
+`9684c51f8add8a429ccb013daa44593df7f26f62476f92ff54364e0c69e2105c`.
 Plugin SHA-256:
 `6ba52a22a59492ec6d0fe82991d7d27d7298e152e91515974ff615a08091a750`.
 
@@ -1369,7 +1979,7 @@ rejoined and completed its workflow.
 Archived report: [paper-1.21.1-execution-audience-strict-20261106-r1.json](reports/paper-1.21.1-execution-audience-strict-20261106-r1.json), SHA-256:
 `2d73ffe76e8bd39bd1e4eb2a595aada8dbfe040f7ce76777e4332fe37e1e32d7`.
 Compressed server log: [paper-1.21.1-execution-audience-strict-20261106-r1.log.gz](reports/paper-1.21.1-execution-audience-strict-20261106-r1.log.gz), SHA-256:
-`5a499bacfaa84c12838c4b19073f708e6682767d362c68509e5cec6e62260568`.
+`c1ee6eef7f1b602e4d269307416945e35809f4e302ce16d95e0b9ddab84eb411`.
 Client logs: [paper-1.21.1-execution-audience-strict-20261106-r1-client-logs.tar.gz](reports/paper-1.21.1-execution-audience-strict-20261106-r1-client-logs.tar.gz), SHA-256:
 `fc822abf800c714cef5722b7996e8ecd2fa2281d551697a4b7cf3f0b52f69218`.
 Plugin SHA-256: `abbc8f64d612eb4cd7cf548f5cde663821b6183687e2c9649affe3003febd3cf`.
@@ -1385,7 +1995,7 @@ Unknown, duplicate, and empty arguments remain preserved.
 Archived report: [paper-1.21.1-name-import-strict-20261106-r2.json](reports/paper-1.21.1-name-import-strict-20261106-r2.json), SHA-256:
 `53bf9b3683bba8abec21886dcc7300d3b4fe169a0395f59a691b93e251cb4af9`.
 Compressed server log: [paper-1.21.1-name-import-strict-20261106-r2.log.gz](reports/paper-1.21.1-name-import-strict-20261106-r2.log.gz), SHA-256:
-`58ac530ab3940c3b7c98964bd6d144a605f2f6de697ee42b183f44b29902448f`.
+`72e6f76648b0f5d4aa274ced5b11d2d6d1de39d34eaf7b2fc31902212dd7c9f1`.
 Client logs: [paper-1.21.1-name-import-strict-20261106-r2-client-logs.tar.gz](reports/paper-1.21.1-name-import-strict-20261106-r2-client-logs.tar.gz), SHA-256:
 `524073a7389f8f3cb1805aedd231500ed8234065c2d192fde6d44b7c6c1905c9`.
 Plugin SHA-256: `42760067a8c4c7ea88d9691da8886d5dc5db7f9fd50a369489ba8b25c45e3657`.
@@ -1410,7 +2020,7 @@ semicolon values, dynamic variable placeholders, and invalid-range preservation.
 Archived report: [paper-1.21.1-variable-conditions-strict-20261106-r1.json](reports/paper-1.21.1-variable-conditions-strict-20261106-r1.json), SHA-256:
 `c5375c3202f5c42a88bcb91ec839f9fe4afd09572c8e3bb614883ce61bc4cae5`.
 Compressed server log: [paper-1.21.1-variable-conditions-strict-20261106-r1.log.gz](reports/paper-1.21.1-variable-conditions-strict-20261106-r1.log.gz), SHA-256:
-`7e490557bb8c9dc30550df6faafb399bf87cb4efe77bc2adae3d1cb4e7274aa0`.
+`92f7a8629e4afb8e633d7e6a7a00c81fe5732229d680af16d2bd4d8f756d7d4b`.
 Client logs: [paper-1.21.1-variable-conditions-strict-20261106-r1-client-logs.tar.gz](reports/paper-1.21.1-variable-conditions-strict-20261106-r1-client-logs.tar.gz), SHA-256:
 `30a54ae26df932ba72229d77e80ebec94ba5615c4200954081536d64e715af4b`.
 Plugin SHA-256: `b37f06a021b904fd3fa61b2710f88cc4c533943c533e28a813e7bc1dd0eae8b6`.
@@ -1442,7 +2052,7 @@ Shulker, Parrot, Llama, Tropical Fish, and Iron Golem entities, including
 inapplicable-trait rejection. Report SHA-256:
 `59ef6eeffea0c5cf6c24cbfe1d7c956a8a8215f3f8586a59f36cbcdb0d264c23`; compressed
 server log SHA-256:
-`b91f35c42f5aac73f4f043252510d539db117a4be82a7deb0a65a65c57bf7edf`; client log
+`3b815a4b2fef20b6d3599c738b129ed20ea5d896cdf8736e2b4d0dcbb828dad0`; client log
 archive SHA-256:
 `0c3a91d398ccf4e0d4ef85c812760dec02d9ae408e184ff75888271e75fe457a`; plugin
 SHA-256: `327c83088c400d0e39f6045d1e58d8a226e999e8d67d9feaa20116a5faacd59d`.
@@ -1456,7 +2066,7 @@ RED, a wrong entity type, invalid variants, unsupported nested traits, and
 malformed type constraints are rejected or preserved as expected. Report SHA-256:
 `9a887d003b8e4fd7ac2b31a9da067ade1d036316cca6ddf18dd6e943205c2c27`; compressed
 server log SHA-256:
-`78bf5c47da944453bbe6b6789e788f77f98fbc3115461c35cc4b247ba672362e`; client log
+`9ee277e82868fc8bb0535d59f71a9b70123d2db6d7e318017a904074be4b4608`; client log
 archive SHA-256:
 `2e9f8e665fbd3eb38b9b22ee8b08d19d371f2a9a4864474d80b3300364de761f`; plugin
 SHA-256: `58f94be7da6216b62e09e7d3405bc6229b97c022e2a2fdd74e2450957721c369`.
@@ -1891,7 +2501,7 @@ enabled independent spawner capped at one spawn. With both state files corrupt,
 the real scheduler left its count at zero; after repair and console reload it
 reached one and persisted one at shutdown. Logs, state files and configuration:
 `reports/paper-1.21.1-state-natural-repair-20261103-r2-logs.tar.gz` (SHA-256
-`14b564407fc3b970065b92663a73fc6b8e911ccf0a644811792ad20c1c36fe00`).
+`62815f3307d3feb21bf9cbcb94c2f41ff60d42561a021dad4526b1ae9b74fdde`).
 Report: `reports/paper-1.21.1-state-natural-repair-20261103-r2.json` (SHA-256
 `862a927d15fd5d7b4539965295379c57f971a8909d85f199d9ccfa8501a30cf7`).
 The earlier `srv-paper-state-natural-repair-20261103-r1` observed paused count
@@ -1903,7 +2513,7 @@ both files after the first shutdown. The second boot logged the pause, rejected
 the console force command with zero spawns, and skipped state saving; both file
 hashes were unchanged after shutdown. Logs and state files:
 `reports/paper-1.21.1-state-corrupt-both-20261103-r1-logs.tar.gz`
-(SHA-256 `8025317b969489ef3de6b0e3c117e58f4730323599d803c77d2124526cec18f1`).
+(SHA-256 `f7e54048e02e5fd0511bd242402e80b5b449a759f7f79b02436f0af395f2031a`).
 Second-boot report: `reports/paper-1.21.1-state-corrupt-both-20261103-r1.json`
 (SHA-256 `fc7b96fb6a02bcbfd982aaa91b5b6ba5bb1ce473636a33268818a254cef784bb`).
 This focused run does not itself establish natural scheduling or repair behavior.
@@ -1913,7 +2523,7 @@ observed the forced spawn rejected, restored the first boot's valid state and
 reloaded it. After loading the target chunk, the server restored count 1, accepted
 one forced spawn, and saved count 2 at shutdown. Its two boot logs and state
 files are archived in `reports/paper-1.21.1-state-repair-20261103-r2-logs.tar.gz`
-(SHA-256 `e6c383a53705c7c0023aef01c419871badbf6ea739e7bbed36cd2bff8f550b7e`);
+(SHA-256 `4ac0e91b1c0b8b6f5cd452d38c402d184376935deef082dfae2538dbf6896d9b`);
 the second-boot report is `reports/paper-1.21.1-state-repair-20261103-r2.json`
 (SHA-256 `52e2f8cb1700c6815d00236c26c668495217063c5ad7fa4a9c001a4ccffff048`).
 The earlier `srv-paper-state-repair-20261103-r1` restored count 1 but its forced
@@ -1935,7 +2545,7 @@ from the backup; shutdown wrote it to the primary while preserving backup
 SHA-256 `3ce9dbd1259f2eda6aa95ac702e58d1def045cb617fa15d37b9c9f9b224abc02`.
 Both logs and state files are archived in
 `reports/paper-1.21.1-state-missing-primary-20261103-r1-logs.tar.gz` (SHA-256
-`21c0932e7ca4d14b9c6758e4311ef8de710c03506a412bf97b6ca81f0a322d50`).
+`3f94274cd01c10abf8e06fb3e376e2ffdd1410881a967e191ab3e14ec0dc9667`).
 The second-boot report is `reports/paper-1.21.1-state-missing-primary-20261103-r1.json`
 (SHA-256 `68a3f66aef3affe75c4d5178194a660efe0f75f04b982fcdf20632620aa70442`).
 This focused run does not exercise the unrecoverable-state pause.
@@ -1960,7 +2570,7 @@ shutdown wrote that counter back to the primary while preserving the backup
 SHA-256 `8e0989e8a96f5c65df11c518e00713af3683dece713a9af6aa386f78135a92ac`.
 Both boot logs and resulting state files are archived in
 `reports/paper-1.21.1-spawner-backup-save-20261103-r1-logs.tar.gz` (SHA-256
-`63e959c78e1a7616c51ea1c3672311c8f035441526bbad5969474b9275aeb703`).
+`8c08f611a86ca665d244a0e85d86aae377dbf065689d2da13e0970ee75aae9d2`).
 The second-boot report is `reports/paper-1.21.1-spawner-backup-save-20261103-r1.json`
 (SHA-256 `e6c7d91474527c7bc34a5d45e1492da7ade136e4083781bd246ca5f8a07d9dd1`).
 This focused run is not a full strict release fixture; interruption during the
@@ -1980,7 +2590,7 @@ also passes the tightened same-line server-thread assertion. Its result is
 `reports/paper-1.21.1-web-reload-20261103-r3.json` (SHA-256
 `f7e4d74e9c9cf99f3683b17dc92ed103486772377b02666c911fd3d9a1a6f8d5`),
 and its log is `reports/paper-1.21.1-web-reload-20261103-r3.log.gz` (SHA-256
-`1829f92d5f441260b3e79859506e969d66ed4ba288724818d8f2cba9d2c69805`).
+`64634ac5c781a93cab05206a98646aa4f8939ac9163b45d8f302a4b86df2d319`).
 This focused fixture is not part of the strict release catalog.
 
 Independent HTTP fixture `srv-paper-web-reload-20261103-r2` on Paper 1.21.1-133
@@ -1991,7 +2601,7 @@ The plugin SHA-256 was `82b509e07d06497e7169647b9b3185423b534c93fae976ea3eb58c40
 Archived observations: `reports/paper-1.21.1-web-reload-20261103-r2.json`
 (SHA-256 `3cb08b5d97349de6e869a58dd5734b099137b9f799c9bc6e23edfbb5c4921774`),
 server log: `reports/paper-1.21.1-web-reload-20261103-r2.log.gz`
-(SHA-256 `30a9850063edb0f2734995f1f5cd3cb9839e6fc8ea28b86a884b0136212b45fe`).
+(SHA-256 `9b10978eabd1e805a2c755b0df75ce35d6e2920de53743415c091a4eda0af89a`).
 
 Independent two-boot fixture `srv-paper-spawner-corrupt-restart-20261103-r1`
 on Paper 1.21.1-133 generated one spawn, replaced the primary state with invalid
@@ -2000,7 +2610,7 @@ YAML, logged `state load failed; trying backup`, and restored the count with
 The plugin SHA-256 was `cef7cc0bfc7779baa2eab9e3789ab4ff5714dd4867adbe80c9352b16a97be066`;
 both boot logs are archived in
 `reports/paper-1.21.1-spawner-corrupt-restart-20261103-r1-logs.tar.gz`
-(SHA-256 `0bd26756122d6aaef0073d3eebf499ceccc3c4f65bd5634c1a1998f12f0cce63`).
+(SHA-256 `f409cfc44318b60faae6fc8cc9180fd2846cff856866ecd6a7b86f3746af37eb`).
 
 Historical strict release fixture `srv-paper-spawner-null-20261103-r2` uses Paper
 `1.21.1-133` and completes 309 probes (290 passed, 19 expected rejections).
@@ -2779,6 +3389,145 @@ dedicated pool; expected and observed distributions were both 0.50/0.50,
 `maxDeviation=0`, and the structured probe status was `passed`. The report
 stores both `maxDeviation` and `tolerance`; strict validation still rejected
 the complete report because 44 unrelated probes were not observed.
+
+Focused fixture `srv-paper-random-spawn-replace-20261119-r14` runs the complete
+Mythic RandomSpawns YAML -> production importer -> generated runtime YAML ->
+production `RandomSpawnService` chain on the SHA-pinned Paper 1.21.1-133
+artifact. Nine probes pass: importer projection/resolution and preservation
+of unsupported ADD and DENY-with-Type; successful replacement only after the
+managed mob appears; condition and spawn-reason negative controls; DENY
+cancellation and its condition control; cooldown rejection and recovery after
+expiry. A real online survival player and a platform with block light zero
+produce four native Paper `NATURAL` spawn attempts, all cancelled by the
+imported DENY rule. The schema-validated report records Paper, API, plugin,
+runner, fixture source/JAR, natural-spawn client, Mythic mob catalog,
+RandomSpawn and replacement mob YAML, and server-JAR hashes. This is
+feature-scoped evidence, not completion of the global release catalog or full
+Mythic RandomSpawns parity. Report:
+[`paper-1.21.1-random-spawn-replace-20261119-r14.json`](reports/paper-1.21.1-random-spawn-replace-20261119-r14.json);
+compressed log:
+[`paper-1.21.1-random-spawn-replace-20261119-r14.log.gz`](reports/paper-1.21.1-random-spawn-replace-20261119-r14.log.gz).
+
+Focused fixture `srv-paper-random-spawn-replace-20261119-r15` passes all ten
+feature probes on SHA-pinned Paper 1.21.1-133. The production-imported
+`ADD/CLUSTER` subset is explicitly enabled for the probe and spawns one managed
+mob near a real Survival player; the fixture also verifies replacement,
+condition/reason controls, DENY, cooldown rejection/recovery, and preservation
+of unsupported definitions. Five server-native `NATURAL` spawn attempts on a
+dark pad with the player online are all cancelled by the imported DENY rule.
+This is focused feature evidence, not Mythic's exact CLUSTER implementation or
+the global strict release catalog; `ADD` Conditions, weighted `Types`, and
+remaining RandomSpawns semantics stay open.
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r15.json),
+  SHA-256 `95108d87b683ba1f3b6ca8f8e340b10a38918e33b171acd5834d05102e19b5b1`.
+- [Compressed server log](reports/paper-1.21.1-random-spawn-replace-20261119-r15.log.gz),
+  SHA-256 `b5c1e6b11bc86fb28f2cb99cdf31b71a95a24b1b699fd53cab406e6ed1c9dfda`.
+- Plugin SHA-256: `9ad15be624c2e43ee8eb7d6b6be0f010f0382cc3b3e4bd190e5fdc89c3f46106`;
+  runner SHA-256: `9c78b09b09c398f7a956eb6cd94e1477288836687c32806f886a00362bff3592`;
+  fixture probe source/JAR SHA-256: `99e411cc4a530d977ebf3ecf136bc28ddfea5eccad1750cbe03bebe7b78d94f5` /
+  `20d9820b2ec2111224c5c9ef55d349a06f4a772405dbcce68c12ec1ae6edfe23`.
+- Reproduce with `pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision rN`;
+  choose an unused revision.
+
+Focused fixture `srv-paper-random-spawn-replace-20261119-r16` passes all eleven
+probes on SHA-pinned Paper 1.21.1-133. In addition to the r15 replacement,
+DENY, cooldown, and natural-spawn checks, the production-imported ADD rule
+evaluates candidate-point world/time/weather conditions: daytime, rainy night,
+and a mismatched world are rejected, while a clear night in the configured
+world spawns exactly one managed mob. Entity-dependent ADD conditions remain
+preserved and fail closed; weighted `Types` and full Mythic generator parity
+remain open.
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r16.json),
+  SHA-256 `089db2ef496743c36f2e9d6e99a9e73cd4c92df819022025652bfa603c86b488`.
+- [Compressed server log](reports/paper-1.21.1-random-spawn-replace-20261119-r16.log.gz),
+  SHA-256 `cff70fb74444f1ecf35f9c5b219d7c391ac88505d3b3b86c4c999c3142353ec0`.
+- Plugin SHA-256: `4be324dc29475ce2e7f06ea26ad306426bd2181a847a8019e5fcbd75b932707a`;
+  runner SHA-256: `b55b04746d7624376492571f2f24ba791a810f94ec9b07f6767a965f4aff5520`;
+  fixture probe source/JAR SHA-256:
+  `43eb4cbe41637c6da6d0ec62f9b0fd63f5c8be2a4dce876600290b74a8e05a42` /
+  `09b4def0e9767117afcd687a288246bbdb2ecc55da1dd4d2945ccb0ed4b7eac8`.
+
+Follow-up fixture `srv-paper-random-spawn-replace-20261119-r18` passes all
+twelve feature probes on the same pinned Paper build. It retains the r16
+condition and natural-spawn checks and adds `randomSpawn.add-world-border`:
+with the live border temporarily moved away from the candidate region, ADD
+reports zero spawns and the nearby managed-mob count remains unchanged. The
+runtime unit test also confirms out-of-border samples never reach the mob-spawn
+adapter. Border API errors fail closed. This remains focused evidence; it does
+not close the full RandomSpawns parity row.
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r18.json),
+  SHA-256 `54199cad2705f370b1655436167a18548625735063f692c2d412bceaf08817d0`.
+- [Compressed server log](reports/paper-1.21.1-random-spawn-replace-20261119-r18.log.gz),
+  SHA-256 `cac4a79cb0b93cbbccd28952f2fe4672aedbf7e4b25690e8174161b566dde6e4`.
+- Plugin SHA-256: `3c87330724a3120c9cf77acf9aadc8ecbf567008d78db421e04e25a2eea88379`;
+  runner SHA-256: `2f4251ee6f93fae9745493d388e91a77ed76b0b0f6b125536abb7bdfeab60800`;
+  fixture probe source/JAR SHA-256:
+  `6ae7cf2beb623ec0b9fb3e8c2ae9f806dc9274f6f1c6e0cb86a2ecc335577dcd` /
+  `cb89f30554d6bc5f14bbdb2832bdcb01241da69cb2fd3206512c4b2e38eaea6c`.
+
+Follow-up fixture `srv-paper-random-spawn-replace-20261119-r19` passes all
+thirteen feature probes on the pinned Paper 1.21.1-133 build. It adds a
+production-importer-to-runtime `Types` alternatives probe using a YAML list.
+Comma syntax and repeated entries have unit/contract coverage. The runtime
+observed 10:6 selections across 16 valid `CUSTOM` spawn events for the
+fixture's 1:1 entry pool; this is a focused compatibility observation, not a
+distribution guarantee. The other twelve probes retain the earlier ADD,
+condition, world-border, replacement, DENY, cooldown, and native-spawn
+controls. This remains feature-scoped evidence and does not close full
+RandomSpawns parity.
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r19.json),
+  SHA-256 `b4af778adfe6400ed9fc6700fded63c870998b869a463970e5beead233a4230d`.
+- [Compressed server log](reports/paper-1.21.1-random-spawn-replace-20261119-r19.log.gz),
+  SHA-256 `faa900d17017ca033b156e067d29521f9afaf6d1dbb3bfac3fdce3d4804337d8`.
+- Plugin SHA-256: `e4d71e9fd4e73ec477212519db89512867bba4056ff3e68e067e067670ad71d5`;
+  runner SHA-256: `5de1fafe7bc5f298a30805c868d407ac3954d490bb63f5d697e0879adeb46d5a`;
+  fixture probe source/JAR SHA-256:
+  `b34ff0fad2e99854ca31bd03e62aed2ce36fdbee58c73b0ee652fca5c0a7a0c3` /
+  `0f68c5e7ca1db3f8e1bcc3de959302e8350d818d67d847401872afb06d638d7c`.
+
+Follow-up fixture `srv-paper-random-spawn-replace-20261119-r21` passes all
+15 feature probes on Paper 1.21.1-133. The production importer accepts
+`PlayersInRadius`, `PlayerWithin`, and `PlayerNotWithin` in location-only ADD
+conditions. Each has an isolated rule that spawns once and an isolated rule
+that rejects; every case records an actual production condition evaluation,
+so rejection cannot pass merely because terrain sampling found no candidate.
+The fixture also checks all four game modes, spherical distance at a cube
+corner, exact zero/one counts, and restoration of the player's mode. Eleven
+native NATURAL attempts are observed and cancelled by DENY. YAML-list Types
+produce both alternatives (6:10 over 16 events, configured weights 1:1).
+
+The game-mode contract comes from a bytecode audit of MythicMobs 5.7.2,
+SHA-256 `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`:
+`PlayersInRadiusCondition.check` filters Creative and Spectator even when its
+parsed `ignoreSpectator` flag is false, and uses spherical distance with
+`RangedInt` exact scalar counts. `PlayerWithinCondition` also excludes those
+modes; `PlayerNotWithinCondition` includes all modes. Earlier prose claiming
+Creative inclusion and configurable Spectator inclusion is superseded for
+this pinned version. This fixture runs Helstera against the audited contract;
+it does not execute a live Mythic-vs-Helstera comparison or establish behavior
+for newer Mythic versions.
+
+Runtime/contract tests additionally verify missing location and query failures
+fail closed under negation and zero/upper-bound counts, and counts above 513
+are not truncated. The focused Maven package run passes 500 tests. The existing
+general Paper radius self-tests now select Survival temporarily and restore
+the original mode. The same artifact now also passes all 471 full strict
+probes in `srv-paper-player-radius-strict-20261119-r1` and 2,298 Maven tests
+plus SpotBugs. RandomSpawns full parity remains open.
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r21.json),
+  SHA-256 `2a48c4c0f7e111425c7ef39fc94cca8fbe7daec324fc3b200b93598f7535e43c`.
+- [Compressed server log](reports/paper-1.21.1-random-spawn-replace-20261119-r21.log.gz),
+  SHA-256 `b87c9b7533eb8a7b4734ae609e1cf4c95885b00a28bb082635d013abb285b5b6`.
+- Plugin SHA-256: `36a9456a8bbb738e15bf3460a3570816dce9328ad35a18235d6c7a9b48a0ff67`;
+  runner SHA-256: `04beb1b5e7844c08a0d0b7d028f59a5a50c9c466b91788c4fe5854048ea0689b`;
+  fixture probe source/JAR SHA-256:
+  `0590c2651411134a5d49750433e6781a65adbf82f12be54b0ee2b5bef7195296` /
+  `e6d869015c81ddeadedd533925df4fa146219029f474ca1e9d2446dfda39d821`.
 
 Fixture `srv-paper-integration-condition-mobility-20261016-r2` ran the current
 plugin on Paper 1.21.1-133 with a real online player. It created a Zombie target
@@ -4798,9 +5547,9 @@ the fixture sent no manual force command. The final state recorded
 Report: [paper-1.21.1-spawner-natural-restart-20261106-r1.json](reports/paper-1.21.1-spawner-natural-restart-20261106-r1.json), SHA-256:
 `4af78ee39e598fe73ca2cb142059eae40bae2692bf5ff895da458cb087c55990`.
 First-boot log SHA-256:
-`9fd81cee7aab307e5673b959aa5399ea87a9950e67545832f2a968998bfb471f`.
+`17701090b6fed65fe22999350eec2d411d0395bd3c3573bbb71d234bf37e8da9`.
 Second-boot log SHA-256:
-`8b677258d41833debfe850682fcbf18a3efd9594920e83d216946fa23c6aee3c`.
+`aab6ed9b45025dc2fe649b7632d4d279af34e4884d4e689fcb585942e7784914`.
 
 Independent follow-up fixture `srv-paper-spawner-natural-restart-20261106-r2`
 passed on Paper 1.21.1-133 after tightening the timing assertion to one
@@ -4809,9 +5558,9 @@ naturally spawned after 579 observed ticks, without issuing a force command.
 Report: [paper-1.21.1-spawner-natural-restart-20261106-r2.json](reports/paper-1.21.1-spawner-natural-restart-20261106-r2.json), SHA-256:
 `4d6a1b3618b1ec27061d14f5b19d91807db36508c5f56baac2c6e6242431ab78`.
 First-boot log SHA-256:
-`b1a79e983d7a0adf15c1b9eed35ffb451ae44ddfc7238ede5ebec2130e7e20e1`.
+`0bd93e70ada1c0bcc7fec28d1549db88fcbeb8d4ef71bbb363b49175a734e913`.
 Second-boot log SHA-256:
-`caaeb3c57cf60680a016184ee3081de80e8b1566bcd11756a225466515027b2a`.
+`c2ec0cd7428eb990bbac9759be362cf0897ec6b6e0af212423435c303ac5cd81`.
 Plugin SHA-256: `1a720c987563702610542daf9cefbe8372c6793ba3718227edadf6ef3ae56026`.
 
 Independent follow-up fixture `srv-paper-spawner-natural-restart-20261106-r4`
@@ -4823,9 +5572,9 @@ ticks, with no manual force command.
 Report: [paper-1.21.1-spawner-natural-restart-20261106-r4.json](reports/paper-1.21.1-spawner-natural-restart-20261106-r4.json), SHA-256:
 `afc78251cdb4bcf9fc5ceba5e3985d57978a46234adcf8e88190b4072beff700`.
 First-boot log SHA-256:
-`31f40fb7bec8dbba007c2015f40f91d721ccebec3cac9c69506769910b1db309`.
+`f72b5ccdf878950cdee1972992f0d1e46a6c92309129716932f13b3282147e95`.
 Second-boot log SHA-256:
-`4c81aa33ae438b0a5069132a216c45eb59b1187f11f3cb5365f26f10b0e32e42`.
+`c7a7b32bb3cc5655459b170d2bcc882a2f91684255c4d6ee86da03b94619991b`.
 Plugin SHA-256: `9b567ff5096e7b0bade71d782dee75e57d0f74566dd87cc5a9ea2169f65adbfa`.
 
 Latest natural Spawner fixture `srv-paper-spawner-natural-restart-20261106-r5`
@@ -4839,9 +5588,9 @@ command.
 Report: [paper-1.21.1-spawner-natural-restart-20261106-r5.json](reports/paper-1.21.1-spawner-natural-restart-20261106-r5.json), SHA-256:
 `9ba540ddb755c89ea8df6381d1193a7310ce45157e63f481d55c19615e099691`.
 First-boot log SHA-256:
-`f02bdb4466bcb951e8054b201ad326d3be10adfa86a8e47756ac5389b4bc1fc1`.
+`cf8845122711b2d8bfe96a221b33c7875e4fbeba76411ffc86e034145f83d2c8`.
 Second-boot log SHA-256:
-`d7bcda57371ff0ee5a0b85b9e3095488dc5079a817c6eaa355b539e50db36f28`.
+`5aa56229823dea6fd60dda724e9752042b431d2f81e04498d376e18a5a474336`.
 Plugin SHA-256: `f588b8e2126e2439192337517a4e5e6ba85e8abf95ee4cb5622df9c1c9be5f4e`.
 
 Strict Paper 1.21.1-133 fixture `srv-paper-nearest-20261031-r1` recorded
@@ -5239,7 +5988,7 @@ spawn locations, explicit target and trigger locations, `@Forward`,
 `@ProjectileForward` on an Arrow, and `@TargetPredictedLocation` using target
 velocity. Invalid coordinate input is rejected. Report:
 `tools/paper-integration/reports/paper-1.21.1-location-targeters-strict-20261104-r1.json`;
-server log SHA-256 `f6f653ff7e1692c501fc8bd15224bf1ff68012cb900f2a1e7cd1171549e3c0c5`;
+server log SHA-256 `6adf5ce06fca1a35ee6930a83eb181db225d67f9068f6d39e0312614d4f80034`;
 client log archive SHA-256
 `efb184f20e405c6557cc650fd7535ef46bc4686bf37ee10b70cef9a086b7e9bf`. Plugin
 SHA-256: `b23a9e5acd11f33281a25570a7918d1129b19041118088f23f8a9b09150c2cd9`.
@@ -5396,7 +6145,7 @@ Report: `tools/paper-integration/reports/paper-1.21.1-metaskill-condition-strict
 SHA-256 `cea7c00e2cab97b8a6858077354cad0371b371b9cde4df73b0671dec67dca10b`.
 Token-redacted compressed log:
 `tools/paper-integration/reports/paper-1.21.1-metaskill-condition-strict-20261115-r2.log.gz`,
-SHA-256 `c7da5b761295a570578c2ff58a3bb90f8f7047a4bdbd1a18c08f80b043b53d15`.
+SHA-256 `883ae0badce97096ae0402644dae42b1ca89c3c56c407d3ebd86b8dde168ea23`.
 The plugin SHA-256 is
 `94653168d595a247c66bc55a8d1e5ba32fa37fa6f0edbd27d99fcd366baa313c` and the
 Paper jar SHA-256 is `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
@@ -5414,7 +6163,7 @@ Report: `tools/paper-integration/reports/paper-1.21.1-nested-skill-cooldown-stri
 SHA-256 `3feaa949e1a628361d0f33abb2d12f9076d470179dcf95645511ceb03b96630f`.
 Token-redacted compressed log:
 `tools/paper-integration/reports/paper-1.21.1-nested-skill-cooldown-strict-20261115-r3.log.gz`,
-SHA-256 `39e2f574ba712743187b75f252c27340a0a8d8d50d78999f4bc41602454e4877`.
+SHA-256 `33f027c3d38bd34ed7d56254982d88dc5d5942585ebc9489f8376a9ee407ccee`.
 The plugin SHA-256 is
 `9b66ac4f5ad543cac9c27414b8cfa6c20ae83544da499c46971c445de2dd67e2` and the
 Paper jar SHA-256 is `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.

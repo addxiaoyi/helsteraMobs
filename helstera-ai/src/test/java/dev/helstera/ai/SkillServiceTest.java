@@ -3385,6 +3385,38 @@ class SkillServiceTest {
     }
 
     @Test
+    void conditionCompositionKeepsQuotedLeafArgumentsIntact() {
+        var svc = service();
+        registry.registerCondition("yes", context -> true);
+        registry.registerCondition("no", context -> false);
+        var context = BehaviorContext.execution(null, null, 1, -1, 0,
+                "IDLE", null, null, List.of(), null);
+        context.skillTree().orElseThrow().setVariable("label", "a && b || c; d | e ) } [ \"f\"");
+        String leaf = "variable-equals{var=skill.label;value=\"a && b || c; d | e ) } [ \\\"f\\\"\"}";
+        for (String expression : List.of(leaf, "(" + leaf + " && yes)", "all{" + leaf + ";no || yes}")) {
+            String key = svc.bindCondition(expression);
+            assertNotNull(key, expression);
+            assertTrue(registry.testCondition(key, context), expression);
+        }
+        String negated = svc.bindCondition("not{" + leaf + "}");
+        assertNotNull(negated);
+        assertFalse(registry.testCondition(negated, context));
+    }
+
+    @Test
+    void malformedCompositesCannotFallBackToLeafBinding() {
+        var svc = service();
+        registry.registerCondition("yes", context -> true);
+        registry.registerCondition("all", context -> true);
+        for (String expression : List.of("yes ||", "yes && && yes", "yes ||| yes", "(yes",
+                "yes)", "(yes) yes", "yes && ()", "!(yes ||)", "all{yes;} || yes",
+                "all{yes} extra", "all{yes}{yes}", "all{yes;yes{[}]}",
+                "yes \"unterminated", "\"\"")) {
+            assertNull(svc.bindCondition(expression), expression);
+        }
+    }
+
+    @Test
     void scalarConditionListPreservesOrForRuntimeEvaluation() {
         var svc = service();
         registry.registerCondition("yes", context -> true);

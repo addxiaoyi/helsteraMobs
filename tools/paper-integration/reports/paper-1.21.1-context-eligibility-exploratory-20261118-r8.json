@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-18T19:33:04.2526416Z",
+  "fixtureDirectory": "srv-paper-context-eligibility-exploratory-20261118-r8",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "fff24386ae840e40311c485482c2a88bfbfb4a9acfc4fcc2f7cb5ca14b6b271f",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "externalPlugin": "MythicMobs 5.7.2 (Modrinth FTWvGuE5)",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "runnerSha256": "8d2323e154c15b58a804f687a12a11972bdd1b2c363b3418a0cf996016db8ca0",
+  "fixtureProbeSourceSha256": "05833dca7c56b829dad82a576b4021a47cb7def6b7973b21af652323e9925fe7",
+  "fixtureProbeJarSha256": "1a88913a2f5cd61cc6f5d4a5359b3d0f19a13bc5c837542b12513b0526540fe4",
+  "sharedSourceSha256": "3ac91a26c619229a6129f4be2b587380e79e25364ca755b520256dcc82f234ed",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "contextEligibilityComparison"
+  ],
+  "probes": [
+    {
+      "id": "contextEligibilityComparison",
+      "status": "observed",
+      "observations": [
+        "creative-ct_trigger native=false imported=false",
+        "creative-ct_modes_on native=false imported=false",
+        "creative-ct_modes_off native=false imported=false",
+        "creative-ct_players_off native=false imported=false",
+        "survival-ct_trigger native=true imported=true",
+        "survival-ct_modes_on native=true imported=true",
+        "survival-ct_modes_off native=true imported=true",
+        "survival-ct_players_off native=false imported=false",
+        "adventure-ct_trigger native=true imported=true",
+        "adventure-ct_modes_on native=true imported=true",
+        "adventure-ct_modes_off native=true imported=true",
+        "adventure-ct_players_off native=false imported=false",
+        "spectator-ct_trigger native=false imported=false",
+        "spectator-ct_modes_on native=false imported=false",
+        "spectator-ct_modes_off native=false imported=false",
+        "spectator-ct_players_off native=false imported=false",
+        "different-ai-target-ai native=true imported=true",
+        "different-ai-target-inherited native=false imported=false",
+        "missing-ai-target-ai native=false imported=false",
+        "missing-ai-target-inherited native=false imported=false",
+        "inherited-only-ai native=false imported=false",
+        "inherited-only-inherited native=false imported=false",
+        "event-bound-target native=false imported=false"
+      ]
+    }
+  ]
+}

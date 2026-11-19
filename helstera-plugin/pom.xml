@@ -88,6 +88,12 @@
                         </goals>
                         <configuration>
                             <createDependencyReducedPom>false</createDependencyReducedPom>
+                            <relocations>
+                                <relocation>
+                                    <pattern>net.objecthunter.exp4j</pattern>
+                                    <shadedPattern>dev.helstera.libs.exp4j</shadedPattern>
+                                </relocation>
+                            </relocations>
                             <filters>
                                 <filter>
                                     <artifact>*:*</artifact>

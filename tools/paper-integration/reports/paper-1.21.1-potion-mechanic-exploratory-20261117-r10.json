@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T09:32:59.3698338Z",
+  "fixtureDirectory": "srv-paper-potion-mechanic-exploratory-20261117-r10",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "dff5a510c2df8006a62db42e2e402e455da0a2e4116145eacfd6cde9902c3fbf",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "potionMechanicRuntime"
+  ],
+  "probes": [
+    {
+      "id": "potionMechanicRuntime",
+      "status": "passed",
+      "observations": [
+        "potion-mechanic active-entities=true invalid-preserved=true imported-default=true default-cast=true default=true target-isolation=true aliases-flags=true dynamic=true normal-retains-stronger=true force-replaces-stronger=true cancelled-removal=true invalid-dynamic-type=true invalid-dynamic-ticks=true invalid-dynamic-level=true negative-dynamic-level=true self=true multiple-targets=true expression-recipient-duration-level=true expression-invalid-preserves-existing=true recipient-duration-level=true self-recipient-context=true recipient-type=true recipient-invalid-first-preserves-effect=true recipient-invalid-second-preserves-effect=true recipient-context-preserved=true callback-removes-later-recipient=true callback-removes-current-recipient=true cleanup=true passed=true"
+      ]
+    }
+  ]
+}

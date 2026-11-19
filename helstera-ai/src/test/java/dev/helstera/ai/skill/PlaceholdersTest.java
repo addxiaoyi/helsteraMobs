@@ -44,6 +44,12 @@ class PlaceholdersTest {
         assertEquals("5 true <skill.var.count> <skill.var.unsupported>",
                 Placeholders.resolve("<SKILL.VAR.Count> <skill.var.flag> <skill.var.count> <skill.var.unsupported>", c));
         assertEquals("7 text", Placeholders.resolve("<skill.var.伤害> <skill.var.custom/value>", c));
+        assertEquals(7, Placeholders.resolveNumber("  <skill.var.伤害>  ", c, -1));
+        c.skillTree().orElseThrow().setVariable("numeric/value", 9);
+        assertEquals(9, Placeholders.resolveNumber("<skill.var.numeric/value>", c, -1));
+        c.skillTree().orElseThrow().setVariable("formula", "2*3");
+        assertEquals(-1, Placeholders.resolveNumber("<skill.var.formula>", c, -1));
+        assertEquals(6, Placeholders.resolveNumber("(<skill.var.formula>)", c, -1));
     }
 
     @Test
@@ -396,6 +402,11 @@ class PlaceholdersTest {
         assertEquals("14", Placeholders.lookup("caster.food", casterContext));
         assertEquals("3.5", Placeholders.lookup("caster.saturation", casterContext));
         assertEquals("1.25", Placeholders.lookup("caster.exhaustion", casterContext));
+        when(player.getExhaustion()).thenReturn(1.3f);
+        for (var scope : java.util.List.of("caster", "target")) {
+            assertEquals("1.2999999523162842", Placeholders.lookup(scope + ".exhaustion", casterContext));
+            assertEquals("1.3", Placeholders.lookup(scope + ".exhaustion{r=1}", casterContext));
+        }
         Monster nonHuman = mock(Monster.class);
         BehaviorContext nonHumanContext = BehaviorContext.of(null, nonHuman, 1.0, -1, 0, "IDLE");
         assertNull(Placeholders.lookup("target.food", nonHumanContext));

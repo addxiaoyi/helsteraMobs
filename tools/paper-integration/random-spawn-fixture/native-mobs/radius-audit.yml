@@ -1,0 +1,8 @@
+HelsteraRadiusAuditMob:
+  Type: COW
+  Display: 'Radius audit mob'
+  Health: 20
+  Options:
+    NoAI: true
+    PreventOtherDrops: true
+    PreventRandomEquipment: true

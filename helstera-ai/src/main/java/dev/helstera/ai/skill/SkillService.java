@@ -338,8 +338,19 @@ public final class SkillService {
             conditionSpec = conditionSpec.substring(1).trim();
             if (conditionSpec.isEmpty()) return null;
         }
-        String composite = bindCompositeCondition(conditionSpec);
-        if (composite != null) return composite;
+        CompositeSyntax syntax = scanCompositeSyntax(conditionSpec);
+        if (syntax == null) {
+            warn("条件表达式结构无效 \"" + spec + "\"");
+            return null;
+        }
+        if (syntax.booleanSeparator() != null || conditionSpec.startsWith("(")
+                || conditionSpec.startsWith("!") || conditionSpec.startsWith("not ")
+                || conditionSpec.startsWith("not:") || conditionSpec.startsWith("not{")
+                || conditionSpec.startsWith("all{") || conditionSpec.startsWith("and{")
+                || conditionSpec.startsWith("any{") || conditionSpec.startsWith("or{")) {
+            return bindCompositeCondition(conditionSpec, syntax);
+        }
+        if (syntax.has(CompositeSeparator.LIST)) return null;
         String rawConditionName = conditionNameBeforeArguments(conditionSpec);
         String rawCanonicalName = canonicalConditionName(rawConditionName.toLowerCase(Locale.ROOT));
         if ("metaskill-condition".equals(rawCanonicalName)) {
@@ -350,7 +361,16 @@ public final class SkillService {
             return null;
         }
         String normalized;
-        if (conditionSpec.indexOf('{') >= 0 && "altitude".equals(rawCanonicalName)) {
+        if ("mobs-in-radius".equals(rawCanonicalName)
+                && (conditionSpec.indexOf('{') >= 0 || !rawConditionName.equals("mobs-in-radius")
+                    && split(conditionSpec).size() <= 2)) {
+            try {
+                normalized = dev.helstera.api.util.MobRadiusSpec.parse(conditionSpec).runtime();
+            } catch (IllegalArgumentException invalid) {
+                warn("生物半径条件参数无效 \"" + spec + "\"");
+                return null;
+            }
+        } else if (conditionSpec.indexOf('{') >= 0 && "altitude".equals(rawCanonicalName)) {
             normalized = normalizeNamedAltitudeCondition(conditionSpec);
             if (normalized == null) {
                 warn("高度条件参数无效 \"" + spec + "\"");
@@ -386,6 +406,7 @@ public final class SkillService {
                     ? SpecSyntax.normalize(conditionSpec) : conditionSpec;
         }
         List<String> parts = split(normalized);
+        if (parts.isEmpty()) return null;
         String name = canonicalConditionName(parts.get(0).toLowerCase(Locale.ROOT));
         List<String> args = new ArrayList<>(parts.subList(1, parts.size()));
         if (name.startsWith("skill:")) {
@@ -1288,17 +1309,17 @@ public final class SkillService {
                 .orElse(false);
     }
 
-    private String bindCompositeCondition(String raw) {
-        String spec = raw.trim();
+    private String bindCompositeCondition(String spec, CompositeSyntax syntax) {
         String operator = null;
         boolean negate = false;
         List<String> children = new ArrayList<>();
-        if (isWrappedCondition(spec)) {
-            return bindCondition(spec.substring(1, spec.length() - 1).trim());
-        } else if (topLevelCompositeOperator(spec) != null) {
-            String delimiter = topLevelCompositeOperator(spec);
-            operator = delimiter.equals("&&") ? "all" : "any";
-            children = splitCompositeChildren(spec, delimiter);
+        CompositeSeparator separator = syntax.booleanSeparator();
+        if (separator != null) {
+            operator = separator == CompositeSeparator.AND ? "all" : "any";
+            children = syntax.split(spec, separator);
+        } else if (spec.startsWith("(")) {
+            return syntax.firstGroupEnd() == spec.length() - 1
+                    ? bindCondition(spec.substring(1, spec.length() - 1).trim()) : null;
         } else if (spec.startsWith("!")) {
             negate = true;
             operator = "not";
@@ -1310,14 +1331,14 @@ public final class SkillService {
             operator = "not";
         } else if (spec.startsWith("all{") || spec.startsWith("and{")) {
             operator = "all";
-            children = compositeChildren(spec);
+            children = compositeChildren(spec, syntax);
         } else if (spec.startsWith("any{") || spec.startsWith("or{")) {
             operator = "any";
-            children = compositeChildren(spec);
+            children = compositeChildren(spec, syntax);
         } else if (spec.startsWith("not{")) {
             operator = "not";
             negate = true;
-            children = compositeChildren(spec);
+            children = compositeChildren(spec, syntax);
         }
         if (operator == null || children.isEmpty() || (negate && children.size() != 1)) return null;
         List<String> keys = new ArrayList<>();
@@ -1347,93 +1368,86 @@ public final class SkillService {
         return key;
     }
 
-    private static List<String> compositeChildren(String spec) {
+    private static List<String> compositeChildren(String spec, CompositeSyntax outer) {
         int open = spec.indexOf('{');
-        int close = spec.lastIndexOf('}');
-        if (open < 0 || close != spec.length() - 1 || close <= open) return List.of();
-        int depth = 0;
-        for (int i = open; i <= close; i++) {
-            char ch = spec.charAt(i);
-            if (ch == '{') depth++;
-            else if (ch == '}' && (--depth < 0 || (depth == 0 && i != close))) return List.of();
-        }
-        if (depth != 0) return List.of();
+        int close = outer.firstGroupEnd();
+        if (close <= open || close != spec.length() - 1) return List.of();
         String body = spec.substring(open + 1, close).trim();
         if (body.startsWith("conditions=")) body = body.substring("conditions=".length()).trim();
-        String delimiter = topLevelCompositeOperator(body);
-        if (delimiter != null) return splitCompositeChildren(body, delimiter);
-        return splitCompositeChildren(body, ";");
+        CompositeSyntax syntax = scanCompositeSyntax(body);
+        if (syntax == null) return List.of();
+        CompositeSeparator separator = syntax.has(CompositeSeparator.LIST)
+                ? CompositeSeparator.LIST : syntax.booleanSeparator();
+        // With explicit list separators, infix subexpressions belong to their own child.
+        return separator == null ? List.of(body) : syntax.split(body, separator);
     }
 
-    private static String topLevelCompositeOperator(String text) {
-        int depth = 0;
-        int parentheses = 0;
-        boolean hasAnd = false;
+    private enum CompositeSeparator {
+        AND, OR, LIST
+    }
+
+    private record SeparatorAt(CompositeSeparator type, int offset, int length) {}
+
+    private record CompositeSyntax(int firstGroupEnd, List<SeparatorAt> separators) {
+        boolean has(CompositeSeparator type) {
+            return separators.stream().anyMatch(separator -> separator.type() == type);
+        }
+
+        CompositeSeparator booleanSeparator() {
+            if (has(CompositeSeparator.OR)) return CompositeSeparator.OR;
+            return has(CompositeSeparator.AND) ? CompositeSeparator.AND : null;
+        }
+
+        List<String> split(String text, CompositeSeparator type) {
+            List<String> children = new ArrayList<>();
+            int start = 0;
+            for (SeparatorAt separator : separators) {
+                if (separator.type() != type) continue;
+                String child = text.substring(start, separator.offset()).trim();
+                if (child.isEmpty()) return List.of();
+                children.add(child);
+                start = separator.offset() + separator.length();
+            }
+            String tail = text.substring(start).trim();
+            if (tail.isEmpty()) return List.of();
+            children.add(tail);
+            return List.copyOf(children);
+        }
+    }
+
+    /** Scan the expression without changing leaf text or interpreting quoted operators. */
+    private static CompositeSyntax scanCompositeSyntax(String text) {
+        List<SeparatorAt> separators = new ArrayList<>();
+        Deque<Character> groups = new ArrayDeque<>();
+        int firstGroupEnd = -1;
+        boolean quoted = false;
         for (int i = 0; i < text.length(); i++) {
-            char current = text.charAt(i);
-            if (current == '{') {
-                depth++;
+            char c = text.charAt(i);
+            if (quoted && c == '\\' && i + 1 < text.length()) {
+                i++;
                 continue;
             }
-            if (current == '}') {
-                depth = Math.max(0, depth - 1);
+            if (c == '"') {
+                quoted = !quoted;
                 continue;
             }
-            if (depth == 0 && current == '(') { parentheses++; continue; }
-            if (depth == 0 && current == ')') { parentheses--; continue; }
-            if (depth != 0 || parentheses != 0 || i + 1 >= text.length()) continue;
-            String pair = text.substring(i, i + 2);
-            if (pair.equals("||")) return "||";
-            if (pair.equals("&&")) hasAnd = true;
-        }
-        return hasAnd ? "&&" : null;
-    }
-
-    private static boolean isWrappedCondition(String spec) {
-        if (spec.length() < 2 || spec.charAt(0) != '(' || spec.charAt(spec.length() - 1) != ')') {
-            return false;
-        }
-        int depth = 0;
-        for (int i = 0; i < spec.length(); i++) {
-            char current = spec.charAt(i);
-            if (current == '(') depth++;
-            else if (current == ')' && --depth == 0 && i != spec.length() - 1) return false;
-            if (depth < 0) return false;
-        }
-        return depth == 0;
-    }
-
-    private static List<String> splitCompositeChildren(String text, String delimiter) {
-        List<String> children = new ArrayList<>();
-        int depth = 0;
-        int parentheses = 0;
-        int start = 0;
-        for (int i = 0; i < text.length(); i++) {
-            char current = text.charAt(i);
-            if (current == '{') {
-                depth++;
-                continue;
+            if (quoted) continue;
+            if (c == '{' || c == '(' || c == '[') {
+                groups.push(c);
+            } else if (c == '}' || c == ')' || c == ']') {
+                char expected = c == '}' ? '{' : c == ')' ? '(' : '[';
+                if (groups.isEmpty() || groups.pop() != expected) return null;
+                if (groups.isEmpty() && firstGroupEnd < 0) firstGroupEnd = i;
+            } else if (groups.isEmpty()) {
+                if (text.startsWith("||", i) || text.startsWith("&&", i)) {
+                    separators.add(new SeparatorAt(c == '|' ? CompositeSeparator.OR : CompositeSeparator.AND, i, 2));
+                    i++;
+                } else if (c == ';' || c == '|') {
+                    separators.add(new SeparatorAt(CompositeSeparator.LIST, i, 1));
+                }
             }
-            if (current == '}') {
-                depth = Math.max(0, depth - 1);
-                continue;
-            }
-            if (depth == 0 && current == '(') { parentheses++; continue; }
-            if (depth == 0 && current == ')') { parentheses--; continue; }
-            boolean matches = depth == 0 && parentheses == 0 && text.startsWith(delimiter, i);
-            if (!matches && delimiter.equals(";") && depth == 0 && parentheses == 0 && current == '|') matches = true;
-            if (!matches) continue;
-            String child = text.substring(start, i).trim();
-            if (child.isEmpty()) return List.of();
-            children.add(child);
-            start = i + delimiter.length();
-            if (delimiter.equals(";") && current == '|') start = i + 1;
-            i = start - 1;
         }
-        String tail = text.substring(start).trim();
-        if (tail.isEmpty()) return List.of();
-        children.add(tail);
-        return List.copyOf(children);
+        return !quoted && groups.isEmpty() ? new CompositeSyntax(firstGroupEnd, List.copyOf(separators)) : null;
     }
 
     /** 绑定一条动作定义，返回可写入 profile 的键；失败返回 null。 */

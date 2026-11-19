@@ -1,0 +1,15 @@
+# Both backends receive the recipient as API trigger; vanilla cows have no combat target.
+lifecycle_expire:
+  Skills: ['potion{t=HASTE;d=8;l=0;a=true;p=false;i=false} @Trigger']
+lifecycle_hidden_base:
+  Skills: ['potion{t=SLOWNESS;d=40;l=0} @Trigger']
+lifecycle_hidden_strong:
+  Skills: ['potion{t=SLOWNESS;d=8;l=2} @Trigger']
+lifecycle_forced:
+  Skills: ['potion{t=SLOWNESS;d=6;l=1;force=true} @Trigger']
+lifecycle_changed:
+  Skills: ['potion{t=SLOWNESS;d=8;l=3} @Trigger']
+lifecycle_health:
+  Skills: ['potion{t=HEAL;d=1;l=0} @Trigger']
+lifecycle_damage:
+  Skills: ['potion{t=HARM;d=1;l=0} @Trigger']

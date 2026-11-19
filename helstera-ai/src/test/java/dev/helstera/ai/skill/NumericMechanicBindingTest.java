@@ -56,6 +56,21 @@ class NumericMechanicBindingTest {
     }
 
     @Test
+    void executionOptionDuplicatesKeepTheirDiagnosticAcrossStrictAndLegacyMechanics() {
+        for (var mechanic : List.of("heal{amount=2;", "potion{t=SPEED;", "message{m=hello;")) {
+            for (var execution : List.of("delay=0;DELAY=1", "repeat=1;repeat=2",
+                    "repeatinterval=1;repeat-interval=2", "cooldown=1;COOLDOWN=2")) {
+                String source = mechanic + execution + "} @Target";
+                assertNull(service.bindAction(source), source);
+                assertTrue(service.warnings().stream().anyMatch(warning -> warning.contains(source)
+                        && warning.contains("duplicate execution option")), source + ": " + service.warnings());
+            }
+        }
+        verify(target, never()).setHealth(anyDouble());
+        verify(target, never()).addPotionEffect(any());
+    }
+
+    @Test
     void reorderedAndOmittedKnockbackArgumentsPreserveMeaningAndTargetIsolation() {
         for (var test : Map.of("knockback{vertical=0.5;power=2} @Target", new Vector(2, 0.5, 0),
                 "knockback{vertical=0.5} @Target", new Vector(1, 0.5, 0),
@@ -111,6 +126,37 @@ class NumericMechanicBindingTest {
         verify(target, never()).setHealth(anyDouble());
         verify(target, never()).setFireTicks(anyInt());
         verify(world, never()).getNearbyEntities(any(Location.class), anyDouble(), anyDouble(), anyDouble());
+    }
+
+    @Test
+    void expressionsBindThroughNamedPositionalAndDirectFactoriesWithoutPartialMutation() {
+        for (String line : List.of("heal{a=max(1, <target.hp{r=0}> / 2)} @Target",
+                "heal-targets \"max(1, <target.hp{r=0}> / 2)\" @Target")) {
+            clearInvocations(target);
+            run(line);
+            verify(target).setHealth(7.5);
+        }
+        SkillCatalog.actions().get("knockback-targets")
+                .create(List.of("power=(<target.hp>/2)", "y=(1==1)/2")).accept(context());
+        verify(target).setVelocity(new Vector(2.5, 0.5, 0));
+        tree.setVariable("力度", 2);
+        SkillCatalog.actions().get("velocity-targets")
+                .create(List.of("<skill.var.力度>", "0", "0")).accept(context());
+        verify(target).setVelocity(new Vector(2, 0, 0));
+        SkillExtras.actions().get("teleport-self")
+                .create(List.of("<skill.var.力度>", "0", "0")).accept(context());
+        verify(caster).teleport(origin.clone().add(2, 0, 0));
+        clearInvocations(target, caster, control);
+        for (String line : List.of("knockback{power=(2+3);y=(1/0)} @Target",
+                "heal{a=sqrt(-1)} @Target", "healpercent{m=(1/0)} @Target",
+                "heal{a=(<missing.value>+1)} @Target")) run(line);
+        verify(target, never()).setVelocity(any());
+        verify(target, never()).setHealth(anyDouble());
+        verify(caster, never()).setHealth(anyDouble());
+        verify(control, never()).setHealth(anyDouble());
+        for (String expression : List.of("1+", "max(1)", "(1+2", "1==1", "=1+2", "eval(1+2)")) {
+            assertNull(service.bindAction("heal{a=" + expression + "} @Target"), expression);
+        }
     }
 
     @Test

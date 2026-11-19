@@ -1,0 +1,9 @@
+name: Condition Guard Must Not Spawn
+model: example/emberling
+display-name: Condition Guard Must Not Spawn
+show-name: true
+entity:
+  type: ZOMBIE
+  no-ai: true
+  silent: true
+  prevent-other-drops: true

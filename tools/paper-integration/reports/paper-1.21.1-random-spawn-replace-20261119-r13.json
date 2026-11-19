@@ -1,0 +1,95 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-19T04:44:02.1540185Z",
+  "fixtureDirectory": "srv-paper-random-spawn-replace-20261119-r13",
+  "evidenceMode": "release",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "runnerSha256": "c609ea513f043c8b5ed3063de6c0620771c82558d2f0e4a88a0ae1d559bfeffb",
+  "fixtureProbeSourceSha256": "0e41ea1e0beaeccb4904587f0c5d0cbf2b8bb93959f45ce22dd9cd049e97da52",
+  "fixtureProbeJarSha256": "16a1bfb146025ccbd93940c9b77880abaa9a46c3704a141a46890c32b1eeaee1",
+  "randomSpawnConfigSha256": "b7a57897c3993c32f76849636604208901cfec280b2f14abb63eece2b76c61e7",
+  "mythicMobCatalogSha256": "54d4bf163e0bf1c20b1002b9b414f8d0212f1698188a0696624bfb47341f2630",
+  "replacementMobConfigSha256": "260bf1742f4219c38ab80e32170b6ce3f940fc4395ba58cc6fea8cdfa88efff2",
+  "conditionGuardMobConfigSha256": "2db3ca08a14fda7f7b3b7794b28815c9054d211f8c2dcbcd77a4d8e20d72cfda",
+  "pluginSha256": "975f267514bf4613a9152e93a89f0dd2039f479a5f62bed5e385d72a24a2e05d",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "randomSpawn.importer",
+    "randomSpawn.replace",
+    "randomSpawn.condition-control",
+    "randomSpawn.reason-control",
+    "randomSpawn.deny",
+    "randomSpawn.deny-condition-control",
+    "randomSpawn.cooldown-immediate",
+    "randomSpawn.cooldown-expired",
+    "randomSpawn.natural-engine"
+  ],
+  "probes": [
+    {
+      "id": "randomSpawn.importer",
+      "status": "passed",
+      "observations": [
+        "[04:43:45] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_IMPORT|passed=true|mappedDefinitions=6|unsupportedActions=1|unsupportedTypedDeny=true|resolvedTypes=true|mappedConditions=true"
+      ]
+    },
+    {
+      "id": "randomSpawn.replace",
+      "status": "passed",
+      "observations": [
+        "[04:43:46] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=replace|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=1"
+      ]
+    },
+    {
+      "id": "randomSpawn.condition-control",
+      "status": "passed",
+      "observations": [
+        "[04:43:46] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=condition-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.reason-control",
+      "status": "passed",
+      "observations": [
+        "[04:43:46] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=reason-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.deny",
+      "status": "passed",
+      "observations": [
+        "[04:43:46] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=deny|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.deny-condition-control",
+      "status": "passed",
+      "observations": [
+        "[04:43:46] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=deny-condition-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.cooldown-immediate",
+      "status": "passed",
+      "observations": [
+        "[04:43:46] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=cooldown-immediate|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.cooldown-expired",
+      "status": "passed",
+      "observations": [
+        "[04:43:46] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=cooldown-expired|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=1"
+      ]
+    },
+    {
+      "id": "randomSpawn.natural-engine",
+      "status": "passed",
+      "observations": [
+        "[04:44:00] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_NATURAL_CASE|passed=true|reason=NATURAL|observed=9|cancelled=9|playerReady=true"
+      ]
+    }
+  ]
+}

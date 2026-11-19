@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T09:31:03.6139865Z",
+  "fixtureDirectory": "srv-paper-numeric-mechanic-exploratory-20261117-r6",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "dff5a510c2df8006a62db42e2e402e455da0a2e4116145eacfd6cde9902c3fbf",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "numericMechanicRuntime"
+  ],
+  "probes": [
+    {
+      "id": "numericMechanicRuntime",
+      "status": "passed",
+      "observations": [
+        "numeric-mechanic active-entities=true invalid-preserved=true imported-binding=true reordered=true omitted=true force-no-vertical=true force-only-vertical=true radial-default-radius=true melee-default-damage=true absolute-damage=true heal-target=true set-health-target=true self-heal=true dynamic=true dynamic-noop-14=true dynamic-noop-15=true dynamic-noop-16=true speed-target=true status-target=true invalid-health-noop=true invalid-direct=true expression-rounded-recipients=true expression-comparison=true expression-vector=true expression-no-partial-mutation=true expression-fraction=true expression-isolation=true recipient-rounded-heal=true recipient-multiple-arguments=true recipient-damage=true recipient-speed=true recipient-status-truncates=true recipient-invalid-first=true recipient-invalid-second=true recipient-maximum=true recipient-context-preserved=true recipient-removed-first=true cleanup=true passed=true"
+      ]
+    }
+  ]
+}

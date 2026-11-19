@@ -164,6 +164,25 @@ public final class BehaviorContext {
         this.executionAudience = executionAudience;
     }
 
+    private BehaviorContext(BehaviorContext source, boolean clearCancellableEvent) {
+        this.instance = source.instance;
+        this.target = source.target;
+        this.targetEntity = source.targetEntity;
+        this.healthRatio = source.healthRatio;
+        this.distanceToTarget = source.distanceToTarget;
+        this.decisionCount = source.decisionCount;
+        this.state = source.state;
+        this.payload = source.payload;
+        this.trigger = source.trigger;
+        this.targets = source.targets;
+        this.origin = source.origin == null ? null : source.origin.clone();
+        this.targetLocation = source.targetLocation == null ? null : source.targetLocation.clone();
+        this.skillTree = source.skillTree;
+        this.cancellableEvent = clearCancellableEvent ? null : source.cancellableEvent;
+        this.damageCause = source.damageCause;
+        this.executionAudience = source.executionAudience;
+    }
+
     /**
      * 构造带信号载荷的上下文（供 on-signal 使用）。
      *
@@ -406,6 +425,43 @@ public final class BehaviorContext {
                 decisionCount, state, payload, trigger, List.of(entity), origin, skillTree,
                 cancellableEvent, damageCause)
                 .withExecutionAudienceFrom(this);
+    }
+
+    /** Returns this context without retaining a synchronous event beyond its trigger. */
+    public BehaviorContext withoutCancellableEvent() {
+        return cancellableEvent == null ? this : new BehaviorContext(this, true);
+    }
+
+    /** Creates an isolated periodic-skill context for an affected entity, without prior trigger data. */
+    public BehaviorContext periodicTarget(LivingEntity entity) {
+        return auraCallbackTarget(entity, "aura-tick");
+    }
+
+    /** Creates an isolated end-skill context for an affected entity. */
+    public BehaviorContext auraEndTarget(LivingEntity entity) {
+        return auraCallbackTarget(entity, "aura-end");
+    }
+
+    private BehaviorContext auraCallbackTarget(LivingEntity entity, String callbackState) {
+        if (entity == null) throw new IllegalArgumentException("Aura callback target is required");
+        double scopedHealthRatio = healthRatio;
+        double maximum = entity.getMaxHealth();
+        if (Double.isFinite(maximum) && maximum > 0) {
+            double health = entity.getHealth();
+            if (Double.isFinite(health)) scopedHealthRatio = health / maximum;
+        }
+        Location scopedOrigin = origin == null ? null : origin.clone();
+        Location entityLocation = entity.getLocation();
+        double scopedDistance = -1;
+        if (scopedOrigin != null && scopedOrigin.getWorld() != null && entityLocation != null
+                && scopedOrigin.getWorld().equals(entityLocation.getWorld())) {
+            scopedDistance = scopedOrigin.distance(entityLocation);
+        }
+        Player player = entity instanceof Player p ? p : null;
+        SkillTreeContext periodicTree = new SkillTreeContext(entity, List.of(entity), scopedOrigin);
+        return new BehaviorContext(instance, player, entity, scopedHealthRatio, scopedDistance,
+                decisionCount, callbackState, null, null, List.of(entity), scopedOrigin,
+                periodicTree, null, null, null).withExecutionAudienceFrom(this);
     }
 
     /** State shared by nested skills triggered from this context. */

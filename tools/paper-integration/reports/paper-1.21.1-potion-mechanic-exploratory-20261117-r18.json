@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T13:14:57.1119211Z",
+  "fixtureDirectory": "srv-paper-potion-mechanic-exploratory-20261117-r18",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "4c10a1d1f6fc314d21c49bad012296fbf5c4ce64bc13a8cda69248d64a7f6393",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "potionMechanicRuntime",
+    "potionMechanicTiming",
+    "potionLifecycle",
+    "potionLifecycleNative"
+  ],
+  "probes": [
+    {
+      "id": "potionMechanicRuntime",
+      "status": "passed",
+      "observations": [
+        "potion-mechanic active-entities=true invalid-preserved=true imported-default=true default-cast=true default=true target-isolation=true aliases-flags=true dynamic=true normal-retains-stronger=true force-replaces-stronger=true cancelled-removal=true invalid-dynamic-type=true invalid-dynamic-ticks=true invalid-dynamic-level=true negative-dynamic-level=true self=true multiple-targets=true expression-recipient-duration-level=true expression-invalid-preserves-existing=true recipient-duration-level=true self-recipient-context=true recipient-type=true recipient-invalid-first-preserves-effect=true recipient-invalid-second-preserves-effect=true recipient-context-preserved=true callback-removes-later-recipient=true callback-removes-current-recipient=true cleanup=true passed=true"
+      ]
+    },
+    {
+      "id": "potionMechanicTiming",
+      "status": "passed",
+      "observations": [
+        "potion-mechanic-timing active-entities=true imported-binding=true delayed-cast=true no-early-mutation=true delay-latest-recipients=true delay-live-effects=true first-execution-isolation=true repeat-latest-recipients=true invalid-repeat-preserves-effect=true invalid-repeat-does-not-block-later=true first-recipient-removed=true removed-recipient-skipped=true repeat-latest-variable=true original-context-preserved=true active-targets-refreshed=true repeat-isolation=true repeat-count-bounded=true invalid-delay-cast=true invalid-delay-preserves-state=true cancel-pending-cast=true cancelled-delay-no-mutation=true cleanup=true passed=true"
+      ]
+    },
+    {
+      "id": "potionLifecycle",
+      "status": "passed",
+      "observations": [
+        "potion-lifecycle source-ready=true active-entities=true chunks-ticking=true expiry-cast=true expiry-flags=true expiry-event=true expiry-removed=true hidden-base=true hidden-stronger=true hidden-restored=true hidden-duration-elapsed=true hidden-eventual-expiry=true forced-hidden-setup=true forced-replacement=true forced-removal-event=true forced-no-resurrection=true forced-stays-expired=true cancel-added-cast=true cancel-added-event=true cancel-added-no-effect=true cancel-changed-setup=true cancel-changed-cast=true cancel-changed-event=true cancel-changed-preserved=true cancel-expiration-cast=true cancel-expiration-event=true cancel-expiration-retained=true uncancelled-expiration=true instant-health-cast=true instant-health-pending=true instant-health-cow=true instant-health-undead=true instant-health-expired=true instant-damage-cast=true instant-damage-pending=true instant-damage-cow=true instant-damage-undead=true instant-damage-expired=true cancel-instant-cast=true cancel-instant-event=true cancel-instant-preserved=true cancel-health-cast=true cancel-health-damage-event=true cancel-health-regain-event=true cancel-health-preserved=true target-isolation=true cleanup=true passed=true"
+      ]
+    },
+    {
+      "id": "potionLifecycleNative",
+      "status": "passed",
+      "observations": [
+        "potion-lifecycle-native source-ready=true active-entities=true chunks-ticking=true expiry-cast=true expiry-flags=true expiry-event=true expiry-removed=true hidden-base=true hidden-stronger=true hidden-restored=true hidden-duration-elapsed=true hidden-eventual-expiry=true forced-hidden-setup=true forced-replacement=true forced-removal-event=true forced-no-resurrection=true forced-stays-expired=true cancel-added-cast=true cancel-added-event=true cancel-added-no-effect=true cancel-changed-setup=true cancel-changed-cast=true cancel-changed-event=true cancel-changed-preserved=true cancel-expiration-cast=true cancel-expiration-event=true cancel-expiration-retained=true uncancelled-expiration=true instant-health-cast=true instant-health-pending=true instant-health-cow=true instant-health-undead=true instant-health-expired=true instant-damage-cast=true instant-damage-pending=true instant-damage-cow=true instant-damage-undead=true instant-damage-expired=true cancel-instant-cast=true cancel-instant-event=true cancel-instant-preserved=true cancel-health-cast=true cancel-health-damage-event=true cancel-health-regain-event=true cancel-health-preserved=true target-isolation=true cleanup=true passed=true"
+      ]
+    }
+  ],
+  "externalPlugin": "MythicMobs 5.7.2 (Modrinth FTWvGuE5)",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "sharedSourceSha256": "d93839db4a7889d09d1dfe99def1dd04cffd55e1f69656342434033c7f02d46d"
+}

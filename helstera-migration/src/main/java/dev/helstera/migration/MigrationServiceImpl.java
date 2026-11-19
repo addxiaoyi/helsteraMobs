@@ -205,6 +205,9 @@ public final class MigrationServiceImpl implements MigrationService {
                     clearDefinitions(incoming, destination, "spawners", "regions");
                     mergeYaml(incoming, destination, "");
                 }
+                else if ("random-spawns.yml".equals(targetRel)) {
+                    mergeDefinitions(incoming, destination, "random-spawns");
+                }
                 else mergeYaml(incoming, destination, "");
                 targetPaths.put(targetRel, target);
                 if (!target.startsWith(targetRoot)) {
@@ -302,6 +305,7 @@ public final class MigrationServiceImpl implements MigrationService {
             List<String> sections = switch (target) {
                 case "items.yml" -> List.of("items");
                 case "spawners.yml" -> List.of("spawners", "spawners.regions");
+                case "random-spawns.yml" -> List.of("random-spawns");
                 default -> List.of();
             };
             if (sections.isEmpty()) continue;

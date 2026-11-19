@@ -71,7 +71,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -139,6 +138,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private Object lootService;                 // dev.helstera.ai.loot.LootService
     private MythicStatsService mythicStatsService;
     private Object spawnerService;              // dev.helstera.ai.spawner.SpawnerService
+    private dev.helstera.ai.spawner.RandomSpawnService randomSpawnService;
+    private org.bukkit.scheduler.BukkitTask randomSpawnTask;
     private dev.helstera.ai.dialog.DialogueService dialogueService;
     private volatile ConfigurationSection customItems;
     private Object migration;                    // MigrationServiceImpl
@@ -315,7 +316,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 this.auraRegistry = new dev.helstera.ai.skill.AuraRegistry();
                 dev.helstera.ai.skill.SkillExtras.auraRegistry(auraRegistry);
                 this.auraCleanupTask = getServer().getScheduler().runTaskTimer(
-                        this, auraRegistry::cleanupExpired, 20L, 20L);
+                        this, () -> {
+                            auraRegistry.tick();
+                        }, 1L, 1L);
                 this.pinRegistry = new dev.helstera.ai.skill.PinRegistry();
                 dev.helstera.ai.skill.SkillExtras.pinRegistry(pinRegistry);
                 reloadPins("启动");
@@ -359,6 +362,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 SkillService skills = new SkillService(br, getLogger());
                 skills.instanceLookup(this::findInstance);
                 dev.helstera.ai.skill.SkillExtras.skillCooldownSetter(skills::setSkillCooldown);
+                dev.helstera.ai.skill.SkillExtras.auraStartSkillDispatcher(skills::castSkill);
+                dev.helstera.ai.skill.SkillExtras.auraTickSkillDispatcher(skills::castSkill);
+                dev.helstera.ai.skill.SkillExtras.auraEndSkillDispatcher(skills::castSkill);
                 if (!new java.io.File(getDataFolder(), "skills.yml").exists()) {
                     saveResource("skills.yml", false);
                 }
@@ -562,6 +568,47 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable t) {
             getLogger().warning("刷怪点不可用: " + t);
         }
+        try {
+            dev.helstera.ai.spawner.RandomSpawnService randomSpawns =
+                    new dev.helstera.ai.spawner.RandomSpawnService(getLogger(), this::spawnMobAt);
+            if (skillService instanceof dev.helstera.ai.skill.SkillService skills
+                    && behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors) {
+                randomSpawns.setConditionTester((condition, event) -> {
+                    String key = skills.bindCondition(condition);
+                    if (key == null) return false;
+                    var entity = event.getEntity();
+                    var context = dev.helstera.api.behavior.BehaviorContext.of(
+                            null, entity, 1.0, -1, 0, "random-spawn");
+                    return behaviors.testCondition(key, context);
+                });
+                randomSpawns.setAddConditionTester((condition, location) -> {
+                    String key = skills.bindCondition(condition);
+                    if (key == null || location == null || location.getWorld() == null) return false;
+                    var context = dev.helstera.api.behavior.BehaviorContext.execution(
+                            null, null, 1.0, -1, 0, "random-spawn-add", null, null,
+                            java.util.List.of(), location);
+                    return behaviors.testCondition(key, context);
+                });
+            }
+            String generator = getConfig().getString("random-spawns.generator", "NONE");
+            try {
+                randomSpawns.configureAdd(new dev.helstera.ai.spawner.RandomSpawnService.AddSettings(
+                        generator,
+                        getConfig().getInt("random-spawns.radius-min", 12),
+                        getConfig().getInt("random-spawns.radius-max", 64),
+                        getConfig().getInt("random-spawns.radius-y", 16),
+                        getConfig().getInt("random-spawns.max-spawns-per-cycle", 1),
+                        getConfig().getInt("random-spawns.max-monsters-per-world", 70)));
+            } catch (IllegalArgumentException ex) {
+                randomSpawns.configureAdd(dev.helstera.ai.spawner.RandomSpawnService.AddSettings.disabled());
+                getLogger().warning("RandomSpawns ADD 已关闭，生成器配置无效: " + ex.getMessage());
+            }
+            java.io.File randomSpawnFile = new java.io.File(getDataFolder(), "random-spawns.yml");
+            if (randomSpawnFile.isFile()) randomSpawns.loadFile(randomSpawnFile.toPath());
+            this.randomSpawnService = randomSpawns;
+        } catch (Throwable t) {
+            getLogger().warning("随机生成替换不可用: " + t);
+        }
         // ---- 对话系统（dialogs.yml）----
         try {
             dev.helstera.ai.dialog.DialogueService ds = new dev.helstera.ai.dialog.DialogueService(
@@ -660,11 +707,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         String token = null;
         try {
             token = getConfig().getString("web.token", "");
-            if (token == null || token.isBlank()) {
-                SecureRandom r = new SecureRandom();
-                StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < 16; i++) sb.append("0123456789abcdef".charAt(r.nextInt(16)));
-                token = sb.toString();
+            if (token == null || token.isBlank() || token.matches("(?i)[a-f0-9]{16}")) {
+                token = WebServerService.newToken();
                 getConfig().set("web.token", token);
                 saveConfig();
             }
@@ -680,7 +724,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (getConfig().getBoolean("web.enabled", true)) {
                 try {
                     ws.start();
-                    getLogger().info("网页开发器本机入口: http://127.0.0.1:" + ws.port() + "/?token=" + token);
+                    getLogger().info("网页开发器本机入口: http://127.0.0.1:" + ws.port() + "/");
                     getLogger().info("远程打不开时执行 /helstera web doctor 查看真实地址与防火墙诊断");
                 } catch (IOException e) {
                     getLogger().warning("网页开发器启动失败（/helstera web start 重试）: " + e.getMessage());
@@ -718,6 +762,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         });
         // 拉杆监听已在 AI 块装载完 leverService 后注册，此处只注册插件自身监听
         getServer().getPluginManager().registerEvents(this, this);
+        if (randomSpawnService != null) getServer().getPluginManager().registerEvents(randomSpawnService, this);
+        if (randomSpawnService != null && randomSpawnService.addSize() > 0
+                && getConfig().getString("random-spawns.generator", "NONE").equalsIgnoreCase("CLUSTER")) {
+            randomSpawnTask = getServer().getScheduler().runTaskTimer(this,
+                    () -> randomSpawnService.tickAdd(), 20L, 20L);
+        }
         if (renderer != null) {
             getServer().getPluginManager().registerEvents(
                     new RenderListeners((DisplayRenderer) renderer, (InstanceManagerImpl) instances, bus), this);
@@ -768,6 +818,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (getConfig().getBoolean("debug.self-test-mythic-pack-condition", false)) {
             runMythicPackConditionSelfTest();
         }
+        if (getConfig().getBoolean("debug.self-test-mythic-key-id", false)) {
+            runMythicKeyIdSelfTest();
+        }
         if (getConfig().getBoolean("debug.self-test-metaskill-condition", false)) {
             runMetaskillConditionSelfTest();
         }
@@ -794,6 +847,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         if (getConfig().getBoolean("debug.self-test-set-speed", false)) {
             dev.helstera.plugin.probe.SetSpeedProbe.schedule(this, instances());
+        }
+        if (getConfig().getBoolean("debug.self-test-potion-packets", false)) {
+            dev.helstera.plugin.probe.PotionPacketProbe.schedule(this, instances());
+        }
+        if (getConfig().getBoolean("debug.self-test-potion-sync", false)) {
+            dev.helstera.plugin.probe.PotionSyncProbe.schedule(this, instances());
+        }
+        String potionRestartStage = getConfig().getString("debug.potion-restart-stage", "");
+        if (potionRestartStage != null && !potionRestartStage.isBlank()) {
+            dev.helstera.plugin.probe.PotionRestartProbe.schedule(this, instances(), potionRestartStage);
         }
         if (getConfig().getBoolean("debug.self-test-entity-options", false)) {
             runEntityOptionsSelfTest();
@@ -857,7 +920,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             WebServerService ws = (WebServerService) webServer;
             String extra = "0.0.0.0".equals(ws.host()) ? "（已监听所有网卡，请注意令牌安全）" : "";
             getLogger().info("helsteraMobs 启动完成（" + (System.currentTimeMillis() - start) + "ms）"
-                    + " · 网页开发器: http://" + ws.host() + ":" + ws.port() + " 令牌: " + token + extra);
+                    + " · 网页开发器: http://" + ws.host() + ":" + ws.port() + "/" + extra
+                    + "；访问链接仅向已授权的游戏内管理员显示");
         }
     }
 
@@ -919,6 +983,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (spawnerService instanceof dev.helstera.ai.spawner.SpawnerService sp) {
             sp.saveState(new java.io.File(getDataFolder(), "spawner-state.yml"));
             sp.stop();
+        }
+        if (randomSpawnService != null) {
+            if (randomSpawnTask != null) {
+                randomSpawnTask.cancel();
+                randomSpawnTask = null;
+            }
+            org.bukkit.event.HandlerList.unregisterAll(randomSpawnService);
+            randomSpawnService = null;
         }
         if (webServer != null) ((WebServerService) webServer).stop();
         if (integrations != null) ((IntegrationRegistryImpl) integrations).disableAll();
@@ -1261,8 +1333,25 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean mythicMobTypeImportedExactSubstringRejected = false;
             boolean mythicMobTypeImportedContainsPositive = false;
             boolean mythicMobTypeImportedContainsNegative = false;
+            boolean auraStartFirstDispatched = false;
+            boolean auraStartMergeNoRedispatch = false;
+            boolean auraStartTargetContextPreserved = false;
+            boolean mythicAuraStartSkill = false;
+            boolean auraTickIntervalRespected = false;
+            boolean auraTickMergeKeptSchedule = false;
+            boolean auraTickTargetContextPreserved = false;
+            boolean auraTickEventContextCleared = false;
+            boolean mythicAuraTickSkill = false;
+            boolean auraEndRemovalHonored = false;
+            boolean auraEndRemovalSuppressed = false;
+            boolean auraEndExpiryDispatched = false;
+            boolean auraEndOverwriteDispatched = false;
+            boolean auraEndTargetContextPreserved = false;
+            boolean auraEndEventContextCleared = false;
+            boolean mythicAuraEndSkill = false;
             org.bukkit.entity.Entity mythicMobProbe = null;
             org.bukkit.entity.Entity ordinaryMobProbe = null;
+            org.bukkit.entity.LivingEntity auraStartProbe = null;
             String actualVersion = "unavailable";
             try {
                 if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
@@ -1376,9 +1465,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 mythicMobRadiusTypeNegative = unrelatedTypeCondition != null
                                         && !behaviors.testCondition(unrelatedTypeCondition, radiusContext);
                                 var importedCustomType = dev.helstera.migration.importer.MmConditions.translate(
-                                        "?MobsInRadius{types=SkeletalMinion;radius=8}");
+                                        "?MobsInRadius{types=SkeletalMinion;radius=8;amount=1}");
                                 var importedUnrelatedType = dev.helstera.migration.importer.MmConditions.translate(
-                                        "?MobsInRadius{types=CaveWraith;radius=8}");
+                                        "?MobsInRadius{types=CaveWraith;radius=8;amount=1}");
                                 String importedCustomTypeCondition = importedCustomType.translated()
                                         ? skills.bindCondition(importedCustomType.condition()) : null;
                                 String importedUnrelatedTypeCondition = importedUnrelatedType.translated()
@@ -1392,7 +1481,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 mythicMobRadiusTypeListPositive = multipleTypeCondition != null
                                         && behaviors.testCondition(multipleTypeCondition, radiusContext);
                                 var importedMultipleTypes = dev.helstera.migration.importer.MmConditions.translate(
-                                        "?MobsInRadius{types=CaveWraith,SkeletalMinion;radius=8}");
+                                        "?MobsInRadius{types=CaveWraith,SkeletalMinion;radius=8;amount=1}");
                                 String importedMultipleTypeCondition = importedMultipleTypes.translated()
                                         ? skills.bindCondition(importedMultipleTypes.condition()) : null;
                                 mythicMobImportedRadiusTypeListPositive = importedMultipleTypeCondition != null
@@ -1402,7 +1491,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 mythicMobRadiusTypeCasePositive = lowerCaseTypeCondition != null
                                         && behaviors.testCondition(lowerCaseTypeCondition, radiusContext);
                                 var importedLowerCaseType = dev.helstera.migration.importer.MmConditions.translate(
-                                        "?MobsInRadius{types=skeletalminion;radius=8}");
+                                        "?MobsInRadius{types=skeletalminion;radius=8;amount=1}");
                                 String importedLowerCaseTypeCondition = importedLowerCaseType.translated()
                                         ? skills.bindCondition(importedLowerCaseType.condition()) : null;
                                 mythicMobImportedRadiusTypeCasePositive = importedLowerCaseTypeCondition != null
@@ -1483,6 +1572,200 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 premiumArgumentsPreserved = !malformedPremium.translated()
                         && "?premium{unknown=true}".equals(malformedPremium.condition());
                 premiumRuntimeArgumentsRejected = skills.bindCondition("mythic-premium{unknown=true}") == null;
+                var world = getServer().getWorlds().stream().findFirst().orElse(null);
+                if (world != null && auraRegistry != null) {
+                    auraStartProbe = world.spawn(world.getSpawnLocation().clone().add(32, 1, 0),
+                            org.bukkit.entity.Zombie.class);
+                    org.bukkit.entity.LivingEntity auraTarget = auraStartProbe;
+                    var tree = new dev.helstera.api.behavior.SkillTreeContext(
+                            auraTarget, java.util.List.of(auraTarget), auraTarget.getLocation());
+                    var auraContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                            null, auraTarget, 1.0, 0, 0, "mythic-aura-start-probe", null,
+                            auraTarget, java.util.List.of(auraTarget), auraTarget.getLocation(), tree);
+                    org.bukkit.event.Cancellable auraEvent = new org.bukkit.event.Cancellable() {
+                        private boolean cancelled;
+                        @Override public boolean isCancelled() { return cancelled; }
+                        @Override public void setCancelled(boolean cancelled) { this.cancelled = cancelled; }
+                    };
+                    var auraEventContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                            null, auraTarget, 1.0, 0, 0, "mythic-aura-event-probe", null,
+                            auraTarget, java.util.List.of(auraTarget), auraTarget.getLocation(), tree, auraEvent);
+                    var startSkillCasts = new java.util.concurrent.atomic.AtomicInteger();
+                    var targetContextPreserved = new java.util.concurrent.atomic.AtomicBoolean(true);
+                    var tickSkillCasts = new java.util.concurrent.atomic.AtomicInteger();
+                    var tickTargetContextPreserved = new java.util.concurrent.atomic.AtomicBoolean(true);
+                    var tickEventContextCleared = new java.util.concurrent.atomic.AtomicBoolean(true);
+                    var syntheticTick = new java.util.concurrent.atomic.AtomicLong(100);
+                    var tickRegistry = new dev.helstera.ai.skill.AuraRegistry(syntheticTick::get,
+                            id -> getServer().getEntity(id) != null);
+                    dev.helstera.ai.skill.SkillExtras.auraRegistry(tickRegistry);
+                    dev.helstera.ai.skill.SkillExtras.auraStartSkillDispatcher((name, scoped) -> {
+                        startSkillCasts.incrementAndGet();
+                        targetContextPreserved.compareAndSet(true,
+                                scoped != null && scoped.targetEntity().orElse(null) == auraTarget);
+                        return skills.castSkill(name, scoped);
+                    });
+                    dev.helstera.ai.skill.SkillExtras.auraTickSkillDispatcher((name, scoped) -> {
+                        tickSkillCasts.incrementAndGet();
+                        tickTargetContextPreserved.compareAndSet(true,
+                                scoped != null && scoped.targetEntity().orElse(null) == auraTarget
+                                        && scoped.targets().equals(List.of(auraTarget)));
+                        tickEventContextCleared.compareAndSet(true,
+                                scoped != null && scoped.cancellableEvent().isEmpty()
+                                        && scoped.trigger().isEmpty());
+                        return true;
+                    });
+                    var endSkillCasts = new java.util.concurrent.atomic.AtomicInteger();
+                    var endTargetContextPreserved = new java.util.concurrent.atomic.AtomicBoolean(true);
+                    var endEventContextCleared = new java.util.concurrent.atomic.AtomicBoolean(true);
+                    dev.helstera.ai.skill.SkillExtras.auraEndSkillDispatcher((name, scoped) -> {
+                        endSkillCasts.incrementAndGet();
+                        endTargetContextPreserved.compareAndSet(true,
+                                scoped != null && scoped.targetEntity().orElse(null) == auraTarget
+                                        && scoped.targets().equals(List.of(auraTarget)));
+                        endEventContextCleared.compareAndSet(true,
+                                scoped != null && scoped.cancellableEvent().isEmpty()
+                                        && scoped.trigger().isEmpty()
+                                        && "aura-end".equals(scoped.state()));
+                        return true;
+                    });
+                    try {
+                        Path importRoot = Files.createTempDirectory("helstera-aura-lifecycle-import-");
+                        String auraAction;
+                        String auraTickAction;
+                        String auraEndRemoveAction;
+                        String auraEndExpiryAction;
+                        String auraEndOverwriteAction;
+                        String auraEndReplaceAction;
+                        String auraEndSuppressedAction;
+                        String auraRemoveAction;
+                        String auraSuppressedRemoveAction;
+                        try {
+                            Path skillsDirectory = Files.createDirectories(importRoot.resolve("Skills"));
+                            Path source = skillsDirectory.resolve("aura-start.yml");
+                            Files.writeString(source, """
+                                    skills:
+                                      aura_start:
+                                        Skills:
+                                          - Aura{aura=paper-aura-start;duration=200;maxStacks=2;mergeSameCaster=true;onStart=unlock_branch}
+                                      aura_tick:
+                                        Skills:
+                                          - Aura{aura=paper-aura-tick;duration=40;maxStacks=2;mergeSameCaster=true;onTick=tick_probe;interval=3}
+                                      aura_end_remove:
+                                        Skills:
+                                          - Aura{aura=paper-aura-end-remove;duration=40;onEnd=end_probe}
+                                      aura_end_expiry:
+                                        Skills:
+                                          - Aura{aura=paper-aura-end-expiry;duration=3;onEndSkill=end_probe}
+                                      aura_end_overwrite:
+                                        Skills:
+                                          - Aura{aura=paper-aura-end-overwrite;duration=40;mergeSameCaster=false;onEndSkill=end_probe}
+                                      aura_end_replace:
+                                        Skills:
+                                          - Aura{aura=paper-aura-end-overwrite;duration=40;mergeSameCaster=false;overwriteAll=true;onEndSkill=end_probe}
+                                      aura_end_suppressed:
+                                        Skills:
+                                          - Aura{aura=paper-aura-end-suppressed;duration=40;onEnd=end_probe;doEndSkillOnTerminate=false}
+                                      aura_remove:
+                                        Skills:
+                                          - AuraRemove{aura=paper-aura-end-remove}
+                                      aura_suppressed_remove:
+                                        Skills:
+                                          - AuraRemove{aura=paper-aura-end-suppressed}
+                                    """);
+                            var imported = new MythicMobsImporter().convert(source, importRoot).stream()
+                                    .filter(entry -> "skills.yml".equals(entry.get("target-file"))
+                                            && "mapped".equals(entry.get("status")))
+                                    .findFirst().orElseThrow();
+                            YamlConfiguration importedSkills = new YamlConfiguration();
+                            importedSkills.loadFromString(String.valueOf(imported.get("content")));
+                            List<String> importedActions = importedSkills.getStringList(
+                                    "skills.aura_start.on-decision");
+                            auraAction = importedActions.isEmpty() ? null : importedActions.get(0);
+                            List<String> importedTickActions = importedSkills.getStringList(
+                                    "skills.aura_tick.on-decision");
+                            auraTickAction = importedTickActions.isEmpty() ? null : importedTickActions.get(0);
+                            java.util.function.Function<String, String> firstImportedAction = name -> {
+                                List<String> actions = importedSkills.getStringList("skills." + name + ".on-decision");
+                                return actions.isEmpty() ? null : actions.get(0);
+                            };
+                            auraEndRemoveAction = firstImportedAction.apply("aura_end_remove");
+                            auraEndExpiryAction = firstImportedAction.apply("aura_end_expiry");
+                            auraEndOverwriteAction = firstImportedAction.apply("aura_end_overwrite");
+                            auraEndReplaceAction = firstImportedAction.apply("aura_end_replace");
+                            auraEndSuppressedAction = firstImportedAction.apply("aura_end_suppressed");
+                            auraRemoveAction = firstImportedAction.apply("aura_remove");
+                            auraSuppressedRemoveAction = firstImportedAction.apply("aura_suppressed_remove");
+                        } finally {
+                            try (var paths = Files.walk(importRoot)) {
+                                for (Path path : paths.sorted(java.util.Comparator.reverseOrder()).toList()) {
+                                    Files.deleteIfExists(path);
+                                }
+                            }
+                        }
+                        auraStartFirstDispatched = runIntegrationAction(skills, behaviors, auraAction, auraContext)
+                                && startSkillCasts.get() == 1 && tree.branchUnlocked("combat");
+                        boolean mergedApply = runIntegrationAction(skills, behaviors, auraAction, auraContext);
+                        auraStartMergeNoRedispatch = mergedApply && startSkillCasts.get() == 1;
+                        auraStartTargetContextPreserved = targetContextPreserved.get();
+                        mythicAuraStartSkill = auraStartFirstDispatched && auraStartMergeNoRedispatch
+                                && auraStartTargetContextPreserved;
+
+                        syntheticTick.set(100);
+                        boolean tickApplied = runIntegrationAction(skills, behaviors, auraTickAction, auraContext);
+                        syntheticTick.set(102);
+                        tickRegistry.tick();
+                        auraTickIntervalRespected = tickApplied && tickSkillCasts.get() == 0;
+                        syntheticTick.set(103);
+                        tickRegistry.tick();
+                        auraTickIntervalRespected &= tickSkillCasts.get() == 1;
+                        boolean tickMerged = runIntegrationAction(skills, behaviors, auraTickAction, auraContext);
+                        syntheticTick.set(106);
+                        tickRegistry.tick();
+                        auraTickMergeKeptSchedule = tickMerged && tickSkillCasts.get() == 2;
+                        auraTickTargetContextPreserved = tickTargetContextPreserved.get();
+                        auraTickEventContextCleared = tickEventContextCleared.get();
+                        mythicAuraTickSkill = auraTickIntervalRespected && auraTickMergeKeptSchedule
+                                && auraTickTargetContextPreserved && auraTickEventContextCleared;
+
+                        int beforeEndRemove = endSkillCasts.get();
+                        runIntegrationAction(skills, behaviors, auraEndRemoveAction, auraEventContext);
+                        runIntegrationAction(skills, behaviors, auraRemoveAction, auraEventContext);
+                        auraEndRemovalHonored = endSkillCasts.get() == beforeEndRemove + 1;
+                        runIntegrationAction(skills, behaviors, auraEndSuppressedAction, auraEventContext);
+                        runIntegrationAction(skills, behaviors, auraSuppressedRemoveAction, auraEventContext);
+                        auraEndRemovalSuppressed = endSkillCasts.get() == beforeEndRemove + 1;
+                        tickRegistry.applyWithResult(auraTarget.getUniqueId(), null, "probe-explicit-suppressed",
+                                "", 10, 1, true, false, false, false, false, 1, null,
+                                ignored -> endSkillCasts.incrementAndGet(), false);
+                        tickRegistry.remove(auraTarget.getUniqueId(), "probe-explicit-suppressed", 1);
+                        auraEndRemovalSuppressed &= endSkillCasts.get() == beforeEndRemove + 1;
+
+                        syntheticTick.set(200);
+                        runIntegrationAction(skills, behaviors, auraEndExpiryAction, auraContext);
+                        syntheticTick.set(203);
+                        tickRegistry.tick();
+                        auraEndExpiryDispatched = endSkillCasts.get() == beforeEndRemove + 2;
+
+                        syntheticTick.set(300);
+                        runIntegrationAction(skills, behaviors, auraEndOverwriteAction, auraContext);
+                        syntheticTick.set(301);
+                        runIntegrationAction(skills, behaviors, auraEndReplaceAction, auraEventContext);
+                        auraEndOverwriteDispatched = endSkillCasts.get() == beforeEndRemove + 3;
+                        auraEndTargetContextPreserved = endTargetContextPreserved.get();
+                        auraEndEventContextCleared = endEventContextCleared.get();
+                        mythicAuraEndSkill = auraEndRemovalHonored && auraEndRemovalSuppressed
+                                && auraEndExpiryDispatched && auraEndOverwriteDispatched
+                                && auraEndTargetContextPreserved && auraEndEventContextCleared;
+                    } finally {
+                        dev.helstera.ai.skill.SkillExtras.auraRegistry(auraRegistry);
+                        dev.helstera.ai.skill.SkillExtras.auraStartSkillDispatcher(skills::castSkill);
+                        dev.helstera.ai.skill.SkillExtras.auraTickSkillDispatcher(skills::castSkill);
+                        dev.helstera.ai.skill.SkillExtras.auraEndSkillDispatcher(skills::castSkill);
+                        tickRegistry.removeTarget(auraStartProbe.getUniqueId());
+                        auraRegistry.removeTarget(auraStartProbe.getUniqueId());
+                    }
+                }
             } catch (Throwable failure) {
                 getLogger().warning("[自检] mythic-pack-condition exception=" + failure.getClass().getSimpleName()
                         + ":" + failure.getMessage());
@@ -1492,6 +1775,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 }
                 if (ordinaryMobProbe != null) {
                     try { ordinaryMobProbe.remove(); } catch (Throwable ignored) { }
+                }
+                if (auraStartProbe != null) {
+                    try {
+                        if (auraRegistry != null) auraRegistry.removeTarget(auraStartProbe.getUniqueId());
+                        auraStartProbe.remove();
+                    } catch (Throwable ignored) { }
                 }
             }
             boolean passed = packLoaded && caseSensitive && missingRejected && exactVersion
@@ -1515,7 +1804,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && mythicMobTypeExactPositive && mythicMobTypeExactSubstringRejected
                     && mythicMobTypeContainsPositive && mythicMobTypeContainsNegative
                     && mythicMobTypeImportedExactPositive && mythicMobTypeImportedExactSubstringRejected
-                    && mythicMobTypeImportedContainsPositive && mythicMobTypeImportedContainsNegative;
+                    && mythicMobTypeImportedContainsPositive && mythicMobTypeImportedContainsNegative
+                    && mythicAuraStartSkill && mythicAuraTickSkill && mythicAuraEndSkill;
             getLogger().info("[自检] mythic-pack-condition actual-version=" + actualVersion
                     + " pack-loaded=" + packLoaded + " case-sensitive=" + caseSensitive
                     + " missing-rejected=" + missingRejected + " exact-version=" + exactVersion
@@ -1563,8 +1853,146 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + mythicMobTypeImportedExactSubstringRejected
                     + " mythic-mob-type-imported-contains-positive=" + mythicMobTypeImportedContainsPositive
                     + " mythic-mob-type-imported-contains-negative=" + mythicMobTypeImportedContainsNegative
+                    + " mythic-aura-start-skill=" + mythicAuraStartSkill
+                    + " mythic-aura-tick-skill=" + mythicAuraTickSkill
+                    + " mythic-aura-end-skill=" + mythicAuraEndSkill
                     + " passed=" + passed);
+            getLogger().info("[自检] mythic-aura-start-skill first-start-dispatched="
+                    + auraStartFirstDispatched + " merge-did-not-redispatch=" + auraStartMergeNoRedispatch
+                    + " target-context-preserved=" + auraStartTargetContextPreserved
+                    + " passed=" + mythicAuraStartSkill);
+            getLogger().info("[自检] mythic-aura-tick-skill interval-respected=" + auraTickIntervalRespected
+                    + " merge-kept-schedule=" + auraTickMergeKeptSchedule
+                    + " target-context-preserved=" + auraTickTargetContextPreserved
+                    + " event-context-cleared=" + auraTickEventContextCleared
+                    + " passed=" + mythicAuraTickSkill);
+            getLogger().info("[自检] mythic-aura-end-skill removal-honored=" + auraEndRemovalHonored
+                    + " removal-suppressed=" + auraEndRemovalSuppressed
+                    + " expiry-dispatched=" + auraEndExpiryDispatched
+                    + " overwrite-dispatched=" + auraEndOverwriteDispatched
+                    + " target-context-preserved=" + auraEndTargetContextPreserved
+                    + " event-context-cleared=" + auraEndEventContextCleared
+                    + " passed=" + mythicAuraEndSkill);
         }, Math.max(1, delay));
+    }
+
+    /** Verifies Mythic KeyId aliases against real trigger-scoped skill-tree metadata. */
+    private void runMythicKeyIdSelfTest() {
+        int delay = getConfig().getInt("debug.self-test-delay-ticks", 40);
+        getServer().getScheduler().runTaskLater(this, () -> {
+            boolean variableSet = false;
+            boolean importedVariableSet = false;
+            boolean directPositive = false;
+            boolean directNegative = false;
+            boolean aliasPositive = false;
+            boolean aliasNegative = false;
+            boolean defaultPositive = false;
+            boolean defaultMismatch = false;
+            boolean missingRejected = false;
+            boolean malformedPreserved = false;
+            boolean unresolvedRejected = false;
+            try {
+                if (!(skillService instanceof dev.helstera.ai.skill.SkillService skills)
+                        || !(behaviorRegistry instanceof dev.helstera.api.behavior.BehaviorRegistry behaviors)) {
+                    throw new IllegalStateException("production skill/behavior services are unavailable");
+                }
+                var tree = new dev.helstera.api.behavior.SkillTreeContext(null, java.util.List.of());
+                var context = dev.helstera.api.behavior.BehaviorContext.continueExecution(
+                        null, (org.bukkit.entity.LivingEntity) null, 1.0, -1, 0,
+                        "mythic-key-id-probe", null, null, java.util.List.of(), null, tree);
+                String setAction = skills.bindAction(
+                        "set-variable{var=skill.key-id;value=minecraft:skill;type=STRING}");
+                variableSet = setAction != null && behaviors.runAction(setAction, context)
+                        && tree.variable(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_KEY_ID_VARIABLE)
+                                .map(String::valueOf).filter("minecraft:skill"::equals).isPresent();
+                tree.unsetVariable(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_KEY_ID_VARIABLE);
+                importedVariableSet = runImportedMythicKeyIdVariableSet(skills, behaviors, context)
+                        && tree.variable(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_KEY_ID_VARIABLE)
+                                .map(String::valueOf).filter("minecraft:skill"::equals).isPresent();
+
+                directPositive = testRuntimeCondition(skills, behaviors, context,
+                        "mythic-key-id minecraft:skill", true);
+                directNegative = testRuntimeCondition(skills, behaviors, context,
+                        "mythic-key-id minecraft:attack", false);
+                aliasPositive = testImportedPackCondition(skills, behaviors, context,
+                        "?MythicKeyId{mythickey=minecraft:skill}", true)
+                        && testImportedPackCondition(skills, behaviors, context,
+                        "?keyid{key=minecraft:skill}", true)
+                        && testImportedPackCondition(skills, behaviors, context,
+                        "?ariKeyId{id=minecraft:skill}", true);
+                aliasNegative = testImportedPackCondition(skills, behaviors, context,
+                        "?MythicKeyId{mythickey=minecraft:attack}", false)
+                        && testImportedPackCondition(skills, behaviors, context,
+                        "?keyid{key=minecraft:attack}", false)
+                        && testImportedPackCondition(skills, behaviors, context,
+                        "?ariKeyId{id=minecraft:attack}", false);
+
+                tree.setVariable(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_KEY_ID_VARIABLE,
+                        "minecraft:attack");
+                defaultPositive = testImportedPackCondition(skills, behaviors, context,
+                        "?MythicKeyId", true);
+                defaultMismatch = testImportedPackCondition(skills, behaviors, context,
+                        "?MythicKeyId{key=minecraft:skill}", false);
+                tree.unsetVariable(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_KEY_ID_VARIABLE);
+                missingRejected = testImportedPackCondition(skills, behaviors, context,
+                        "?MythicKeyId", false)
+                        && testRuntimeCondition(skills, behaviors, context,
+                        "mythic-key-id minecraft:skill", false);
+                var malformed = dev.helstera.migration.importer.MmConditions.translate(
+                        "?MythicKeyId{unknown=value}");
+                malformedPreserved = !malformed.translated()
+                        && "?MythicKeyId{unknown=value}".equals(malformed.condition())
+                        && skills.bindCondition("mythic-key-id{unknown=value}") == null;
+                tree.setVariable(dev.helstera.api.behavior.SkillTreeContext.MYTHIC_KEY_ID_VARIABLE,
+                        "<unresolved.key>");
+                unresolvedRejected = testRuntimeCondition(skills, behaviors, context,
+                        "mythic-key-id <missing.value>", false);
+            } catch (Throwable failure) {
+                getLogger().warning("[自检] mythic-key-id exception=" + failure.getClass().getSimpleName()
+                        + ":" + failure.getMessage());
+            }
+            boolean passed = variableSet && importedVariableSet && directPositive && directNegative && aliasPositive
+                    && aliasNegative && defaultPositive && defaultMismatch && missingRejected
+                    && malformedPreserved && unresolvedRejected;
+            getLogger().info("[自检] mythic-key-id variable-set=" + variableSet
+                    + " imported-variable-set=" + importedVariableSet
+                    + " direct-positive=" + directPositive + " direct-negative=" + directNegative
+                    + " aliases-positive=" + aliasPositive + " aliases-negative=" + aliasNegative
+                    + " default-positive=" + defaultPositive + " default-mismatch=" + defaultMismatch
+                    + " missing-rejected=" + missingRejected + " malformed-preserved=" + malformedPreserved
+                    + " unresolved-rejected=" + unresolvedRejected + " passed=" + passed);
+        }, Math.max(1, delay));
+    }
+
+    private boolean runImportedMythicKeyIdVariableSet(
+            dev.helstera.ai.skill.SkillService skills,
+            dev.helstera.api.behavior.BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext context) throws java.io.IOException {
+        Path root = Files.createTempDirectory("helstera-mythic-key-id-probe-");
+        Path source = Files.createDirectories(root.resolve("Skills")).resolve("probe.yml");
+        try {
+            Files.writeString(source, """
+                    skills:
+                      mythic_key_id_probe:
+                        Skills:
+                          - setvariable{var=skill.key-id;type=STRING;value=minecraft:skill}
+                    """);
+            var entries = new MythicMobsImporter().convert(source);
+            var plan = entries.stream().filter(entry -> "skills.yml".equals(entry.get("target-file")))
+                    .findFirst().orElseThrow();
+            var imported = YamlConfiguration.loadConfiguration(
+                    new java.io.StringReader(String.valueOf(plan.get("content"))));
+            var actions = imported.getStringList("skills.mythic_key_id_probe.on-decision");
+            if (!actions.equals(List.of("set-variable var=skill.key-id type=STRING value=\"minecraft:skill\""))) {
+                return false;
+            }
+            String action = skills.bindAction(actions.getFirst());
+            return action != null && behaviors.runAction(action, context);
+        } finally {
+            Files.deleteIfExists(source);
+            Files.deleteIfExists(root.resolve("Skills"));
+            Files.deleteIfExists(root);
+        }
     }
 
     /** Verifies imported Mythic metaskill conditions against the production skill runtime. */
@@ -11125,7 +11553,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             boolean structureCondition = false;
             boolean mythicMobTypeCondition = false;
             boolean variableContainsCondition = false;
-            boolean importedVariableConditions = false;
             boolean triggerBlockTypeCondition = false;
             boolean originLocationCondition = false;
             boolean importedOriginLocationCondition = false;
@@ -11498,137 +11925,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         modelInstance, zombie, 1.0, -1, 0, "integration", null,
                         zombie, java.util.List.of(zombie), zombie.getLocation(),
                         variableContext.skillTree().orElse(null));
-                String variableProbeSuffix = java.util.UUID.randomUUID().toString().replace("-", "");
-                boolean variablePrimaryMapped = true;
-                boolean variableAliasesMapped = true;
-                boolean variableScopesMatched = true;
-                boolean variableIsSetAliasesMatched = true;
-                boolean variableWrongTypeRejected = true;
-                for (String scope : java.util.List.of("skill", "caster", "target", "world", "global")) {
-                    String variable = "parity" + variableProbeSuffix;
-                    String set = "set-variable{var=" + scope + "." + variable
-                            + ";value=ready;type=STRING}";
-                    boolean setSucceeded = runIntegrationAction(skills, behaviors, set, scopedVariableContext);
-                    String equalsSource = switch (scope) {
-                        case "caster" -> "?varEquals{n=caster." + variable + ";v=ready}";
-                        case "target" -> "?varEq{key=target." + variable + ";value=ready}";
-                        case "world" -> "?variableEq{n=world." + variable + ";v=ready}";
-                        default -> "?VariableEquals{var=" + scope + "." + variable + ";value=ready}";
-                    };
-                    var equalsMapped = dev.helstera.migration.importer.MmConditions.translate(equalsSource);
-                    String equalsKey = equalsMapped.translated()
-                            ? skills.bindCondition(equalsMapped.condition()) : null;
-                    boolean equalsPassed = equalsKey != null
-                            && behaviors.testCondition(equalsKey, scopedVariableContext);
-                    String isSetSource = switch (scope) {
-                        case "skill" -> "?VariableIsSet{variable=skill." + variable + "}";
-                        case "target" -> "?varSet{k=target." + variable + "}";
-                        default -> "?varIsSet{key=" + scope + "." + variable + "}";
-                    };
-                    var isSetMapped = dev.helstera.migration.importer.MmConditions.translate(isSetSource);
-                    String isSetKey = isSetMapped.translated()
-                            ? skills.bindCondition(isSetMapped.condition()) : null;
-                    boolean isSetPassed = isSetKey != null
-                            && behaviors.testCondition(isSetKey, scopedVariableContext);
-                    if (scope.equals("global")) {
-                        var wrongType = dev.helstera.migration.importer.MmConditions.translate(
-                                "?VariableInRange{var=global." + variable + ";value=0to100}");
-                        String wrongTypeKey = wrongType.translated()
-                                ? skills.bindCondition(wrongType.condition()) : null;
-                        variableWrongTypeRejected = wrongTypeKey != null
-                                && !behaviors.testCondition(wrongTypeKey, scopedVariableContext);
-                    }
-                    boolean unsetSucceeded = runIntegrationAction(skills, behaviors,
-                            "variable-unset{var=" + scope + "." + variable + "}", scopedVariableContext);
-                    boolean unsetRejected = isSetKey != null
-                            && !behaviors.testCondition(isSetKey, scopedVariableContext);
-                    variablePrimaryMapped &= scope.equals("skill")
-                            ? equalsMapped.translated() && isSetMapped.translated()
-                            : true;
-                    variableAliasesMapped &= equalsMapped.translated() && isSetMapped.translated();
-                    variableScopesMatched &= setSucceeded && equalsPassed && isSetPassed
-                            && unsetSucceeded && unsetRejected;
-                    variableIsSetAliasesMatched &= isSetMapped.translated() && isSetPassed;
-                }
-
-                String numericVariable = "range" + variableProbeSuffix;
-                boolean numericSet = runIntegrationAction(skills, behaviors,
-                        "set-variable{var=global." + numericVariable + ";value=42}", scopedVariableContext);
-                boolean variableRangesMatched = numericSet;
-                for (String source : java.util.List.of(
-                        "?VariableInRange{var=global." + numericVariable + ";value=40to45}",
-                        "?varInRange{scope=global;variable=" + numericVariable + ";range=>=42}",
-                        "?varRange{s=global;n=" + numericVariable + ";r=<=42}")) {
-                    var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
-                    String key = mapped.translated() ? skills.bindCondition(mapped.condition()) : null;
-                    variableRangesMatched &= key != null
-                            && behaviors.testCondition(key, scopedVariableContext);
-                }
-                var exclusiveRange = dev.helstera.migration.importer.MmConditions.translate(
-                        "?VariableInRange{var=global." + numericVariable + ";value=>42}");
-                String exclusiveRangeKey = exclusiveRange.translated()
-                        ? skills.bindCondition(exclusiveRange.condition()) : null;
-                variableRangesMatched &= exclusiveRangeKey != null
-                        && !behaviors.testCondition(exclusiveRangeKey, scopedVariableContext);
-                var missingVariable = dev.helstera.migration.importer.MmConditions.translate(
-                        "?VariableEquals{var=global.missing" + variableProbeSuffix + ";value=ready}");
-                String missingVariableKey = missingVariable.translated()
-                        ? skills.bindCondition(missingVariable.condition()) : null;
-                boolean missingVariableRejected = missingVariableKey != null
-                        && !behaviors.testCondition(missingVariableKey, scopedVariableContext);
-                String quotedVariable = "quoted" + variableProbeSuffix;
-                boolean quotedValueSet = runIntegrationAction(skills, behaviors,
-                        "set-variable{var=global." + quotedVariable
-                                + ";value=\"ready; now\";type=STRING}", scopedVariableContext);
-                var quotedValue = dev.helstera.migration.importer.MmConditions.translate(
-                        "?VariableEquals{var=global." + quotedVariable + ";value=\"ready; now\"}");
-                String quotedValueKey = quotedValue.translated()
-                        ? skills.bindCondition(quotedValue.condition()) : null;
-                boolean quotedValueMatched = quotedValueSet && quotedValueKey != null
-                        && behaviors.testCondition(quotedValueKey, scopedVariableContext);
-                String expectedVariable = "expected" + variableProbeSuffix;
-                String actualVariable = "actual" + variableProbeSuffix;
-                boolean placeholderVariablesSet = runIntegrationAction(skills, behaviors,
-                        "set-variable{var=skill." + expectedVariable + ";value=ready;type=STRING}",
-                        scopedVariableContext)
-                        && runIntegrationAction(skills, behaviors,
-                        "set-variable{var=skill." + actualVariable + ";value=ready;type=STRING}",
-                        scopedVariableContext);
-                var placeholderEquals = dev.helstera.migration.importer.MmConditions.translate(
-                        "?VariableEquals{var=skill." + actualVariable + ";value=<skill.var."
-                                + expectedVariable + ">}");
-                String placeholderKey = placeholderEquals.translated()
-                        ? skills.bindCondition(placeholderEquals.condition()) : null;
-                boolean variablePlaceholderMatched = placeholderVariablesSet && placeholderKey != null
-                        && behaviors.testCondition(placeholderKey, scopedVariableContext);
-                String invalidRangeSource = "?VariableInRange{var=global." + numericVariable + "}";
-                var invalidRange = dev.helstera.migration.importer.MmConditions.translate(invalidRangeSource);
-                boolean invalidRangePreserved = !invalidRange.translated()
-                        && invalidRangeSource.equals(invalidRange.condition())
-                        && skills.bindCondition(invalidRange.condition()) == null;
-                importedVariableConditions = variablePrimaryMapped && variableAliasesMapped
-                        && variableScopesMatched && variableIsSetAliasesMatched
-                        && variableRangesMatched && missingVariableRejected
-                        && variableWrongTypeRejected && quotedValueMatched
-                        && variablePlaceholderMatched && invalidRangePreserved;
-                getLogger().info("imported-variable-conditions result=" + importedVariableConditions
-                        + " primary-mapped=" + variablePrimaryMapped
-                        + " aliases=" + (variableAliasesMapped && variableIsSetAliasesMatched)
-                        + " scopes=" + variableScopesMatched
-                        + " ranges=" + variableRangesMatched
-                        + " missing-rejected=" + missingVariableRejected
-                        + " wrong-type-rejected=" + variableWrongTypeRejected
-                        + " quoted-value=" + quotedValueMatched
-                        + " dynamic-placeholder=" + variablePlaceholderMatched
-                        + " invalid-preserved=" + invalidRangePreserved);
-                runIntegrationAction(skills, behaviors,
-                        "variable-unset{var=global." + numericVariable + "}", scopedVariableContext);
-                runIntegrationAction(skills, behaviors,
-                        "variable-unset{var=global." + quotedVariable + "}", scopedVariableContext);
-                runIntegrationAction(skills, behaviors,
-                        "variable-unset{var=skill." + expectedVariable + "}", scopedVariableContext);
-                runIntegrationAction(skills, behaviors,
-                        "variable-unset{var=skill." + actualVariable + "}", scopedVariableContext);
+                runImportedVariableConditionsSelfTest(skills, behaviors, scopedVariableContext);
 
                 Location projectileOrigin = world.getHighestBlockAt(location).getLocation().add(0, 4, 0);
                 projectileProbe = world.spawnArrow(projectileOrigin,
@@ -13936,7 +14233,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean utilityTargetCount = behaviors.testCondition(
                         skills.bindCondition("targetcount 1"), conditionContext);
                 boolean utilityMobsRadius = behaviors.testCondition(
-                        skills.bindCondition("mobsinradius 1 4"), context);
+                        skills.bindCondition("mobsinradius >0 4 ZOMBIE"), context);
                 boolean utilityMobsOrigin = behaviors.testCondition(
                         skills.bindCondition("mobs-near-origin >=1 4 ZOMBIE"), context);
                 double spawnDistance = conditionTarget.getLocation()
@@ -14314,14 +14611,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 boolean casterTagAdded = runIntegrationAction(skills, behaviors,
                         "addtag{tag=HelsteraMechanicProbe}", context);
                 boolean casterTagPresent = zombie.getScoreboardTags().contains("HelsteraMechanicProbe");
-                boolean targetTagAdded = runIntegrationAction(skills, behaviors,
-                        "addtag{tag=HelsteraTargetMechanicProbe} @Target", conditionContext);
-                boolean targetTagPresent = conditionTarget.getScoreboardTags()
-                        .contains("HelsteraTargetMechanicProbe");
-                boolean targetTagRemoved = runIntegrationAction(skills, behaviors,
-                        "removetag{tag=HelsteraTargetMechanicProbe} @Target", conditionContext);
-                boolean targetTagAbsent = !conditionTarget.getScoreboardTags()
-                        .contains("HelsteraTargetMechanicProbe");
+                var originalTagMechanicAiTarget = zombie.getTarget();
+                boolean targetTagAdded;
+                boolean targetTagPresent;
+                boolean targetTagRemoved;
+                boolean targetTagAbsent;
+                try {
+                    // @Target on a Mob follows its live Bukkit AI target; binding
+                    // conditionTarget in the execution context alone is insufficient.
+                    zombie.setTarget(conditionTarget);
+                    targetTagAdded = runIntegrationAction(skills, behaviors,
+                            "addtag{tag=HelsteraTargetMechanicProbe} @Target", conditionContext);
+                    targetTagPresent = conditionTarget.getScoreboardTags()
+                            .contains("HelsteraTargetMechanicProbe");
+                    targetTagRemoved = runIntegrationAction(skills, behaviors,
+                            "removetag{tag=HelsteraTargetMechanicProbe} @Target", conditionContext);
+                    targetTagAbsent = !conditionTarget.getScoreboardTags()
+                            .contains("HelsteraTargetMechanicProbe");
+                } finally {
+                    if (zombie.isValid()) zombie.setTarget(originalTagMechanicAiTarget);
+                    conditionTarget.removeScoreboardTag("HelsteraTargetMechanicProbe");
+                }
                 boolean casterTagRemoved = runIntegrationAction(skills, behaviors,
                         "removetag{tag=HelsteraMechanicProbe}", context);
                 boolean casterTagAbsent = !zombie.getScoreboardTags().contains("HelsteraMechanicProbe");
@@ -14825,11 +15135,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     boolean targetPlayersDisabled = false;
                     boolean targetCreativeFilter = false;
                     boolean ignoreCreativeFilter = false;
-                    boolean targetCreativePriority = false;
+                    boolean targetCreativePlayerDisabledPriority = false;
                     boolean targetCreativeDisabled = false;
                     boolean targetSpectatorFilter = false;
                     boolean ignoreSpectatorFilter = false;
-                    boolean targetSpectatorPriority = false;
+                    boolean targetSpectatorPlayerDisabledPriority = false;
                     boolean targetSpectatorDisabled = false;
                     boolean targetAnimalsDisabled = false;
                     boolean targetAnimalsPriority = false;
@@ -15073,10 +15383,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     "@living{target=creative;ignore=creative;targetcreative=true;targetplayers=false}",
                                     (dev.helstera.api.instance.ModelInstance) null,
                                     stateFilterCandidates, java.util.List.of());
-                            targetCreativePriority = !creativeExpected.isEmpty()
-                                    && creativeSpecific.size() == creativeExpected.size()
-                                    && creativeSpecific.containsAll(creativeExpected)
-                                    && creativeSpecific.contains(gameModeFilterPlayer);
+                            targetCreativePlayerDisabledPriority = !creativeExpected.isEmpty()
+                                    && creativeSpecific.isEmpty();
                             targetCreativeDisabled = dev.helstera.api.behavior.Targeters.select(
                                     "@living{target=creative;targetcreative=false}",
                                     (dev.helstera.api.instance.ModelInstance) null,
@@ -15108,10 +15416,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                     "@living{target=spectator;ignore=spectator;targetspectator=true;targetplayers=false}",
                                     (dev.helstera.api.instance.ModelInstance) null,
                                     stateFilterCandidates, java.util.List.of());
-                            targetSpectatorPriority = !spectatorExpected.isEmpty()
-                                    && spectatorSpecific.size() == spectatorExpected.size()
-                                    && spectatorSpecific.containsAll(spectatorExpected)
-                                    && spectatorSpecific.contains(gameModeFilterPlayer);
+                            targetSpectatorPlayerDisabledPriority = !spectatorExpected.isEmpty()
+                                    && spectatorSpecific.isEmpty();
                             targetSpectatorDisabled = dev.helstera.api.behavior.Targeters.select(
                                     "@living{target=spectator;targetspectator=false}",
                                     (dev.helstera.api.instance.ModelInstance) null,
@@ -15138,10 +15444,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " target-villagers-priority=" + targetVillagersPriority
                                 + " target-all=" + targetAllPriority
                                 + " target-creative=" + targetCreativeFilter + " ignore-creative=" + ignoreCreativeFilter
-                                + " target-creative-priority=" + targetCreativePriority
+                                + " target-creative-player-disabled-priority=" + targetCreativePlayerDisabledPriority
                                 + " target-creative-disabled=" + targetCreativeDisabled
                                 + " target-spectator=" + targetSpectatorFilter + " ignore-spectator=" + ignoreSpectatorFilter
-                                + " target-spectator-priority=" + targetSpectatorPriority
+                                + " target-spectator-player-disabled-priority=" + targetSpectatorPlayerDisabledPriority
                                 + " target-spectator-disabled=" + targetSpectatorDisabled
                                 + " ground-probe-on-ground=" + groundFilterTarget.isOnGround()
                                 + " ground-probe-at=" + formatProbeLocation(groundFilterTarget.getLocation())
@@ -15949,10 +16255,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         permissionProbe.setLevel(oldEnchantingLevel);
                         permissionProbe.setExp(oldEnchantingExp);
                     }
-                    playerRadiusConditions = behaviors.testCondition(
-                            skills.bindCondition("player-within 1"), stateContext)
-                            && !behaviors.testCondition(
-                            skills.bindCondition("player-not-within 1"), stateContext);
+                    var radiusPlayerMode = permissionProbe.getGameMode();
+                    try {
+                        permissionProbe.setGameMode(org.bukkit.GameMode.SURVIVAL);
+                        playerRadiusConditions = behaviors.testCondition(
+                                skills.bindCondition("player-within 1"), stateContext)
+                                && !behaviors.testCondition(
+                                skills.bindCondition("player-not-within 1"), stateContext);
+                    } finally {
+                        permissionProbe.setGameMode(radiusPlayerMode);
+                    }
                     Location oldLookingAtLocation = permissionProbe.getLocation().clone();
                     org.bukkit.block.Block lookingAtTargetBlock = null;
                     org.bukkit.Material oldLookingAtTargetType = null;
@@ -17232,7 +17544,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         org.bukkit.entity.Zombie fallbackTarget = null;
         org.bukkit.entity.Zombie triggerTarget = null;
         org.bukkit.entity.Arrow projectile = null;
+        org.bukkit.entity.Mob sourceMob = null;
+        org.bukkit.entity.LivingEntity originalMobTarget = null;
         try {
+            var sourceEntity = modelInstance == null ? null : modelInstance.baseEntity().orElse(null);
+            if (!(sourceEntity instanceof org.bukkit.entity.Mob managedMob)) {
+                throw new IllegalStateException("managed Mob caster unavailable");
+            }
+            sourceMob = managedMob;
+            originalMobTarget = sourceMob.getTarget();
             var origin = owner.getLocation().clone().add(4, 0, 0);
             activeTarget = world.spawn(origin, org.bukkit.entity.Zombie.class);
             fallbackTarget = world.spawn(origin.clone().add(2, 0, 0), org.bukkit.entity.Zombie.class);
@@ -17240,6 +17560,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             activeTarget.setAI(false);
             fallbackTarget.setAI(false);
             triggerTarget.setAI(false);
+            sourceMob.setTarget(activeTarget);
 
             var liveTargetContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
                     modelInstance, activeTarget, 1, 0, 0, "integration", null,
@@ -17263,7 +17584,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
             activeTarget.remove();
             var inactiveTargetContext = dev.helstera.api.behavior.BehaviorContext.continueExecution(
-                    modelInstance, activeTarget, 1, 0, 0, "integration", null,
+                    null, activeTarget, 1, 0, 0, "integration", null,
                     activeTarget, java.util.List.of(activeTarget, fallbackTarget), owner.getLocation(), null);
             boolean targetFallback = dev.helstera.api.behavior.Targeters.select(
                     "@target", inactiveTargetContext, java.util.List.of(), java.util.List.of())
@@ -17314,6 +17635,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (activeTarget != null && activeTarget.isValid()) activeTarget.remove();
             if (fallbackTarget != null && fallbackTarget.isValid()) fallbackTarget.remove();
             if (triggerTarget != null && triggerTarget.isValid()) triggerTarget.remove();
+            if (sourceMob != null && sourceMob.isValid()) {
+                sourceMob.setTarget(originalMobTarget != null && originalMobTarget.isValid()
+                        ? originalMobTarget : null);
+            }
         }
     }
 
@@ -17429,6 +17754,160 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " duplicate-rejected=" + duplicateHealthRejected
                 + " overflow-preserved=" + overflowPreserved
                 + " invalid-preserved=" + invalidPreserved);
+    }
+
+    private void runImportedVariableConditionsSelfTest(SkillService skills, BehaviorRegistry behaviors,
+            dev.helstera.api.behavior.BehaviorContext scopedVariableContext) {
+        String variableProbeSuffix = java.util.UUID.randomUUID().toString().replace("-", "");
+        boolean variablePrimaryMapped = true;
+        boolean variableAliasesMapped = true;
+        boolean variableScopesMatched = true;
+        boolean variableIsSetAliasesMatched = true;
+        boolean variableWrongTypeRejected = true;
+        for (String scope : java.util.List.of("skill", "caster", "target", "world", "global")) {
+            String variable = "parity" + variableProbeSuffix;
+            String set = "set-variable{var=" + scope + "." + variable
+                    + ";value=ready;type=STRING}";
+            boolean setSucceeded = runIntegrationAction(skills, behaviors, set, scopedVariableContext);
+            String equalsSource = switch (scope) {
+                case "caster" -> "?varEquals{n=caster." + variable + ";v=ready}";
+                case "target" -> "?varEq{key=target." + variable + ";value=ready}";
+                case "world" -> "?variableEq{n=world." + variable + ";v=ready}";
+                default -> "?VariableEquals{var=" + scope + "." + variable + ";value=ready}";
+            };
+            var equalsMapped = dev.helstera.migration.importer.MmConditions.translate(equalsSource);
+            String equalsKey = equalsMapped.translated()
+                    ? skills.bindCondition(equalsMapped.condition()) : null;
+            boolean equalsPassed = equalsKey != null
+                    && behaviors.testCondition(equalsKey, scopedVariableContext);
+            String isSetSource = switch (scope) {
+                case "skill" -> "?VariableIsSet{variable=skill." + variable + "}";
+                case "target" -> "?varSet{k=target." + variable + "}";
+                default -> "?varIsSet{key=" + scope + "." + variable + "}";
+            };
+            var isSetMapped = dev.helstera.migration.importer.MmConditions.translate(isSetSource);
+            String isSetKey = isSetMapped.translated()
+                    ? skills.bindCondition(isSetMapped.condition()) : null;
+            boolean isSetPassed = isSetKey != null
+                    && behaviors.testCondition(isSetKey, scopedVariableContext);
+            if (scope.equals("global")) {
+                var wrongType = dev.helstera.migration.importer.MmConditions.translate(
+                        "?VariableInRange{var=global." + variable + ";value=0to100}");
+                String wrongTypeKey = wrongType.translated()
+                        ? skills.bindCondition(wrongType.condition()) : null;
+                variableWrongTypeRejected = wrongTypeKey != null
+                        && !behaviors.testCondition(wrongTypeKey, scopedVariableContext);
+            }
+            boolean unsetSucceeded = runIntegrationAction(skills, behaviors,
+                    "variable-unset{var=" + scope + "." + variable + "}", scopedVariableContext);
+            boolean unsetRejected = isSetKey != null
+                    && !behaviors.testCondition(isSetKey, scopedVariableContext);
+            variablePrimaryMapped &= scope.equals("skill")
+                    ? equalsMapped.translated() && isSetMapped.translated()
+                    : true;
+            variableAliasesMapped &= equalsMapped.translated() && isSetMapped.translated();
+            variableScopesMatched &= setSucceeded && equalsPassed && isSetPassed
+                    && unsetSucceeded && unsetRejected;
+            variableIsSetAliasesMatched &= isSetMapped.translated() && isSetPassed;
+        }
+
+        String numericVariable = "range" + variableProbeSuffix;
+        boolean numericSet = runIntegrationAction(skills, behaviors,
+                "set-variable{var=global." + numericVariable + ";value=42}", scopedVariableContext);
+        boolean variableRangesMatched = numericSet;
+        for (String source : java.util.List.of(
+                "?VariableInRange{var=global." + numericVariable + ";value=40to45}",
+                "?varInRange{scope=global;variable=" + numericVariable + ";range=>=42}",
+                "?varRange{s=global;n=" + numericVariable + ";r=<=42}")) {
+            var mapped = dev.helstera.migration.importer.MmConditions.translate(source);
+            String key = mapped.translated() ? skills.bindCondition(mapped.condition()) : null;
+            variableRangesMatched &= key != null
+                    && behaviors.testCondition(key, scopedVariableContext);
+        }
+        var exclusiveRange = dev.helstera.migration.importer.MmConditions.translate(
+                "?VariableInRange{var=global." + numericVariable + ";value=>42}");
+        String exclusiveRangeKey = exclusiveRange.translated()
+                ? skills.bindCondition(exclusiveRange.condition()) : null;
+        variableRangesMatched &= exclusiveRangeKey != null
+                && !behaviors.testCondition(exclusiveRangeKey, scopedVariableContext);
+        var missingVariable = dev.helstera.migration.importer.MmConditions.translate(
+                "?VariableEquals{var=global.missing" + variableProbeSuffix + ";value=ready}");
+        String missingVariableKey = missingVariable.translated()
+                ? skills.bindCondition(missingVariable.condition()) : null;
+        boolean missingVariableRejected = missingVariableKey != null
+                && !behaviors.testCondition(missingVariableKey, scopedVariableContext);
+        String quotedVariable = "quoted" + variableProbeSuffix;
+        String quotedArgument = "\"ready; now | later && next || end ) } [ \\\"quoted\\\"\"";
+        boolean quotedValueSet = runIntegrationAction(skills, behaviors,
+                "set-variable{var=global." + quotedVariable
+                        + ";value=" + quotedArgument + ";type=STRING}", scopedVariableContext);
+        var quotedValue = dev.helstera.migration.importer.MmConditions.translate(
+                "?VariableEquals{var=global." + quotedVariable + ";value=" + quotedArgument + "}");
+        String quotedValueKey = quotedValue.translated()
+                ? skills.bindCondition(quotedValue.condition()) : null;
+        boolean quotedValueMatched = quotedValueSet && quotedValueKey != null
+                && behaviors.testCondition(quotedValueKey, scopedVariableContext);
+        boolean variableCompositionMatched = quotedValueMatched && missingVariableRejected;
+        boolean malformedVariableCompositionRejected = false;
+        if (variableCompositionMatched) {
+            // Helstera composition receives imported variable predicates as leaves.
+            for (String separator : java.util.List.of(";", "|")) {
+                String composedKey = skills.bindCondition("any{" + missingVariable.condition()
+                        + separator + quotedValue.condition() + " && !" + missingVariable.condition() + "}");
+                variableCompositionMatched &= composedKey != null
+                        && behaviors.testCondition(composedKey, scopedVariableContext);
+            }
+            String negatedKey = skills.bindCondition("not{" + quotedValue.condition() + "}");
+            variableCompositionMatched &= negatedKey != null
+                    && !behaviors.testCondition(negatedKey, scopedVariableContext);
+            malformedVariableCompositionRejected = skills.bindCondition(quotedValue.condition() + " ||") == null;
+        }
+        String expectedVariable = "expected" + variableProbeSuffix;
+        String actualVariable = "actual" + variableProbeSuffix;
+        boolean placeholderVariablesSet = runIntegrationAction(skills, behaviors,
+                "set-variable{var=skill." + expectedVariable + ";value=ready;type=STRING}",
+                scopedVariableContext)
+                && runIntegrationAction(skills, behaviors,
+                "set-variable{var=skill." + actualVariable + ";value=ready;type=STRING}",
+                scopedVariableContext);
+        var placeholderEquals = dev.helstera.migration.importer.MmConditions.translate(
+                "?VariableEquals{var=skill." + actualVariable + ";value=<skill.var."
+                        + expectedVariable + ">}");
+        String placeholderKey = placeholderEquals.translated()
+                ? skills.bindCondition(placeholderEquals.condition()) : null;
+        boolean variablePlaceholderMatched = placeholderVariablesSet && placeholderKey != null
+                && behaviors.testCondition(placeholderKey, scopedVariableContext);
+        String invalidRangeSource = "?VariableInRange{var=global." + numericVariable + "}";
+        var invalidRange = dev.helstera.migration.importer.MmConditions.translate(invalidRangeSource);
+        boolean invalidRangePreserved = !invalidRange.translated()
+                && invalidRangeSource.equals(invalidRange.condition())
+                && skills.bindCondition(invalidRange.condition()) == null;
+        boolean importedVariableConditions = variablePrimaryMapped && variableAliasesMapped
+                && variableScopesMatched && variableIsSetAliasesMatched
+                && variableRangesMatched && missingVariableRejected
+                && variableWrongTypeRejected && quotedValueMatched
+                && variablePlaceholderMatched && invalidRangePreserved
+                && variableCompositionMatched && malformedVariableCompositionRejected;
+        getLogger().info("imported-variable-conditions result=" + importedVariableConditions
+                + " primary-mapped=" + variablePrimaryMapped
+                + " aliases=" + (variableAliasesMapped && variableIsSetAliasesMatched)
+                + " scopes=" + variableScopesMatched
+                + " ranges=" + variableRangesMatched
+                + " missing-rejected=" + missingVariableRejected
+                + " wrong-type-rejected=" + variableWrongTypeRejected
+                + " quoted-value=" + quotedValueMatched
+                + " dynamic-placeholder=" + variablePlaceholderMatched
+                + " invalid-preserved=" + invalidRangePreserved
+                + " helstera-composition=" + variableCompositionMatched
+                + " malformed-composition-rejected=" + malformedVariableCompositionRejected);
+        runIntegrationAction(skills, behaviors,
+                "variable-unset{var=global." + numericVariable + "}", scopedVariableContext);
+        runIntegrationAction(skills, behaviors,
+                "variable-unset{var=global." + quotedVariable + "}", scopedVariableContext);
+        runIntegrationAction(skills, behaviors,
+                "variable-unset{var=skill." + expectedVariable + "}", scopedVariableContext);
+        runIntegrationAction(skills, behaviors,
+                "variable-unset{var=skill." + actualVariable + "}", scopedVariableContext);
     }
 
     private boolean runImportedPluginConditionSelfTest(SkillService skills, BehaviorRegistry behaviors,
@@ -18035,10 +18514,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean entitiesNegative = false;
         boolean mobsPositive = false;
         boolean mobsNegative = false;
-        boolean mobsArmorStandExcluded = false;
+        boolean mobsArmorStandIncluded = false;
         boolean mobsTypePositive = false;
         boolean mobsTypeNegative = false;
-        boolean mobsDefaultRadiusNegative = false;
+        boolean mobsDefaultZero = false;
         boolean mobsNearOriginImported = false;
         boolean mobsNearOriginDefaultExact = false;
         boolean mobsNearOriginExactPositive = false;
@@ -18058,16 +18537,21 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean subjectRestored = false;
         boolean peerRestored = true;
         org.bukkit.Location subjectOriginalLocation = permissionProbe.getLocation().clone();
+        org.bukkit.entity.Entity radiusCaster = stateInstance.baseEntity().orElseThrow();
+        org.bukkit.Location casterOriginalLocation = radiusCaster.getLocation().clone();
+        org.bukkit.GameMode subjectOriginalMode = permissionProbe.getGameMode();
         org.bukkit.entity.Player peer = getServer().getOnlinePlayers().stream()
                 .filter(player -> player != permissionProbe && player.isOnline() && !player.isDead())
                 .findFirst().orElse(null);
         org.bukkit.Location peerOriginalLocation = peer == null ? null : peer.getLocation().clone();
         try {
+            permissionProbe.setGameMode(org.bukkit.GameMode.SURVIVAL);
             int radiusX = subjectOriginalLocation.getBlockX() + 48;
             int radiusZ = subjectOriginalLocation.getBlockZ() + 48;
             int radiusY = world.getHighestBlockYAt(radiusX, radiusZ) + 1;
             org.bukkit.Location radiusOrigin = new org.bukkit.Location(world, radiusX + 0.5, radiusY,
                     radiusZ + 0.5, subjectOriginalLocation.getYaw(), subjectOriginalLocation.getPitch());
+            if (!radiusCaster.teleport(radiusOrigin)) throw new IllegalStateException("Radius caster teleport failed");
             permissionProbe.teleport(radiusOrigin);
             if (peer != null) peer.teleport(radiusOrigin.clone().add(1.0, 0, 0));
             org.bukkit.entity.Zombie zombie = world.spawn(radiusOrigin.clone().add(2.0, 0, 0),
@@ -18090,13 +18574,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var radiusTargetContext = dev.helstera.api.behavior.BehaviorContext.of(
                     null, zombie, 1.0, 2.0, 0, "integration");
             var importedPlayers = dev.helstera.migration.importer.MmConditions.translate(
-                    "?playersInRadius{r=4}");
+                    "?playersInRadius{r=4;amount=>0}");
             var importedPlayersDefaults = dev.helstera.migration.importer.MmConditions.translate(
                     "?playersInRadius");
             var importedEntities = dev.helstera.migration.importer.MmConditions.translate(
                     "?entitiesInRadius{count=2;radius=4}");
             var importedMobs = dev.helstera.migration.importer.MmConditions.translate(
-                    "?mobsInRadius{types=ZOMBIE;radius=4}");
+                    "?mobsInRadius{types=ZOMBIE;radius=4;amount=1}");
             var importedMobsDefaults = dev.helstera.migration.importer.MmConditions.translate(
                     "?mobsInRadius");
             var importedMobsNearOrigin = dev.helstera.migration.importer.MmConditions.translate(
@@ -18114,13 +18598,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             imported = importedPlayers.translated()
                     && "players-in-radius >0 4 true".equals(importedPlayers.condition())
                     && importedPlayersDefaults.translated()
-                    && "players-in-radius >0 32 true".equals(importedPlayersDefaults.condition())
+                    && "players-in-radius 0 32 true".equals(importedPlayersDefaults.condition())
                     && importedEntities.translated()
                     && "entities-in-radius 2 4".equals(importedEntities.condition())
                     && importedMobs.translated()
                     && "mobs-in-radius 1 4 ZOMBIE".equals(importedMobs.condition())
                     && importedMobsDefaults.translated()
-                    && "mobs-in-radius 1 5".equals(importedMobsDefaults.condition())
+                    && "mobs-in-radius 0 0".equals(importedMobsDefaults.condition())
                     && importedMobsNearOrigin.translated()
                     && "mobs-near-origin 2 4 ZOMBIE,COW".equals(importedMobsNearOrigin.condition())
                     && importedMobsNearOriginDefaults.translated()
@@ -18186,23 +18670,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     "mobs-near-origin <=0 4 NOT_A_REGISTERED_MYTHIC_MOB");
             mobsNearOriginUnknownTypeRejected = mobsNearOriginUnknownKey != null
                     && !behaviors.testCondition(mobsNearOriginUnknownKey, radiusContext);
-            String mobsArmorStandKey = skills.bindCondition("mobs-in-radius 3 4");
-            mobsArmorStandExcluded = mobsArmorStandKey != null
-                    && !behaviors.testCondition(mobsArmorStandKey, radiusContext);
+            String mobsArmorStandKey = skills.bindCondition("mobs-in-radius 1 4 ARMOR_STAND");
+            mobsArmorStandIncluded = mobsArmorStandKey != null
+                    && behaviors.testCondition(mobsArmorStandKey, radiusContext);
             if (playersDefaultsKey != null) {
                 permissionProbe.teleport(radiusOrigin.clone().add(20.0, 0, 0));
                 if (peer != null) peer.teleport(radiusOrigin.clone().add(22.0, 0, 0));
-                playersDefaultRadiusPositive = behaviors.testCondition(playersDefaultsKey, radiusContext);
+                playersDefaultRadiusNegative = !behaviors.testCondition(playersDefaultsKey, radiusContext);
                 permissionProbe.teleport(radiusOrigin.clone().add(40.0, 0, 0));
                 if (peer != null) peer.teleport(radiusOrigin.clone().add(42.0, 0, 0));
-                playersDefaultRadiusNegative = !behaviors.testCondition(playersDefaultsKey, radiusContext);
+                playersDefaultRadiusPositive = behaviors.testCondition(playersDefaultsKey, radiusContext);
                 permissionProbe.teleport(radiusOrigin);
                 if (peer != null) peer.teleport(radiusOrigin.clone().add(1.0, 0, 0));
             }
             if (mobsDefaultsKey != null) {
                 zombie.teleport(radiusOrigin.clone().add(8.0, 0, 0));
                 cow.teleport(radiusOrigin.clone().add(9.0, 0, 0));
-                mobsDefaultRadiusNegative = !behaviors.testCondition(mobsDefaultsKey, radiusContext);
+                mobsDefaultZero = behaviors.testCondition(mobsDefaultsKey, radiusContext);
                 zombie.teleport(radiusOrigin.clone().add(2.0, 0, 0));
                 cow.teleport(radiusOrigin.clone().add(3.0, 0, 0));
             }
@@ -18223,8 +18707,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             playerNotWithinPositive = notWithinKey != null
                     && behaviors.testCondition(notWithinKey, radiusTargetContext);
 
-            zombie.teleport(radiusOrigin.clone().add(16.0, 0, 0));
-            cow.teleport(radiusOrigin.clone().add(18.0, 0, 0));
+            // The player is also this fixture's caster and has moved to +16.
+            // Put negative-control mobs outside BOTH the caster and origin spheres.
+            zombie.teleport(radiusOrigin.clone().add(-16.0, 0, 0));
+            cow.teleport(radiusOrigin.clone().add(-18.0, 0, 0));
             entitiesNegative = entitiesKey != null && !behaviors.testCondition(entitiesKey, radiusContext);
             mobsNegative = mobsKey != null && !behaviors.testCondition(mobsKey, radiusContext);
             livingNegative = livingKey != null && !behaviors.testCondition(livingKey, radiusContext);
@@ -18243,8 +18729,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             getLogger().warning("[自检] radius conditions failed: " + failure);
         } finally {
             try {
+                radiusCaster.teleport(casterOriginalLocation);
+                permissionProbe.setGameMode(subjectOriginalMode);
                 permissionProbe.teleport(subjectOriginalLocation);
-                subjectRestored = permissionProbe.getLocation().distance(subjectOriginalLocation) < 0.01;
+                subjectRestored = permissionProbe.getLocation().distance(subjectOriginalLocation) < 0.01
+                        && radiusCaster.getLocation().distance(casterOriginalLocation) < 0.01
+                        && permissionProbe.getGameMode() == subjectOriginalMode;
             } catch (Throwable restoreFailure) {
                 getLogger().warning("[自检] radius subject restore failed: " + restoreFailure);
             }
@@ -18260,8 +18750,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         boolean passed = imported && playersPositive && playersNegative
                 && playersDefaultRadiusPositive && playersDefaultRadiusNegative && entitiesPositive
-                && entitiesNegative && mobsPositive && mobsNegative && mobsDefaultRadiusNegative
-                && mobsArmorStandExcluded
+                && entitiesNegative && mobsPositive && mobsNegative && mobsDefaultZero
+                && mobsArmorStandIncluded
                 && mobsTypePositive && mobsTypeNegative
                 && mobsNearOriginImported && mobsNearOriginDefaultExact
                 && mobsNearOriginExactPositive && mobsNearOriginExactNegative
@@ -18277,7 +18767,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " players-default-radius-negative=" + playersDefaultRadiusNegative
                 + " entities-positive=" + entitiesPositive + " entities-negative=" + entitiesNegative
                 + " mobs-positive=" + mobsPositive + " mobs-negative=" + mobsNegative
-                + " mobs-armor-stand-excluded=" + mobsArmorStandExcluded
+                + " mobs-armor-stand-included=" + mobsArmorStandIncluded
                 + " mobs-near-origin-imported=" + mobsNearOriginImported
                 + " mobs-near-origin-default-exact=" + mobsNearOriginDefaultExact
                 + " mobs-near-origin-exact-positive=" + mobsNearOriginExactPositive
@@ -18287,7 +18777,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 + " mobs-near-origin-type-negative=" + mobsNearOriginTypeNegative
                 + " mobs-near-origin-armor-stand-excluded=" + mobsNearOriginArmorStandExcluded
                 + " mobs-near-origin-unknown-type-rejected=" + mobsNearOriginUnknownTypeRejected
-                + " mobs-default-radius-negative=" + mobsDefaultRadiusNegative
+                + " mobs-default-zero=" + mobsDefaultZero
                 + " mobs-type-positive=" + mobsTypePositive + " mobs-type-negative=" + mobsTypeNegative
                 + " invalid-radius-arguments-preserved=" + invalidRadiusArgumentsPreserved
                 + " living-positive=" + livingPositive + " living-negative=" + livingNegative
@@ -18784,8 +19274,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && "14".equals(dev.helstera.ai.skill.Placeholders.lookup("target.food-level", context))
                     && "3.5".equals(dev.helstera.ai.skill.Placeholders.lookup("caster.saturation", context))
                     && "3.5".equals(dev.helstera.ai.skill.Placeholders.lookup("target.saturation", context))
-                    && "1.3".equals(dev.helstera.ai.skill.Placeholders.lookup("caster.exhaustion", context))
-                    && "1.3".equals(dev.helstera.ai.skill.Placeholders.lookup("target.exhaustion", context));
+                    && Double.toString((double) 1.3f).equals(
+                    dev.helstera.ai.skill.Placeholders.lookup("caster.exhaustion", context))
+                    && Double.toString((double) 1.3f).equals(
+                    dev.helstera.ai.skill.Placeholders.lookup("target.exhaustion", context))
+                    && "1.3".equals(dev.helstera.ai.skill.Placeholders.lookup("caster.exhaustion{r=1}", context))
+                    && "1.3".equals(dev.helstera.ai.skill.Placeholders.lookup("target.exhaustion{r=1}", context));
             nonHumanFoodStatsUnresolved = dev.helstera.ai.skill.Placeholders.lookup(
                     "target.food", nonPlayerContext) == null
                     && dev.helstera.ai.skill.Placeholders.lookup("target.saturation", nonPlayerContext) == null
@@ -18938,6 +19432,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             return new VelocityEvidence(false, false, false, false, false, false, false, false);
         }
         org.bukkit.util.Vector original = target.getVelocity().clone();
+        org.bukkit.entity.Mob targetSource = context.instance() == null ? null
+                : context.instance().baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
+                .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+        org.bukkit.entity.LivingEntity originalAiTarget = targetSource == null ? null : targetSource.getTarget();
         boolean set = false;
         boolean add = false;
         boolean multiply = false;
@@ -18946,6 +19444,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean relative = false;
         boolean imported = false;
         try {
+            if (targetSource != null && targetSource.isValid()) targetSource.setTarget(target);
             target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
             set = runIntegrationAction(skills, behaviors, "velocity-targets 2 3 4 SET", context)
                     && velocityNear(target.getVelocity(), 2, 3, 4);
@@ -19006,6 +19505,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable failure) {
             getLogger().warning("[自检] velocity-mechanic exception=" + failure);
         } finally {
+            if (targetSource != null && targetSource.isValid()) targetSource.setTarget(originalAiTarget);
             target.setVelocity(original);
         }
         boolean restored = velocityNear(target.getVelocity(), original.getX(), original.getY(), original.getZ());
@@ -19033,6 +19533,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     false, false, false, false, false);
         }
         org.bukkit.util.Vector original = target.getVelocity().clone();
+        org.bukkit.entity.Mob targetSource = context.instance() == null ? null
+                : context.instance().baseEntity().filter(org.bukkit.entity.Mob.class::isInstance)
+                .map(org.bukkit.entity.Mob.class::cast).orElse(null);
+        org.bukkit.entity.LivingEntity originalAiTarget = targetSource == null ? null : targetSource.getTarget();
         boolean set = false;
         boolean add = false;
         boolean multiply = false;
@@ -19043,6 +19547,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean imported = false;
         boolean invalidPreserved = false;
         try {
+            if (targetSource != null && targetSource.isValid()) targetSource.setTarget(target);
             target.setVelocity(new org.bukkit.util.Vector(8, 12, 20));
             set = runIntegrationAction(skills, behaviors,
                     "directional-velocity-targets 0 0 2 SET", context)
@@ -19110,6 +19615,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } catch (Throwable failure) {
             getLogger().warning("[自检] directional-velocity-mechanic exception=" + failure);
         } finally {
+            if (targetSource != null && targetSource.isValid()) targetSource.setTarget(originalAiTarget);
             target.setVelocity(original);
         }
         boolean restored = velocityNear(target.getVelocity(), original.getX(), original.getY(), original.getZ());
@@ -19562,6 +20068,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 target.setAI(false);
                 target.setGravity(false);
                 target.setInvulnerable(true);
+                caster.setTarget(target);
                 managed = instances().bind("example/emberling", caster,
                         dev.helstera.api.instance.SpawnOptions.defaults());
 
@@ -22705,7 +23212,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 + " failure=" + sp.forceSpawnFailure(candidate));
                     }
                     if (candidate.equals("player_limit_probe")) {
-                        boolean second = sp.forceSpawn(candidate, safeLocation);
+                        boolean second = sp.forceSpawn(candidate, playerLimitLocation);
                         getLogger().info("spawner-player-limits id=" + candidate
                                 + " first=" + accepted + " second=" + second
                                 + " total=" + sp.get(candidate).totalSpawned()
@@ -24337,6 +24844,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     if (!(probeEntity instanceof org.bukkit.entity.LivingEntity probeLiving)) {
                         throw new IllegalStateException("trigger probe entity is not living");
                     }
+                    // Native Zombie spawn equipment can reduce the tagged hit below the
+                    // damage-amount >=2 threshold; this probe isolates trigger dispatch.
+                    if (probeLiving.getEquipment() != null) {
+                        probeLiving.getEquipment().setArmorContents(new org.bukkit.inventory.ItemStack[4]);
+                    }
                     int attackProbeId = spawnMobAt("trigger_probe", location.clone().add(6, 0, 1), null);
                     var attackProbe = attackProbeId > 0 ? instances().impl(attackProbeId) : null;
                     if (attackProbe != null) tracked.add(attackProbe);
@@ -24475,7 +24987,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                 null, probeLiving, 1.0, -1, 0, "integration", null,
                                 probeAttacker, java.util.List.of(probeLiving), probeLiving.getLocation(), null);
                         taggedDamageAction = runIntegrationAction(damageSkills, damageBehaviors,
-                                "damage-target 3 tags=FIRE", taggedDamageContext);
+                                // The probe mob's native armor reduces 3 damage below the
+                                // configured final-damage >=2 trigger requirement on Paper.
+                                "damage-target 6 tags=FIRE", taggedDamageContext);
                     }
                     org.bukkit.event.HandlerList.unregisterAll(taggedDamageListener);
                     boolean taggedDamageObserved = taggedDamageAction
@@ -28077,6 +28591,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             "clear-target", targetContext);
                     clearTargetMechanic = clearDispatched && controller.targetEntity() == null
                             && mob.getTarget() == null;
+                    // @Target on a Mob resolves its live Bukkit AI target. Set the
+                    // native target explicitly before asserting the chained mob filter.
+                    mob.setTarget(monster);
                     String chainTag = "helstera_chain_" + java.util.UUID.randomUUID().toString().replace("-", "");
                     try {
                         var playerContext = dev.helstera.api.behavior.BehaviorContext.of(
@@ -30458,21 +30975,40 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 entities.add(living);
                 var tree = new dev.helstera.api.behavior.SkillTreeContext(living, java.util.List.of(living), at);
                 tree.setVariable("restart-marker", "saved-on-first-boot:" + living.getUniqueId());
+                tree.setVariable("skill.counter", "dotted-name:" + living.getUniqueId());
+                tree.setVariable("skill.list", java.util.List.of("red", 7, false));
+                tree.setVariable("skill.set", java.util.Set.of("birch", "oak"));
+                tree.setVariable("skill.map", java.util.Map.of(
+                        "dotted.key", java.util.Map.of("enabled", true),
+                        "unlocked", java.util.List.of("root", "advanced")));
+                tree.setLocation("mythic.tracked-location", at.clone().add(1, 2, 3));
                 tree.defineBranch("restart-foundation", java.util.Set.of());
                 tree.defineBranch("restart-advanced", java.util.Set.of("restart-foundation"));
+                tree.defineBranch("unlocked", java.util.Set.of());
+                tree.defineBranch("route.advanced", java.util.Set.of("unlocked"));
                 foundationUnlocked &= tree.unlockBranch("restart-foundation");
+                foundationUnlocked &= tree.unlockBranch("unlocked");
                 skills.restoreSkillTreeSnapshot(instanceId, tree.snapshot());
+            }
+            boolean unsupportedRejected = false;
+            try {
+                var invalidTree = new dev.helstera.api.behavior.SkillTreeContext(null, java.util.List.of());
+                invalidTree.setVariable("unsupported", new Object());
+                invalidTree.snapshot();
+            } catch (IllegalStateException expected) {
+                unsupportedRejected = true;
             }
             String uuids = entities.stream().map(entity -> entity.getUniqueId().toString())
                     .sorted().collect(java.util.stream.Collectors.joining(","));
-            boolean passed = foundationUnlocked && entities.size() == 2
+            boolean passed = foundationUnlocked && unsupportedRejected && entities.size() == 2
                     && entities.stream().allMatch(entity -> "skilltree_probe".equals(
                     entity.getPersistentDataContainer().get(
                             persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING)));
             getLogger().info("[SelfTest] skilltree-restart stage=write result="
                     + (passed ? "passed" : "failed") + " mob-id=skilltree_probe entities=" + entities.size()
                     + " entity-uuids=" + uuids + " marker=saved-on-first-boot"
-                    + " foundation-unlocked=" + foundationUnlocked);
+                    + " foundation-unlocked=" + foundationUnlocked
+                    + " unsupported-value-rejected=" + unsupportedRejected);
             return;
         }
         String expectedMobId = "skilltree_probe";
@@ -30499,18 +31035,46 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean prerequisiteRestored = restored.stream().allMatch(instance -> skills.snapshotOf(instance.instanceId())
                 .map(snapshot -> snapshot.branchRequirements().getOrDefault(
                         "restart-advanced", java.util.Set.of()).contains("restart-foundation")).orElse(false));
+        boolean dottedNamesRestored = restored.stream().allMatch(instance -> {
+            var entity = instance.baseEntity().orElseThrow();
+            var snapshot = skills.snapshotOf(instance.instanceId()).orElse(null);
+            return snapshot != null
+                    && ("dotted-name:" + entity.getUniqueId()).equals(snapshot.variables().get("skill.counter"))
+                    && java.util.List.of("red", 7, false).equals(snapshot.variables().get("skill.list"))
+                    && java.util.Set.of("birch", "oak").equals(snapshot.variables().get("skill.set"))
+                    && java.util.Map.of("dotted.key", java.util.Map.of("enabled", true),
+                    "unlocked", java.util.List.of("root", "advanced"))
+                    .equals(snapshot.variables().get("skill.map"))
+                    && snapshot.locations().containsKey("mythic.tracked-location")
+                    && snapshot.branchRequirements().containsKey("unlocked")
+                    && snapshot.branchRequirements().getOrDefault("route.advanced", java.util.Set.of())
+                    .contains("unlocked")
+                    && snapshot.unlockedBranches().contains("unlocked");
+        });
         boolean advancedUnlocked = restored.stream().allMatch(instance -> {
             var snapshot = skills.snapshotOf(instance.instanceId()).orElse(null);
             if (snapshot == null) return false;
             var tree = dev.helstera.api.behavior.SkillTreeContext.restore(
                     snapshot, instance.baseEntity().orElse(null), java.util.List.of(), getServer()::getWorld);
-            return tree.unlockBranch("restart-advanced") && tree.branchUnlocked("restart-advanced");
+            return tree.unlockBranch("restart-advanced") && tree.branchUnlocked("restart-advanced")
+                    && tree.unlockBranch("route.advanced") && tree.branchUnlocked("route.advanced");
         });
-        boolean passed = uniqueMarkers && foundationRestored && prerequisiteRestored && advancedUnlocked;
+        boolean collectionsRestored = restored.stream().allMatch(instance -> skills.snapshotOf(instance.instanceId())
+                .map(snapshot -> java.util.List.of("red", 7, false).equals(snapshot.variables().get("skill.list"))
+                        && java.util.Set.of("birch", "oak").equals(snapshot.variables().get("skill.set"))
+                        && java.util.Map.of("dotted.key", java.util.Map.of("enabled", true),
+                        "unlocked", java.util.List.of("root", "advanced"))
+                        .equals(snapshot.variables().get("skill.map")))
+                .orElse(false));
+        boolean passed = uniqueMarkers && foundationRestored && prerequisiteRestored
+                && dottedNamesRestored && collectionsRestored && advancedUnlocked;
         getLogger().info("[SelfTest] skilltree-restart stage=verify result=" + (passed ? "passed" : "failed")
                 + " mob-id=" + expectedMobId + " entities=" + restored.size()
                 + " uuid-markers=" + uniqueMarkers + " foundation-restored=" + foundationRestored
-                + " prerequisite-restored=" + prerequisiteRestored + " advanced-unlocked=" + advancedUnlocked);
+                + " prerequisite-restored=" + prerequisiteRestored
+                + " dotted-names-restored=" + dottedNamesRestored
+                + " collections-restored=" + collectionsRestored
+                + " advanced-unlocked=" + advancedUnlocked);
         if (!passed) return;
 
         var victim = (org.bukkit.entity.LivingEntity) restored.get(0).baseEntity().orElseThrow();
@@ -31683,6 +32247,41 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 success = false;
                 spawners().stop();
                 getLogger().warning("刷怪点重载失败，已禁用刷怪点: " + ex.getMessage());
+            }
+        }
+        if (randomSpawnService != null) {
+            if (randomSpawnTask != null) {
+                randomSpawnTask.cancel();
+                randomSpawnTask = null;
+            }
+            try {
+                randomSpawnService.configureAdd(new dev.helstera.ai.spawner.RandomSpawnService.AddSettings(
+                        getConfig().getString("random-spawns.generator", "NONE"),
+                        getConfig().getInt("random-spawns.radius-min", 12),
+                        getConfig().getInt("random-spawns.radius-max", 64),
+                        getConfig().getInt("random-spawns.radius-y", 16),
+                        getConfig().getInt("random-spawns.max-spawns-per-cycle", 1),
+                        getConfig().getInt("random-spawns.max-monsters-per-world", 70)));
+            } catch (IllegalArgumentException ex) {
+                randomSpawnService.configureAdd(dev.helstera.ai.spawner.RandomSpawnService.AddSettings.disabled());
+                getLogger().warning("RandomSpawns ADD 已关闭，生成器配置无效: " + ex.getMessage());
+            }
+            java.io.File randomSpawnFile = new java.io.File(getDataFolder(), "random-spawns.yml");
+            if (randomSpawnFile.isFile()) {
+                try {
+                    randomSpawnService.loadFile(randomSpawnFile.toPath());
+                } catch (java.io.IOException ex) {
+                    success = false;
+                    randomSpawnService.load(null);
+                    getLogger().warning("random-spawns.yml 重载失败，已禁用随机生成替换: " + ex.getMessage());
+                }
+            } else {
+                randomSpawnService.load(null);
+            }
+            if (randomSpawnService.addSize() > 0
+                    && getConfig().getString("random-spawns.generator", "NONE").equalsIgnoreCase("CLUSTER")) {
+                randomSpawnTask = getServer().getScheduler().runTaskTimer(this,
+                        () -> randomSpawnService.tickAdd(), 20L, 20L);
             }
         }
         // 对话系统就地重载：不打断正在运行的 cinematic

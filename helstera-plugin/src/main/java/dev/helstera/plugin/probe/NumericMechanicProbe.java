@@ -48,6 +48,7 @@ public final class NumericMechanicProbe {
             var caster = entities.get(0);
             var target = entities.get(1);
             var control = entities.get(2);
+            caster.setTarget(target);
             require(checks, "active-entities", entities.stream().allMatch(Cow::isValid));
             instance = instances.bind("example/emberling", caster, SpawnOptions.defaults().persistent(false));
             for (var entity : entities) entity.setHealth(8);
@@ -85,6 +86,16 @@ public final class NumericMechanicProbe {
                           - 'setnodamageticks{t=5} @Target'
                       recipient_heal:
                         Skills: ['heal{a=<target.hp{r=2}>} @Targets']
+                      expression_heal:
+                        Skills: ['heal{a=max(1, <target.hp{r=0}> / 2)} @Targets']
+                      expression_compare:
+                        Skills: ['setfire{(<target.hp> >= 4) * 20} @Targets']
+                      expression_vector:
+                        Skills: ['knockback{power=(<target.hp> + 1)/2;y=atan2(0,1)} @Targets']
+                      expression_fraction:
+                        Skills: ['healpercent{m=(<target.hp> / 20)} @Targets']
+                      expression_invalid:
+                        Skills: ['knockback{power=(2+3);y=(1/0)} @Targets']
                       recipient_damage:
                         Skills: ['damage{a=<target.hp{r=0}>} @Targets']
                       recipient_knockback:
@@ -104,13 +115,15 @@ public final class NumericMechanicProbe {
                           - 'heal{a=}'
                           - 'sethealth{unknown=1} @Target'
                           - 'forcepull{v=2;yv=bad} @Target'
+                          - 'heal{a=max(1)} @Target'
+                          - 'setfire{t=(1+)} @Target'
                     """);
             var entries = new MythicMobsImporter().convert(source, root);
             var plan = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file"))).findFirst().orElseThrow();
             var yaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(plan.get("content"))));
-            require(checks, "invalid-preserved", yaml.getStringList("skills.invalid.unsupported").size() == 5
+            require(checks, "invalid-preserved", yaml.getStringList("skills.invalid.unsupported").size() == 7
                     && yaml.getStringList("skills.invalid.on-decision").isEmpty()
-                    && entries.stream().filter(e -> "WARN".equals(e.get("severity"))).count() == 5);
+                    && entries.stream().filter(e -> "WARN".equals(e.get("severity"))).count() == 7);
             var skills = new SkillService(new BehaviorRegistryImpl(), plugin.getLogger());
             skills.loadSkills(yaml.getConfigurationSection("skills"));
             require(checks, "imported-binding", skills.warnings().isEmpty());
@@ -169,6 +182,24 @@ public final class NumericMechanicProbe {
             target.setAbsorptionAmount(0.125);
             control.setAbsorptionAmount(0.25);
             tree.targets(List.of(target, control));
+            require(checks, "expression-rounded-recipients", skills.castSkill("expression_heal", context)
+                    && close(target.getHealth(), 4.625) && close(control.getHealth(), 7.75));
+            target.setHealth(3.125);
+            control.setHealth(5.25);
+            require(checks, "expression-comparison", skills.castSkill("expression_compare", context)
+                    && target.getFireTicks() == 0 && control.getFireTicks() == 20);
+            require(checks, "expression-vector", skills.castSkill("expression_vector", context)
+                    && vector(target.getVelocity(), 2.0625, 0, 0)
+                    && vector(control.getVelocity(), 3.125, 0, 0));
+            require(checks, "expression-no-partial-mutation", skills.castSkill("expression_invalid", context)
+                    && vector(target.getVelocity(), 2.0625, 0, 0)
+                    && vector(control.getVelocity(), 3.125, 0, 0));
+            require(checks, "expression-fraction", skills.castSkill("expression_fraction", context)
+                    && close(target.getHealth(), 6.25) && close(control.getHealth(), 13.125));
+            require(checks, "expression-isolation", close(caster.getHealth(), 9)
+                    && tree.targets().equals(List.of(target, control)));
+            target.setHealth(3.125);
+            control.setHealth(5.25);
             require(checks, "recipient-rounded-heal", skills.castSkill("recipient_heal", context)
                     && close(target.getHealth(), 6.255) && close(control.getHealth(), 10.5));
             target.setHealth(3.125);
@@ -234,6 +265,7 @@ public final class NumericMechanicProbe {
         StringBuilder observation = new StringBuilder("[自检] numeric-mechanic");
         checks.forEach((name, value) -> observation.append(' ').append(name).append('=').append(value));
         plugin.getLogger().info(observation + error + " passed=" + checks.values().stream().allMatch(Boolean.TRUE::equals));
+        TimedRecipientProbe.run(plugin, instances, false);
     }
 
     private static boolean run(SkillService skills, String line, BehaviorContext context) {

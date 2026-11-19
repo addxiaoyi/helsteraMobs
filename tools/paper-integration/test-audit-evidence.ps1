@@ -498,7 +498,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'importedVariableConditions'
     $fullReport.probes += [pscustomobject]@{
-        id = 'importedVariableConditions'; status = 'passed'; observations = @('imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true')
+        id = 'importedVariableConditions'; status = 'passed'; observations = @('imported-variable-conditions result=true primary-mapped=true aliases=true scopes=true ranges=true missing-rejected=true wrong-type-rejected=true quoted-value=true dynamic-placeholder=true invalid-preserved=true helstera-composition=true malformed-composition-rejected=true')
     }
     $fullReport.expectedProbeIds += 'importedFreeInventorySlotCondition'
     $fullReport.probes += [pscustomobject]@{
@@ -572,7 +572,7 @@ try {
         throw 'Synthetic release report must contain targeterArgumentValidation.'
     }
     $targeterArgumentValidation[0].observations = @(
-        'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-priority=true target-spectator-disabled=true')
+        'targeter-argument-validation rejected=true chain=true control=true target-players=true ignore-players=true target-players-specific=true target-players-disabled=true invalid-filter=true target-ground=true ignore-ground=true target-water=true ignore-water=true target-flying=true ignore-flying=true target-invulnerable-disabled=true target-invulnerable-priority=true target-armorstands-disabled=true target-armorstands-priority=true target-animals-disabled=true target-animals-priority=true target-creatures-disabled=true target-creatures-priority=true target-villagers-disabled=true target-villagers-priority=true target-all=true target-creative=true ignore-creative=true target-creative-player-disabled-priority=true target-creative-disabled=true target-spectator=true ignore-spectator=true target-spectator-player-disabled-priority=true target-spectator-disabled=true')
     $locationTargeterProbe = @($fullReport.probes | Where-Object id -eq 'locationTargeterDispatch')
     if ($locationTargeterProbe.Count -ne 1) { throw 'Synthetic release report must contain locationTargeterDispatch.' }
     $locationTargeterProbe[0].observations = @(
@@ -584,7 +584,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'radiusConditions'
     $fullReport.probes += [pscustomobject]@{
-        id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-excluded=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-radius-negative=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
+        id = 'radiusConditions'; status = 'passed'; observations = @('radius-condition-details imported=true players-positive=true players-negative=true players-default-radius-positive=true players-default-radius-negative=true entities-positive=true entities-negative=true mobs-positive=true mobs-negative=true mobs-armor-stand-included=true mobs-near-origin-imported=true mobs-near-origin-default-exact=true mobs-near-origin-exact-positive=true mobs-near-origin-exact-negative=true mobs-near-origin-range-positive=true mobs-near-origin-type-positive=true mobs-near-origin-type-negative=true mobs-near-origin-armor-stand-excluded=true mobs-near-origin-unknown-type-rejected=true mobs-default-zero=true mobs-type-positive=true mobs-type-negative=true invalid-radius-arguments-preserved=true living-positive=true living-negative=true player-within-positive=true player-within-negative=true player-not-within-positive=true player-not-within-negative=true restored=true passed=true')
     }
     $fullReport.expectedProbeIds += 'importedPlayerKillsCondition'
     $fullReport.probes += [pscustomobject]@{

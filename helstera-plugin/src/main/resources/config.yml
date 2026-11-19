@@ -168,6 +168,16 @@ ai:
 #       table: boss_loot     # 对应 loot.yml 的 tables.<名字>
 #       luck: true           # 是否计入击杀者主手的抢夺等级
 #   编辑后执行 /helstera reload loot（会同时重载 spawners.yml）
+random-spawns:
+  # MythicMobs 5.7.2 defaults to NONE; ADD definitions remain inert until opted in.
+  # CLUSTER enables the bounded player-nearby ADD subset (not Mythic's exact mob-cap algorithm).
+  generator: NONE
+  radius-min: 12
+  radius-max: 64
+  radius-y: 16
+  max-spawns-per-cycle: 1
+  max-monsters-per-world: 70
+
 loot:
   # 留空则使用插件目录下的 loot.yml
   enabled: true
@@ -185,7 +195,7 @@ web:
   # 此时任何能连到该端口的人拿到令牌即可操作，请务必用防火墙限制来源。
   host: "127.0.0.1"
   port: 8765
-  # 留空则每次启动自动生成
+  # 留空则每次启动自动生成 256 位随机访问令牌；令牌不会写入服务端日志。
   token: ""
 
 debug:
@@ -196,13 +206,20 @@ debug:
   self-test: false
   self-test-entity-options: false
   self-test-mythic-pack-condition: false
+  self-test-mythic-key-id: false
   self-test-metaskill-condition: false
   self-test-nested-skill-cooldown: false
   self-test-modify-damage: false
   self-test-potion-mechanic: false
+  # Requires the pinned MythicMobs oracle and the packaged lifecycle Skills YAML.
+  self-test-potion-lifecycle-native: false
   self-test-numeric-mechanic: false
   self-test-percent-health: false
   self-test-set-speed: false
+  # Focused real-client comparison; requires the pinned MythicMobs oracle.
+  self-test-potion-packets: false
+  self-test-potion-sync: false
+  potion-restart-stage: ""
   self-test-show-health: false
   self-test-item-effects: false
   self-test-loot: false

@@ -1,0 +1,4 @@
+random_spawn_probe:
+  Type: ZOMBIE
+random_spawn_guard:
+  Type: ZOMBIE

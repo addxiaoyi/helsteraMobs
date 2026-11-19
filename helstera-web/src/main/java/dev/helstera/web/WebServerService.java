@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.security.SecureRandom;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
@@ -74,7 +75,8 @@ public final class WebServerService {
     private final WebBridge bridge;
     private String host;
     private final int port;
-    private final String token;
+    private volatile String token;
+    private static final SecureRandom TOKEN_RANDOM = new SecureRandom();
     private final Path dataFolder;
     private final Path modelsRoot;
     private final Path mobsDir;
@@ -179,7 +181,7 @@ public final class WebServerService {
                 if (nic.isLoopback() || !nic.isUp()) continue;
                 nic.getInetAddresses().asIterator().forEachRemaining(addr -> {
                     if (addr instanceof java.net.Inet4Address) {
-                        plugin.getLogger().info("  → 远程访问: http://" + addr.getHostAddress() + ":" + port + "/?token=" + token);
+                        plugin.getLogger().info("  → 远程访问: http://" + addr.getHostAddress() + ":" + port + "/");
                     }
                 });
             }
@@ -297,6 +299,22 @@ public final class WebServerService {
 
     public int port() { return port; }
     public String token() { return token; }
+
+    /** Replaces the active credential after the caller has persisted it. */
+    public synchronized void replaceToken(String replacement) {
+        if (replacement == null || !replacement.matches("[a-f0-9]{64}")) {
+            throw new IllegalArgumentException("Web token must be a lowercase 256-bit hex value");
+        }
+        token = replacement;
+        cachedHtml = null;
+    }
+
+    /** Creates a cryptographically random 256-bit web credential. */
+    public static String newToken() {
+        byte[] bytes = new byte[32];
+        TOKEN_RANDOM.nextBytes(bytes);
+        return java.util.HexFormat.of().formatHex(bytes);
+    }
     public String url() { return "http://" + host + ":" + port + "/"; }
     public String host() { return host; }
 
@@ -353,7 +371,7 @@ public final class WebServerService {
         }
 
         out.add("可用访问地址：");
-        out.add("  http://127.0.0.1:" + port + "/?token=" + token + "   ← 服务器本机浏览器");
+        out.add("  http://127.0.0.1:" + port + "/   ← 服务器本机浏览器");
         int lan = 0;
         try {
             java.util.Enumeration<java.net.NetworkInterface> nics = java.net.NetworkInterface.getNetworkInterfaces();
@@ -364,7 +382,7 @@ public final class WebServerService {
                 while (it.hasNext()) {
                     java.net.InetAddress a = it.next();
                     if (a instanceof java.net.Inet4Address) {
-                        out.add("  http://" + a.getHostAddress() + ":" + port + "/?token=" + token
+                        out.add("  http://" + a.getHostAddress() + ":" + port + "/"
                                 + "   ← " + nic.getName());
                         lan++;
                     }

@@ -244,6 +244,7 @@ public final class PercentHealthProbe {
     private static void nativePlaceholderChecks(Cow caster, Cow target, BehaviorContext context,
                                                 LinkedHashMap<String, Boolean> checks,
                                                 List<String> observations) throws Exception {
+        nativeExpressionChecks(checks, observations);
         Class<?> abstractEntity = Class.forName("io.lumine.mythic.api.adapters.AbstractEntity");
         Class<?> adapter = Class.forName("io.lumine.mythic.bukkit.BukkitAdapter");
         var adapt = adapter.getMethod("adapt", Entity.class);
@@ -317,6 +318,51 @@ public final class PercentHealthProbe {
                 }
             }
             require(checks, "sampled-" + range, valid);
+        }
+    }
+
+    /** Compare the loaded MM math engine, separately from its Premium-gated skill factory. */
+    private static void nativeExpressionChecks(LinkedHashMap<String, Boolean> checks,
+                                               List<String> observations) throws Exception {
+        Object operators = Class.forName("io.lumine.mythic.core.utils.math.Operators")
+                .getField("operators").get(null);
+        Object functions = Class.forName("io.lumine.mythic.core.utils.math.Functions")
+                .getField("functions").get(null);
+        // Use the native operator's loader and avoid Shade relocating the oracle class name.
+        Class<?> builderType = operators.getClass().getComponentType().getClassLoader()
+                .loadClass(String.join(".", "net", "objecthunter", "exp4j", "ExpressionBuilder"));
+        var expressions = new LinkedHashMap<String, Double>();
+        expressions.put("2+3*4", 14.0);
+        expressions.put("2^3^2", 512.0);
+        expressions.put("-2^2", -4.0);
+        expressions.put("(-2)^2", 4.0);
+        expressions.put("2(3+4)", 14.0);
+        expressions.put("max(2,min(8,3))", 3.0);
+        expressions.put("atan2(0,-1)", Math.PI);
+        expressions.put("sin(pi/2)+sqrt(9)", 4.0);
+        expressions.put("1e-3+2E-3", 0.003);
+        expressions.put("(7%4)", 3.0);
+        expressions.put("(2<3)", 1.0);
+        expressions.put("(2<=2)", 1.0);
+        expressions.put("(3>2)", 1.0);
+        expressions.put("(2>=2)", 1.0);
+        expressions.put("(1+2==3)", 1.0);
+        expressions.put("(3<2)", 0.0);
+        expressions.put("(2>1<2)", 1.0);
+        expressions.put("(pi<e>0)", 0.0);
+        expressions.put("random(0.125,0.125)", 0.125);
+        int index = 0;
+        for (var entry : expressions.entrySet()) {
+            Object builder = builderType.getConstructor(String.class).newInstance(entry.getKey());
+            builderType.getMethod("operator", operators.getClass()).invoke(builder, operators);
+            builderType.getMethod("functions", functions.getClass()).invoke(builder, functions);
+            Object expression = builderType.getMethod("build").invoke(builder);
+            double nativeValue = (double) expression.getClass().getMethod("evaluate").invoke(expression);
+            double importedValue = dev.helstera.api.util.NumericExpression.resolve(entry.getKey(), value -> value);
+            observations.add("math-engine-" + entry.getKey() + "[native=" + nativeValue
+                    + ",imported=" + importedValue + "]");
+            require(checks, "math-engine-" + index++,
+                    close(nativeValue, entry.getValue()) && close(importedValue, nativeValue));
         }
     }
 

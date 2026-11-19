@@ -1,0 +1,8 @@
+sync_visible:
+  Skills: ['potion{t=HASTE;d=1200;l=2;a=true;p=true;i=false} @Trigger']
+sync_invisible:
+  Skills: ['potion{t=INVISIBILITY;d=1200;l=0;a=true;p=false;i=false} @Trigger']
+sync_changed:
+  Skills: ['potion{t=HASTE;d=1200;l=1;a=false;p=true;i=true;force=true} @Trigger']
+sync_hidden:
+  Skills: ['potion{t=HASTE;d=1200;l=1;a=false;p=false;i=false;force=true} @Trigger']

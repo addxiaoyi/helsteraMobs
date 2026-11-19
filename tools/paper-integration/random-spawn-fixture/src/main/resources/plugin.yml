@@ -1,0 +1,6 @@
+name: HelsteraRandomSpawnPaperFixture
+version: '1.0'
+api-version: '1.21'
+main: dev.helstera.test.randomspawn.RandomSpawnPaperFixture
+depend: [helsteraMobs]
+softdepend: [MythicMobs]

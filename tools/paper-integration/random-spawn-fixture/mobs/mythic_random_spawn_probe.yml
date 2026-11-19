@@ -1,0 +1,9 @@
+name: Random Spawn Replacement
+model: example/emberling
+display-name: Random Spawn Replacement
+show-name: true
+entity:
+  type: ZOMBIE
+  no-ai: true
+  silent: true
+  prevent-other-drops: true

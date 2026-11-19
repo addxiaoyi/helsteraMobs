@@ -39,6 +39,9 @@ public interface HelsteraBridge {
 
     String webToken();
 
+    /** Revoke the current web credential and persist a newly generated token. */
+    String webRotateToken();
+
     /** 启动网页开发器；{@code host} 为 null 表示用配置里的地址。 */
     void webStart(String host) throws Exception;
 

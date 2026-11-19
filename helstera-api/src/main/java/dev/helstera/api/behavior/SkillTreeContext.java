@@ -13,6 +13,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /** Per-trigger state shared by nested skills in one Mythic-style skill tree. */
 public final class SkillTreeContext {
+    private static final int MAX_VARIABLE_COLLECTION_SIZE = 4096;
+    private static final int MAX_VARIABLE_VALUE_NODES = 16384;
+    private static final int MAX_VARIABLE_VALUE_DEPTH = 16;
     /** Internal location key used by MythicMobs' TrackLocation mechanic and TrackedLocation targeter. */
     public static final String MYTHIC_TRACKED_LOCATION = "mythic.tracked-location";
     /** Internal variable key used by MythicMobs' MythicKeyId skill condition. */
@@ -26,7 +29,11 @@ public final class SkillTreeContext {
                            Set<String> damageTags,
                            Optional<Snapshot> parent) {
         public Snapshot {
-            variables = Map.copyOf(variables == null ? Map.of() : variables);
+            Map<String, Object> variableCopy = new java.util.LinkedHashMap<>();
+            if (variables != null) {
+                variables.forEach((name, value) -> variableCopy.put(name, copyVariableValue(value)));
+            }
+            variables = Map.copyOf(variableCopy);
             locations = Map.copyOf(locations == null ? Map.of() : locations);
             branchRequirements = copyRequirements(branchRequirements);
             unlockedBranches = Set.copyOf(unlockedBranches == null ? Set.of() : unlockedBranches);
@@ -38,6 +45,55 @@ public final class SkillTreeContext {
             Map<String, Set<String>> copy = new java.util.LinkedHashMap<>();
             if (value != null) value.forEach((key, deps) -> copy.put(key, Set.copyOf(deps == null ? Set.of() : deps)));
             return Map.copyOf(copy);
+        }
+
+        private static Object copyVariableValue(Object value) {
+            if (!isPersistentVariableValue(value, 0, new int[]{0})) return value;
+            return immutableVariableCopy(value);
+        }
+
+        private static Object immutableVariableCopy(Object value) {
+            if (isScalar(value)) return value;
+            if (value instanceof List<?> list) return list.stream()
+                    .map(Snapshot::immutableVariableCopy).toList();
+            if (value instanceof Set<?> set) {
+                Set<Object> copy = new java.util.LinkedHashSet<>();
+                set.forEach(item -> copy.add(immutableVariableCopy(item)));
+                return Set.copyOf(copy);
+            }
+            if (value instanceof Map<?, ?> map) {
+                Map<String, Object> copy = new java.util.LinkedHashMap<>();
+                map.forEach((key, entryValue) -> copy.put((String) key, immutableVariableCopy(entryValue)));
+                return Map.copyOf(copy);
+            }
+            // Keep invalid explicit snapshots constructible so the persistence
+            // boundary can report an IOException without replacing prior data.
+            return value;
+        }
+
+        private static boolean isScalar(Object value) {
+            if (value instanceof String || value instanceof Boolean) return true;
+            if (value instanceof Byte || value instanceof Short || value instanceof Integer || value instanceof Long) {
+                return true;
+            }
+            if (value instanceof Float number) return Float.isFinite(number);
+            return value instanceof Double number && Double.isFinite(number);
+        }
+
+        private static boolean isPersistentVariableValue(Object value, int depth, int[] nodes) {
+            if (depth > MAX_VARIABLE_VALUE_DEPTH || ++nodes[0] > MAX_VARIABLE_VALUE_NODES) return false;
+            if (isScalar(value)) return true;
+            if (value instanceof List<?> list && list.size() <= MAX_VARIABLE_COLLECTION_SIZE) {
+                return list.stream().allMatch(item -> isPersistentVariableValue(item, depth + 1, nodes));
+            }
+            if (value instanceof Set<?> set && set.size() <= MAX_VARIABLE_COLLECTION_SIZE) {
+                return set.stream().allMatch(item -> isPersistentVariableValue(item, depth + 1, nodes));
+            }
+            if (value instanceof Map<?, ?> map && map.size() <= MAX_VARIABLE_COLLECTION_SIZE) {
+                return map.entrySet().stream().allMatch(entry -> entry.getKey() instanceof String
+                        && isPersistentVariableValue(entry.getValue(), depth + 1, nodes));
+            }
+            return false;
         }
     }
 
@@ -188,10 +244,10 @@ public final class SkillTreeContext {
     public Snapshot snapshot() {
         Map<String, Object> savedVariables = new java.util.LinkedHashMap<>();
         variables.forEach((name, value) -> {
-            if (!(value instanceof String || value instanceof Number || value instanceof Boolean)) {
+            if (!Snapshot.isPersistentVariableValue(value, 0, new int[]{0})) {
                 throw new IllegalStateException("unsupported skill-tree variable type for '" + name + "'");
             }
-            savedVariables.put(name, value);
+            savedVariables.put(name, Snapshot.copyVariableValue(value));
         });
         Map<String, LocationSnapshot> savedLocations = new java.util.LinkedHashMap<>();
         locations.forEach((name, location) -> savedLocations.put(name, toSnapshot(location)));

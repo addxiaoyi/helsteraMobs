@@ -125,9 +125,6 @@ public record MythicSkillSpec(
             int eq = dev.helstera.api.util.PlaceholderSyntax.argumentEquals(value);
             if (eq > 0) {
                 String key = value.substring(0, eq).trim().toLowerCase(Locale.ROOT);
-                if (strict && args.containsKey(key)) {
-                    throw new IllegalArgumentException("duplicate mechanic argument: " + key);
-                }
                 if ((key.equals("delay") || key.equals("repeat") || key.equals("repeatinterval")
                         || key.equals("cooldown")
                         || key.equals("repeat-interval"))
@@ -135,6 +132,9 @@ public record MythicSkillSpec(
                         || key.equals("repeatinterval") && args.containsKey("repeat-interval")
                         || key.equals("repeat-interval") && args.containsKey("repeatinterval"))) {
                     throw new IllegalArgumentException("duplicate execution option: " + key);
+                }
+                if (strict && args.containsKey(key)) {
+                    throw new IllegalArgumentException("duplicate mechanic argument: " + key);
                 }
                 args.put(key, unquote(value.substring(eq + 1).trim()));
             } else positional.add(unquote(value));

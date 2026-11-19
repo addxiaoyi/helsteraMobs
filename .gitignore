@@ -68,6 +68,8 @@ tools/jdk25/
 tools/*.zip
 tools/*.jar
 tools/**/*.zip
+!tools/paper-integration/reports/paper-*-strict-*.client-logs.zip
+!tools/paper-integration/reports/paper-1.21.1-skilltree-dotted-names-restart-*.zip
 tools/**/*.jar
 tools/paper-integration/node_modules/
 tools/paper-integration/.external-cache/

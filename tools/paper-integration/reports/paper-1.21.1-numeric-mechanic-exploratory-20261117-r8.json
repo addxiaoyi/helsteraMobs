@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-17T11:24:48.3089700Z",
+  "fixtureDirectory": "srv-paper-numeric-mechanic-exploratory-20261117-r8",
+  "evidenceMode": "exploratory",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "pluginSha256": "82c8d6f074753d76531f15caf2d0467c318adb096ae6005f7e16415585af10b1",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "numericMechanicRuntime",
+    "numericMechanicTiming"
+  ],
+  "probes": [
+    {
+      "id": "numericMechanicRuntime",
+      "status": "passed",
+      "observations": [
+        "numeric-mechanic active-entities=true invalid-preserved=true imported-binding=true reordered=true omitted=true force-no-vertical=true force-only-vertical=true radial-default-radius=true melee-default-damage=true absolute-damage=true heal-target=true set-health-target=true self-heal=true dynamic=true dynamic-noop-14=true dynamic-noop-15=true dynamic-noop-16=true speed-target=true status-target=true invalid-health-noop=true invalid-direct=true expression-rounded-recipients=true expression-comparison=true expression-vector=true expression-no-partial-mutation=true expression-fraction=true expression-isolation=true recipient-rounded-heal=true recipient-multiple-arguments=true recipient-damage=true recipient-speed=true recipient-status-truncates=true recipient-invalid-first=true recipient-invalid-second=true recipient-maximum=true recipient-context-preserved=true recipient-removed-first=true cleanup=true passed=true"
+      ]
+    },
+    {
+      "id": "numericMechanicTiming",
+      "status": "passed",
+      "observations": [
+        "numeric-mechanic-timing active-entities=true imported-binding=true delayed-cast=true no-early-mutation=true delay-latest-recipients=true first-execution-isolation=true repeat-latest-recipients=true first-recipient-removed=true removed-recipient-skipped=true repeat-latest-variable=true original-context-preserved=true active-targets-refreshed=true repeat-isolation=true repeat-count-bounded=true invalid-delay-cast=true invalid-delay-preserves-state=true cancel-pending-cast=true cancelled-delay-no-mutation=true cleanup=true passed=true"
+      ]
+    }
+  ]
+}

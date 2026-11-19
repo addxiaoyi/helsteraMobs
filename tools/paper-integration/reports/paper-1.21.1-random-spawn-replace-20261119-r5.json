@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-19T03:36:05.0822046Z",
+  "fixtureDirectory": "srv-paper-random-spawn-replace-20261119-r5",
+  "evidenceMode": "release",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "pluginEnabled": true,
+  "runnerSha256": "c05099462517e9ec0fb41887369f211ac2a4a52b195c6ae1658af5da1f35a0e2",
+  "fixtureProbeSourceSha256": "46d86661f12f0f908fc71dc070d680c5baffda06f8dc67ed6078eb7b08706013",
+  "fixtureProbeJarSha256": "4eae6a427a8e53be18f97ca0d41016a99adad1a635e57067f68756f1f3e9ebb1",
+  "randomSpawnConfigSha256": "a92a514c6d159d18a29f1cce40dd613ae82f5b35edbaba78bf5fec7809541aee",
+  "mythicMobCatalogSha256": "54d4bf163e0bf1c20b1002b9b414f8d0212f1698188a0696624bfb47341f2630",
+  "replacementMobConfigSha256": "260bf1742f4219c38ab80e32170b6ce3f940fc4395ba58cc6fea8cdfa88efff2",
+  "conditionGuardMobConfigSha256": "2db3ca08a14fda7f7b3b7794b28815c9054d211f8c2dcbcd77a4d8e20d72cfda",
+  "pluginSha256": "dd10cc5615cb96eacb76c84f6166de64d89e9f731cb48311233919be7945e279",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "log": "logs/latest.log",
+  "expectedProbeIds": [
+    "randomSpawn.importer",
+    "randomSpawn.replace",
+    "randomSpawn.condition-control",
+    "randomSpawn.reason-control",
+    "randomSpawn.cooldown-immediate",
+    "randomSpawn.cooldown-expired"
+  ],
+  "probes": [
+    {
+      "id": "randomSpawn.importer",
+      "status": "passed",
+      "observations": [
+        "[03:36:02] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_IMPORT|passed=true|mappedDefinitions=4|unsupportedActions=2|resolvedTypes=true|mappedConditions=true"
+      ]
+    },
+    {
+      "id": "randomSpawn.replace",
+      "status": "passed",
+      "observations": [
+        "[03:36:03] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=replace|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=1"
+      ]
+    },
+    {
+      "id": "randomSpawn.condition-control",
+      "status": "passed",
+      "observations": [
+        "[03:36:03] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=condition-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.reason-control",
+      "status": "passed",
+      "observations": [
+        "[03:36:03] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=reason-control|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.cooldown-immediate",
+      "status": "passed",
+      "observations": [
+        "[03:36:03] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=cooldown-immediate|passed=true|cancelled=false|reason=CUSTOM|originalValid=true|namedZombieCount=0"
+      ]
+    },
+    {
+      "id": "randomSpawn.cooldown-expired",
+      "status": "passed",
+      "observations": [
+        "[03:36:03] [Server thread/INFO]: [HelsteraRandomSpawnPaperFixture] RANDOM_SPAWN_CASE|id=cooldown-expired|passed=true|cancelled=true|reason=CUSTOM|originalValid=false|namedZombieCount=1"
+      ]
+    }
+  ]
+}

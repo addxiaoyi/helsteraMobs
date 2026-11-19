@@ -90,6 +90,164 @@ class ImportersTest {
     }
 
     @Test
+    @DisplayName("Mythic RandomSpawns imports ADD/REPLACE/DENY subsets and reports unsupported details")
+    void mythicRandomSpawnsConvertReplaceSubset(@TempDir Path root) throws Exception {
+        write(root, "Mobs/boss.yml", "boss:\n  Type: ZOMBIE\nguard:\n  Type: SKELETON\n");
+        Path replace = write(root, "RandomSpawns/boss.yml", """
+                RandomBoss:
+                  Action: REPLACE
+                  Types: boss, boss, guard
+                  Chance: 0.25
+                  Priority: 7
+                  Cooldown: 3
+                  Worlds: world,world_nether
+                  Biomes: PLAINS,FOREST
+                  Reason: NATURAL
+                  Conditions:
+                    - "entitytype{t=SKELETON}"
+                AddBoss:
+                  Action: ADD
+                  Types: [boss, guard]
+                  Chance: 1
+                AliasBoss:
+                  Action: REPLACE
+                  MobType: guard
+                NamedBoss:
+                  Action: REPLACE
+                  MobName: boss
+                DenyZombies:
+                  Action: DENY
+                  Chance: 1
+                  Priority: 9
+                  Worlds: world
+                  Biomes: PLAINS
+                  Reason: NATURAL
+                  Conditions:
+                    - "entitytype{t=ZOMBIE}"
+                """);
+        var importer = new MythicMobsImporter();
+        assertTrue(importer.scan(root).contains(replace));
+        var converted = importer.convert(replace, root);
+        var target = plan(converted.stream().filter(e -> "mapped".equals(e.get("status"))).toList())
+                .filter(entry -> "random-spawns.yml".equals(entry.get("target-file"))).orElseThrow();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(target.get("content"))));
+        assertEquals("REPLACE", yaml.getString("random-spawns.randomboss.action"));
+        assertEquals(Map.of("mythic_boss", 2.0, "mythic_guard", 1.0),
+                yaml.getConfigurationSection("random-spawns.randomboss.types").getValues(false));
+        assertEquals(0.25, yaml.getDouble("random-spawns.randomboss.chance"));
+        assertEquals(7, yaml.getInt("random-spawns.randomboss.priority"));
+        assertEquals(3.0, yaml.getDouble("random-spawns.randomboss.cooldown"));
+        assertEquals(List.of("world", "world_nether"), yaml.getStringList("random-spawns.randomboss.worlds"));
+        assertEquals(List.of("PLAINS", "FOREST"), yaml.getStringList("random-spawns.randomboss.biomes"));
+        assertEquals(List.of("NATURAL"), yaml.getStringList("random-spawns.randomboss.reasons"));
+        assertEquals(List.of("entity-type-is SKELETON"), yaml.getStringList("random-spawns.randomboss.conditions"));
+        assertEquals("DENY", yaml.getString("random-spawns.denyzombies.action"));
+        assertEquals(9, yaml.getInt("random-spawns.denyzombies.priority"));
+        assertEquals(List.of("entity-type-is ZOMBIE"), yaml.getStringList("random-spawns.denyzombies.conditions"));
+        assertTrue(yaml.getConfigurationSection("random-spawns.denyzombies.types") == null);
+        assertEquals("ADD", yaml.getString("random-spawns.addboss.action"));
+        assertEquals("LAND", yaml.getString("random-spawns.addboss.position-type"));
+        assertEquals(Map.of("mythic_boss", 1.0, "mythic_guard", 1.0),
+                yaml.getConfigurationSection("random-spawns.addboss.types").getValues(false));
+        assertTrue(converted.stream().anyMatch(entry -> "mapped".equals(entry.get("status"))
+                && "RandomSpawns.AddBoss".equals(entry.get("source-key"))));
+        assertEquals(Map.of("mythic_guard", 1.0),
+                yaml.getConfigurationSection("random-spawns.aliasboss.types").getValues(false));
+        assertEquals(Map.of("mythic_boss", 1.0),
+                yaml.getConfigurationSection("random-spawns.namedboss.types").getValues(false));
+    }
+
+    @Test
+    void rejectsMalformedRandomSpawnTypeAlternativesWithoutPartialProjection(@TempDir Path root) throws Exception {
+        write(root, "Mobs/boss.yml", "boss:\n  Type: ZOMBIE\n");
+        Path source = write(root, "RandomSpawns/malformed-types.yml", """
+                MalformedTypes:
+                  Action: ADD
+                  Types: [boss, ""]
+                """);
+
+        var entries = new MythicMobsImporter().convert(source, root);
+
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "RandomSpawns.MalformedTypes".equals(entry.get("source-key"))
+                && String.valueOf(entry.get("note")).contains("empty mob ID")));
+        assertFalse(entries.stream().anyMatch(entry -> "random-spawns.yml".equals(entry.get("target-file"))));
+    }
+
+    @Test
+    void denyRandomSpawnWithSpawnTypeDoesNotGuessWhetherTypeIsAFilter(@TempDir Path root) throws Exception {
+        Path source = write(root, "RandomSpawns/deny.yml", """
+                TypedDeny:
+                  Action: DENY
+                  Type: boss
+                  Conditions:
+                    - "entitytype{t=ZOMBIE}"
+                """);
+        var entries = new MythicMobsImporter().convert(source, root);
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "RandomSpawns.TypedDeny".equals(entry.get("source-key"))
+                && String.valueOf(entry.get("note")).contains("DENY does not spawn a mob")));
+        assertFalse(entries.stream().anyMatch(entry -> "random-spawns.yml".equals(entry.get("target-file"))));
+    }
+
+    @Test
+    void addRandomSpawnLocationConditionsMapButEntityConditionsRemainUnsupported(@TempDir Path root)
+            throws Exception {
+        write(root, "Mobs/boss.yml", "boss:\n  Type: ZOMBIE\n");
+        Path source = write(root, "RandomSpawns/conditioned.yml", """
+                LocationConditionedBoss:
+                  Action: ADD
+                  Type: boss
+                  PositionType: LAND
+                  Conditions:
+                    - "?world{world=arena}"
+                    - "?time{time=night}"
+                    - "?weather{weather=clear}"
+                    - "?playersinradius{radius=64;amount=>0}"
+                NearbyPlayerGuardedBoss:
+                  Action: ADD
+                  Type: boss
+                  PositionType: LAND
+                  Conditions:
+                    - "?playerwithin{radius=1}"
+                EntityConditionedBoss:
+                  Action: ADD
+                  Type: boss
+                  Conditions:
+                    - "?entitytype{t=ZOMBIE}"
+                """);
+
+        var entries = new MythicMobsImporter().convert(source, root);
+
+        var target = entries.stream().filter(entry -> "mapped".equals(entry.get("status")))
+                .filter(entry -> "random-spawns.yml".equals(entry.get("target-file"))).findFirst().orElseThrow();
+        var yaml = YamlConfiguration.loadConfiguration(new StringReader(String.valueOf(target.get("content"))));
+        assertEquals(List.of("world-is arena", "time-is night", "weather-is clear",
+                        "players-in-radius >0 64 true"),
+                yaml.getStringList("random-spawns.locationconditionedboss.conditions"));
+        assertEquals(List.of("player-within 1"),
+                yaml.getStringList("random-spawns.nearbyplayerguardedboss.conditions"));
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && "RandomSpawns.EntityConditionedBoss".equals(entry.get("source-key"))
+                && String.valueOf(entry.get("note")).contains("requiring an entity")));
+    }
+
+    @Test
+    void mythicRandomSpawnUnsupportedOptionsDoNotProduceRuntimeDefinition(@TempDir Path root) throws Exception {
+        write(root, "Mobs/boss.yml", "boss:\n  Type: ZOMBIE\n");
+        Path source = write(root, "RandomSpawns/unsupported.yml", """
+                StructureBoss:
+                  Action: REPLACE
+                  Type: boss
+                  Structures: [minecraft:fortress]
+                """);
+        var entries = new MythicMobsImporter().convert(source, root);
+        assertTrue(entries.stream().anyMatch(entry -> "unsupported".equals(entry.get("status"))
+                && String.valueOf(entry.get("value")).contains("Structures")));
+        assertFalse(entries.stream().anyMatch(entry -> "random-spawns.yml".equals(entry.get("target-file"))));
+    }
+
+    @Test
     void distinguishesNamedMobFromWrapperWithReservedChildName(@TempDir Path root) throws Exception {
         Path wrapped = write(root, "Mobs/wrapped.yml", "mobs:\n  Skills: {Type: ZOMBIE}\n");
         Path named = write(root, "Mobs/named.yml", "mobs: {Type: SKELETON, Health: 12}\n");
@@ -2019,6 +2177,27 @@ class ImportersTest {
                   options:
                     Skills:
                       - aura{type=HARMFUL;refreshDuration=false}
+                  start_skill:
+                    Skills:
+                      - aura{aura=START;onStart=start_probe}
+                  tick_skill:
+                    Skills:
+                      - aura{aura=TICK;ot=tick_probe;i=3}
+                  end_skill:
+                    Skills:
+                      - aura{aura=END;oe=end_probe;desot=false}
+                  invalid_tick_skill:
+                    Skills:
+                      - aura{aura=BAD;onTickSkill=[inline skill]}
+                  invalid_interval:
+                    Skills:
+                      - aura{aura=BAD;onTick=tick_probe;interval=0}
+                  invalid_start_skill:
+                    Skills:
+                      - aura{aura=BAD;onStartSkill=[inline skill]}
+                  invalid_end_skill:
+                    Skills:
+                      - aura{aura=BAD;onEndSkill=[inline skill]}
                   components:
                     Skills:
                       - aura{auraName=WARD;duration=100;components=[onattack]}
@@ -2036,12 +2215,26 @@ class ImportersTest {
                 target.getStringList("skills.overwrite.on-decision"));
         assertEquals(List.of("mythic-aura{auraType=\"HARMFUL\";refreshDuration=\"false\"}"),
                 target.getStringList("skills.options.on-decision"));
+        assertEquals(List.of("mythic-aura{auraName=\"START\";onStartSkill=\"start_probe\"}"),
+                target.getStringList("skills.start_skill.on-decision"));
+        assertEquals(List.of("mythic-aura{auraName=\"TICK\";onTickSkill=\"tick_probe\";interval=\"3\"}"),
+                target.getStringList("skills.tick_skill.on-decision"));
+        assertEquals(List.of("mythic-aura{auraName=\"END\";onEndSkill=\"end_probe\";doEndSkillOnTerminate=\"false\"}"),
+                target.getStringList("skills.end_skill.on-decision"));
+        assertTrue(target.getStringList("skills.invalid_start_skill.unsupported")
+                .contains("aura{aura=BAD;onStartSkill=[inline skill]}"));
+        assertTrue(target.getStringList("skills.invalid_end_skill.unsupported")
+                .contains("aura{aura=BAD;onEndSkill=[inline skill]}"));
+        assertTrue(target.getStringList("skills.invalid_tick_skill.unsupported")
+                .contains("aura{aura=BAD;onTickSkill=[inline skill]}"));
+        assertTrue(target.getStringList("skills.invalid_interval.unsupported")
+                .contains("aura{aura=BAD;onTick=tick_probe;interval=0}"));
         assertTrue(target.getStringList("skills.components.unsupported")
                 .contains("aura{auraName=WARD;duration=100;components=[onattack]}"));
         assertTrue(target.getStringList("skills.invalid_duration.unsupported")
                 .contains("aura{auraName=SHORT;duration=0}"));
         assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
-                && String.valueOf(entry.get("note")).contains("Aura components")));
+                && String.valueOf(entry.get("note")).contains("Aura visual components")));
         assertTrue(entries.stream().anyMatch(entry -> "WARN".equals(entry.get("severity"))
                 && String.valueOf(entry.get("source-key")).contains("invalid_duration")));
     }

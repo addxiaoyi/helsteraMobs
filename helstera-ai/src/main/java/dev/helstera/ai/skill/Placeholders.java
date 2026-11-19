@@ -59,12 +59,15 @@ public final class Placeholders {
      */
     public static double resolveNumber(String text, BehaviorContext ctx, double def) {
         if (text == null) return def;
-        String s = resolve(text, ctx).trim();
-        if (s.isEmpty()) return def;
         try {
-            double value = Double.parseDouble(s);
-            return Double.isFinite(value) ? value : def;
-        } catch (NumberFormatException e) {
+            String source = text.trim();
+            // Preserve the generic single-placeholder contract, including arbitrary variable keys.
+            if (source.startsWith("<") && source.indexOf('>') == source.length() - 1) {
+                double value = Double.parseDouble(resolve(source, ctx).trim());
+                return Double.isFinite(value) ? value : def;
+            }
+            return dev.helstera.api.util.NumericExpression.resolve(source, value -> resolve(value, ctx));
+        } catch (IllegalArgumentException | ArithmeticException e) {
             return def;
         }
     }

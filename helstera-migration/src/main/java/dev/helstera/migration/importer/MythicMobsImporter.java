@@ -44,6 +44,8 @@ import java.util.Set;
  */
 public final class MythicMobsImporter implements MigrationImporter {
 
+    private record RandomSpawnType(String mobId, double weight) { }
+
     private static final Set<String> ATTRIBUTE_OPERATIONS = Set.of(
             "ADD_NUMBER", "ADD_SCALAR", "MULTIPLY_SCALAR_1");
     private static final Set<String> ATTRIBUTE_SLOTS = Set.of(
@@ -291,6 +293,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         collect(pluginDataFolder.resolve("Items"), out);
         collect(pluginDataFolder.resolve("Spawners"), out);
         collect(pluginDataFolder.resolve("DropTables"), out);
+        collect(pluginDataFolder.resolve("RandomSpawns"), out);
         return out;
     }
 
@@ -331,7 +334,8 @@ public final class MythicMobsImporter implements MigrationImporter {
             throw new IllegalArgumentException("Source file is outside a MythicMobs category: " + sourceFile);
         }
         Path category = root.resolve(root.relativize(file).getName(0));
-        if (!Set.of("Mobs", "Skills", "Items", "Spawners", "DropTables").contains(category.getFileName().toString())) {
+        if (!Set.of("Mobs", "Skills", "Items", "Spawners", "DropTables", "RandomSpawns")
+                .contains(category.getFileName().toString())) {
             throw new IllegalArgumentException("Unknown MythicMobs category: " + category);
         }
         return convertInCategory(sourceFile, category, root);
@@ -347,6 +351,10 @@ public final class MythicMobsImporter implements MigrationImporter {
             throw new IllegalArgumentException("Cannot read MythicMobs YAML " + sourceFile + ": " + ex.getMessage(), ex);
         }
         String categoryName = category == null ? "" : category.getFileName().toString();
+        boolean isRandomSpawnsDir = "randomspawns".equalsIgnoreCase(categoryName);
+        if (isRandomSpawnsDir) {
+            return convertRandomSpawns(src, sourceFile, pluginDataFolder, entries);
+        }
         boolean isItemsDir = "items".equalsIgnoreCase(categoryName);
         if (isItemsDir) return convertItems(src, sourceFile, entries);
 
@@ -504,7 +512,7 @@ public final class MythicMobsImporter implements MigrationImporter {
     static Path sourceCategory(Path sourceFile) {
         for (Path directory = sourceFile.getParent(); directory != null; directory = directory.getParent()) {
             Path name = directory.getFileName();
-            if (name != null && Set.of("mobs", "skills", "items", "spawners", "droptables")
+            if (name != null && Set.of("mobs", "skills", "items", "spawners", "droptables", "randomspawns")
                     .contains(name.toString().toLowerCase(Locale.ROOT))) return directory;
         }
         return null;
@@ -933,6 +941,322 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "source-regions", seenRegions,
                 "status", "mapped", "note", "MythicMobs spawners converted."));
         return entries;
+    }
+
+    private List<Map<String, Object>> convertRandomSpawns(YamlConfiguration src, Path file,
+                                                           Path pluginDataFolder,
+                                                           List<Map<String, Object>> entries) {
+        ConfigurationSection root = ciSection(src, "random-spawns", "randomspawns");
+        if (root == null) root = src;
+        MythicMobCatalog mobCatalog = MythicMobCatalog.read(pluginDataFolder);
+        YamlConfiguration target = new YamlConfiguration();
+        Map<String, String> seen = new LinkedHashMap<>();
+        int converted = 0;
+        for (String key : root.getKeys(false)) {
+            ConfigurationSection definition = root.getConfigurationSection(key);
+            if (definition == null) {
+                note(entries, file.toString(), "RandomSpawns." + key, "random-spawns", root.get(key),
+                        "unsupported", "RandomSpawn definition must be a configuration section; original value preserved.", "WARN");
+                continue;
+            }
+            if (duplicateDefinition(seen, key, "random spawn", file, entries)) continue;
+            String sourcePath = "RandomSpawns." + key;
+            String path = "random-spawns." + normalizeId(key);
+            String action = firstString(definition, "action", "spawnmethod");
+            if (action == null) action = "ADD";
+            boolean add = action != null && "ADD".equalsIgnoreCase(action.trim());
+            boolean replace = action != null && "REPLACE".equalsIgnoreCase(action.trim());
+            boolean deny = action != null && "DENY".equalsIgnoreCase(action.trim());
+            if (!add && !replace && !deny) {
+                note(entries, file.toString(), sourcePath, path, definition.getValues(true), "unsupported",
+                        "Unsupported RandomSpawn action; only ADD (opt-in CLUSTER subset), REPLACE, and DENY have runtime projections.", "WARN");
+                continue;
+            }
+
+            List<String> unsupported = new ArrayList<>();
+            if (deny && ciGet(definition, "types", "type", "mobtype", "mobname") != null) {
+                unsupported.add("Type (DENY does not spawn a mob; match the event with Conditions)");
+            }
+            for (String option : definition.getKeys(false)) {
+                if (!Set.of("action", "spawnmethod", "type", "types", "mobname", "mobtype", "chance", "priority", "worlds", "biomes",
+                        "reason", "cooldown", "conditions", "level", "positiontype").contains(option.toLowerCase(Locale.ROOT))) {
+                    unsupported.add(option);
+                }
+            }
+            Object rawPositionType = ciGet(definition, "positiontype");
+            String positionType = rawPositionType == null ? "LAND"
+                    : String.valueOf(rawPositionType).trim().toUpperCase(Locale.ROOT);
+            if (add && !Set.of("LAND", "SEA").contains(positionType)) {
+                unsupported.add("PositionType=" + rawPositionType + " (runtime supports LAND and SEA only)");
+            } else if (!add && rawPositionType != null) {
+                unsupported.add("PositionType (only applicable to ADD)");
+            }
+            Object level = ciGet(definition, "level");
+            if (level != null && (!(level instanceof Number number) || number.doubleValue() != 1.0)) {
+                unsupported.add("Level=" + level);
+            }
+            Object configuredCooldown = ciGet(definition, "cooldown");
+            if (deny && configuredCooldown != null) {
+                double parsedCooldown = parseRandomSpawnNumber(configuredCooldown);
+                if (!Double.isFinite(parsedCooldown) || parsedCooldown != 0) {
+                    unsupported.add("Cooldown (DENY does not spawn a mob)");
+                }
+            }
+            Object configuredReason = ciGet(definition, "reason");
+            if (add && configuredReason != null) {
+                List<String> addReasons = randomSpawnValues(configuredReason);
+                if (addReasons == null || addReasons.stream().anyMatch(reason ->
+                        !"NATURAL".equalsIgnoreCase(reason))) {
+                    unsupported.add("Reason (ADD point generation only exposes NATURAL in the supported subset)");
+                }
+            }
+            if (!unsupported.isEmpty()) {
+                note(entries, file.toString(), sourcePath, path, definition.getValues(true), "unsupported",
+                        "RandomSpawn uses options not yet represented by the runtime projection ("
+                                + String.join(", ", unsupported)
+                                + "); the complete source definition remains in this report.", "WARN");
+                continue;
+            }
+
+            List<RandomSpawnType> types = (replace || add)
+                    ? parseRandomSpawnTypes(definition, mobCatalog, file, sourcePath, entries)
+                    : List.of();
+            if ((replace || add) && types.isEmpty()) continue;
+            double chance = 1.0;
+            Object rawChance = ciGet(definition, "chance");
+            if (rawChance != null) {
+                chance = parseRandomSpawnNumber(rawChance);
+                if (!Double.isFinite(chance) || chance < 0 || chance > 1) {
+                    note(entries, file.toString(), sourcePath, path,
+                            definition.getValues(true), "unsupported", "Chance must be a finite value in [0, 1]; definition was not projected.", "WARN");
+                    continue;
+                }
+            }
+            int priority = 1;
+            Object rawPriority = ciGet(definition, "priority");
+            if (rawPriority != null) {
+                double parsed = parseRandomSpawnNumber(rawPriority);
+                if (!Double.isFinite(parsed) || parsed != Math.rint(parsed)
+                        || parsed < Integer.MIN_VALUE || parsed > Integer.MAX_VALUE) {
+                    note(entries, file.toString(), sourcePath, path,
+                            definition.getValues(true), "unsupported", "Priority must be an integer; definition was not projected.", "WARN");
+                    continue;
+                }
+                priority = (int) parsed;
+            }
+            double cooldown = 0;
+            Object rawCooldown = ciGet(definition, "cooldown");
+            if (rawCooldown != null) {
+                cooldown = parseRandomSpawnNumber(rawCooldown);
+                if (!Double.isFinite(cooldown) || cooldown < 0 || cooldown > 31_536_000) {
+                    note(entries, file.toString(), sourcePath, path,
+                            definition.getValues(true), "unsupported", "Cooldown must be finite seconds in [0, 31536000]; definition was not projected.", "WARN");
+                    continue;
+                }
+            }
+            List<String> conditions = mapRandomSpawnConditions(definition, file, sourcePath,
+                    path, entries);
+            if (conditions == null) continue;
+            if (add && conditions.stream().anyMatch(condition -> !isLocationOnlyRandomSpawnCondition(condition))) {
+                note(entries, file.toString(), sourcePath, path, definition.getValues(true), "unsupported",
+                        "ADD Conditions requiring an entity or an unsupported candidate-point predicate are preserved and not projected.", "WARN");
+                continue;
+            }
+            Object rawWorlds = ciGet(definition, "worlds");
+            Object rawBiomes = ciGet(definition, "biomes");
+            Object rawReasons = ciGet(definition, "reason");
+            List<String> worlds = randomSpawnValues(rawWorlds);
+            List<String> biomes = randomSpawnValues(rawBiomes);
+            List<String> reasons = randomSpawnValues(rawReasons);
+            if ((rawWorlds != null && worlds == null) || (rawBiomes != null && biomes == null)
+                    || (rawReasons != null && reasons == null)
+                    || !validRandomSpawnBiomes(biomes) || !validRandomSpawnReasons(reasons)) {
+                note(entries, file.toString(), sourcePath, path,
+                        definition.getValues(true), "unsupported",
+                        "RandomSpawn world, biome, or reason filters contain invalid values; definition was not projected.", "WARN");
+                continue;
+            }
+
+            target.set(path + ".action", add ? "ADD" : replace ? "REPLACE" : "DENY");
+            if (replace || add) {
+                Map<String, Double> targetTypes = new LinkedHashMap<>();
+                types.forEach(entry -> targetTypes.put(entry.mobId(), entry.weight()));
+                target.set(path + ".types", targetTypes);
+            }
+            if (add) target.set(path + ".position-type", positionType);
+            target.set(path + ".chance", chance);
+            target.set(path + ".priority", priority);
+            target.set(path + ".cooldown", cooldown);
+            if (!worlds.isEmpty()) target.set(path + ".worlds", worlds);
+            if (!biomes.isEmpty()) target.set(path + ".biomes", biomes);
+            if (!reasons.isEmpty()) target.set(path + ".reasons", reasons);
+            if (!conditions.isEmpty()) target.set(path + ".conditions", conditions);
+            note(entries, file.toString(), sourcePath, path, definition.getValues(true), "mapped",
+                    add ? "Mythic Action: ADD projected to the opt-in bounded CLUSTER generator subset; configure random-spawns.generator: CLUSTER to enable. PositionType, filters and type are retained; native Mythic cap/cluster semantics remain incomplete."
+                            : replace
+                            ? "Mythic Action: REPLACE converted to an event-driven creature-spawn replacement; configured filters and types are retained."
+                            : "Mythic Action: DENY converted to cancellation of matching creature-spawn events; match criteria are retained.");
+            converted++;
+        }
+        if (converted > 0) {
+            entries.add(Map.of("target-file", "random-spawns.yml", "content", target.saveToString(),
+                    "status", "mapped", "note", "Mythic ADD/REPLACE/DENY supported subsets converted."));
+        }
+        return entries;
+    }
+
+    private List<RandomSpawnType> parseRandomSpawnTypes(ConfigurationSection definition,
+                                                        MythicMobCatalog catalog,
+                                                        Path file, String sourcePath,
+                                                        List<Map<String, Object>> entries) {
+        Object rawTypes = ciGet(definition, "types");
+        List<String> declarations = new ArrayList<>();
+        if (rawTypes instanceof List<?> list) {
+            for (Object value : list) {
+                if (!(value instanceof String text)) {
+                    note(entries, file.toString(), sourcePath, "random-spawns", definition.getValues(true),
+                            "unsupported", "RandomSpawn Types must contain only mob-id strings; definition was not projected.", "WARN");
+                    return List.of();
+                }
+                addRandomSpawnTypeDeclarations(declarations, text);
+            }
+        } else if (rawTypes != null) {
+            if (!(rawTypes instanceof String text)) {
+                note(entries, file.toString(), sourcePath, "random-spawns", definition.getValues(true),
+                        "unsupported", "RandomSpawn Types must be a comma-separated mob-id string or string list; definition was not projected.", "WARN");
+                return List.of();
+            }
+            addRandomSpawnTypeDeclarations(declarations, text);
+        } else {
+            String type = firstString(definition, "type", "mobtype", "mobname");
+            if (type != null) {
+                addRandomSpawnTypeDeclarations(declarations, type);
+            }
+        }
+        if (declarations.isEmpty()) {
+            note(entries, file.toString(), sourcePath, "random-spawns", definition.getValues(true),
+                    "unsupported", "RandomSpawn requires Type or Types; definition was not projected.", "WARN");
+            return List.of();
+        }
+
+        Map<String, Double> weights = new LinkedHashMap<>();
+        for (String declaration : declarations) {
+            String value = declaration.trim();
+            if (value.isBlank()) {
+                note(entries, file.toString(), sourcePath, "random-spawns", definition.getValues(true),
+                        "unsupported", "RandomSpawn Type/Types contains an empty mob ID; definition was not projected.", "WARN");
+                return List.of();
+            }
+            MythicMobCatalog.Resolution resolution = catalog.resolve(value);
+            if (!resolution.resolved()) {
+                note(entries, file.toString(), sourcePath, "random-spawns", definition.getValues(true),
+                        "unsupported", resolution.problem() + " Vanilla and unresolved external mob types are not executable by this runtime.", "WARN");
+                return List.of();
+            }
+            // MythicMobs 5.7.2 chooses one entry uniformly from its mobTypes list.
+            // Repeated IDs therefore contribute repeated equal-probability entries.
+            double mergedWeight = weights.getOrDefault(resolution.targetId(), 0.0) + 1.0;
+            if (!Double.isFinite(mergedWeight) || mergedWeight > 1_000_000) {
+                note(entries, file.toString(), sourcePath, "random-spawns", definition.getValues(true),
+                        "unsupported", "RandomSpawn Type/Types contains too many alternatives; definition was not projected.", "WARN");
+                return List.of();
+            }
+            weights.put(resolution.targetId(), mergedWeight);
+        }
+        return weights.entrySet().stream().map(entry -> new RandomSpawnType(entry.getKey(), entry.getValue())).toList();
+    }
+
+    private static void addRandomSpawnTypeDeclarations(List<String> declarations, String raw) {
+        for (String value : raw.split(",", -1)) declarations.add(value.trim());
+    }
+
+    private static double parseRandomSpawnNumber(Object raw) {
+        if (raw instanceof Number number) return number.doubleValue();
+        if (raw instanceof String text) {
+            try { return Double.parseDouble(text.trim()); }
+            catch (NumberFormatException ignored) { return Double.NaN; }
+        }
+        return Double.NaN;
+    }
+
+    private static boolean isLocationOnlyRandomSpawnCondition(String raw) {
+        if (raw == null || raw.isBlank()) return false;
+        String condition = raw.trim();
+        if (condition.startsWith("!")) condition = condition.substring(1).trim();
+        if (condition.isEmpty()) return false;
+        int separator = condition.indexOf('{');
+        if (separator < 0) separator = condition.indexOf(' ');
+        String name = (separator < 0 ? condition : condition.substring(0, separator))
+                .trim().toLowerCase(Locale.ROOT);
+        return Set.of("world-is", "weather-is", "time-is", "dimension-is", "biome-is",
+                "biome-type-is", "altitude", "height", "height-above", "height-below",
+                "light-level", "light-level-below", "light-level-above", "sky-light-level",
+                "light-level-from-blocks", "world-time", "local-difficulty", "region",
+                "not-in-region", "in-claim", "near-claim", "moist", "moisture-level",
+                "block-type-is", "block-type-in-radius", "players-in-radius", "player-within",
+                "player-not-within", "night", "raining", "thundering")
+                .contains(name);
+    }
+
+    private List<String> mapRandomSpawnConditions(ConfigurationSection definition, Path file,
+                                                   String sourcePath, String targetPath,
+                                                   List<Map<String, Object>> entries) {
+        Object raw = ciGet(definition, "conditions");
+        if (raw == null) return List.of();
+        List<?> values = raw instanceof List<?> list ? list : List.of(raw);
+        List<String> mapped = new ArrayList<>();
+        for (Object value : values) {
+            List<String> parsed = value instanceof String text
+                    ? ConditionListParser.parseFailClosed(text) : List.of();
+            if (parsed.isEmpty() || parsed.contains(ConditionListParser.INVALID_CONDITION)) {
+                note(entries, file.toString(), sourcePath, targetPath,
+                        definition.getValues(true), "unsupported", "Invalid RandomSpawn conditions fail closed; definition was not projected.", "WARN");
+                return null;
+            }
+            for (String condition : parsed) {
+                MmConditions.Mapped translation = MmConditions.translate(condition);
+                if (translation.translated()) mapped.add(translation.condition());
+                else if (isSpawnerNativeCondition(condition)) mapped.add(condition);
+                else {
+                    note(entries, file.toString(), sourcePath, targetPath,
+                            definition.getValues(true), "unsupported", "Unmapped RandomSpawn condition prevents projection rather than being silently ignored.", "WARN");
+                    return null;
+                }
+            }
+        }
+        return mapped;
+    }
+
+    private static List<String> randomSpawnValues(Object raw) {
+        if (raw == null) return List.of();
+        List<String> result = new ArrayList<>();
+        List<?> values = raw instanceof List<?> list ? list : List.of(raw);
+        for (Object value : values) {
+            if (!(value instanceof String text)) return null;
+            for (String part : text.split(",")) {
+                String trimmed = part.trim();
+                if (trimmed.isEmpty()) return null;
+                result.add(trimmed);
+            }
+        }
+        if (result.isEmpty()) return null;
+        return List.copyOf(result);
+    }
+
+    private static boolean validRandomSpawnBiomes(List<String> biomes) {
+        if (biomes == null) return false;
+        return biomes.stream().allMatch(value -> {
+            try { org.bukkit.block.Biome.valueOf(value.toUpperCase(Locale.ROOT)); return true; }
+            catch (IllegalArgumentException ex) { return false; }
+        });
+    }
+
+    private static boolean validRandomSpawnReasons(List<String> reasons) {
+        if (reasons == null) return false;
+        return reasons.stream().allMatch(value -> {
+            try { org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason.valueOf(value.toUpperCase(Locale.ROOT)); return true; }
+            catch (IllegalArgumentException ex) { return false; }
+        });
     }
 
     private static String firstString(ConfigurationSection section, String... keys) {
@@ -2049,7 +2373,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "unsupported", externalDisguise
                             ? "Mythic entity disguise semantics require MythicDisguise/LibsDisguises; Helstera model-appearance disguise is not equivalent."
                             : auraMechanic
-                            ? "Aura components, lifecycle skills, attachments, charges and event cancellation options are not implemented; the original mechanic was preserved."
+                            ? "Aura visual components, attachments, charges and event cancellation are not implemented; the original mechanic was preserved."
                             : "The Mythic mechanic has no verified Helstera action mapping.",
                     "WARN");
             return;
@@ -2544,7 +2868,10 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             case "effect", "potion" -> {
                 var potion = potionSpec(trimmed);
-                yield potion == null ? null : "effect-targets " + String.join(" ", potion.positionalArguments());
+                yield potion == null ? null : "effect-targets " + potion.positionalArguments().stream()
+                        .map(argument -> argument.chars().anyMatch(Character::isWhitespace)
+                                ? "\"" + escape(argument) + "\"" : argument)
+                        .collect(java.util.stream.Collectors.joining(" "));
             }
             case "teleportself", "teleport-self" -> "teleport-self "
                     + firstArgOrPositional(trimmed, 0, "0", "x", "dx") + " "
@@ -3404,6 +3731,12 @@ public final class MythicMobsImporter implements MigrationImporter {
                 case "auraname", "aura", "b", "buff", "buffname", "debuff", "debuffname", "n", "name" -> "auraName";
                 case "auratype", "auragroup", "group", "type", "g" -> "auraType";
                 case "duration", "ticks", "d", "time", "t" -> "duration";
+                case "onstartskill", "onstart", "os" -> "onStartSkill";
+                case "ontickskill", "ontick", "ot" -> "onTickSkill";
+                case "onendskill", "onend", "oe" -> "onEndSkill";
+                case "interval", "i" -> "interval";
+                case "doendskillonterminate", "desot", "alwaysrunendskill", "ares" ->
+                        "doEndSkillOnTerminate";
                 case "maxstacks", "ms" -> "maxStacks";
                 case "refreshduration", "rd" -> "refreshDuration";
                 case "mergesamecaster", "msc", "mc" -> "mergeSameCaster";
@@ -3417,8 +3750,12 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (attribute.equals("unsupported") || value.isBlank()
                     || canonical.putIfAbsent(attribute, value) != null) return null;
             if (attribute.equals("duration") && !validAuraDuration(value)) return null;
+            if ((attribute.equals("onStartSkill") || attribute.equals("onTickSkill")
+                    || attribute.equals("onEndSkill"))
+                    && (value.contains("[") || value.contains("]"))) return null;
+            if (attribute.equals("interval") && !positiveInteger(value)) return null;
             if (attribute.equals("maxStacks") && !positiveInteger(value)) return null;
-            if (Set.of("refreshDuration", "mergeSameCaster", "mergeAll",
+            if (Set.of("refreshDuration", "mergeSameCaster", "mergeAll", "doEndSkillOnTerminate",
                     "overwriteSameCaster", "overwriteAll").contains(attribute)
                     && !value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return null;
         }

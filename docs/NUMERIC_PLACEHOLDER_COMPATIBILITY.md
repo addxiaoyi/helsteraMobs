@@ -128,7 +128,8 @@ Recipient scopes retain the original trigger, event, cause, payload, origin,
 execution audience, and shared SkillTree. Their singleton target lists do not
 replace the caller's inherited target list. A scheduling-hook test verifies
 delayed/repeated numeric resolution uses each recipient's latest health at
-execution time; that is unit evidence, separate from live Paper timing.
+execution time. Real Paper timing is now also verified by the numeric and Potion
+timing probes described below.
 
 Bytecode audit of pinned MM 5.7.2 `HealMechanic.castAtEntity` and
 `PotionMechanic.applyPotionEffect` shows their placeholder getters receive the
@@ -136,6 +137,27 @@ actual recipient. This supports the context contract, but does not establish
 Premium dynamic numeric runtime parity: the MM Free edition gate still applies.
 
 ## Validation and remaining work
+
+Potion expiry, hidden effects, instant effects, and event cancellation have a
+separate [lifecycle contract](POTION_LIFECYCLE_COMPATIBILITY.md), with 47 checks
+for each of imported execution and native MM 5.7.2. Those static-source
+comparisons retain the Premium numeric boundary described above.
+
+The earlier timing artifact passes 2,261 Maven tests and SpotBugs. Paper 1.21.1-133
+fixtures `srv-paper-numeric-mechanic-exploratory-20261117-r9` and
+`srv-paper-potion-mechanic-exploratory-20261117-r13` pass the original 38/28
+runtime assertions and 19/22 additional timing assertions. The imported formula
+runs after four Bukkit ticks and repeats twice at four-tick intervals. Health,
+absorption, and shared variables change before execution; a removed first
+recipient does not block the second. Invalid Potion levels preserve the existing
+effect during both delay and repeat. The probes also verify bounded execution,
+`forget` cancellation, original context retention, refreshed active targets,
+entity/file cleanup, and release of temporary plugin chunk tickets. Effect-event
+observations record exact application ticks and requested duration before vanilla
+decrements it. This is Helstera execution evidence; Premium native numeric skill
+comparison, other mechanics, client effects, and other versions remain open.
+
+Earlier recipient-only baseline:
 
 The full `./mvnw -o -q -pl helstera-plugin -am verify` build passes 2,250 tests,
 zero failures/errors/skips, and SpotBugs. Tests cover stale context ratios,
@@ -166,7 +188,7 @@ isolation, and cleanup controls; Potion retains cancellation coverage. The final
 artifact also passes all 88 MM comparison/regression assertions in
 `srv-paper-percent-health-exploratory-20261117-r10`. The selected-recipient
 checks are Helstera runtime evidence, separate from native MM dynamic numeric
-comparison and live delayed/repeated timing.
+comparison. Live delayed/repeated timing is covered by the newer fixtures above.
 
 Focused Paper 1.21.1-133 fixture
 `srv-paper-percent-health-exploratory-20261117-r9` passes 88 assertions with
@@ -185,7 +207,11 @@ Reports, sanitized logs, reproduction commands, and hashes are in
 [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
 
 Actual Premium-enabled dynamic numeric skill comparison remains unverified.
-Other placeholder families, expressions/math, PlaceholderAPI
+The [numeric expression follow-up](NUMERIC_EXPRESSION_COMPATIBILITY.md) adds
+arithmetic, functions, comparisons, and rounded tokens to shared numeric,
+fractional-health, and Potion duration/level arguments, with separate native
+engine comparisons and imported real-entity Paper evidence.
+Other placeholder families, remaining expression fields, PlaceholderAPI
 integration, recipient audits for remaining mechanics,
 timing, other versions, and integration into the full strict release catalog
 remain open. This slice does not complete the Mechanics, Skills importer,

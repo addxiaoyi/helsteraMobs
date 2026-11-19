@@ -1,7 +1,8 @@
 param(
     [ValidatePattern('^r[1-9][0-9]*$')]
     [string]$EvidenceRevision = 'r1',
-    [string]$PaperJarPath = ''
+    [string]$PaperJarPath = '',
+    [string]$MythicMobsJarPath = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -40,6 +41,14 @@ if ((Test-Path -LiteralPath $reportPath) -or (Test-Path -LiteralPath $logArchive
     throw "Refusing to overwrite archived evidence for $EvidenceRevision. Choose a new revision."
 }
 
+$nativeOracle = -not [string]::IsNullOrWhiteSpace($MythicMobsJarPath)
+$mythicSha256 = '9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f'
+$sharedSource = Join-Path $root 'helstera-plugin/src/main/resources/probes/potion-lifecycle-skills.yml'
+if ($nativeOracle -and (-not (Test-Path -LiteralPath $MythicMobsJarPath -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $MythicMobsJarPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne $mythicSha256)) {
+    throw 'Native lifecycle evidence requires the pinned MythicMobs 5.7.2 Modrinth FTWvGuE5 artifact.'
+}
+
 [void][System.IO.Directory]::CreateDirectory($server)
 [void][System.IO.Directory]::CreateDirectory($reports)
 Copy-Item -LiteralPath $paper -Destination (Join-Path $server 'paper.jar')
@@ -48,6 +57,12 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'server.properties') -Destinatio
     [System.Text.UTF8Encoding]::new($false))
 $plugins = Join-Path $server 'plugins'
 [void][System.IO.Directory]::CreateDirectory($plugins)
+if ($nativeOracle) {
+    Copy-Item -LiteralPath $MythicMobsJarPath -Destination (Join-Path $plugins 'MythicMobs.jar')
+    $mythicSkills = Join-Path $plugins 'MythicMobs/Skills'
+    [void][System.IO.Directory]::CreateDirectory($mythicSkills)
+    Copy-Item -LiteralPath $sharedSource -Destination $mythicSkills
+}
 $installedPlugin = Join-Path $plugins 'helsteraMobs.jar'
 Copy-Item -LiteralPath $plugin -Destination $installedPlugin
 $pluginSha256 = (Get-FileHash -LiteralPath $installedPlugin -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -63,7 +78,14 @@ if ($configText -notmatch '(?m)^  self-test-potion-mechanic:\s*true\s*$') {
     throw 'Could not enable the potion-mechanic Paper self-test.'
 }
 $configText = [regex]::Replace($configText, '(?m)^  self-test-delay-ticks:\s*\d+\s*$',
-    '  self-test-delay-ticks: 1')
+    '  self-test-delay-ticks: 100')
+if ($nativeOracle) {
+    $configText = [regex]::Replace($configText, '(?m)^  self-test-potion-lifecycle-native:\s*false\s*$',
+        '  self-test-potion-lifecycle-native: true')
+    if ($configText -notmatch '(?m)^  self-test-potion-lifecycle-native:\s*true\s*$') {
+        throw 'Could not enable the native lifecycle oracle.'
+    }
+}
 [System.IO.File]::WriteAllText($configPath, $configText, [System.Text.UTF8Encoding]::new($false))
 Copy-Item -LiteralPath (Join-Path $root 'helstera-plugin/src/main/resources/skills.yml') -Destination (Join-Path $data 'skills.yml')
 
@@ -92,13 +114,23 @@ try {
             -not (Select-String -LiteralPath $latestLog -Pattern 'Done \(' -Quiet)) {
         throw 'Paper did not finish startup; inspect the retained fixture logs.'
     }
-    $probePattern = '(?m)^.*\[自检\] potion-mechanic .*passed=true\s*$'
+    $probePatterns = @(
+        '(?m)^.*\[自检\] potion-mechanic-timing .*passed=true\s*$',
+        '(?m)^.*\[自检\] potion-lifecycle .*passed=true\s*$'
+    )
+    if ($nativeOracle) { $probePatterns += '(?m)^.*\[自检\] potion-lifecycle-native .*passed=true\s*$' }
     $probeDeadline = [DateTime]::UtcNow.AddSeconds(30)
-    while ([DateTime]::UtcNow -lt $probeDeadline -and -not $process.HasExited -and
-            -not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
+    while ([DateTime]::UtcNow -lt $probeDeadline -and -not $process.HasExited) {
+        $pending = @($probePatterns | Where-Object {
+            -not (Select-String -LiteralPath $latestLog -Pattern $_ -Quiet)
+        })
+        if ($pending.Count -eq 0) { break }
         Start-Sleep -Milliseconds 250
     }
-    if (-not (Select-String -LiteralPath $latestLog -Pattern $probePattern -Quiet)) {
+    $pending = @($probePatterns | Where-Object {
+        -not (Select-String -LiteralPath $latestLog -Pattern $_ -Quiet)
+    })
+    if ($pending.Count -gt 0) {
         throw 'The potion-mechanic Paper probe did not pass; inspect the retained fixture logs.'
     }
     $process.StandardInput.WriteLine('stop')
@@ -119,10 +151,34 @@ $paperMatch = [regex]::Match($logText,
     'This server is running Paper version (.+?) \(Implementing API version (.+?)\)')
 $observationMatch = [regex]::Match($logText,
     '(?m)^.*\[自检\] (potion-mechanic .*passed=true)\s*$')
+$timingMatch = [regex]::Match($logText,
+    '(?m)^.*\[自检\] (potion-mechanic-timing .*passed=true)\s*$')
+$lifecycleMatch = [regex]::Match($logText,
+    '(?m)^.*\[自检\] (potion-lifecycle .*passed=true)\s*$')
+$nativeMatch = [regex]::Match($logText,
+    '(?m)^.*\[自检\] (potion-lifecycle-native .*passed=true)\s*$')
 if (-not $paperMatch.Success -or $paperMatch.Groups[1].Value -notmatch '^1\.21\.1-133(?:-|$)' -or
-        -not $observationMatch.Success -or
+        -not $observationMatch.Success -or -not $timingMatch.Success -or -not $lifecycleMatch.Success -or
+        ($nativeOracle -and -not $nativeMatch.Success) -or
         -not $logText.Contains('Enabling helsteraMobs v1.0.0')) {
     throw 'Focused report checks found incomplete Paper/plugin startup evidence.'
+}
+$catalog = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'release-probe-catalog.json') -Raw -Encoding utf8 |
+    ConvertFrom-Json
+foreach ($probe in @(
+    @{ id = 'potionMechanicRuntime'; observation = $observationMatch.Groups[1].Value },
+    @{ id = 'potionMechanicTiming'; observation = $timingMatch.Groups[1].Value },
+    @{ id = 'potionLifecycle'; observation = $lifecycleMatch.Groups[1].Value }
+)) {
+    $required = @($catalog.probes | Where-Object id -eq $probe.id)
+    if ($required.Count -ne 1 -or [string]::IsNullOrWhiteSpace($required[0].requiredObservation) -or
+            $probe.observation -cne $required[0].requiredObservation) {
+        throw "Focused evidence does not satisfy every required assertion for $($probe.id)."
+    }
+}
+if ($nativeOracle -and $nativeMatch.Groups[1].Value -cne
+        ($lifecycleMatch.Groups[1].Value -creplace '^potion-lifecycle ', 'potion-lifecycle-native ')) {
+    throw 'Native and imported lifecycle evidence must pass the identical complete assertion contract.'
 }
 $redactedLog = [regex]::Replace($logText,
     '(?i)([?&]token=)[^&\s"''<>]+', '$1[REDACTED]')
@@ -151,12 +207,31 @@ $report = [ordered]@{
     pluginSha256 = $pluginSha256
     paperJarSha256 = (Get-FileHash -LiteralPath $paper -Algorithm SHA256).Hash.ToLowerInvariant()
     log = 'logs/latest.log'
-    expectedProbeIds = @('potionMechanicRuntime')
+    expectedProbeIds = @('potionMechanicRuntime', 'potionMechanicTiming', 'potionLifecycle')
     probes = @([ordered]@{
         id = 'potionMechanicRuntime'
         status = 'passed'
         observations = @($observationMatch.Groups[1].Value)
+    }, [ordered]@{
+        id = 'potionMechanicTiming'
+        status = 'passed'
+        observations = @($timingMatch.Groups[1].Value)
+    }, [ordered]@{
+        id = 'potionLifecycle'
+        status = 'passed'
+        observations = @($lifecycleMatch.Groups[1].Value)
     })
+}
+if ($nativeOracle) {
+    $report.externalPlugin = 'MythicMobs 5.7.2 (Modrinth FTWvGuE5)'
+    $report.externalPluginSha256 = $mythicSha256
+    $report.sharedSourceSha256 = (Get-FileHash -LiteralPath $sharedSource -Algorithm SHA256).Hash.ToLowerInvariant()
+    $report.expectedProbeIds += 'potionLifecycleNative'
+    $report.probes += [ordered]@{
+        id = 'potionLifecycleNative'
+        status = 'passed'
+        observations = @($nativeMatch.Groups[1].Value)
+    }
 }
 $json = $report | ConvertTo-Json -Depth 8
 [System.IO.File]::WriteAllText((Join-Path $server 'integration-report.json'), $json + "`n",

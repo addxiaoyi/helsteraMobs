@@ -1,0 +1,5 @@
+name: HelsteraContextTargeterProbe
+version: '1'
+api-version: '1.21'
+main: dev.helstera.test.targeter.ContextTargeterProbe
+depend: [helsteraMobs, MythicMobs]

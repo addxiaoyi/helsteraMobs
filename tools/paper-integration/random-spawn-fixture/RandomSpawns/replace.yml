@@ -1,0 +1,132 @@
+ConditionGuard:
+  Action: REPLACE
+  Type: random_spawn_guard
+  Chance: 1
+  Priority: 10
+  Reason: CUSTOM
+  Conditions:
+    - "entitytype{t=SKELETON}"
+Replacement:
+  Action: REPLACE
+  Type: random_spawn_probe
+  Chance: 1
+  Priority: 20
+  Cooldown: 1
+  Worlds: integration-world
+  Reason: CUSTOM
+  Conditions:
+    - "entitytype{t=SKELETON}"
+AlternativeTypes:
+  Action: REPLACE
+  Types: [random_spawn_probe, random_spawn_guard]
+  Chance: 1
+  Priority: 30
+  Reason: CUSTOM
+  Conditions:
+    - "entitytype{t=ALLAY}"
+ZeroChanceControl:
+  Action: REPLACE
+  Type: random_spawn_probe
+  Chance: 0
+  Priority: 10
+  Reason: CUSTOM
+  Conditions:
+    - "entitytype{t=CREEPER}"
+ReasonGuard:
+  Action: REPLACE
+  Type: random_spawn_guard
+  Chance: 1
+  Priority: 40
+  Reason: SPAWNER
+  Conditions:
+    - "entitytype{t=CREEPER}"
+DenyZombie:
+  Action: DENY
+  Chance: 1
+  Priority: 50
+  Worlds: integration-world
+  Reason: CUSTOM
+  Conditions:
+    - "entitytype{t=ZOMBIE}"
+NaturalDeny:
+  Action: DENY
+  Chance: 1
+  Priority: 100
+  Worlds: integration-world
+  Reason: NATURAL
+ClusterAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Worlds: integration-world
+LocationConditionalAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Conditions:
+    - "?world{world=integration-world}"
+    - "?time{time=night}"
+    - "?weather{weather=clear}"
+    - "?playersinradius{radius=64;amount=>0}"
+WrongWorldConditionalAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Conditions:
+    - "?world{world=missing-world}"
+PlayerDistanceConditionalAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Conditions:
+    - "?playerwithin{d=1}"
+PlayerWithinAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Conditions:
+    - "?playerwithin{d=64}"
+PlayerCountAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Conditions:
+    - "?playersinradius{radius=64;amount=>0}"
+PlayerCountRejectedAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Conditions:
+    - "?playersinradius{radius=1;amount=>0}"
+PlayerNotWithinAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Conditions:
+    - "?playernotwithin{d=1}"
+PlayerNotWithinRejectedAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  PositionType: LAND
+  Conditions:
+    - "?playernotwithin{d=64}"
+ConditionalAdd:
+  Action: ADD
+  Type: random_spawn_probe
+  Chance: 1
+  Conditions:
+    - "entitytype{t=ZOMBIE}"
+UnsupportedAction:
+  Action: SCALE
+IgnoredDeny:
+  Action: DENY
+  Type: random_spawn_guard
