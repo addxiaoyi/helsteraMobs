@@ -9590,6 +9590,8 @@ public final class SkillExtras {
     }
 
     private static double resolveMobRadius(String raw, BehaviorContext ctx) {
+        var interval = dev.helstera.api.util.MobRadiusSpec.radiusInterval(raw);
+        if (interval.isPresent()) return interval.get().sample();
         if (!dev.helstera.api.util.NumericExpression.dynamic(raw))
             return dev.helstera.api.util.MobRadiusSpec.requireRadius(Double.parseDouble(raw));
         BehaviorContext scoped = null;

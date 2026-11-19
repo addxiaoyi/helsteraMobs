@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 /** MobsInRadius arguments shared by migration and direct condition binding. */
@@ -13,6 +14,10 @@ public record MobRadiusSpec(String amount, String radius, String types) {
     private static final Pattern RANGE = Pattern.compile(
             "(?:>=|<=|>|<)?" + NUMBER + "|" + NUMBER + "(?:to|-)" + NUMBER);
     private static final Pattern HEAD = Pattern.compile("(?i)^mobs[-_]?in[-_]?radius(?=\\s|\\{|$)");
+    // The native factory checks this grammar before its edition gate. Malformed candidates
+    // must not fall through to arithmetic (e.g. 2--3 is not a radius of five).
+    private static final Pattern NATIVE_INTERVAL = Pattern.compile("^-?[0-9]*(\\.\\d+)?(to|-)+[0-9]\\d*(\\.\\d+)?");
+    private static final Pattern INTERVAL = Pattern.compile("(" + NUMBER + ")(?:to|-)(" + NUMBER + ")");
 
     public static boolean supports(String source) {
         return source != null && HEAD.matcher(source.trim()).find();
@@ -84,14 +89,32 @@ public record MobRadiusSpec(String amount, String radius, String types) {
 
     public static boolean validRadius(String raw) {
         try {
-            // Native bare A-B/AtoB is a random interval, not subtraction. Preserve until supported.
-            if (raw != null && raw.matches(NUMBER + "(?:to|-)" + NUMBER)) return false;
+            if (radiusInterval(raw).isPresent()) return true;
             NumericExpression.validate(raw);
             if (!NumericExpression.dynamic(raw)) requireRadius(Double.parseDouble(raw));
             return true;
         } catch (IllegalArgumentException invalid) {
             return false;
         }
+    }
+
+    /** The endpoints retain their order, as native sampling uses start + u * (end - start). */
+    public record RadiusInterval(double start, double end) {
+        public RadiusInterval {
+            requireRadius(start);
+            requireRadius(end);
+        }
+
+        public double sample() {
+            return requireRadius(start + Math.random() * (end - start));
+        }
+    }
+
+    public static Optional<RadiusInterval> radiusInterval(String raw) {
+        if (raw == null || !NATIVE_INTERVAL.matcher(raw).matches()) return Optional.empty();
+        var match = INTERVAL.matcher(raw);
+        if (!match.matches()) throw invalid("invalid random radius interval");
+        return Optional.of(new RadiusInterval(Double.parseDouble(match.group(1)), Double.parseDouble(match.group(2))));
     }
 
     /** Validate again after resolution: a valid expression may produce an invalid radius. */

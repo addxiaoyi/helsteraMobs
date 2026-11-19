@@ -1,13 +1,14 @@
 # MythicMobs Parity Roadmap
 
-Dynamic MobsInRadius update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r37` passes 20 probes, retaining the 120
-constant mob and 132 player native comparisons. It adds 96 dynamic execution,
-negation and invalid-result checks plus six public native placeholder oracles.
-The public MM 5.7.2 numeric factory substitutes static `1`; Helstera resolves
-expressions at each evaluation. Premium condition equivalence remains unverified.
-Live registration confirms `MobsNearOrigin` is a targeter, with no same-named
-built-in condition; Helstera retains its condition extension. See the
+Random and dynamic MobsInRadius update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r38` passes 21 probes. It adds 48 native
+random-radius condition comparisons and 256 independent native/runtime draw
+pairs, retaining 120 constant mob and 132 player comparisons, 96 dynamic checks
+and six public placeholder oracles. Bare `AtoB`/`A-B` intervals resample in all
+scopes, including location conditions. The public MM numeric factory supports
+these intervals but replaces other dynamic radii with static `1`; Premium
+expression equivalence remains unverified. `MobsNearOrigin` is a native targeter
+and a Helstera condition extension. See the
 [contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
@@ -19,11 +20,12 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after the dynamic MobsInRadius implementation:
+Immediate continuation after the random/dynamic MobsInRadius implementation:
 
-1. Audit native condition dispatch, MythicEntity aliases and loaded-entity fallback;
-   compare bare random-radius intervals before accepting their syntax. The pinned
-   5.7.2 `MobsNearOrigin` name is a targeter; its Helstera condition is an extension.
+1. Audit native condition dispatch, MythicEntity aliases and loaded-entity fallback.
+   Bare random-radius intervals now have scoped native evidence; boundary-crossing
+   stochastic populations and full dispatch remain unverified. The pinned 5.7.2
+   `MobsNearOrigin` name is a targeter; its Helstera condition is an extension.
 2. Compare Premium-enabled dynamic radius when an appropriate native artifact is
    available. The public-build static-1 boundary and public string placeholders
    provide scoped evidence only; do not treat them as Premium condition parity.
@@ -43,7 +45,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-dynamic-radius-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `a7993771cf0c525583afb6b627eeeaf6b302c39539f672aae1fb26b7f98d0482`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,307 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-random-radius-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `7afd6fefe63b1849660b33ccf31aef25ff6c61493d282dd3cc52517d0f461197`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,308 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

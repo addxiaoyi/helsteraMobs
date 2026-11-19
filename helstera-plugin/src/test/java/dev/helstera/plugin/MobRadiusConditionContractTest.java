@@ -206,10 +206,35 @@ class MobRadiusConditionContractTest {
 
     @Test void malformedNestedAndQuotedRadiusArgumentsRemainUnsupported() {
         for (String radius : List.of("<caster.hp{r=0;bogus=1}>", "<caster.hp{r=0>",
-                "<caster.hp{r=0}}>", "min(2,)", "\"2 + 3", "5} junk{r=2", "1to5", "2-3")) {
+                "<caster.hp{r=0}}>", "min(2,)", "\"2 + 3", "5} junk{r=2", "2--3", "2toto3", "-2to3",
+                "2to-3", "NaNto3", "1to" + "9".repeat(160), "1to" + "9".repeat(310))) {
             String source = "mobsInRadius{r=" + radius + ";t=ZOMBIE;a=0}";
             assertFalse(MmConditions.translate("?" + source).translated(), source);
             assertNull(skills.bindCondition(source), source);
         }
+    }
+
+    @Test void nativeRandomIntervalsWorkWithoutMetadataAndAreSampledAgain() {
+        Entity caster = entity(EntityType.ZOMBIE, 0, 0);
+        Entity custom = entity(EntityType.COW, 2, 0);
+        doReturn(List.of(custom, entity(EntityType.ZOMBIE, 2, 0)))
+                .when(world).getNearbyEntities(any(Location.class), anyDouble(), anyDouble(), anyDouble());
+        SkillExtras.mythicMobTypeQuery(new SkillExtras.MythicMobTypeQuery() {
+            public boolean isKnownType(String name) { return name.equals("TestMob"); }
+            public Optional<Boolean> matches(Entity entity, String name) { return Optional.of(entity == custom); }
+        });
+        for (var ctx : List.of(context(caster, center), context(null, center), context(caster, center).withLocationTarget(center))) {
+            assertTrue(imported("mobsInRadius{r=2to2;t=TestMob;a=1}", ctx));
+            assertTrue(imported("mobsInRadius{r=3-2;t=TestMob;a=1}", ctx));
+            assertFalse(imported("mobsInRadius{r=.1to1;t=TestMob;a=1}", ctx));
+        }
+        String key = skills.bindCondition("mobsInRadius{r=2to3;t=TestMob;a=1}");
+        assertNotNull(key);
+        clearInvocations(world);
+        for (int i = 0; i < 32; i++) assertTrue(registry.testCondition(key, context(null, center)));
+        var radii = org.mockito.ArgumentCaptor.forClass(Double.class);
+        verify(world, times(32)).getNearbyEntities(eq(center), radii.capture(), anyDouble(), anyDouble());
+        assertTrue(radii.getAllValues().stream().allMatch(radius -> radius >= 2 && radius <= 3));
+        assertTrue(radii.getAllValues().stream().distinct().count() > 1, "must resample on each evaluation");
     }
 }

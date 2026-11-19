@@ -420,6 +420,21 @@ if ($MobRadiusAudit) {
         observations = @($dynamicLines | ForEach-Object { $_.Value }) +
             @($oracleLines | ForEach-Object { $_.Value }) + @($dynamicSummary.Value)
     }
+    $randomLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_RANDOM\|radius=[^\r\n]+$')
+    $sampleLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_RANDOM_SAMPLES\|radius=[^\r\n]+$')
+    $randomSummary = [regex]::Match($log,
+        '(?m)^.*MOB_RADIUS_RANDOM_SUMMARY\|comparisons=48\|drawPairs=256\|passed=true\s*$')
+    if ($randomLines.Count -ne 48 -or $sampleLines.Count -ne 8 -or -not $randomSummary.Success -or
+            @($randomLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0 -or
+            @($sampleLines | Where-Object { $_.Value -notmatch '\|passed=true$' }).Count -ne 0) {
+        throw 'Incomplete random radius native comparison evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'mobRadius.random-native-comparison'
+        status = 'passed'
+        observations = @($randomLines | ForEach-Object { $_.Value }) +
+            @($sampleLines | ForEach-Object { $_.Value }) + @($randomSummary.Value)
+    }
 }
 $fixtureSource = Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/RandomSpawnPaperFixture.java'
 $report = [ordered]@{

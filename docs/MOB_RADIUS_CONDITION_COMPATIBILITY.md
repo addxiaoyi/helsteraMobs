@@ -48,9 +48,18 @@ Premium numeric-condition parity. Native parsing failures may also fall back
 to `1`; Helstera deliberately rejects them. See the
 [numeric compatibility contract](NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
 
-Bare random intervals such as `2-3` and `2to3` remain unsupported and preserved;
-they are not silently interpreted as subtraction. Use `(2-3)` for a subtraction
-expression (which evaluates to a rejected negative radius in this example).
+Bare random intervals such as `2-3` and `2to3` sample a fresh double on every
+evaluation, including the location path without metadata. The native factory
+recognizes intervals before the Premium gate. Helstera preserves endpoint order
+and uses the same `start + u * (end - start)` calculation: equal endpoints are
+deterministic, and reversed intervals such as `3to2` are valid. Both endpoints
+must be nonnegative with finite squares. Fractional endpoints follow the native
+interval grammar; the second endpoint starts with a digit. Negative endpoints,
+repeated separators and malformed ranges are rejected rather than defaulting.
+Use `(2-3)` for subtraction (which produces a rejected negative radius here).
+Native/runtime sample bounds and resampling checks do not claim matching random
+draws or verify a distribution. Native condition comparisons use populations
+that remain constant throughout each tested interval.
 
 ## Context and population
 
@@ -97,7 +106,7 @@ Reproduce the focused strict comparison after building the production JAR:
 
 ```powershell
 pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 `
-  -EvidenceRevision r38 -MobRadiusStrict `
+  -EvidenceRevision r39 -MobRadiusStrict `
   -VanillaCachePath srv-paper-random-spawn-replace-20261119-r21/cache/mojang_1.21.1.jar
 ```
 

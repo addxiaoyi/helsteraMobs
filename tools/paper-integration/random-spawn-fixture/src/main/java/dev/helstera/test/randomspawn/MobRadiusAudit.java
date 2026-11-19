@@ -258,6 +258,81 @@ final class MobRadiusAudit {
             probe.getLogger().info("MOB_RADIUS_DYNAMIC_SUMMARY|observations=" + dynamicRows
                     + "|placeholderOracles=" + oracleRows + "|publicEdition=true|passed=true");
             if (dynamicRows != 96 || oracleRows != 6) throw new IllegalStateException("Incomplete dynamic audit");
+            record RandomCase(String radius, double first, double last) { }
+            var randomCases = List.of(new RandomCase("0to0", 0, 0), new RandomCase("1to1", 1, 1),
+                    new RandomCase("2to2", 2, 2), new RandomCase("2-2", 2, 2),
+                    new RandomCase("2-3", 2, 3), new RandomCase("3to2", 3, 2),
+                    new RandomCase(".1to1", .1, 1), new RandomCase("2.1to2.9", 2.1, 2.9));
+            Class<?> radiusSpec = Class.forName("dev.helstera.api.util.MobRadiusSpec", true, runtimeLoader);
+            int randomRows = 0;
+            int randomSamples = 0;
+            for (RandomCase sample : randomCases) {
+                Object nativeRandom = placeholderDouble.getMethod("of", String.class).invoke(null, sample.radius());
+                Object runtimeRandom = ((Optional<?>) radiusSpec.getMethod("radiusInterval", String.class)
+                        .invoke(null, sample.radius())).orElseThrow();
+                boolean nativeFactory = nativeRandom.getClass().getSimpleName().equals("RandomDouble");
+                double nativeFirst = (double) nativeRandom.getClass().getMethod("getMin").invoke(nativeRandom);
+                double nativeLast = (double) nativeRandom.getClass().getMethod("getMax").invoke(nativeRandom);
+                double runtimeFirst = (double) runtimeRandom.getClass().getMethod("start").invoke(runtimeRandom);
+                double runtimeLast = (double) runtimeRandom.getClass().getMethod("end").invoke(runtimeRandom);
+                java.util.Set<Double> nativeDraws = new java.util.HashSet<>();
+                java.util.Set<Double> runtimeDraws = new java.util.HashSet<>();
+                boolean bounds = nativeFirst == sample.first() && nativeLast == sample.last()
+                        && runtimeFirst == sample.first() && runtimeLast == sample.last();
+                for (int i = 0; i < 32; i++) {
+                    double nativeDraw = (double) placeholderDouble.getMethod("get").invoke(nativeRandom);
+                    double runtimeDraw = (double) runtimeRandom.getClass().getMethod("sample").invoke(runtimeRandom);
+                    double low = Math.min(sample.first(), sample.last()), high = Math.max(sample.first(), sample.last());
+                    bounds &= nativeDraw >= low && nativeDraw <= high && runtimeDraw >= low && runtimeDraw <= high;
+                    nativeDraws.add(nativeDraw);
+                    runtimeDraws.add(runtimeDraw);
+                    randomSamples++;
+                }
+                boolean resampled = sample.first() == sample.last()
+                        ? nativeDraws.size() == 1 && runtimeDraws.size() == 1
+                        : nativeDraws.size() > 1 && runtimeDraws.size() > 1;
+                boolean passed = nativeFactory && bounds && resampled;
+                probe.getLogger().info("MOB_RADIUS_RANDOM_SAMPLES|radius=" + sample.radius()
+                        + "|drawPairs=32|nativeFactory=" + nativeFactory + "|bounds=" + bounds
+                        + "|resampled=" + resampled + "|passed=" + passed);
+                if (!passed) throw new IllegalStateException("Random radius factory/range differs");
+                for (String mode : List.of("caster", "location", "target-location")) {
+                    boolean casterMode = mode.equals("caster");
+                    String types = casterMode ? "ZOMBIE" : "HelsteraRadiusAuditMob";
+                    String source = "mobsInRadius{r=" + sample.radius() + ";a=" + (casterMode ? 2 : 1) + ";t=" + types + "}";
+                    Object config = configImpl.getConstructor(String.class).newInstance(source);
+                    Object nativeCondition = nativeType.getConstructor(String.class, configType).newInstance(source, config);
+                    resolveTypes.invoke(nativeCondition, (Object) types.split(","), config);
+                    Object context = execution.invoke(null, mode.equals("location") ? null : model,
+                            null, 1.0, -1.0, 0L, "random-radius-audit", null, null, List.of(), center);
+                    if (mode.equals("target-location"))
+                        context = contextType.getMethod("withLocationTarget", Location.class).invoke(context, center);
+                    // The population is constant throughout each tested interval, allowing independent draws.
+                    boolean expectedBase = Math.min(sample.first(), sample.last()) >= 2;
+                    for (boolean negate : new boolean[]{false, true}) {
+                        boolean nativeBase = casterMode ? (boolean) casterCheck.invoke(nativeCondition, metadata)
+                                : (boolean) locationCheck.invoke(nativeCondition, adaptLocation.invoke(null, center));
+                        String expression = (negate ? "!" : "") + source;
+                        Object mapped = translate.invoke(null, "?" + expression);
+                        boolean translated = (boolean) mapped.getClass().getMethod("translated").invoke(mapped);
+                        String key = translated ? (String) bind.invoke(skills, mapped.getClass().getMethod("condition").invoke(mapped)) : null;
+                        String directKey = (String) bind.invoke(skills, expression);
+                        boolean imported = key != null && (boolean) test.invoke(registry, key, context);
+                        boolean direct = directKey != null && (boolean) test.invoke(registry, directKey, context);
+                        boolean expected = negate != expectedBase;
+                        boolean matched = key != null && directKey != null && nativeBase == expectedBase
+                                && imported == expected && direct == expected;
+                        probe.getLogger().info("MOB_RADIUS_RANDOM|radius=" + sample.radius() + "|mode=" + mode
+                                + "|negated=" + negate + "|nativeBase=" + nativeBase + "|imported=" + imported
+                                + "|direct=" + direct + "|expected=" + expected + "|matched=" + matched);
+                        if (!matched) throw new IllegalStateException("Random radius condition differs");
+                        randomRows++;
+                    }
+                }
+            }
+            probe.getLogger().info("MOB_RADIUS_RANDOM_SUMMARY|comparisons=" + randomRows
+                    + "|drawPairs=" + randomSamples + "|passed=true");
+            if (randomRows != 48 || randomSamples != 256) throw new IllegalStateException("Incomplete random audit");
         } finally {
             entities.forEach(Entity::remove);
         }
