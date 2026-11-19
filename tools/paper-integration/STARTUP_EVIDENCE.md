@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-mob-radius-strict-20261119-r2` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `1ea4f5db1d4dec787b349f8c7b7910719793e92e7f8f5e83947e136efcfd60db`. [Strict report](reports/paper-1.21.1-mob-radius-strict-20261119-r2.json) · [Redacted server log](reports/paper-1.21.1-mob-radius-strict-20261119-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-mob-radius-strict-20261119-r2.client-logs.zip) This artifact passes 2,303 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-dynamic-radius-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `a7993771cf0c525583afb6b627eeeaf6b302c39539f672aae1fb26b7f98d0482`. [Strict report](reports/paper-1.21.1-dynamic-radius-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-dynamic-radius-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-dynamic-radius-strict-20261119-r1.client-logs.zip) This artifact passes 2,307 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,14 +9,51 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `e69092d994e339b5fb8557b45ff29f4c330c92efef856ff93a2df71d78451e8a`;
-redacted server log SHA-256: `7482c01720fa8a931ca98bf8780dcf3d16dc766a347adfaeac133a19d44f9c2e`;
-redacted client logs SHA-256: `0e0f98c2b2029a2517bfe9c2378436cafa27245781eafb9d5910cc84fa3e746d`.
-The preceding `srv-paper-player-syntax-strict-20261119-r2` report remains archived in the release manifest.
+Current full-report SHA-256: `08bb2b9c03030e8b620bf60e4b4ab881065a9bdf2679358454591dcd1c1c06c5`;
+redacted server log SHA-256: `b3e5f4c5d6feaa491734e06f5171170aab092f10bfccaa9e11debea0ae60297d`;
+redacted client logs SHA-256: `34ef4f2179aeb9c5c90387489c2e50d85e515925e03d5d0b5040d2fd8a6a22e3`.
+The preceding `srv-paper-mob-radius-strict-20261119-r2` and
+`srv-paper-player-syntax-strict-20261119-r2` reports remain archived in the release manifest.
 
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Dynamic radius and native registration
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r37` passes all
+20 probes on the current artifact. It retains 120 constant mob and 132 player
+native comparisons with no mismatches, and adds 96 dynamic cases across two
+caster health values, caster/location/explicit-location scopes, and positive/
+negated forms. Checks cover formulas, nested rounding, caster-vs-selected-target
+scope, missing variables, negative values, division by zero and squared-radius
+overflow. Six `PlaceholderString` oracles compare actual entity health and rounding.
+
+The actual MM public condition radius is static `1` in all dynamic cases; its
+expected condition outcome is recorded separately from Helstera's execution.
+This is an edition boundary, not Premium parity. The live registry contains
+`MobsInRadius` and lacks `MobsNearOrigin`, while `@MobsNearOrigin` resolves to
+`MobsNearOriginTargeter`. Third-party condition registrations and other versions
+remain outside this evidence. All spawned audit entities are removed.
+
+NATURAL sampling observes 8/8 cancellations at block light 0; configured type
+alternatives appear 10:6 over 16 valid events, without a distribution claim.
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r37.json), SHA-256
+  `3af74314b3bc627ec58b10263b3601bf1b5e0989679627047316cd3d3bb2df13`.
+- [Redacted log](reports/paper-1.21.1-random-spawn-replace-20261119-r37.log.gz), SHA-256
+  `1e2635966d30ddb506f464e8e2487a0d83d65f6a217322652253d8ab65b4f497`.
+- Plugin SHA-256: `a7993771cf0c525583afb6b627eeeaf6b302c39539f672aae1fb26b7f98d0482`.
+
+Diagnostic attempts `srv-paper-random-spawn-replace-20261119-r35` and
+`srv-paper-random-spawn-replace-20261119-r36` are excluded from release evidence:
+the first omitted the native targeter's required type list; the second assumed
+written health equals read-back health despite Bukkit float storage. The final
+probe supplies a type and compares the live entity's health. Neither failure
+required changing the production artifact. The r37 runner hash records the
+executed runner; its later Cookie/Bearer redaction fix was also applied to this
+archive. Report observations and the production JAR were unchanged. See the
+[contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).
 
 ## MobsInRadius native comparison
 
@@ -4263,7 +4300,8 @@ outside that managed lookup. This is exploratory Paper 1.21.11 evidence; the
 Paper 1.21.1 release target remains open.
 
 Fixture `srv-paper-integration-exploratory-1.21.11-r70` extends the passing
-`conditionUtilityAliases` probe with `MobsNearOrigin`, using the real execution
+`conditionUtilityAliases` probe with the Helstera `MobsNearOrigin` condition
+extension (not a built-in condition in MM 5.7.2), using the real execution
 origin, a radius of 4, and a `ZOMBIE` type filter. Existing managed-entity,
 spatial, fluid, and Mob Option probes remained passed. This is exploratory
 Paper 1.21.11 evidence; the Paper 1.21.1 release target remains open.

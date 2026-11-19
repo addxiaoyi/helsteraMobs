@@ -22,8 +22,35 @@ amount, radius and optional type-list arguments.
 Amounts are exact scalars, strict comparisons, or inclusive ascending ranges.
 Fractional bounds are valid, e.g. `>1.5` and `1.5to2.5`; the population itself
 is an integer. Unknown or duplicate argument names, malformed lists, reversed
-ranges, negative/nonfinite numbers and placeholder radii are not silently
-defaulted. Migration preserves the original text and direct binding rejects it.
+ranges, negative/nonfinite literals and malformed radius expressions are not
+silently defaulted. Migration preserves the original text and direct binding rejects it.
+
+## Dynamic radius
+
+Named radii accept the shared finite numeric expression grammar, including
+`r=min(<caster.hp>, 5)` and `r=<target.hp{r=0}>`. Expressions containing spaces
+and nested rounding braces survive migration and direct binding. Radius values
+are resolved again at each evaluation; amount and type filters remain constant.
+
+The metadata/caster path resolves target placeholders against the **caster**,
+matching the entity argument used by the pinned native condition. A selected
+skill target does not change that numeric scope. The location path evaluates
+constant formulas without metadata; entity, variable and random placeholders
+remain unresolved there. Negative, unresolved and nonfinite results, including
+overflow of the squared radius, reject the whole condition even under negation.
+
+This is an explicit extension relative to the pinned public MM 5.7.2 build:
+its numeric factory replaces dynamic radii with static `1` behind the Premium
+gate. The focused fixture observes this on actual native conditions, checks
+the public `PlaceholderString` health/rounding results, and separately asserts
+Helstera's dynamic execution. It neither changes licensing state nor proves
+Premium numeric-condition parity. Native parsing failures may also fall back
+to `1`; Helstera deliberately rejects them. See the
+[numeric compatibility contract](NUMERIC_PLACEHOLDER_COMPATIBILITY.md).
+
+Bare random intervals such as `2-3` and `2to3` remain unsupported and preserved;
+they are not silently interpreted as subtraction. Use `(2-3)` for a subtraction
+expression (which evaluates to a rejected negative radius in this example).
 
 ## Context and population
 
@@ -51,10 +78,15 @@ treated as evidence of valid input.
 
 Inclusive `>=`/`<=` comparisons, namespaced Bukkit names and case-insensitive
 custom-name lookup remain Helstera extensions; native equivalence for these
-extensions is not claimed. Placeholder-backed radius evaluation, native
+extensions is not claimed. Premium-enabled radius evaluation, native
 MythicEntity aliases outside Bukkit names, the native loaded-entity fallback
 without an ActiveMob, and other MythicMobs versions remain unverified.
-`MobsNearOrigin` is a separate condition and is not covered by this contract.
+`MobsNearOrigin` is a targeter in the pinned MM 5.7.2 build, with no same-named
+entry in its built-in condition registry. The focused fixture reads that live
+registry and resolves `@MobsNearOrigin` to the actual native targeter class.
+Helstera retains its `mobs-near-origin` **condition extension**; prior statements
+calling it an official MM condition are superseded. This does not establish
+absence of third-party custom conditions or behavior in other MM versions.
 
 The native fixture calls the pinned constructors, actual deferred type resolver
 and both check overloads. It compares migrated and directly bound production
@@ -65,7 +97,7 @@ Reproduce the focused strict comparison after building the production JAR:
 
 ```powershell
 pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 `
-  -EvidenceRevision r35 -MobRadiusStrict `
+  -EvidenceRevision r38 -MobRadiusStrict `
   -VanillaCachePath srv-paper-random-spawn-replace-20261119-r21/cache/mojang_1.21.1.jar
 ```
 

@@ -223,10 +223,14 @@ if ($process.ExitCode -ne 0) { throw "Paper exited with code $($process.ExitCode
 $log = [System.IO.File]::ReadAllText($latestLog)
 $safeLog = [regex]::Replace($log, '(?i)([?&]token=)[^&\s"''<>]+', '$1[REDACTED]')
 $safeLog = [regex]::Replace($safeLog, '(令牌[ \t]*[:：][ \t]*)\S+', '$1[REDACTED]')
+$safeLog = [regex]::Replace($safeLog, '(?i)(__cf_bm=)[^;\s"''<>]+', '$1[REDACTED]')
+$safeLog = [regex]::Replace($safeLog, '(?i)(\bauthorization\s*:\s*bearer\s+)[^\s"''<>]+', '$1[REDACTED]')
 [System.IO.File]::WriteAllText($latestLog, $safeLog, [System.Text.UTF8Encoding]::new($false))
 if ($safeLog -match '(?i)[?&]token=(?!\[REDACTED\])[^&\s"''<>]+' -or
-    $safeLog -match '令牌[ \t]*[:：][ \t]*(?!\[REDACTED\])\S+') {
-    throw 'Credential-like web token text remains after Paper-log redaction.'
+    $safeLog -match '令牌[ \t]*[:：][ \t]*(?!\[REDACTED\])\S+' -or
+    $safeLog -match '(?i)__cf_bm=(?!\[REDACTED\])[^;\s"''<>]+' -or
+    $safeLog -match '(?i)\bauthorization\s*:\s*bearer\s+(?!\[REDACTED\])[^\s"''<>]+') {
+    throw 'Credential text remains after Paper-log redaction.'
 }
 $importMatch = [regex]::Match($log, '(?m)^.*RANDOM_SPAWN_IMPORT\|passed=(true|false)\|[^\r\n]*$')
 if (-not $importMatch.Success -or $importMatch.Groups[1].Value -ne 'true') {
@@ -393,6 +397,28 @@ if ($MobRadiusAudit) {
         id = 'mobRadius.native-audit'
         status = if ($MobRadiusStrict) { 'passed' } else { 'observed' }
         observations = @($auditLines | ForEach-Object { $_.Value }) + @($auditSummary.Value)
+    }
+    $registryLine = [regex]::Match($log,
+        '(?m)^.*MOB_RADIUS_REGISTRY\|nearOriginCondition=false\|radiusCondition=true\|nearOriginTargeter=true\|targeterClass=io\.lumine\.mythic\.core\.skills\.targeters\.MobsNearOriginTargeter\s*$')
+    if (-not $registryLine.Success) { throw 'Missing native MobsNearOrigin registration evidence.' }
+    $dynamicLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_DYNAMIC\|radius=[^\r\n]+$')
+    $oracleLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_PLACEHOLDER\|token=[^\r\n]+$')
+    $dynamicSummary = [regex]::Match($log,
+        '(?m)^.*MOB_RADIUS_DYNAMIC_SUMMARY\|observations=96\|placeholderOracles=6\|publicEdition=true\|passed=true\s*$')
+    if ($dynamicLines.Count -ne 96 -or $oracleLines.Count -ne 6 -or -not $dynamicSummary.Success -or
+            @(@($dynamicLines) + @($oracleLines) | Where-Object { $_.Value -notmatch '\|passed=true$' }).Count -ne 0) {
+        throw 'Incomplete dynamic radius extension/edition-boundary evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'mobRadius.native-registration'
+        status = 'passed'
+        observations = @($registryLine.Value)
+    }
+    $probes += [ordered]@{
+        id = 'mobRadius.dynamic-extension-boundary'
+        status = 'passed'
+        observations = @($dynamicLines | ForEach-Object { $_.Value }) +
+            @($oracleLines | ForEach-Object { $_.Value }) + @($dynamicSummary.Value)
     }
 }
 $fixtureSource = Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/RandomSpawnPaperFixture.java'

@@ -1,14 +1,14 @@
 # MythicMobs Parity Matrix
 
-MobsInRadius correction (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r34` passes 18 probes, including 120
-native/imported/direct-binding mob-radius comparisons and the prior 132 player
-comparisons, all matching. Effective defaults are exact amount zero/radius zero;
-legacy values fill both omitted fields, counts support fractional bounds, and
-caster/location overloads use their distinct type filters. World/custom-provider
-failures remain false under negation. This supersedes older mob-radius defaults
-and population assumptions without closing the complete Conditions catalog.
-See the [contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and
+Dynamic MobsInRadius update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r37` passes 20 probes, retaining the 120
+constant mob and 132 player native comparisons. It adds 96 dynamic execution,
+negation and invalid-result checks plus six public native placeholder oracles.
+The public MM 5.7.2 numeric factory substitutes static `1`; Helstera resolves
+expressions at each evaluation. Premium condition equivalence remains unverified.
+Live registration confirms `MobsNearOrigin` is a targeter, with no same-named
+built-in condition; Helstera retains its condition extension. See the
+[contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and
 [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
@@ -241,7 +241,7 @@ mixed player/monster/animal candidates and invalid values. Strict Paper fixture
 angle/length boundaries, and malformed, duplicate, and unknown arguments. The
 broader Context targeters row remains `mapped-unverified`.
 
-Latest strict release evidence: `srv-paper-mob-radius-strict-20261119-r2` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `1ea4f5db1d4dec787b349f8c7b7910719793e92e7f8f5e83947e136efcfd60db`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-mob-radius-strict-20261119-r2.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,303 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict release evidence: `srv-paper-dynamic-radius-strict-20261119-r1` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `a7993771cf0c525583afb6b627eeeaf6b302c39539f672aae1fb26b7f98d0482`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-dynamic-radius-strict-20261119-r1.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,307 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Sunny` aliases `sunny`/`isSunny` now map to `weather-is clear`; `Thundering` aliases `thundering`/`isThundering`/`stormy`/`isStormy` now map to `weather-is thunder`. The importer, `SkillService`, and `ConditionListParser` agree on these names, and malformed or duplicate arguments remain fail-closed. Migration, API, AI, and plugin cross-module tests cover the alias paths and clear/thunder runtime states. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Crouching` aliases `sneaking`/`isCrouching`/`isSneaking`, and `Wearing` aliases `isWearing`/`wielding`/`isWielding`, now map through the importer, `SkillService`, and `ConditionListParser`. The existing `is-sneaking` and `wearing` evaluators are reused; wearing item arguments are strict and unknown, duplicate, or empty values fail closed. Migration, API, AI, and plugin cross-module tests cover Player sneaking, helmet matching, aliases, and preservation. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
@@ -3533,7 +3533,7 @@ row remains `mapped-unverified` until the declared catalog is covered.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-mob-radius-strict-20261119-r2` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `1ea4f5db1d4dec787b349f8c7b7910719793e92e7f8f5e83947e136efcfd60db`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-player-radius-strict-20261119-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-dynamic-radius-strict-20261119-r1` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `a7993771cf0c525583afb6b627eeeaf6b302c39539f672aae1fb26b7f98d0482`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-player-radius-strict-20261119-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -4150,13 +4150,16 @@ vanilla Zombie against MythicMobs' own API oracle, then checks direct and both
 imported condition paths. This evidence covers MythicMobs 5.7.2 on Paper
 1.21.1-133; other versions and the complete Conditions catalog remain open.
 
-Origin population condition update: official `MobsNearOrigin` now evaluates
+Origin population condition extension: Helstera `MobsNearOrigin` evaluates
 valid Bukkit `Mob` entities around `BehaviorContext.origin`, with Mythic amount
 range, radius, and exact Bukkit entity-type filters. Unknown type filters fail
 closed; MythicMob custom type names are not guessed. Migration/runtime tests
 cover the structured arguments, and exploratory Paper
 `srv-paper-integration-exploratory-1.21.11-r70` keeps the aggregate utility
-probe passed.
+probe passed. The pinned MM 5.7.2 built-in registry has no same-named condition;
+its `@MobsNearOrigin` resolves to a native targeter. See the
+[MobsInRadius/registration contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).
+Other MM versions and third-party custom condition registrations remain unverified.
 
 Spawn-distance condition update: official `DistanceFromSpawn` now compares the
 active target/origin location to `World#getSpawnLocation()` with Mythic range

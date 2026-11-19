@@ -1,14 +1,14 @@
 # Isolated Paper Integration Server
 
-MobsInRadius correction (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r34` passes 18 probes, including 120
-native/imported/direct-binding mob-radius comparisons and the prior 132 player
-comparisons, all matching. Effective defaults are exact amount zero/radius zero;
-legacy values fill both omitted fields, counts support fractional bounds, and
-caster/location overloads use their distinct type filters. World/custom-provider
-failures remain false under negation. This supersedes older mob-radius defaults
-and population assumptions without closing the complete Conditions catalog.
-See the [contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and
+Dynamic MobsInRadius update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r37` passes 20 probes, retaining the 120
+constant mob and 132 player native comparisons. It adds 96 dynamic execution,
+negation and invalid-result checks plus six public native placeholder oracles.
+The public MM 5.7.2 numeric factory substitutes static `1`; Helstera resolves
+expressions at each evaluation. Premium condition equivalence remains unverified.
+Live registration confirms `MobsNearOrigin` is a targeter, with no same-named
+built-in condition; Helstera retains its condition extension. See the
+[contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and
 [Paper evidence](STARTUP_EVIDENCE.md).
 
 
@@ -178,7 +178,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-mob-radius-strict-20261119-r2` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `1ea4f5db1d4dec787b349f8c7b7910719793e92e7f8f5e83947e136efcfd60db`. See the [strict report](reports/paper-1.21.1-mob-radius-strict-20261119-r2.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,303 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-dynamic-radius-strict-20261119-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `a7993771cf0c525583afb6b627eeeaf6b302c39539f672aae1fb26b7f98d0482`. See the [strict report](reports/paper-1.21.1-dynamic-radius-strict-20261119-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,307 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player

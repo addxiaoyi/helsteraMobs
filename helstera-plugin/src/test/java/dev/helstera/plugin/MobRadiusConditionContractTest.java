@@ -10,6 +10,7 @@ import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
+import org.bukkit.entity.LivingEntity;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
@@ -144,7 +145,7 @@ class MobRadiusConditionContractTest {
         for (String source : List.of("mobsInRadius{r=5;r=6}", "mobsInRadius{a=1;amount=2}",
                 "mobsInRadius{t=ZOMBIE,,COW}", "mobsInRadius{a=3to2}", "mobsInRadius{r=NaN}",
                 "mobsInRadius{r=1e309}", "mobsInRadius{r=5;x=1}", "mobsInRadius{}2",
-                "mobsInRadius{t=ZOMBIE} >1", "mobsInRadius{r=5} 1 junk", "mobsInRadius{r=<caster.var.r>}",
+                "mobsInRadius{t=ZOMBIE} >1", "mobsInRadius{r=5} 1 junk", "mobsInRadius{r=-1}",
                 "mobsInRadius{a=1;}", "mobsInRadius{r=5}{a=1}")) {
             var mapped = MmConditions.translate("?" + source);
             assertFalse(mapped.translated(), source);
@@ -152,5 +153,63 @@ class MobRadiusConditionContractTest {
             assertNull(skills.bindCondition(source), source);
         }
         assertNull(skills.bindCondition("mobs-in-radius 1 5 ZOMBIE ignored"));
+    }
+
+    @Test void dynamicRadiusIsReevaluatedAndTargetHealthMeansCasterHealth() {
+        LivingEntity caster = mock(LivingEntity.class);
+        when(caster.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(caster.getLocation()).thenReturn(center);
+        when(caster.getMaxHealth()).thenReturn(20.0);
+        when(caster.getHealth()).thenReturn(1.4);
+        LivingEntity target = mock(LivingEntity.class);
+        when(target.getHealth()).thenReturn(10.0);
+        when(target.getMaxHealth()).thenReturn(20.0);
+        when(target.getLocation()).thenReturn(center.clone().add(40, 0, 0));
+        var ctx = context(caster, center).withTargetEntity(target);
+        doReturn(List.of(entity(EntityType.ZOMBIE, 1, 0), entity(EntityType.ZOMBIE, 2, 0)))
+                .when(world).getNearbyEntities(any(Location.class), anyDouble(), anyDouble(), anyDouble());
+        String source = "mobsInRadius{r=<target.hp{r=0}>;t=ZOMBIE;a=1}";
+        assertTrue(imported(source, ctx));
+        assertTrue(imported("mobsInRadius{r=\"min(<caster.hp>, 5)\";t=ZOMBIE;a=1}", ctx));
+        when(caster.getHealth()).thenReturn(2.4);
+        assertFalse(imported(source, ctx));
+        assertTrue(imported("mobsInRadius{r=<caster.hp{r=0}>;t=ZOMBIE;a=2}", ctx));
+        verify(world, atLeastOnce()).getNearbyEntities(center, 1, 1, 1);
+        verify(world, atLeastOnce()).getNearbyEntities(center, 2, 2, 2);
+    }
+
+    @Test void locationFormulaWorksButMetadataIsUnavailableEvenWithRetainedCaster() {
+        Entity custom = entity(EntityType.COW, 2, 0);
+        doReturn(List.of(custom)).when(world).getNearbyEntities(any(Location.class), anyDouble(), anyDouble(), anyDouble());
+        SkillExtras.mythicMobTypeQuery(new SkillExtras.MythicMobTypeQuery() {
+            public boolean isKnownType(String name) { return true; }
+            public Optional<Boolean> matches(Entity entity, String name) { return Optional.of(entity == custom); }
+        });
+        for (var ctx : List.of(context(null, center), context(custom, center).withLocationTarget(center))) {
+            assertTrue(imported("mobsInRadius{r=min(2, 5);a=1;t=TestMob}", ctx));
+            for (String prefix : List.of("", "!")) {
+                assertFalse(imported(prefix + "mobsInRadius{r=<caster.hp>;a=0;t=TestMob}", ctx));
+                assertFalse(imported(prefix + "mobsInRadius{r=<random.2to2>;a=0;t=TestMob}", ctx));
+            }
+        }
+    }
+
+    @Test void badDynamicResultsRejectBeforeQueryAndRemainFalseUnderNegation() {
+        Entity caster = entity(EntityType.ZOMBIE, 0, 0);
+        var ctx = context(caster, center);
+        for (String radius : List.of("<caster.var.missing>", "1/0", "(2-3)", "1e155*2", "sqrt(-1)")) {
+            for (String prefix : List.of("", "!"))
+                assertFalse(imported(prefix + "mobsInRadius{r=" + radius + ";t=ZOMBIE;a=0}", ctx));
+        }
+        verify(world, never()).getNearbyEntities(any(Location.class), anyDouble(), anyDouble(), anyDouble());
+    }
+
+    @Test void malformedNestedAndQuotedRadiusArgumentsRemainUnsupported() {
+        for (String radius : List.of("<caster.hp{r=0;bogus=1}>", "<caster.hp{r=0>",
+                "<caster.hp{r=0}}>", "min(2,)", "\"2 + 3", "5} junk{r=2", "1to5", "2-3")) {
+            String source = "mobsInRadius{r=" + radius + ";t=ZOMBIE;a=0}";
+            assertFalse(MmConditions.translate("?" + source).translated(), source);
+            assertNull(skills.bindCondition(source), source);
+        }
     }
 }

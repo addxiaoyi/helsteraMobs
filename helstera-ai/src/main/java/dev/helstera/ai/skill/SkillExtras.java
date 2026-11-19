@@ -4685,9 +4685,8 @@ public final class SkillExtras {
                             || !dev.helstera.api.util.MobRadiusSpec.validRadius(rawRadius))
                         throw new IllegalArgumentException("invalid mobs-in-radius arguments");
                     NumberRange amount = numberRange(List.of(rawAmount), 0);
-                    double radius = Double.parseDouble(rawRadius);
                     Set<String> types = mobTypeFilter(a, 2);
-                    return ctx -> amount.contains(countMobsNear(ctx, radius, types));
+                    return ctx -> amount.contains(countMobsNear(ctx, resolveMobRadius(rawRadius, ctx), types));
                 }),
                 Map.entry("mobs-near-origin", (SkillCatalog.ConditionFactory) a -> {
                     NumberRange amount = nonNegativeCountRange(a, 0, "1");
@@ -9588,6 +9587,27 @@ public final class SkillExtras {
             throw new IllegalStateException("Player radius condition requires a valid location");
         }
         return location;
+    }
+
+    private static double resolveMobRadius(String raw, BehaviorContext ctx) {
+        if (!dev.helstera.api.util.NumericExpression.dynamic(raw))
+            return dev.helstera.api.util.MobRadiusSpec.requireRadius(Double.parseDouble(raw));
+        BehaviorContext scoped = null;
+        if (ctx != null && ctx.targetLocation().isEmpty() && ctx.instance() != null) {
+            if (!ctx.instanceValid()) throw new IllegalStateException("MobsInRadius caster is unavailable");
+            Entity source = ctx.instance().baseEntity().orElseThrow(
+                    () -> new IllegalStateException("MobsInRadius caster has no entity"));
+            // Native metadata check passes the caster as the placeholder target.
+            // Clear any unrelated entity target even when the caster is not living.
+            scoped = source instanceof LivingEntity living ? ctx.withTargetEntity(living)
+                    : ctx.withLocationTarget(source.getLocation());
+        }
+        BehaviorContext numericContext = scoped;
+        double radius = dev.helstera.api.util.NumericExpression.resolve(raw,
+                token -> numericContext == null ? token : Placeholders.resolve(token, numericContext));
+        // Native location check uses get() without metadata. Unresolved values fail closed here;
+        // the public MM edition's static-1 fallback is not replicated.
+        return dev.helstera.api.util.MobRadiusSpec.requireRadius(radius);
     }
 
     private static int countMobsNear(

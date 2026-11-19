@@ -362,7 +362,7 @@ public final class SkillService {
         }
         String normalized;
         if ("mobs-in-radius".equals(rawCanonicalName)
-                && (conditionSpec.indexOf('{') >= 0 || !rawConditionName.equals("mobs-in-radius")
+                && (conditionSpec.substring(rawConditionName.length()).trim().startsWith("{") || !rawConditionName.equals("mobs-in-radius")
                     && split(conditionSpec).size() <= 2)) {
             try {
                 normalized = dev.helstera.api.util.MobRadiusSpec.parse(conditionSpec).runtime();
@@ -370,6 +370,9 @@ public final class SkillService {
                 warn("生物半径条件参数无效 \"" + spec + "\"");
                 return null;
             }
+        } else if ("mobs-in-radius".equals(rawCanonicalName)) {
+            // Positional radii may contain quoted formulas and placeholder rounding braces.
+            normalized = conditionSpec;
         } else if (conditionSpec.indexOf('{') >= 0 && "altitude".equals(rawCanonicalName)) {
             normalized = normalizeNamedAltitudeCondition(conditionSpec);
             if (normalized == null) {
