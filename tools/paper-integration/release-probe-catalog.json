@@ -1133,7 +1133,7 @@
     {
       "id": "goatOptionsImported",
       "status": "passed",
-      "requiredObservationPattern": "^goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true$"
+      "requiredObservationPattern": "^goat-options result=true imported=true screaming=true control-screaming=false default-screaming=(?:true|false) wrong-type-preserved=true invalid-preserved=true default-preserved=true invalid-default-preserved=true$"
     },
     {
       "id": "frogOptionsImported",

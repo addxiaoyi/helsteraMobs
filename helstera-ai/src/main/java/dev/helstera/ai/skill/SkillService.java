@@ -1510,7 +1510,14 @@ public final class SkillService {
         }
 
         Double chance = parsed == null ? null : parsed.chance();
-        String targeterSpec = parsed == null ? null : parsed.targeter();
+        dev.helstera.api.behavior.Targeters.PositionTargeterSpec positionSpec;
+        try {
+            positionSpec = dev.helstera.api.behavior.Targeters.positionTargeterSpec(parsed == null ? null : parsed.targeter());
+        } catch (IllegalArgumentException invalid) {
+            warn("invalid location target conditions in \"" + spec + "\": " + invalid.getMessage());
+            return null;
+        }
+        String targeterSpec = positionSpec.selector();
         long delayTicks;
         int repeat;
         long repeatInterval;
@@ -1567,6 +1574,11 @@ public final class SkillService {
         List<String> conditionKeys = new ArrayList<>();
         List<String> triggerConditionKeys = new ArrayList<>();
         List<String> targetConditionKeys = new ArrayList<>();
+        for (var condition : positionSpec.conditions()) {
+            String key = bindCondition((condition.expected() ? "" : "!") + condition.expression());
+            if (key == null) return null;
+            targetConditionKeys.add(key);
+        }
         if (parsed != null) {
             for (String condition : parsed.inlineConditions()) {
                 boolean triggerCondition = condition.startsWith("~");
@@ -1579,17 +1591,6 @@ public final class SkillService {
                 String key = bindCondition(condition);
                 if (key == null) return null;
                 targetConditionKeys.add(key);
-            }
-        }
-        if (!targetConditionKeys.isEmpty() && targeterSpec != null) {
-            String targeterName = targeterSpec.trim().replaceFirst("^@", "");
-            int targeterArguments = targeterName.indexOf('{');
-            if (targeterArguments >= 0) targeterName = targeterName.substring(0, targeterArguments);
-            if (dev.helstera.api.behavior.Targeters.isLocationName(targeterName)
-                    || dev.helstera.api.behavior.Targeters.isVariableLocationName(targeterName)
-                    || PinTargeter.recognizes(targeterSpec)) {
-                warn("per-target inline conditions require an entity targeter in \"" + spec + "\"");
-                return null;
             }
         }
 
@@ -1705,7 +1706,7 @@ public final class SkillService {
                 || dev.helstera.api.behavior.Targeters.isVariableLocationName(targeterName.trim())) {
             dev.helstera.api.behavior.Targeters.resolveLocation(targeterSpec, ctx)
                     .filter(location -> location.getWorld() != null)
-                    .ifPresent(location -> action.accept(ctx.withLocationTarget(location)));
+                    .ifPresent(location -> invokeLocationTargeted(action, ctx, location, targetConditionKeys));
             return;
         }
         if (PinTargeter.recognizes(targeterSpec)) {
@@ -1713,7 +1714,7 @@ public final class SkillService {
                     targeterSpec, SkillExtras.pinRegistry());
             if (locations == null) return;
             for (org.bukkit.Location location : locations) {
-                action.accept(ctx.withLocationTarget(location));
+                invokeLocationTargeted(action, ctx, location, targetConditionKeys);
             }
             return;
         }
@@ -1768,6 +1769,14 @@ public final class SkillService {
                 ctx.origin().orElse(null), tree, ctx.cancellableEvent().orElse(null),
                 ctx.damageCause().orElse(null)).withExecutionAudienceFrom(ctx);
         action.accept(scoped);
+    }
+
+    private void invokeLocationTargeted(Consumer<dev.helstera.api.behavior.BehaviorContext> action,
+                                       dev.helstera.api.behavior.BehaviorContext ctx,
+                                       org.bukkit.Location location, List<String> conditions) {
+        var scoped = ctx.withLocationTarget(location);
+        if (conditionsPass(conditions, scoped.withConditionScope(
+                dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) action.accept(scoped);
     }
 
     private static boolean isExecutionAttribute(String key) {

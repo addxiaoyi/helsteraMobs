@@ -9525,7 +9525,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         boolean outputDirectoryExisted = Files.isDirectory(outputDirectory);
         var mobFiles = new java.util.ArrayList<Path>();
         var instanceIds = new java.util.ArrayList<Integer>();
+        var spawnedDefaults = new java.util.HashMap<java.util.UUID, Boolean>();
+        // Paper randomly creates screaming goats. Capture the native value before
+        // spawnMobCore applies configured entity options, rather than assuming false.
+        org.bukkit.event.Listener spawnObserver = new org.bukkit.event.Listener() {
+            @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+            public void observe(org.bukkit.event.entity.CreatureSpawnEvent event) {
+                if (event.getEntity() instanceof org.bukkit.entity.Goat goat)
+                    spawnedDefaults.put(goat.getUniqueId(), goat.isScreaming());
+            }
+        };
         try {
+            getServer().getPluginManager().registerEvents(spawnObserver, this);
             String suffix = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8);
             sourceRoot = Files.createTempDirectory("helstera-goat-options-import-");
             Path sourceDirectory = Files.createDirectories(sourceRoot.resolve("Mobs"));
@@ -9609,9 +9620,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     : wrongOptions.getConfigurationSection("entity.unsupported.Options");
             var invalidUnsupported = invalidOptions == null ? null
                     : invalidOptions.getConfigurationSection("entity.unsupported.Options");
+            boolean defaultPreserved = defaultGoat != null
+                    && java.util.Objects.equals(spawnedDefaults.get(defaultGoat.getUniqueId()), defaultGoat.isScreaming());
+            boolean invalidDefaultPreserved = invalidGoat != null
+                    && java.util.Objects.equals(spawnedDefaults.get(invalidGoat.getUniqueId()), invalidGoat.isScreaming());
             boolean imported = configured != null && control != null && defaultGoat != null && invalidGoat != null
                     && wrongTypeEntity instanceof org.bukkit.entity.Zombie
-                    && configured.isScreaming() && !control.isScreaming() && !defaultGoat.isScreaming()
+                    && configured.isScreaming() && !control.isScreaming() && defaultPreserved
                     && wrongUnsupported != null && wrongUnsupported.getBoolean("Screaming")
                     && invalidUnsupported != null
                     && "maybe".equalsIgnoreCase(invalidUnsupported.getString("Screaming"));
@@ -9619,7 +9634,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && wrongUnsupported != null && wrongUnsupported.getBoolean("Screaming");
             boolean invalidPreserved = invalidUnsupported != null
                     && "maybe".equalsIgnoreCase(invalidUnsupported.getString("Screaming"))
-                    && !invalidGoat.isScreaming();
+                    && invalidDefaultPreserved;
             boolean passed = imported && wrongTypePreserved && invalidPreserved;
             getLogger().info("[自检] goat-options result=" + passed
                     + " imported=" + imported
@@ -9627,10 +9642,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " control-screaming=" + (control != null && control.isScreaming())
                     + " default-screaming=" + (defaultGoat != null && defaultGoat.isScreaming())
                     + " wrong-type-preserved=" + wrongTypePreserved
-                    + " invalid-preserved=" + invalidPreserved);
+                    + " invalid-preserved=" + invalidPreserved
+                    + " default-preserved=" + defaultPreserved
+                    + " invalid-default-preserved=" + invalidDefaultPreserved);
         } catch (Throwable failure) {
             getLogger().warning("[自检] goat-options result=false imported=false error=" + failure);
         } finally {
+            org.bukkit.event.HandlerList.unregisterAll(spawnObserver);
             cleanupImportedMobProbe(sourceRoot, outputDirectory, outputDirectoryExisted, mobFiles, instanceIds);
         }
     }
@@ -26682,10 +26700,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                       Type: ZOMBIE
                       Options:
                         PreventSunburn: true
+                        Despawn: NEVER
                     %s:
                       Type: ZOMBIE
                       Options:
                         PreventSunburn: false
+                        Despawn: NEVER
                     """.formatted(protectedSourceId, controlSourceId));
 
             var importer = new MythicMobsImporter();
@@ -26768,6 +26788,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             probeIds[0] = protectedZombie.getUniqueId();
             probeIds[1] = controlZombie.getUniqueId();
+            // Other client workflows move observers during the daylight sample.
+            // Keep these owned probe entities until their explicit cleanup.
+            protectedZombie.setRemoveWhenFarAway(false);
+            controlZombie.setRemoveWhenFarAway(false);
             protectedZombie.setAI(true);
             controlZombie.setAI(true);
             protectedZombie.setShouldBurnInDay(true);

@@ -113,6 +113,42 @@ treated as evidence of valid input.
 
 ## Scope and remaining work
 
+Helstera location targeters accept Mythic-style bracketed condition lists, for example:
+
+```yaml
+Skills:
+  - skill{s=effect} @Pin{name=route;conditions=[ - mobsInRadius{r=5;a=1;t=Guard} true ]}
+```
+
+`conditions`, `targetconditions`, `cond` and `c` share one parser. Each selected
+position is checked in target scope before its action runs. `false` negates the
+predicate; failed registry lookups remain failures under negation. Multiple
+conditions must all pass. Empty/malformed lists, duplicate condition aliases
+and unsupported imported conditions are rejected rather than silently dropped.
+Named locations, variable locations, pins and pin regions use the same execution
+gate. Action contexts retain location and audience metadata without a fabricated
+entity target. Variable locations and conditions are resolved at each execution.
+For explicit `Location`/`Loc`/`L`, the existing unbracketed `c=x,y,z,yaw,pitch`
+coordinate alias remains supported and can accompany a separate `conditions`
+list; bracketed `c=[...]` denotes conditions instead. Selector arguments and
+condition arguments are separated by semicolons.
+
+The pinned public MM 5.7.2 targeter reads the list text, but only activates its
+condition list behind the Premium switch (`isVolatile`). Its actual
+`ILocationSelector.filter` leaves the tested locations unfiltered. The fixture
+observes that boundary without changing licensing state or injecting guards.
+It separately parses the same list through the public condition library and
+calls `evaluateTargets` as a reference for Helstera's filtering. Those comparisons
+verify condition-library semantics on selected positions, not Premium targeter
+execution. Bracketed location filtering is therefore an extension relative to
+this public artifact; Premium-enabled targeter equivalence remains unverified.
+
+Helstera also accepts `?@condition` after a location targeter. This is an
+extension: the pinned MM 5.7.2 mechanic parser has `?~` and `?` branches, but no
+dedicated `?@` branch. The fixture uses bracketed lists, not that syntax. Earlier roadmap
+wording that location/pin guards were omitted was inaccurate: `?@` was rejected
+at binding time, while native list arguments were unsupported.
+
 Inclusive `>=`/`<=` comparisons, namespaced Bukkit names and case-insensitive
 custom-name lookup remain Helstera extensions; native equivalence for these
 extensions is not claimed. Premium-enabled radius evaluation, the complete
@@ -138,16 +174,20 @@ two type filters, three exact amounts, positive/negative outcomes, eight scenes
 and both import/direct paths. It checks retained target UUIDs, action invocation,
 location preservation and execution scope. Message delivery is replaced by an
 observer after the production gates; this is not a message-delivery claim.
-Non-living trigger dispatch and condition action suffixes beyond true/false
-remain outside this verified slice. Inline location/pin targeters currently do
-not apply target-condition guards; that dispatcher gap remains open. The
-complete native dispatcher is not yet covered.
+A further 672 location-targeter comparisons cover seven scenes and four
+argument aliases, observing the public targeter boundary and comparing retained
+coordinates and action counts with the native condition-library reference on
+imported/direct paths. They do not verify Premium targeter execution.
+Non-living trigger dispatch, condition action suffixes beyond true/false and
+native interface dispatch for other location predicates (including entity-only
+conditions on locations) remain outside this verified slice. Location-selection
+offsets/sorting/limits and the complete native dispatcher are not yet covered.
 
 Reproduce the focused strict comparison after building the production JAR:
 
 ```powershell
 pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 `
-  -EvidenceRevision r47 -MobRadiusStrict `
+  -EvidenceRevision r52 -MobRadiusStrict `
   -VanillaCachePath srv-paper-random-spawn-replace-20261119-r21/cache/mojang_1.21.1.jar
 ```
 

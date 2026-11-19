@@ -1,18 +1,23 @@
 # MythicMobs Parity Roadmap
 
-MobsInRadius condition-dispatch update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r46` passes 23 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Its 576 new comparisons use actual native
-`evaluateCaster`, `evaluateTargets` and `evaluateTrigger` calls against
-full-file imported and direct production skills. Skill `Conditions` are now
-imported as caster guards; target/trigger radius checks use their own locations.
-Empty targets and dead/invalid entities are rejected before predicates or
-negation, and explicit locations survive skill-tree creation. Earlier active
-registry, aliases, constant/dynamic/random radius and player comparisons pass.
-Inline location/pin target guards, non-living trigger dispatch, broader condition
-actions, Premium expressions and other versions remain open; the complete
-Conditions row stays `mapped-unverified`. See the
-[contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+Location-targeter condition update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r51` passes 24 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Its 672 new comparisons check the public-build targeter boundary
+and compare filtering against the public native condition library across seven
+scenes, four argument aliases, two type filters, three amounts, true/false
+outcomes and imported/direct execution. Positions are filtered before actions;
+explicit coordinates, variable locations, pins and pin regions retain their
+location context. The existing `Location/Loc/L` coordinate alias `c=x,y,z,yaw,pitch`
+remains valid alongside bracketed `c=[...]` guards. The earlier 576 condition
+dispatch comparisons and radius/RandomSpawns controls also pass.
+Public MM reads bracketed lists but gates their activation behind Premium.
+Its actual selector filter remains unfiltered; Helstera filtering is compared
+separately with native condition-library evaluation. This proves neither
+Premium targeter equivalence nor `?@` syntax, which is a Helstera extension.
+Other native condition interfaces, non-living triggers, action suffixes,
+selection modifiers, Premium expressions and other versions remain open.
+The complete Conditions and Context Targeters rows stay `mapped-unverified`.
+See the [contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 This is the ordered worklist for closing the compatibility gaps recorded in the
@@ -22,12 +27,14 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after the MobsInRadius condition-dispatch implementation:
+Immediate continuation after the location-targeter condition implementation:
 
 1. Extend native condition dispatch beyond the verified caster, living-trigger
-   and entity/explicit-location target slice. Inline location/pin targeters still
-   omit target-condition guards; non-living trigger dispatch and condition actions
-   beyond true/false need implementation and comparison. Audit the remaining
+   and entity/explicit-location target slice. Location-targeter radius
+   lists now have 672 condition-library/boundary comparisons; the earlier claim that inline guards were
+   omitted is corrected: they were rejected at binding. Next compare other
+   condition interfaces on locations, non-living trigger dispatch, condition
+   actions beyond true/false and selection offsets/sorting/limits. Audit the remaining
    MythicEntity catalog: five aliases, custom-name priority and
    unregister/reregister lifecycle have scoped native evidence.
    Stable native `isLoadedMob` requires an ActiveMob;
@@ -54,7 +61,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-radius-dispatch-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `6d6261bbacfdce63ceb324935b961233926fa4b1bc3ee75e27bbd159f2979fa4`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,312 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-location-guards-strict-20261119-r3` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `16c347b088cf9a099e7a49de39fd19edd45e07485401a945b671a9249be40bca`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,313 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

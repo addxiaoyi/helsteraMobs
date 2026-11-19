@@ -418,7 +418,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'goatOptionsImported'
     $fullReport.probes += [pscustomobject]@{
-        id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true')
+        id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true default-preserved=true invalid-default-preserved=true')
     }
     $fullReport.expectedProbeIds += 'frogOptionsImported'
     $fullReport.probes += [pscustomobject]@{

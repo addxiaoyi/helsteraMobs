@@ -598,7 +598,57 @@ public final class Targeters {
         return applySkipAndLimit(selected, parsed);
     }
 
-    private record ConditionalCondition(String expression, boolean expected) {
+    public record ConditionalCondition(String expression, boolean expected) {
+    }
+
+    /** Separates native location-targeter guards from arguments owned by the selector. */
+    public record PositionTargeterSpec(String selector, List<ConditionalCondition> conditions) {
+        public PositionTargeterSpec { conditions = List.copyOf(conditions); }
+    }
+
+    public static boolean isPositionTargeter(String spec) {
+        if (spec == null) return false;
+        String name = spec.trim().replaceFirst("^@", "").split("\\{", 2)[0].trim();
+        String compact = name.replace("_", "").replace("-", "").toLowerCase(Locale.ROOT);
+        return isLocationName(name) || isVariableLocationName(name)
+                || compact.equals("pin") || compact.equals("blocksinpinregion");
+    }
+
+    /** Malformed or duplicate guards must never turn into an unguarded location action. */
+    public static PositionTargeterSpec positionTargeterSpec(String spec) {
+        if (!isPositionTargeter(spec)) return new PositionTargeterSpec(spec, List.of());
+        int open = spec.indexOf('{');
+        if (open < 0) return new PositionTargeterSpec(spec, List.of());
+        if (!spec.endsWith("}")) throw new IllegalArgumentException("Unclosed location targeter");
+        String body = spec.substring(open + 1, spec.length() - 1);
+        if (!validArgumentSyntax(body)) throw new IllegalArgumentException("Malformed location targeter");
+        List<String> retained = new ArrayList<>();
+        List<ConditionalCondition> conditions = null;
+        boolean explicitLocation = isExplicitLocationName(spec.substring(0, open).trim().replaceFirst("^@", ""));
+        for (String argument : splitSpecArguments(body)) {
+            int equals = argument.indexOf('=');
+            String name = equals < 0 ? "" : argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+            if (!java.util.Set.of("targetconditions", "conditions", "cond", "c").contains(name)) {
+                retained.add(argument);
+                continue;
+            }
+            String value = argument.substring(equals + 1).trim();
+            // Location historically uses c for a coordinate tuple; bracketed c is a guard list.
+            if (explicitLocation && name.equals("c") && !value.startsWith("[")) {
+                retained.add(argument);
+                continue;
+            }
+            if (conditions != null) throw new IllegalArgumentException("Duplicate location target conditions");
+            if (!value.startsWith("[") || !value.endsWith("]"))
+                throw new IllegalArgumentException("Location target conditions require a bracketed list");
+            String inner = value.substring(1, value.length() - 1).trim();
+            if (inner.isBlank()) throw new IllegalArgumentException("Empty location target conditions");
+            conditions = parseConditionalConditions(inner.startsWith("-") ? inner : "- " + inner);
+            if (conditions.isEmpty()) throw new IllegalArgumentException("Malformed location target conditions");
+        }
+        if (conditions == null) return new PositionTargeterSpec(spec, List.of());
+        String selector = spec.substring(0, open) + (retained.isEmpty() ? "" : "{" + String.join(";", retained) + "}");
+        return new PositionTargeterSpec(selector, conditions);
     }
 
     private static List<ConditionalCondition> conditionalConditions(List<String> args) {

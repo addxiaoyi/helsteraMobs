@@ -2184,9 +2184,26 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
 
         String variableTargeter = locationTargeter(raw);
+        if (variableTargeter != null) {
+            try {
+                var position = dev.helstera.api.behavior.Targeters.positionTargeterSpec(variableTargeter);
+                for (var condition : position.conditions()) {
+                    if (!MmConditions.translate(condition.expression()).translated())
+                        throw new IllegalArgumentException("Unsupported location target condition: " + condition.expression());
+                }
+                variableTargeter = position.selector();
+            } catch (IllegalArgumentException invalid) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", invalid.getMessage() + "; original line preserved.", "WARN");
+                return;
+            }
+        }
         boolean variableLocation = variableTargeter != null && dev.helstera.api.behavior.Targeters
                 .isVariableLocationName(variableTargeter.substring(1).split("\\{", 2)[0]);
-        if (variableTargeter != null && !(variableLocation
+        if (variableTargeter != null && (variableLocation
+                || dev.helstera.api.behavior.Targeters.isLocationName(variableTargeter)) && !(variableLocation
                 ? dev.helstera.api.behavior.Targeters.validVariableLocationSpec(variableTargeter)
                 : dev.helstera.api.behavior.Targeters.validLocationTargeterSpec(variableTargeter))) {
             scan.unsupported.add(raw);
@@ -2769,8 +2786,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             String target = raw.substring(i, end);
             int brace = target.indexOf('{');
             String name = (brace < 0 ? target : target.substring(0, brace)).toLowerCase(Locale.ROOT);
-            if (dev.helstera.api.behavior.Targeters.isVariableLocationName(name.substring(1))
-                    || dev.helstera.api.behavior.Targeters.isLocationName(name.substring(1))) return target;
+            if (dev.helstera.api.behavior.Targeters.isPositionTargeter(name)) return target;
             i = end - 1;
         }
         return null;

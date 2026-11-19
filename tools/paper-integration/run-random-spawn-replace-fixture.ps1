@@ -447,6 +447,18 @@ if ($MobRadiusAudit) {
         status = 'passed'
         observations = @($dispatchLines | ForEach-Object { $_.Value }) + @($dispatchSummary.Value)
     }
+    $locationLines = [regex]::Matches($log, '(?m)^.*LOCATION_TARGET_GUARD\|scene=[^\r\n]+$')
+    $locationSummary = [regex]::Match($log,
+        '(?m)^.*LOCATION_TARGET_GUARD_SUMMARY\|comparisons=672\|selectors=7\|aliases=4\|publicNativeGuardApplied=false\|reference=condition-library\|passed=true\s*$')
+    if ($locationLines.Count -ne 672 -or -not $locationSummary.Success -or
+            @($locationLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete location target guard extension-boundary evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'targeter.location-condition-extension-boundary'
+        status = 'passed'
+        observations = @($locationLines | ForEach-Object { $_.Value }) + @($locationSummary.Value)
+    }
     $lifecycleLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_LIFECYCLE\|phase=[^\r\n]+$')
     $aliasLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_ALIAS\|type=[^\r\n]+$')
     $lifecycleSummary = [regex]::Match($log,

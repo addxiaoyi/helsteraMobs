@@ -184,10 +184,175 @@ final class MobRadiusDispatchAudit {
                     }
                 }
             }
+            // Public MM gates targeter lists behind Premium. Observe that boundary separately
+            // from comparisons against its public condition-library evaluator; never inject guards.
+            Object nativeSkills = mythic.getClass().getMethod("getSkillManager").invoke(mythic);
+            if ((boolean) mythic.getClass().getMethod("isVolatile").invoke(null))
+                throw new IllegalStateException("Expected the pinned public-build targeter boundary");
+            Class<?> nativeTargeter = Class.forName("io.lumine.mythic.core.skills.SkillTargeter", true, nativeLoader);
+            Class<?> nativeSelector = Class.forName("io.lumine.mythic.core.skills.targeters.ILocationSelector", true, nativeLoader);
+            var nativeGuards = nativeTargeter.getDeclaredField("targetConditions");
+            nativeGuards.setAccessible(true);
+            var nativeGuardText = nativeTargeter.getDeclaredField("targetConditionString");
+            nativeGuardText.setAccessible(true);
+            Object nativePins = mythic.getClass().getMethod("getPinManager").invoke(mythic);
+            Object packs = mythic.getClass().getMethod("getPackManager").invoke(mythic);
+            Object pack = packs.getClass().getMethod("getBasePack").invoke(packs);
+            Class<?> packType = Class.forName("io.lumine.mythic.api.packs.Pack", true, nativeLoader);
+            Path pinFile = ((java.io.File) packType.getMethod("getPackFile", String.class).invoke(pack, "pins.yml")).toPath();
+            byte[] priorPinFile = Files.exists(pinFile) ? Files.readAllBytes(pinFile) : null;
+            @SuppressWarnings("unchecked") Map<String, Object> nativePinMap = (Map<String, Object>)
+                    nativePins.getClass().getMethod("getPins").invoke(nativePins);
+            Class<?> pinType = Class.forName("io.lumine.mythic.core.skills.pins.Pin", true, nativeLoader);
+            Class<?> pinsType = Class.forName("dev.helstera.ai.skill.PinRegistry", true, runtimeLoader);
+            Class<?> extras = Class.forName("dev.helstera.ai.skill.SkillExtras", true, runtimeLoader);
+            var pinsGetter = extras.getDeclaredMethod("pinRegistry");
+            pinsGetter.setAccessible(true);
+            Object priorPins = pinsGetter.invoke(null);
+            Object runtimePins = pinsType.getConstructor().newInstance();
+            Location blockStart = center.getBlock().getLocation();
+            Location blockEnd = blockStart.clone().add(1, 0, 0);
+            var pinsYaml = new YamlConfiguration();
+            List<String> pinNames = List.of("DispatchGuardRoute", "DispatchGuardFirst", "DispatchGuardLast");
+            List<String> createdPins = new ArrayList<>();
+            int locationRows = 0;
+            try {
+                for (int i = 0; i < pinNames.size(); i++) {
+                    String name = pinNames.get(i);
+                    if (((Optional<?>) nativePins.getClass().getMethod("getPin", String.class).invoke(nativePins, name)).isPresent())
+                        throw new IllegalStateException("Audit pin already exists: " + name);
+                    Location point = i == 0 ? center : i == 1 ? blockStart : blockEnd;
+                    if (i == 0) {
+                        Object pin = nativePins.getClass().getMethod("createMultiPin", packType, String.class, abstractLocation)
+                                .invoke(nativePins, pack, name, adaptLocation.invoke(null, point));
+                        createdPins.add(name);
+                        @SuppressWarnings("unchecked") List<Object> points = (List<Object>) pinType.getMethod("getLocations").invoke(pin);
+                        points.add(adaptLocation.invoke(null, far.getLocation()));
+                        pin.getClass().getMethod("save").invoke(pin);
+                        pinsYaml.set("pins." + name, List.of(point.getWorld().getName() + "," + point.getX() + "," + point.getY() + "," + point.getZ(),
+                                far.getWorld().getName() + "," + far.getLocation().getX() + "," + far.getLocation().getY() + "," + far.getLocation().getZ()));
+                    } else {
+                        nativePins.getClass().getMethod("createPin", packType, String.class, abstractLocation)
+                                .invoke(nativePins, pack, name, adaptLocation.invoke(null, point));
+                        createdPins.add(name);
+                        pinsYaml.set("pins." + name, point.getWorld().getName() + "," + point.getX() + "," + point.getY() + "," + point.getZ());
+                    }
+                }
+                if (!((List<?>) pinsType.getMethod("load", ConfigurationSection.class).invoke(runtimePins, pinsYaml)).isEmpty())
+                    throw new IllegalStateException("Runtime pin load failed");
+                extras.getMethod("pinRegistry", pinsType).invoke(null, runtimePins);
+                for (String scene : List.of("origin-near", "origin-far", "self", "trigger", "pin", "missing-pin", "region")) {
+                    String selector = switch (scene) {
+                        case "self" -> "@SelfLocation";
+                        case "trigger" -> "@TriggerLocation";
+                        case "pin" -> "@Pin{name=DispatchGuardRoute}";
+                        case "missing-pin" -> "@Pin{name=DispatchGuardMissing}";
+                        case "region" -> "@BlocksInPinRegion{pin1=DispatchGuardFirst;pin2=DispatchGuardLast}";
+                        default -> "@Origin";
+                    };
+                    for (String alias : List.of("conditions", "targetconditions", "cond", "c")) {
+                        for (String type : List.of("ZOMBIE", "HelsteraRadiusAuditMob")) {
+                            for (int amount : new int[]{0, 1, 2}) {
+                                for (boolean outcome : new boolean[]{true, false}) {
+                                    String expression = "mobsInRadius{r=5;t=" + type + ";a=" + amount + "}";
+                                    String guard = alias + "=[ - " + expression + " " + outcome + " ]";
+                                    String targeter = selector.endsWith("}") ? selector.substring(0, selector.length() - 1) + ";" + guard + "}"
+                                            : selector + "{" + guard + "}";
+                                    Object target = nativeSkills.getClass().getMethod("getTargeter", String.class).invoke(nativeSkills, targeter);
+                                    if (!nativeSelector.isInstance(target)) throw new IllegalStateException("Not a native location selector: " + targeter);
+                                    String guardList = "[ - " + expression + " " + outcome + " ]";
+                                    if (nativeGuards.get(target) != null || !guardList.equals(nativeGuardText.get(target)))
+                                        throw new IllegalStateException("Unexpected public targeter condition boundary: " + targeter);
+                                    // This is a public condition-library reference, not Premium targeter execution.
+                                    List<?> guards = (List<?>) nativeSkills.getClass().getMethod("getConditions", String.class)
+                                            .invoke(nativeSkills, guardList);
+                                    if (guards.size() != 1 || !nativeCondition.isInstance(guards.getFirst()))
+                                        throw new IllegalStateException("Native condition library did not parse radius guard: " + guardList);
+                                    resolveTypes.invoke(guards.getFirst(), (Object) new String[]{type}, configImpl.getConstructor(String.class).newInstance(expression));
+                                    Object nativeMeta = metadataImpl.getConstructor(triggerType, skillCaster, abstractEntity)
+                                            .newInstance(triggerType.getMethod("get", String.class).invoke(null, "API"), nativeCaster, adaptEntity.invoke(null, custom));
+                                    Location origin = scene.equals("origin-far") ? far.getLocation() : center;
+                                    metadataImpl.getMethod("setOrigin", abstractLocation).invoke(nativeMeta, adaptLocation.invoke(null, origin));
+                                    Collection<?> locations = (Collection<?>) nativeSelector.getMethod("getLocations", metadata).invoke(target, nativeMeta);
+                                    var unfilteredPoints = new java.util.HashSet<String>();
+                                    for (Object point : locations) unfilteredPoints.add(locationKey((Location) adapter.getMethod("adapt", abstractLocation).invoke(null, point)));
+                                    metadataImpl.getMethod("setLocationTargets", Collection.class).invoke(nativeMeta, locations);
+                                    nativeSelector.getMethod("filter", metadata).invoke(target, nativeMeta);
+                                    Collection<?> publicFiltered = (Collection<?>) metadataImpl.getMethod("getLocationTargets").invoke(nativeMeta);
+                                    var publicPoints = new java.util.HashSet<String>();
+                                    for (Object point : publicFiltered) publicPoints.add(locationKey((Location) adapter.getMethod("adapt", abstractLocation).invoke(null, point)));
+                                    if (!publicPoints.equals(unfilteredPoints))
+                                        throw new IllegalStateException("Public targeter unexpectedly filtered positions");
+                                    nativeCondition.getMethod("evaluateTargets", metadata).invoke(guards.getFirst(), nativeMeta);
+                                    Collection<?> expected = (Collection<?>) metadataImpl.getMethod("getLocationTargets").invoke(nativeMeta);
+                                    var expectedPoints = new java.util.HashSet<String>();
+                                    for (Object point : expected) expectedPoints.add(locationKey((Location) adapter.getMethod("adapt", abstractLocation).invoke(null, point)));
+                                    String line = "skill{s=observe} " + targeter;
+                                    var sourceYaml = new YamlConfiguration();
+                                    sourceYaml.set("dispatch.Skills", List.of(line));
+                                    sourceYaml.set("observe.Skills", List.of("message{m=observe}"));
+                                    sourceYaml.save(source.toFile());
+                                    @SuppressWarnings("unchecked") List<Map<String, Object>> entries = (List<Map<String, Object>>) importer.getClass()
+                                            .getMethod("convert", Path.class).invoke(importer, source);
+                                    var imported = new YamlConfiguration();
+                                    imported.loadFromString(entries.stream().filter(e -> "skills.yml".equals(e.get("target-file")))
+                                            .findFirst().orElseThrow().get("content").toString());
+                                    if (imported.getStringList("skills.dispatch.on-decision").size() != 1)
+                                        throw new IllegalStateException("Location-guarded skill was not imported: " + line);
+                                    imported.set("skills.observe.on-decision", List.of("radius-dispatch-observe"));
+                                    var direct = new YamlConfiguration();
+                                    direct.set("skills.dispatch.on-decision", List.of(line));
+                                    direct.set("skills.observe.on-decision", List.of("radius-dispatch-observe"));
+                                    for (var definition : List.of(imported, direct)) {
+                                        skillsType.getMethod("loadSkills", ConfigurationSection.class).invoke(skills, definition.getConfigurationSection("skills"));
+                                        Object ctx = continuation.invoke(null, model, custom, 1.0, -1.0, 0L, "dispatch", null,
+                                                custom, List.of(custom, far), origin, null);
+                                        observed.clear();
+                                        boolean invoked = (boolean) skillsType.getMethod("castSkill", String.class, contextType).invoke(skills, "dispatch", ctx);
+                                        var actualPoints = new java.util.HashSet<String>();
+                                        boolean clean = true;
+                                        for (Object action : observed) {
+                                            Location point = (Location) ((Optional<?>) contextType.getMethod("targetLocation").invoke(action)).orElseThrow();
+                                            actualPoints.add(locationKey(point));
+                                            clean &= ((List<?>) contextType.getMethod("targets").invoke(action)).isEmpty()
+                                                    && ((Optional<?>) contextType.getMethod("targetEntity").invoke(action)).isEmpty()
+                                                    && contextType.getMethod("conditionScope").invoke(action).toString().equals("EXECUTION");
+                                        }
+                                        boolean matched = invoked && clean && expectedPoints.equals(actualPoints) && observed.size() == expectedPoints.size();
+                                        probe.getLogger().info("LOCATION_TARGET_GUARD|scene=" + scene + "|alias=" + alias + "|type=" + type
+                                                + "|amount=" + amount + "|outcome=" + outcome + "|path=" + (definition == imported ? "imported" : "direct")
+                                                + "|publicNativeGuardApplied=false|nativeUnfilteredCount=" + publicPoints.size()
+                                                + "|conditionLibraryCount=" + expectedPoints.size() + "|runtimeCount=" + observed.size() + "|matched=" + matched);
+                                        if (!matched) throw new IllegalStateException("Location guard differs from native condition-library reference: " + targeter
+                                                + " expected=" + expectedPoints + " actual=" + actualPoints);
+                                        locationRows++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception failure) {
+                probe.getLogger().log(java.util.logging.Level.SEVERE, "LOCATION_TARGET_GUARD_ERROR", failure);
+                throw failure;
+            } finally {
+                extras.getMethod("pinRegistry", pinsType).invoke(null, priorPins);
+                // Pinned removePin throws on its empty YAML property path. Restore isolated fixture state.
+                for (String name : createdPins) nativePinMap.remove(name);
+                if (priorPinFile == null) Files.deleteIfExists(pinFile);
+                else Files.write(pinFile, priorPinFile);
+            }
+            if (locationRows != 672) throw new IllegalStateException("Incomplete location guard evidence");
+            probe.getLogger().info("LOCATION_TARGET_GUARD_SUMMARY|comparisons=" + locationRows
+                    + "|selectors=7|aliases=4|publicNativeGuardApplied=false|reference=condition-library|passed=true");
         } finally {
             far.remove();
         }
         if (rows != 576) throw new IllegalStateException("Incomplete dispatch evidence");
         probe.getLogger().info("MOB_RADIUS_DISPATCH_SUMMARY|comparisons=" + rows + "|scopes=3|scenes=8|passed=true");
     }
+    private static String locationKey(Location point) {
+        return point.getWorld().getUID() + ":" + point.getX() + ":" + point.getY() + ":" + point.getZ();
+    }
+
 }

@@ -867,13 +867,31 @@ try {
         'This server is running Paper version 1.21.1-test (Implementing API version 1.21.1-test-api)',
         '[Server thread/INFO]: [helsteraMobs] Enabling helsteraMobs v1.0.0',
         '[Server thread/INFO]: Done (12.345s)! For help, type "help"',
-        '[Server thread/INFO]: [helsteraMobs] [自检] goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true'
+        '[Server thread/INFO]: [helsteraMobs] [自检] goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true default-preserved=true invalid-default-preserved=true'
     ) -Encoding utf8
     & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $goatOptionsTemp | Out-Null
     $goatOptionsReport = Get-Content -LiteralPath (Join-Path $goatOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
     Assert-True (($goatOptionsReport.probes | Where-Object id -eq 'goatOptionsImported').status -eq 'passed' -and
         ($goatOptionsReport.probes | Where-Object id -eq 'goatOptionsImported').observations[0] -match
-        '^goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true$') 'report writer requires imported Goat option evidence'
+        '^goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true default-preserved=true invalid-default-preserved=true$') 'report writer requires imported Goat option evidence'
+    $goatBaselineLog = Get-Content -LiteralPath (Join-Path $goatOptionsLogDirectory 'latest.log') -Raw -Encoding utf8
+    foreach ($defaultValue in @('true', 'false')) {
+        $goatVariantLog = $goatBaselineLog.Replace('default-screaming=false', "default-screaming=$defaultValue")
+        Set-Content -LiteralPath (Join-Path $goatOptionsLogDirectory 'latest.log') -Value $goatVariantLog -Encoding utf8
+        & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $goatOptionsTemp | Out-Null
+        $goatVariant = Get-Content -LiteralPath (Join-Path $goatOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+        Assert-True (($goatVariant.probes | Where-Object id -eq 'goatOptionsImported').status -eq 'passed') 'native Goat defaults may be true or false when preserved'
+    }
+    foreach ($rejectedLog in @(
+        $goatBaselineLog.Replace(' default-preserved=true', ''),
+        $goatBaselineLog.Replace(' default-preserved=true', ' default-preserved=false'),
+        $goatBaselineLog.Replace(' invalid-default-preserved=true', ' invalid-default-preserved=false')
+    )) {
+        Set-Content -LiteralPath (Join-Path $goatOptionsLogDirectory 'latest.log') -Value $rejectedLog -Encoding utf8
+        & (Join-Path $PSScriptRoot 'write-report.ps1') -ServerDirectory $goatOptionsTemp | Out-Null
+        $goatRejected = Get-Content -LiteralPath (Join-Path $goatOptionsTemp 'integration-report.json') -Raw -Encoding utf8 | ConvertFrom-Json
+        Assert-True (($goatRejected.probes | Where-Object id -eq 'goatOptionsImported').status -ne 'passed') 'Goat evidence must prove native defaults are preserved'
+    }
     $tameableOptionsTemp = Join-Path $temp 'tameable-options-fixture'
     $tameableOptionsLogDirectory = Join-Path $tameableOptionsTemp 'logs'
     New-Item -ItemType Directory -Path $tameableOptionsLogDirectory -Force | Out-Null
@@ -1663,7 +1681,7 @@ try {
     }
     $fullCatalogReport.expectedProbeIds += 'goatOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{
-        id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true')
+        id = 'goatOptionsImported'; status = 'passed'; observations = @('goat-options result=true imported=true screaming=true control-screaming=false default-screaming=false wrong-type-preserved=true invalid-preserved=true default-preserved=true invalid-default-preserved=true')
     }
     $fullCatalogReport.expectedProbeIds += 'frogOptionsImported'
     $fullCatalogReport.probes += [pscustomobject]@{

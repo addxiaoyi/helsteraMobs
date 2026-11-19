@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-radius-dispatch-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `6d6261bbacfdce63ceb324935b961233926fa4b1bc3ee75e27bbd159f2979fa4`. [Strict report](reports/paper-1.21.1-radius-dispatch-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-radius-dispatch-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-radius-dispatch-strict-20261119-r1.client-logs.zip) This artifact passes 2,312 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-location-guards-strict-20261119-r3` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `16c347b088cf9a099e7a49de39fd19edd45e07485401a945b671a9249be40bca`. [Strict report](reports/paper-1.21.1-location-guards-strict-20261119-r3.json) · [Redacted server log](reports/paper-1.21.1-location-guards-strict-20261119-r3.log.gz) · [Redacted client logs](reports/paper-1.21.1-location-guards-strict-20261119-r3.client-logs.zip) This artifact passes 2,313 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,10 +9,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `ca8552ce4892489bf26958164817e94fa345134b9b168dab0de81dff5431c5e8`;
-redacted server log SHA-256: `2a21371dd49f85e11e117be184ae8dca6a61bf97b02ed4ebc1009efd90658fe4`;
-redacted client logs SHA-256: `ba5c1b2a712540156ee3057772c2faeccaafb07fc7df216f6f05e3ca183b2802`.
-The preceding `srv-paper-radius-active-strict-20261119-r2`,
+Current full-report SHA-256: `c075014fa80c050008e2ff8d01894e6487a3495a1c35e803f980d759837837ab`;
+redacted server log SHA-256: `d002706e02a8e0ee7bb54d8c5d36059779cfeb96e75ce49096a615685aff87db`;
+redacted client logs SHA-256: `4fbaf5624d043456a5662c1c7a7b2b05599aaf48b4ca04ae93272c510de81353`.
+The preceding `srv-paper-radius-dispatch-strict-20261119-r1`,
+`srv-paper-radius-active-strict-20261119-r2`,
 `srv-paper-radius-active-strict-20261119-r1`,
 `srv-paper-random-radius-strict-20261119-r1`,
 `srv-paper-dynamic-radius-strict-20261119-r1`,
@@ -22,6 +23,75 @@ The preceding `srv-paper-radius-active-strict-20261119-r2`,
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Location condition lists and the public-build boundary
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r51` passes all
+24 probes on plugin `16c347b088cf9a099e7a49de39fd19edd45e07485401a945b671a9249be40bca`.
+The 672 comparisons observe the actual public MM 5.7.2 targeter parser and
+`ILocationSelector.filter` on Paper 1.21.1-133. This build retains the condition
+text but gates activation behind Premium (`isVolatile`); the fixture asserts
+that its guard list stays null and its actual filter leaves positions unchanged.
+It separately parses the bracketed list through the public condition library
+and invokes `evaluateTargets` as a reference for Helstera filtering. No licensing
+state is changed and no guard is injected into the native targeter. Seven scenes cover near/far
+Origin, SelfLocation, TriggerLocation, a two-position Pin, a missing Pin and
+BlocksInPinRegion. Each uses four condition argument aliases, vanilla/custom
+type filters, amounts 0/1/2, true/false outcomes and full-file imported/direct
+skills. Retained coordinates and action counts match that condition-library
+reference; action contexts
+have no fabricated entity targets and retain ordinary execution scope.
+The public condition-library parser must produce a real MobsInRadiusCondition;
+its actual deferred type resolver is run before evaluation. Fixture pins are
+created through native APIs; the fixture restores the registry and YAML snapshot
+afterward, along with the prior Helstera Pin registry.
+The earlier 576 dispatch comparisons and all radius/RandomSpawns controls pass.
+
+Production regressions also cover multiple conjunctive guards, contradictory
+guards, changing variable locations, execution audience, malformed/duplicate
+lists, unsupported-condition preservation, query failures under negation, and
+the existing explicit-coordinate `c` alias. The build passes 2,313 Maven tests
+and SpotBugs. Bracketed filtering is an extension relative to this public
+artifact; Premium targeter equivalence is unverified. `?@` is also an extension.
+Other native condition interfaces, non-living triggers, condition action suffixes,
+selection modifiers, Premium evaluation and other versions remain unverified.
+No complete catalog row is promoted. See the
+[contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r51.json), SHA-256
+  `fe135adb72e9f36b0de5ac2ec0e7e70bfebdf8e3893800efbec734e3e86b1743`.
+- [Redacted log](reports/paper-1.21.1-random-spawn-replace-20261119-r51.log.gz), SHA-256
+  `cb771b4df717194708a36881a0e17d8c67e35352caaa6fe734f55c4a1df9aa22`.
+
+Diagnostic attempt `srv-paper-random-spawn-replace-20261119-r47` stopped at a
+fixture reflection lookup for a package-private Pin registry getter, before
+creating native pins. The fixture now uses declared-method access and restores
+the saved registry. Attempt `srv-paper-random-spawn-replace-20261119-r48`
+exposed an error in the pinned native `removePin` cleanup (empty YAML property
+path), which masked the comparison exception. Teardown now restores the
+fixture pin map and saved YAML; errors are logged before cleanup. Neither
+attempt is release evidence.
+
+Full attempt `srv-paper-location-guards-strict-20261119-r1` retained a failed
+PreventSunburn observation: both probe zombies were removed after 40 entity
+ticks before the protected combustion event occurred. The probe now imports
+`Despawn: NEVER` for both owned entities and disables native distance removal;
+its existing explicit cleanup and combustion assertions remain required. The
+final run observes both zombies through 101 ticks: one protected event cancelled
+and four uncancelled control events with 143 remaining fire ticks. The
+revised artifact is verified again by the focused fixture and full strict run.
+Full attempt `srv-paper-location-guards-strict-20261119-r2` passed the sunburn
+probe but exposed a separate Goat fixture assumption: an unconfigured Goat
+randomly spawned screaming. The probe now captures native screaming state at
+CreatureSpawnEvent and requires omitted/invalid options to preserve it. Explicit
+true/false options and preservation checks remain mandatory. The report writer
+and release catalog require both preservation assertions; regression tests accept
+either native default and reject missing or false preservation evidence.
+
+Earlier focused `srv-paper-random-spawn-replace-20261119-r50` and
+`srv-paper-random-spawn-replace-20261119-r49` passed 24 probes
+before the final probe corrections; both reports remain archived on their
+original plugin hashes and do not substitute for the final-artifact rerun.
 
 ## Caster, target and trigger condition dispatch
 
@@ -61,7 +131,8 @@ but stopped before archival because the report schema lacked the new dispatch
 source-hash property. The schema was corrected and r46 reran the unchanged
 production JAR successfully. Diagnostic attempts are not release evidence.
 
-Non-living trigger dispatch, inline location/pin target guards, condition actions
+Location/pin radius guards are covered by the newer comparison above.
+Non-living trigger dispatch, other native condition interfaces, condition actions
 beyond true/false, Premium expressions and other versions remain open. The full
 Conditions catalog is still `mapped-unverified`; see the
 [compatibility contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).

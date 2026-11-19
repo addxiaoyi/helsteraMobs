@@ -359,4 +359,124 @@ class MobRadiusConditionContractTest {
         assertEquals(BehaviorContext.ConditionScope.EXECUTION, observed.getLast().conditionScope());
     }
 
+    @Test void importedPositionTargeterConditionsFilterLocations(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path root) throws Exception {
+        Entity custom = entity(EntityType.COW, 1, 0);
+        doReturn(List.of(custom)).when(world).getNearbyEntities(any(Location.class), anyDouble(), anyDouble(), anyDouble());
+        SkillExtras.mythicMobTypeQuery(new SkillExtras.MythicMobTypeQuery() {
+            public boolean isKnownType(String name) { return name.equals("TestMob"); }
+            public Optional<Boolean> matches(Entity entity, String name) { return Optional.of(entity == custom); }
+        });
+        var pins = new dev.helstera.ai.skill.PinRegistry(name -> name.equals("world") ? world : null);
+        var pinYaml = new org.bukkit.configuration.file.YamlConfiguration();
+        pinYaml.set("pins.route", List.of("world,0,64,0", "world,40,64,0"));
+        pinYaml.set("pins.first", "world,0,64,0");
+        pinYaml.set("pins.last", "world,1,64,0");
+        assertTrue(pins.load(pinYaml).isEmpty());
+        SkillExtras.pinRegistry(pins);
+        var captured = new java.util.ArrayList<BehaviorContext>();
+        registry.registerAction("location-observe", captured::add);
+        var source = java.nio.file.Files.createDirectories(root.resolve("Skills")).resolve("locations.yml");
+        java.nio.file.Files.writeString(source, """
+                observe:
+                  Skills: ['message{m=probe}']
+                near:
+                  Skills: ['skill{s=observe} @Pin{name=route;conditions=[ - mobsInRadius{r=5;a=1;t=TestMob} true ]}']
+                far:
+                  Skills: ['skill{s=observe} @Pin{name=route;c=[ - mobsInRadius{r=5;a=1;t=TestMob} false ]}']
+                origin:
+                  Skills: ['skill{s=observe} @Origin{cond=[ - mobsInRadius{r=5;a=1;t=TestMob} true ]}']
+                region:
+                  Skills: ['skill{s=observe} @BlocksInPinRegion{pin1=first;pin2=last;targetconditions=[ - mobsInRadius{r=5;a=1;t=TestMob} true ]}']
+                missing:
+                  Skills: ['skill{s=observe} @Pin{name=missing;conditions=[ - mobsInRadius{r=5;a=0;t=TestMob} true ]}']
+                coordinates:
+                  Skills: ['skill{s=observe} @Location{c=0,64,0,0,0;conditions=[ - mobsInRadius{r=5;a=1;t=TestMob} true ]}']
+                coordinate_guard:
+                  Skills: ['skill{s=observe} @Loc{x=0;y=64;z=0;c=[ - mobsInRadius{r=5;a=1;t=TestMob} true ]}']
+                invalid:
+                  Skills: ['skill{s=observe} @Origin{conditions=[ - mobsInRadius{unknown=true} false ]}']
+                empty:
+                  Skills: ['skill{s=observe} @Origin{conditions=[]}']
+                duplicate:
+                  Skills: ['skill{s=observe} @Origin{conditions=[ - isPlayer true ];c=[ - isPlayer false ]}']
+                invalid_coordinates:
+                  Skills: ['skill{s=observe} @Location{c=garbage;conditions=[ - mobsInRadius{r=5;a=1;t=TestMob} true ]}']
+                """);
+        var entries = new dev.helstera.migration.importer.MythicMobsImporter().convert(source);
+        var plan = entries.stream().filter(e -> "skills.yml".equals(e.get("target-file"))).findFirst().orElseThrow();
+        var yaml = org.bukkit.configuration.file.YamlConfiguration.loadConfiguration(
+                new java.io.StringReader(plan.get("content").toString()));
+        for (String name : List.of("near", "far", "origin", "region", "missing", "coordinates", "coordinate_guard"))
+            assertFalse(yaml.getStringList("skills." + name + ".on-decision").isEmpty(), name + " " + entries);
+        for (String name : List.of("invalid", "empty", "duplicate", "invalid_coordinates"))
+            assertTrue(yaml.getStringList("skills." + name + ".on-decision").isEmpty(), name);
+        yaml.set("skills.observe.on-decision", List.of("location-observe"));
+        skills.loadSkills(yaml.getConfigurationSection("skills"));
+        var ctx = context(null, center).withExecutionAudience(List.of());
+        for (String name : List.of("near", "far", "origin", "region", "missing", "coordinates", "coordinate_guard")) {
+            captured.clear();
+            assertTrue(skills.castSkill(name, ctx));
+            List<Location> expected = switch (name) {
+                case "far" -> List.of(center.clone().add(40, 0, 0));
+                case "region" -> List.of(center, center.clone().add(1, 0, 0));
+                case "missing" -> List.of();
+                default -> List.of(center);
+            };
+            assertEquals(expected, captured.stream().map(c -> c.targetLocation().orElseThrow()).toList(), name);
+            for (var action : captured) {
+                assertEquals(BehaviorContext.ConditionScope.EXECUTION, action.conditionScope());
+                assertTrue(action.targetEntity().isEmpty());
+                assertTrue(action.targets().isEmpty());
+                assertEquals(java.util.Set.of(), action.executionAudience().orElseThrow());
+            }
+        }
+        for (String selector : List.of("Location", "Loc", "L")) {
+            captured.clear();
+            String coordinates = skills.bindAction("location-observe @" + selector + "{c=40,65,2,30,15}");
+            assertNotNull(coordinates, selector);
+            assertTrue(skills.runAction(coordinates, ctx));
+            assertEquals(List.of(new Location(world, 40, 65, 2, 30, 15)),
+                    captured.stream().map(c -> c.targetLocation().orElseThrow()).toList());
+        }
+        captured.clear();
+        String inline = skills.bindAction("location-observe @Pin{name=route} ?@mobsInRadius{r=5;a=1;t=TestMob}");
+        assertNotNull(inline);
+        assertTrue(skills.runAction(inline, ctx));
+        assertEquals(List.of(center), captured.stream().map(c -> c.targetLocation().orElseThrow()).toList());
+        for (String targeter : List.of("@Origin{conditions=[]}", "@Origin{conditions=garbage}",
+                "@Origin{c=0,64,0,0,0}",
+                "@Origin{conditions=[ - mobsInRadius{unknown=true} false ]}",
+                "@Origin{conditions=[ - isPlayer true ];c=[ - isPlayer false ]}"))
+            assertNull(skills.bindAction("location-observe " + targeter), targeter);
+        captured.clear();
+        String conjunction = skills.bindAction("location-observe @Pin{name=route;conditions=[ - mobsInRadius{r=5;a=1;t=TestMob} true - mobsInRadius{r=5;a=0;t=TestMob} false ]}");
+        assertNotNull(conjunction);
+        assertTrue(skills.runAction(conjunction, ctx));
+        assertEquals(List.of(center), captured.stream().map(c -> c.targetLocation().orElseThrow()).toList());
+        captured.clear();
+        String contradiction = skills.bindAction("location-observe @Pin{name=route;conditions=[ - mobsInRadius{r=5;a=1;t=TestMob} true - mobsInRadius{r=5;a=1;t=TestMob} false ]}");
+        assertNotNull(contradiction);
+        assertTrue(skills.runAction(contradiction, ctx));
+        assertTrue(captured.isEmpty());
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        var variableContext = BehaviorContext.continueExecution(null, (LivingEntity) null, 1, -1, 0,
+                "test", null, null, List.of(), center, tree);
+        tree.setLocation("mark", center);
+        String variable = skills.bindAction("location-observe @VariableLocation{var=mark;conditions=[ - mobsInRadius{r=5;a=1;t=TestMob} true ]}");
+        assertNotNull(variable);
+        assertTrue(skills.runAction(variable, variableContext));
+        assertEquals(List.of(center), captured.stream().map(c -> c.targetLocation().orElseThrow()).toList());
+        captured.clear();
+        tree.setLocation("mark", center.clone().add(40, 0, 0));
+        assertTrue(skills.runAction(variable, variableContext));
+        assertTrue(captured.isEmpty(), "Location and guard must be resolved again for each execution");
+        SkillExtras.mythicMobTypeQuery(null);
+        captured.clear();
+        String negated = skills.bindAction("location-observe @Pin{name=route} ?@!mobsInRadius{r=5;a=1;t=TestMob}");
+        assertNotNull(negated);
+        assertTrue(skills.runAction(negated, ctx));
+        assertTrue(captured.isEmpty(), "Unavailable type queries cannot be inverted into passing locations");
+    }
+
 }
