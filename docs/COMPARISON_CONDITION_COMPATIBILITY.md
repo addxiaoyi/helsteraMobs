@@ -101,15 +101,19 @@ No arithmetic is evaluated inside a dynamic distance string: expressions such as
 `<caster.hp>+1` are preserved/rejected at binding. Malformed options, duplicate or
 unknown arguments, missing values, and nonfinite resolved numbers fail closed.
 
-The new native suite contains 10,400 matching rows: 20 expressions, 26 scenes,
+The dynamic native suite contains 14,560 matching rows: 28 expressions, 26 scenes,
 five named/inline modes, both outcomes, and imported/direct execution. It checks
 health aliases and rounding, caster health changing from 3.125 to 0.4/0.6 on the
 same compiled condition, constant integer/float/rounded random tokens, strict
 comparisons and range endpoints, removed/non-living triggers, explicit points,
 and mixed-world/removed target sets in both orders. Native unresolved-input error
 logs are expected observations; their returned framework result is compared with
-runtime preview and execution. This does not prove arbitrary variable/trigger
-placeholder families, stochastic distribution equivalence, non-living casters,
+runtime preview and execution. Eight additional trigger health/max-health/position
+expressions contribute 4,160 rows. Their native conditions are constructed at
+enable and evaluated after real scheduler ticks, allowing the native delayed
+trigger delegates to initialize. See the [trigger placeholder contract](TRIGGER_PLACEHOLDER_COMPATIBILITY.md).
+This does not prove arbitrary variable/trigger placeholder families, stochastic
+distribution equivalence, non-living casters,
 arbitrary formulas or other versions.
 
 ## Evidence

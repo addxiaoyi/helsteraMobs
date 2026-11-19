@@ -1,19 +1,18 @@
 # MythicMobs Parity Matrix
 
-Dynamic-Distance update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r59` passes 28 probes on Paper 1.21.1-133
-with public MythicMobs 5.7.2. Dynamic comparison/range strings now preserve native
-placeholder context: caster gates resolve target health against the caster;
-entity/trigger/location gates resolve general placeholders without metadata.
-Cross-world checks happen first, and unresolved comparisons reject before
-inversion and abort the whole target-set gate. The new suite passes 10,400
-native comparisons covering health/rounding updates, constant random families,
-mixed-world/removed targets and explicit locations. All previous 14,280 comparison
-and 6,820 relational rows also pass. Broader placeholder families, relationship
-lifecycle/restart, player faction providers, condition actions and other versions
-remain open. Complete Conditions and Context Targeters rows remain
-`mapped-unverified`. See the [comparison contract](docs/COMPARISON_CONDITION_COMPATIBILITY.md) and
-[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+Trigger-placeholder update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r62` passes 29 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Trigger name/type, health/max-health/percentage,
+and location families now read the actual trigger, including nonliving and removed
+entities. Plain coordinates use block positions, native outer rounding is ignored,
+and missing/nonfinite data stays unresolved under the documented boundary.
+The new suite checks 1,020 outputs across 34 tokens and 10 scenes, including 86
+explicit boundary observations. Dynamic Distance now passes 14,560 native dispatch
+comparisons, with 4,160 added trigger-expression rows; previous comparison,
+relation and radius controls remain required. Scoped variables, broader placeholder
+families, relationship lifecycle/restart and other versions remain open.
+Full Conditions and Context Targeters remain `mapped-unverified`.
+See the [trigger placeholder contract](docs/TRIGGER_PLACEHOLDER_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 See the [ordered parity roadmap](MYTHICMOBS_PARITY_ROADMAP.md) for the full
@@ -245,7 +244,7 @@ mixed player/monster/animal candidates and invalid values. Strict Paper fixture
 angle/length boundaries, and malformed, duplicate, and unknown arguments. The
 broader Context targeters row remains `mapped-unverified`.
 
-Latest strict release evidence: `srv-paper-dynamic-distance-strict-20261119-r1` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `dee429696ad1488fe6ce36c956db37d5ab50639a191ae247b7e619ba57ae29e8`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-dynamic-distance-strict-20261119-r1.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,337 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict release evidence: `srv-paper-trigger-placeholders-strict-20261119-r1` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `326d9cf4ef807bd5739a5aca146cd9835364435b53feaf467e3bfcb8134ef50d`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-trigger-placeholders-strict-20261119-r1.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,341 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Sunny` aliases `sunny`/`isSunny` now map to `weather-is clear`; `Thundering` aliases `thundering`/`isThundering`/`stormy`/`isStormy` now map to `weather-is thunder`. The importer, `SkillService`, and `ConditionListParser` agree on these names, and malformed or duplicate arguments remain fail-closed. Migration, API, AI, and plugin cross-module tests cover the alias paths and clear/thunder runtime states. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Crouching` aliases `sneaking`/`isCrouching`/`isSneaking`, and `Wearing` aliases `isWearing`/`wielding`/`isWielding`, now map through the importer, `SkillService`, and `ConditionListParser`. The existing `is-sneaking` and `wearing` evaluators are reused; wearing item arguments are strict and unknown, duplicate, or empty values fail closed. Migration, API, AI, and plugin cross-module tests cover Player sneaking, helmet matching, aliases, and preservation. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
@@ -3537,7 +3536,7 @@ row remains `mapped-unverified` until the declared catalog is covered.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-dynamic-distance-strict-20261119-r1` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `dee429696ad1488fe6ce36c956db37d5ab50639a191ae247b7e619ba57ae29e8`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-view-angle-strict-20261119-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-trigger-placeholders-strict-20261119-r1` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `326d9cf4ef807bd5739a5aca146cd9835364435b53feaf467e3bfcb8134ef50d`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-dynamic-distance-strict-20261119-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.

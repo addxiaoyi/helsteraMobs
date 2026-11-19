@@ -24,6 +24,7 @@ final class ComparisonDispatchAudit {
     private record Scene(String name, List<LivingEntity> targets, Entity trigger, Location point, float pitch) {}
 
     static void run(JavaPlugin probe, Plugin helstera, Plugin mythic, Location center) throws Exception {
+        TriggerPlaceholderAudit.run(probe, helstera, mythic, center);
         run(probe, helstera, mythic, center, false, false);
         run(probe, helstera, mythic, center, true, false);
         run(probe, helstera, mythic, center, false, true);
@@ -159,6 +160,12 @@ final class ComparisonDispatchAudit {
                         {"distance{d=<target.hp>to<caster.hp>}", "DistanceCondition"},
                         {"distance{d=<random.float.rounded.4to4>}", "DistanceCondition"}};
             }
+            if (dynamicDistance) {
+                var expandedCases = new ArrayList<>(Arrays.asList(cases));
+                for (String expression : TriggerPlaceholderAudit.DISTANCES)
+                    expandedCases.add(new String[]{expression, "DistanceCondition"});
+                cases = expandedCases.toArray(String[][]::new);
+            }
             ClassLoader nativeLoader = mythic.getClass().getClassLoader();
             ClassLoader runtimeLoader = helstera.getClass().getClassLoader();
             Class<?> abstractEntity = Class.forName("io.lumine.mythic.api.adapters.AbstractEntity", true, nativeLoader);
@@ -213,7 +220,8 @@ final class ComparisonDispatchAudit {
                 String expression = test[0] + " " + outcome;
                 Class<?> conditionClass = Class.forName("io.lumine.mythic.core.skills.conditions.all." + test[1], true, nativeLoader);
                 Object config = configImpl.getConstructor(String.class).newInstance(expression);
-                Object condition = conditionClass.getConstructor(String.class, configType).newInstance(expression, config);
+                Object condition = test[0].contains("<trigger.") ? TriggerPlaceholderAudit.condition(expression)
+                        : conditionClass.getConstructor(String.class, configType).newInstance(expression, config);
                 for (String mode : List.of("Conditions", "TargetConditions", "TriggerConditions", "inline-caster", "inline-trigger")) {
                     boolean inline = mode.startsWith("inline");
                     String nativeMethod = switch (mode) {
@@ -298,7 +306,7 @@ final class ComparisonDispatchAudit {
                     }
                 }
             }
-            int expectedRows = extended ? 6820 : dynamicDistance ? 10400 : 14280;
+            int expectedRows = extended ? 6820 : dynamicDistance ? 14560 : 14280;
             if (rows != expectedRows) throw new IllegalStateException("Incomplete comparison dispatch evidence: " + rows);
             probe.getLogger().info(marker + "_SUMMARY|comparisons=" + rows + "|conditions=" + cases.length
                     + "|scenes=" + scenes.size() + "|modes=5|passed=true");

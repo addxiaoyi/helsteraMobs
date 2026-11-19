@@ -67,6 +67,85 @@ class PlaceholdersTest {
     }
 
     @Test
+    void triggerHealthUsesCurrentTriggerAndIgnoresOuterRounding() {
+        var trigger = mock(org.bukkit.entity.LivingEntity.class);
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(target.getHealth()).thenReturn(18.0);
+        when(trigger.getHealth()).thenReturn(3.125);
+        when(trigger.getMaxHealth()).thenReturn(20.0);
+        var c = BehaviorContext.continueExecution(null, target, 1, 999, 0, "test", null,
+                trigger, java.util.List.of(target), null, null);
+        assertEquals("3.125 3.125 20.0 15.625", Placeholders.resolve(
+                "<trigger.hp> <trigger.hp{r=0}> <trigger.maxhealth> <trigger.php>", c));
+        when(trigger.getHealth()).thenReturn(0.6);
+        assertEquals("0.6 0.6 0.6", Placeholders.resolve(
+                "<trigger.health> <trigger{rounding=0}.hp> <trigger.thp{}>", c));
+        assertEquals("<trigger.hp{r=oops}>", Placeholders.resolve("<trigger.hp{r=oops}>", c));
+        assertEquals("<trigger.var.Count>", Placeholders.resolve("<trigger.var.Count>", c));
+    }
+
+    @Test
+    void nonlivingAndAbsentTriggersDoNotBorrowTargetHealth() {
+        var target = mock(org.bukkit.entity.LivingEntity.class);
+        when(target.getHealth()).thenReturn(18.0);
+        var item = mock(org.bukkit.entity.Item.class);
+        var c = BehaviorContext.continueExecution(null, target, 1, 999, 0, "test", null,
+                item, java.util.List.of(target), null, null);
+        assertEquals("0.0 0.0 <trigger.php>", Placeholders.resolve(
+                "<trigger.hp> <trigger.mhp> <trigger.php>", c));
+        assertEquals(-1, Placeholders.resolveNumber("<trigger.php>", c, -1));
+        var absent = BehaviorContext.continueExecution(null, target, 1, 999, 0, "test", null,
+                null, java.util.List.of(target), null, null);
+        assertEquals("<trigger.hp> <trigger.name>", Placeholders.resolve("<trigger.hp> <trigger.name>", absent));
+        var invalid = mock(org.bukkit.entity.LivingEntity.class);
+        when(invalid.getHealth()).thenReturn(Double.NaN);
+        when(invalid.getMaxHealth()).thenReturn(0.0);
+        var invalidContext = BehaviorContext.continueExecution(null, target, 1, 999, 0, "test", null,
+                invalid, java.util.List.of(target), null, null);
+        assertEquals(-1, Placeholders.resolveNumber("<trigger.hp>", invalidContext, -1));
+        assertEquals(-1, Placeholders.resolveNumber("<trigger.php>", invalidContext, -1));
+    }
+
+    @Test
+    void triggerLocationsUseBlockCoordinatesAndFullFloatPrecision() {
+        var trigger = mock(org.bukkit.entity.Entity.class);
+        var world = mock(org.bukkit.World.class);
+        when(world.getName()).thenReturn("trigger-world");
+        var point = new org.bukkit.Location(world, -1.25, 70.9, 2.125, 12.345f, -6.789f);
+        when(trigger.getLocation()).thenReturn(point);
+        var c = BehaviorContext.continueExecution(null, (org.bukkit.entity.LivingEntity) null,
+                1, 999, 0, "test", null, trigger, java.util.List.of(), null, null);
+        assertEquals("-2.0 70.0 2.0 -1.25 2.125 trigger-world", Placeholders.resolve(
+                "<trigger.l.x> <trigger.location.y> <trigger.l.z> <trigger.l.x.double> "
+                        + "<trigger.location.z.double> <trigger.location.world>", c));
+        assertEquals(Double.toString((double) point.getYaw()), Placeholders.resolve("<trigger.l.yaw{r=0}>", c));
+        assertEquals(Double.toString((double) point.getPitch()), Placeholders.resolve("<trigger.location.pitch>", c));
+        point.setX(-0.01);
+        assertEquals("-1.0 -0.01", Placeholders.resolve("<trigger.l.x> <trigger.l.x.double>", c));
+    }
+
+    @Test
+    void triggerNamesTypesAndRemovedEntitiesKeepTheirOwnIdentity() {
+        var trigger = mock(org.bukkit.entity.Cow.class);
+        when(trigger.getType()).thenReturn(org.bukkit.entity.EntityType.COW);
+        when(trigger.getName()).thenReturn("Cow");
+        when(trigger.isValid()).thenReturn(false);
+        var c = BehaviorContext.continueExecution(null, (org.bukkit.entity.LivingEntity) null,
+                1, 999, 0, "test", null, trigger, java.util.List.of(), null, null);
+        assertEquals("Cow COW", Placeholders.resolve("<trigger.name> <trigger.entity_type>", c));
+        when(trigger.getCustomName()).thenReturn("Named trigger");
+        assertEquals("Named trigger", Placeholders.resolve("<trigger.name>", c));
+        when(trigger.getCustomName()).thenReturn("");
+        assertEquals("", Placeholders.resolve("<trigger.name>", c));
+        var player = mock(Player.class);
+        when(player.getName()).thenReturn("AccountName");
+        when(player.getCustomName()).thenReturn("Display name");
+        var playerContext = BehaviorContext.continueExecution(null, (org.bukkit.entity.LivingEntity) null,
+                1, 999, 0, "test", null, player, java.util.List.of(), null, null);
+        assertEquals("AccountName", Placeholders.resolve("<trigger.name>", playerContext));
+    }
+
+    @Test
     @DisplayName("紧凑显示显式保留一位小数，默认解析保留精度")
     void formatsHealthWithOneDecimal() {
         var c = ctx(0.2299999, -1, "IDLE");

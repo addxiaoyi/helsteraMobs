@@ -86,6 +86,10 @@ public final class Placeholders {
         try { parsed = PlaceholderSyntax.parse(key); }
         catch (IllegalArgumentException e) { return null; }
         if (parsed.rounding() == null) return lookupValue(parsed.key(), ctx, numbers);
+        // Native TriggerPlaceholder delegates without forwarding its outer numeric config.
+        if (parsed.key().regionMatches(true, 0, "trigger.", 0, 8)) {
+            return lookupValue(parsed.key(), ctx, numbers);
+        }
         if (!supportsRounding(parsed.key())) return null;
         String value = lookupValue(parsed.key(), ctx, Placeholders::exact);
         if (value == null) return null;
@@ -113,7 +117,7 @@ public final class Placeholders {
         return switch (scope) {
             case "caster" -> caster(ctx, field, numbers);
             case "target" -> target(ctx, field, numbers);
-            case "trigger" -> trigger(ctx, field);
+            case "trigger" -> trigger(ctx, field, numbers);
             case "skill" -> skill(ctx, dot < 0 ? "" : key.substring(dot + 1), numbers);
             case "ctx" -> context(ctx, field);
             case "mob" -> caster(ctx, field, numbers);       // 兼容旧写法
@@ -248,9 +252,42 @@ public final class Placeholders {
         return null;
     }
 
-    private static String trigger(BehaviorContext ctx, String field) {
-        if (ctx == null || !"uuid".equals(normalizeField(field))) return null;
-        return ctx.trigger().map(Entity::getUniqueId).map(Object::toString).orElse(null);
+    private static String trigger(BehaviorContext ctx, String field, DoubleFunction<String> numbers) {
+        Entity trigger = ctx.trigger().orElse(null);
+        if (trigger == null) return null;
+        field = normalizeField(field);
+        if (field.equals("uuid")) return trigger.getUniqueId().toString();
+        if (field.equals("entity-type")) return trigger.getType().name();
+        if (field.equals("name")) {
+            if (trigger instanceof Player player) return player.getName();
+            String custom = trigger.getCustomName();
+            return custom != null ? custom : trigger.getName();
+        }
+        LivingEntity living = trigger instanceof LivingEntity value ? value : null;
+        if (field.equals("health") || field.equals("hp.raw")) {
+            return numbers.apply(living == null ? 0 : living.getHealth());
+        }
+        if (field.equals("maxhealth") || field.equals("hp.max")) {
+            return numbers.apply(living == null ? 0 : living.getMaxHealth());
+        }
+        if (field.equals("hp.percent")) {
+            // Native emits NaN for nonliving entities; keep our finite-number boundary.
+            return living == null ? null : numbers.apply(100.0 * (living.getHealth() / living.getMaxHealth()));
+        }
+        if (field.startsWith("location.")) field = "l." + field.substring(9);
+        if (field.equals("l.world")) field = "l.w";
+        if (!field.startsWith("l.")) return null;
+        Location location = trigger.getLocation();
+        if (location == null) return null;
+        // TargetLocation placeholders use block coordinates, unlike caster's block centers.
+        return switch (field.substring(2)) {
+            case "x" -> numbers.apply(location.getBlockX());
+            case "y" -> numbers.apply(location.getBlockY());
+            case "z" -> numbers.apply(location.getBlockZ());
+            case "yaw" -> numbers.apply(location.getYaw());
+            case "pitch" -> numbers.apply(location.getPitch());
+            default -> mythicLocationField(java.util.Optional.of(location), field.substring(2), numbers);
+        };
     }
 
     /** Resolves current skill context and skill-tree variables. */
@@ -353,7 +390,13 @@ public final class Placeholders {
     /** 已知占位符的完整键名清单，供体检报告对照。 */
     public static List<String> knownKeys() {
         List<String> out = new ArrayList<>();
-        out.add("trigger.uuid");
+        for (String field : List.of("uuid", "name", "entity_type", "health", "hp", "thp",
+                "maxhealth", "mhp", "healthpercent", "percenthealth", "php")) out.add("trigger." + field);
+        for (String prefix : List.of("trigger.l.", "trigger.location.")) {
+            for (String field : List.of("x", "y", "z", "x.double", "y.double", "z.double", "yaw", "pitch", "w")) {
+                out.add(prefix + (prefix.equals("trigger.location.") && field.equals("w") ? "world" : field));
+            }
+        }
         for (String scope : List.of("caster", "target", "skill")) {
             for (String f : List.of("hp", "hp.percent", "hp.raw", "hp.max", "health", "maxhealth",
                     "name", "type", "world", "loc.x", "loc.y", "loc.z",

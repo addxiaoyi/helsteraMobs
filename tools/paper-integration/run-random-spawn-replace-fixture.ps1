@@ -483,10 +483,22 @@ if ($MobRadiusAudit) {
         status = 'passed'
         observations = @($relationLines | ForEach-Object { $_.Value }) + @($relationSummary.Value)
     }
+    $triggerPlaceholderLines = [regex]::Matches($log, '(?m)^.*TRIGGER_PLACEHOLDER\|token=[^\r\n]+$')
+    $triggerPlaceholderSummary = [regex]::Match($log,
+        '(?m)^.*TRIGGER_PLACEHOLDER_SUMMARY\|comparisons=1020\|tokens=34\|scenes=10\|modes=3\|boundaries=86\|schedulerTicks=\d+\|passed=true\s*$')
+    if ($triggerPlaceholderLines.Count -ne 1020 -or -not $triggerPlaceholderSummary.Success -or
+            @($triggerPlaceholderLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete trigger placeholder native comparison evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'placeholder.trigger-context'
+        status = 'passed'
+        observations = @($triggerPlaceholderLines | ForEach-Object { $_.Value }) + @($triggerPlaceholderSummary.Value)
+    }
     $distanceLines = [regex]::Matches($log, '(?m)^.*DYNAMIC_DISTANCE_DISPATCH\|condition=[^\r\n]+$')
     $distanceSummary = [regex]::Match($log,
-        '(?m)^.*DYNAMIC_DISTANCE_DISPATCH_SUMMARY\|comparisons=10400\|conditions=20\|scenes=26\|modes=5\|passed=true\s*$')
-    if ($distanceLines.Count -ne 10400 -or -not $distanceSummary.Success -or
+        '(?m)^.*DYNAMIC_DISTANCE_DISPATCH_SUMMARY\|comparisons=14560\|conditions=28\|scenes=26\|modes=5\|passed=true\s*$')
+    if ($distanceLines.Count -ne 14560 -or -not $distanceSummary.Success -or
             @($distanceLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
         throw 'Incomplete dynamic distance native comparison evidence.'
     }
@@ -539,6 +551,7 @@ $report = [ordered]@{
     fixtureProbeJarSha256 = (Get-FileHash -LiteralPath $probeJar -Algorithm SHA256).Hash.ToLowerInvariant()
     conditionProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     dispatchProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/MobRadiusDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
+    triggerPlaceholderProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/TriggerPlaceholderAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     comparisonProbeSourceSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/ComparisonDispatchAudit.java') -Algorithm SHA256).Hash.ToLowerInvariant()
     naturalSpawnClientSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'natural-spawn-client.js') -Algorithm SHA256).Hash.ToLowerInvariant()
     randomSpawnConfigSha256 = (Get-FileHash -LiteralPath (Join-Path $fixtureDir 'RandomSpawns/replace.yml') -Algorithm SHA256).Hash.ToLowerInvariant()

@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-dynamic-distance-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `dee429696ad1488fe6ce36c956db37d5ab50639a191ae247b7e619ba57ae29e8`. [Strict report](reports/paper-1.21.1-dynamic-distance-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-dynamic-distance-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-dynamic-distance-strict-20261119-r1.client-logs.zip) This artifact passes 2,337 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-trigger-placeholders-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `326d9cf4ef807bd5739a5aca146cd9835364435b53feaf467e3bfcb8134ef50d`. [Strict report](reports/paper-1.21.1-trigger-placeholders-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-trigger-placeholders-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-trigger-placeholders-strict-20261119-r1.client-logs.zip) This artifact passes 2,341 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,10 +9,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `01595ba3c32ff193f13ce4d09abd377d7b12fd8b0689b94e161c146ae440d566`;
-redacted server log SHA-256: `69c7dcabfe2ba288dd57303969c049c9c6dd0529b7f112cbd3d94f477bacef09`;
-redacted client logs SHA-256: `4f970d40574c8ac2fef06d9acebb2622089c64c54bee42b45f20bcbde5e746b6`.
-The preceding `srv-paper-view-angle-strict-20261119-r1`,
+Current full-report SHA-256: `bebeb756e4f10c829bc6af19a5a9d600a82601303243c0dc3005d6f98b7ad84a`;
+redacted server log SHA-256: `75802815a46a9c46986f119caf23c3d437819bba6c3bfad33194895084780dca`;
+redacted client logs SHA-256: `92094d8753896cdf442d3305b9e52ed12af5496f9222eaffc446dfa4753294c9`.
+The preceding `srv-paper-dynamic-distance-strict-20261119-r1`,
+`srv-paper-view-angle-strict-20261119-r1`,
 `srv-paper-relational-dispatch-strict-20261119-r1`,
 `srv-paper-comparison-dispatch-strict-20261119-r1`,
 `srv-paper-trigger-dispatch-strict-20261119-r1`,
@@ -28,6 +29,55 @@ The preceding `srv-paper-view-angle-strict-20261119-r1`,
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Trigger names, health and locations
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r62` passes all
+29 probes on plugin `326d9cf4ef807bd5739a5aca146cd9835364435b53feaf467e3bfcb8134ef50d`. Public native
+PlaceholderString and DistanceCondition instances are constructed during enable
+and evaluated after real scheduler ticks, allowing native five-tick trigger
+initialization. No native fields, callbacks, predicates or licensing checks are
+replaced. The fixture checks 1,020 outputs (34 tokens × 10 scenes × three modes):
+934 ordinary equal values and 86 explicitly classified boundaries for missing
+triggers and nonliving health percentages. Of those boundaries, 66 missing-trigger
+outputs also preserve the same token; 20 differ (native missing names are Unknown,
+nonliving percentages are NaN). All boundary rows verify preserved tokens and
+numeric rejection; they are not blanket claims of identical native text.
+
+The same compiled placeholders observe changed health, name and negative position;
+items, arrows, removed living/nonliving entities, cross-world and self triggers;
+and metadata with an unrelated selected target versus contextless reads. Native
+block coordinates, uppercase entity types, full float-to-double angles and ignored
+outer rounding are reproduced. Player account-name priority has unit coverage;
+connected-player name behavior is not covered by this focused native fixture.
+
+Eight trigger expressions add 4,160 imported/direct, named/inline, true/false
+Distance comparisons. The complete dynamic suite passes 14,560 rows; previous
+14,280 comparison, 6,820 relation, radius, nonliving-trigger and location-guard
+controls remain required. Trigger percentage NaN is outside the dynamic-equivalence
+slice and retains Helstera's finite-number boundary. Broader variables, stats,
+items, threat and other placeholder families remain open. See the
+[trigger contract](../../docs/TRIGGER_PLACEHOLDER_COMPATIBILITY.md) and
+[comparison contract](../../docs/COMPARISON_CONDITION_COMPATIBILITY.md).
+
+Maven passes 2,341 tests with zero failures/errors/skips and SpotBugs. Full strict
+fixture `srv-paper-trigger-placeholders-strict-20261119-r1` passes 471 probes
+(452 passed, 19 expected rejections), zero failed/incomplete. The first focused
+attempt `srv-paper-random-spawn-replace-20261119-r60` stopped at an invalid fixture
+health setup above the vanilla cow maximum;
+`srv-paper-random-spawn-replace-20261119-r61` then exposed a missing fixture
+ModelInstance executionAudience stub. r62 corrects both fixture setup issues.
+Neither failed attempt is published as passing evidence. Its 29 probes passed,
+but archiving initially rejected the new probe-source hash field. The report
+schema now declares that field; the unchanged r62 report and redacted log were
+validated and archived without rerunning or changing observations.
+Report/audit contracts, release audit, version
+matrix and archived credential scan pass. Broad parity rows are not promoted.
+
+- [Focused report](reports/paper-1.21.1-random-spawn-replace-20261119-r62.json), SHA-256
+  `b5f090736cdc625d85a55bc53ac06dd98924d57f1b8fd9c6bbe61a96071764fe`.
+- [Redacted focused log](reports/paper-1.21.1-random-spawn-replace-20261119-r62.log.gz), SHA-256
+  `0e6bbb92d107c1189b0ad50d2a7d7c16d26e76bcd68faa941006285bc5f8d510`.
 
 ## Dynamic Distance placeholder dispatch
 
