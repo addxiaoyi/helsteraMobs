@@ -6,3 +6,11 @@ HelsteraRadiusAuditMob:
     NoAI: true
     PreventOtherDrops: true
     PreventRandomEquipment: true
+MUSHROOM_COW:
+  Type: COW
+  Display: 'Radius name collision'
+  Health: 20
+  Options:
+    NoAI: true
+    PreventOtherDrops: true
+    PreventRandomEquipment: true

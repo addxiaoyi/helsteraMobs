@@ -65,8 +65,8 @@ that remain constant throughout each tested interval.
 
 | Context | Center | Caster exclusion | Eligible types |
 | --- | --- | --- | --- |
-| Model instance without an explicit location target | Caster entity location; execution origin is ignored | UUID | Bukkit entity types or registered MythicMob internal names |
-| Explicit location target, or execution origin without an instance | Supplied location | None | Registered MythicMob internal names |
+| Model instance without an explicit location target | Caster entity location; execution origin is ignored | UUID | Bukkit entity types or active registered MythicMob internal names |
+| Explicit location target, or execution origin without an instance | Supplied location | None | Active registered MythicMob internal names |
 
 This asymmetry follows the two native `check` overloads. In particular,
 `t=ZOMBIE` on the location path does not count ordinary vanilla Zombies. A
@@ -75,6 +75,24 @@ The caster path can count ArmorStands when `t=ARMOR_STAND` is specified; it is
 not restricted to Bukkit `Mob` instances. Both paths use spherical distance,
 including the radius boundary, and do not impose a 512-entity count limit.
 An omitted type list selects nothing; it is not a wildcard.
+
+Radius queries read the native active registry by UUID. They do not use the
+API helper's `getMythicMobInstance(Entity)`, which can reload an entity from its
+persistent data. A custom mob removed from the active registry therefore stops
+counting even while its persistent Mythic marker remains; registering its saved
+ActiveMob restores the count. A caster-path Bukkit type match still counts
+independently of that registry. A missing active-query interface rejects evaluation even before querying an
+empty scene; entity lookup failures also reject rather than pretending that the
+population is zero.
+
+Native MythicEntity aliases are valid filter inputs, resolved through the
+installed MM adapter. A registered custom name takes precedence over an alias:
+the focused fixture registers a COW named `MUSHROOM_COW` and counts it by name.
+An ordinary baby Husk is not selected solely by `BABY_HUSK`; the native condition
+requires an active Mythic mob before that part of the predicate. Valid aliases
+with no selected entities still support zero-count and negated conditions.
+Five native aliases and 216 comparisons cover active, unregistered and restored
+states, three execution scopes, exact-zero/exact-one amounts and negation.
 
 Missing context, invalid coordinates, failed world queries, unavailable custom
 type registries and failed custom type lookups reject evaluation at the
@@ -87,9 +105,13 @@ treated as evidence of valid input.
 
 Inclusive `>=`/`<=` comparisons, namespaced Bukkit names and case-insensitive
 custom-name lookup remain Helstera extensions; native equivalence for these
-extensions is not claimed. Premium-enabled radius evaluation, native
-MythicEntity aliases outside Bukkit names, the native loaded-entity fallback
-without an ActiveMob, and other MythicMobs versions remain unverified.
+extensions is not claimed. Premium-enabled radius evaluation, the complete
+MythicEntity alias catalog, ModelEngine hitbox-parent lookup and other MythicMobs
+versions remain unverified. In the pinned native implementation, `isLoadedMob`
+delegates to `getActiveMob().isPresent()`. With a stable registry, a loaded entity
+therefore has an ActiveMob; the later native MythicEntity comparison fallback
+for a missing ActiveMob was not reached. The fixture does not fabricate an
+inconsistent registry to claim that fallback is verified.
 `MobsNearOrigin` is a targeter in the pinned MM 5.7.2 build, with no same-named
 entry in its built-in condition registry. The focused fixture reads that live
 registry and resolves `@MobsNearOrigin` to the actual native targeter class.
@@ -106,7 +128,7 @@ Reproduce the focused strict comparison after building the production JAR:
 
 ```powershell
 pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 `
-  -EvidenceRevision r39 -MobRadiusStrict `
+  -EvidenceRevision r43 -MobRadiusStrict `
   -VanillaCachePath srv-paper-random-spawn-replace-20261119-r21/cache/mojang_1.21.1.jar
 ```
 

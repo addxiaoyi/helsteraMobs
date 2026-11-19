@@ -40,6 +40,8 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     private Method getMythicMobTypeMethod;
     private Object mythicMobRegistry;
     private Method getMythicMobNamesMethod;
+    private Method getActiveMobMethod;
+    private Method getMythicEntityTypeMethod;
     private final org.bukkit.configuration.file.FileConfiguration cfg;
 
     public MythicMobsAdapter(InstanceManagerImpl instances, dev.helstera.api.model.ModelRegistry registry,
@@ -102,6 +104,8 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         getMythicMobTypeMethod = null;
         mythicMobRegistry = null;
         getMythicMobNamesMethod = null;
+        getActiveMobMethod = null;
+        getMythicEntityTypeMethod = null;
         this.host = host;
         Plugin mm = Bukkit.getPluginManager().getPlugin("MythicMobs");
         if (mm == null || !mm.isEnabled()) {
@@ -135,6 +139,15 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
                 getMythicMobTypeMethod = null;
                 mythicMobRegistry = null;
                 getMythicMobNamesMethod = null;
+                getActiveMobMethod = null;
+                getMythicEntityTypeMethod = null;
+            }
+            try {
+                bindMythicEntityLookup(Class.forName("io.lumine.mythic.bukkit.adapters.BukkitEntityType", false,
+                        mm.getClass().getClassLoader()));
+            } catch (ReflectiveOperationException | LinkageError | RuntimeException ignored) {
+                // Optional aliases must not disable working custom-name and active-registry queries.
+                getMythicEntityTypeMethod = null;
             }
             Class<?> eventClass = Class.forName("io.lumine.mythic.bukkit.events.MythicMobSpawnEvent");
             // 强转无法在编译期校验：MythicMobs 是软依赖，其事件类只有运行时才存在。
@@ -188,6 +201,8 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         getMythicMobTypeMethod = null;
         mythicMobRegistry = null;
         getMythicMobNamesMethod = null;
+        getActiveMobMethod = null;
+        getMythicEntityTypeMethod = null;
         if (mechanics != null) mechanics.disable();
         mechanics = null;
     }
@@ -278,6 +293,56 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         }
     }
 
+    /** MobsInRadius accepts registered Mythic names and native MythicEntity aliases. */
+    public boolean hasRadiusType(String type) {
+        if (hasMythicMobType(type)) {
+            requireActiveRadiusLookup();
+            return true;
+        }
+        if (type == null || type.isBlank() || getMythicEntityTypeMethod == null
+                || (mythicPlugin != null && !mythicPlugin.isEnabled())) return false;
+        try {
+            boolean known = getMythicEntityTypeMethod.invoke(null, type) != null;
+            if (known) requireActiveRadiusLookup();
+            return known;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+            throw new IllegalStateException("Mythic radius type registry unavailable", failure);
+        }
+    }
+
+    private void requireActiveRadiusLookup() {
+        if (mythicMobRegistry == null || getActiveMobMethod == null)
+            throw new IllegalStateException("Mythic active radius lookup unavailable");
+    }
+
+    /** Read the active registry without the API helper's persistent-data reload side effect. */
+    public java.util.Optional<Boolean> matchesActiveRadiusType(Entity entity, String expectedName) {
+        if (entity == null || expectedName == null || expectedName.isBlank()
+                || mythicMobRegistry == null || getActiveMobMethod == null
+                || (mythicPlugin != null && !mythicPlugin.isEnabled())) return java.util.Optional.empty();
+        try {
+            Object result = getActiveMobMethod.invoke(mythicMobRegistry, entity.getUniqueId());
+            if (!(result instanceof java.util.Optional<?> active)) return java.util.Optional.empty();
+            if (active.isEmpty()) return java.util.Optional.of(false);
+            Object mob = active.get();
+            Object type = mob.getClass().getMethod("getType").invoke(mob);
+            if (type == null) return java.util.Optional.empty();
+            Object name = type.getClass().getMethod("getInternalName").invoke(type);
+            return name instanceof String text ? java.util.Optional.of(text.equalsIgnoreCase(expectedName))
+                    : java.util.Optional.empty();
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError failure) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    void bindMythicEntityLookup(Class<?> type) throws NoSuchMethodException {
+        getMythicEntityTypeMethod = null;
+        Method method = type.getMethod("getMythicEntity", String.class);
+        if (!Modifier.isStatic(method.getModifiers()) || method.getReturnType().isPrimitive())
+            throw new NoSuchMethodException("Mythic entity lookup has an incompatible signature");
+        getMythicEntityTypeMethod = method;
+    }
+
     void bindMythicMobLookup(Object apiHelper) throws NoSuchMethodException {
         bindMythicMobLookup(apiHelper, null);
     }
@@ -289,6 +354,8 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         getMythicMobTypeMethod = null;
         mythicMobRegistry = null;
         getMythicMobNamesMethod = null;
+        getActiveMobMethod = null;
+        getMythicEntityTypeMethod = null;
         if (apiHelper == null) throw new NoSuchMethodException("MythicMobs API helper is null");
         Method method = apiHelper.getClass().getMethod("isMythicMob", Entity.class);
         if (Modifier.isStatic(method.getModifiers()) || method.getReturnType() != boolean.class) {
@@ -317,6 +384,17 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
             getMythicMobTypeMethod = null;
         }
         if (mobRegistry != null) {
+            mythicMobRegistry = mobRegistry;
+            try {
+                Method activeMethod = mobRegistry.getClass().getMethod("getActiveMob", java.util.UUID.class);
+                if (!Modifier.isStatic(activeMethod.getModifiers())
+                        && java.util.Optional.class.isAssignableFrom(activeMethod.getReturnType())) {
+                    if (!activeMethod.canAccess(mobRegistry)) activeMethod.trySetAccessible();
+                    getActiveMobMethod = activeMethod;
+                }
+            } catch (NoSuchMethodException | RuntimeException ignored) {
+                // Radius conditions reject unavailable active queries instead of loading PDC entities.
+            }
             try {
                 Method namesMethod = mobRegistry.getClass().getMethod("getMobNames");
                 if (!Modifier.isStatic(namesMethod.getModifiers())

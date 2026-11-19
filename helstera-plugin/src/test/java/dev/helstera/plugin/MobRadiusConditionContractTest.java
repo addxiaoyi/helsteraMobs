@@ -237,4 +237,26 @@ class MobRadiusConditionContractTest {
         assertTrue(radii.getAllValues().stream().allMatch(radius -> radius >= 2 && radius <= 3));
         assertTrue(radii.getAllValues().stream().distinct().count() > 1, "must resample on each evaluation");
     }
+
+    @Test void radiusUsesActiveQueryAndAcceptsKnownAliasesWithZeroPopulation() {
+        Entity caster = entity(EntityType.ZOMBIE, 0, 0);
+        Entity custom = entity(EntityType.COW, 2, 0);
+        doReturn(List.of(custom)).when(world).getNearbyEntities(any(Location.class), anyDouble(), anyDouble(), anyDouble());
+        var active = new java.util.concurrent.atomic.AtomicReference<Optional<Boolean>>(Optional.of(false));
+        SkillExtras.mythicMobTypeQuery(new SkillExtras.MythicMobTypeQuery() {
+            public boolean isKnownType(String name) { return name.equals("TestMob"); }
+            public Optional<Boolean> matches(Entity entity, String name) { fail("Radius must use active query"); return Optional.empty(); }
+            public boolean isKnownRadiusType(String name) { return isKnownType(name) || name.equals("BABY_ZOMBIE"); }
+            public Optional<Boolean> matchesRadiusType(Entity entity, String name) { return active.get(); }
+        });
+        var ctx = context(caster, center);
+        assertTrue(imported("mobsInRadius{r=5;a=0;t=BABY_ZOMBIE}", ctx));
+        assertTrue(imported("!mobsInRadius{r=5;a=1;t=BABY_ZOMBIE}", ctx));
+        assertFalse(imported("mobsInRadius{r=5;a=1;t=TestMob}", ctx));
+        active.set(Optional.of(true));
+        assertTrue(imported("mobsInRadius{r=5;a=1;t=TestMob}", ctx));
+        active.set(Optional.empty());
+        assertFalse(imported("mobsInRadius{r=5;a=0;t=TestMob}", ctx));
+        assertFalse(imported("!mobsInRadius{r=5;a=0;t=TestMob}", ctx));
+    }
 }

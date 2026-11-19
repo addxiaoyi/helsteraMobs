@@ -698,6 +698,17 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             ? java.util.Optional.empty()
                             : mythicAdapter.matchesMythicMobType(entity, type);
                 }
+
+                @Override
+                public boolean isKnownRadiusType(String type) {
+                    return mythicAdapter != null && mythicAdapter.hasRadiusType(type);
+                }
+
+                @Override
+                public java.util.Optional<Boolean> matchesRadiusType(org.bukkit.entity.Entity entity, String type) {
+                    return mythicAdapter == null ? java.util.Optional.empty()
+                            : mythicAdapter.matchesActiveRadiusType(entity, type);
+                }
             });
         } catch (Throwable t) {
             getLogger().warning("外部插件集成层不可用: " + t);

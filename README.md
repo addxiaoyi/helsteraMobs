@@ -1,16 +1,16 @@
-Latest full-catalog strict fixture `srv-paper-random-radius-strict-20261119-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `7afd6fefe63b1849660b33ccf31aef25ff6c61493d282dd3cc52517d0f461197`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-random-radius-strict-20261119-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,308 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-radius-active-strict-20261119-r2` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `94a4cbe1f73dd48ec296d4ba48f54689f08e7e1654ae2be8eef8e46eb6e6cc70`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-radius-active-strict-20261119-r2.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,311 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-Random and dynamic MobsInRadius update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r38` passes 21 probes. It adds 48 native
-random-radius condition comparisons and 256 independent native/runtime draw
-pairs, retaining 120 constant mob and 132 player comparisons, 96 dynamic checks
-and six public placeholder oracles. Bare `AtoB`/`A-B` intervals resample in all
-scopes, including location conditions. The public MM numeric factory supports
-these intervals but replaces other dynamic radii with static `1`; Premium
-expression equivalence remains unverified. `MobsNearOrigin` is a native targeter
-and a Helstera condition extension. See the
-[contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and
-[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+MobsInRadius active-registry update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r42` passes 22 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Its 216 new comparisons cover registered,
+unregistered-but-persistent and restored mobs, five native aliases, name
+collisions, three scopes, exact-zero/exact-one amounts and negation. Radius
+queries no longer reload unregistered mobs through the API helper. The fixture
+retains 120 constant mob and 132 player comparisons, 96 dynamic checks, six
+placeholder oracles, 48 random-radius comparisons and 256 independent draw
+pairs. Premium expressions, complete native dispatch and other versions remain
+unverified; the complete Conditions row remains `mapped-unverified`. See the
+[contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 Condition-expression parser update: `SkillService` preserves quoted and nested
@@ -1688,7 +1688,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-random-radius-strict-20261119-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-radius-active-strict-20261119-r2` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1704,7 +1704,7 @@ all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-random-radius-strict-20261119-r1`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `7afd6fefe63b1849660b33ccf31aef25ff6c61493d282dd3cc52517d0f461197`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,308 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-radius-active-strict-20261119-r2`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `94a4cbe1f73dd48ec296d4ba48f54689f08e7e1654ae2be8eef8e46eb6e6cc70`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,311 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
 
@@ -1713,7 +1713,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 699 cited IDs; 597 report files; 11 directories without reports; 91 missing directories; 346 archived release reports. The
+   Current fixture inventory: 705 cited IDs; 602 report files; 12 directories without reports; 91 missing directories; 350 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-random-radius-strict-20261119-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-random-radius-strict-20261119-r1.json"
+      "releaseFixtureId": "srv-paper-radius-active-strict-20261119-r2",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-radius-active-strict-20261119-r2.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

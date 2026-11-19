@@ -333,6 +333,86 @@ final class MobRadiusAudit {
             probe.getLogger().info("MOB_RADIUS_RANDOM_SUMMARY|comparisons=" + randomRows
                     + "|drawPairs=" + randomSamples + "|passed=true");
             if (randomRows != 48 || randomSamples != 256) throw new IllegalStateException("Incomplete random audit");
+            // Avoid overriding babies of the Zombies already present in this scene.
+            Entity collision = (Entity) nativeApi.getClass().getMethod("spawnMythicMob", String.class, Location.class)
+                    .invoke(nativeApi, "MUSHROOM_COW", center.clone().add(0, 0, 1));
+            if (collision == null) throw new IllegalStateException("Native collision mob was not spawned");
+            entities.add(collision);
+            org.bukkit.entity.Husk baby = center.getWorld().spawn(center.clone().add(0, 0, 3), org.bukkit.entity.Husk.class);
+            baby.setBaby(true);
+            entities.add(baby);
+            collision.setGravity(false);
+            baby.setGravity(false);
+            baby.setAI(false);
+            Object mobManager = mythic.getClass().getMethod("getMobManager").invoke(mythic);
+            Method getActive = mobManager.getClass().getMethod("getActiveMob", java.util.UUID.class);
+            Method unregister = mobManager.getClass().getMethod("unregisterActiveMob", java.util.UUID.class);
+            Class<?> activeType = Class.forName("io.lumine.mythic.core.mobs.ActiveMob", true, nativeLoader);
+            Method register = mobManager.getClass().getMethod("registerActiveMob", activeType);
+            Object activeCustom = ((Optional<?>) getActive.invoke(mobManager, custom.getUniqueId())).orElseThrow();
+            Class<?> nativeEntityType = Class.forName("io.lumine.mythic.bukkit.adapters.BukkitEntityType", true, nativeLoader);
+            List<String> populationTypes = List.of("HelsteraRadiusAuditMob", "BABY_ZOMBIE", "BABY_HUSK",
+                    "BABY_VILLAGER_ZOMBIE", "PIG_ZOMBIE", "MUSHROOM_COW");
+            for (String type : populationTypes.subList(1, populationTypes.size())) {
+                boolean known = nativeEntityType.getMethod("getMythicEntity", String.class).invoke(null, type) != null;
+                probe.getLogger().info("MOB_RADIUS_ALIAS|type=" + type + "|nativeKnown=" + known);
+                if (!known) throw new IllegalStateException("Unknown native audit alias");
+            }
+            int lifecycleRows = 0;
+            try {
+                for (String phase : List.of("active", "unregistered", "reregistered")) {
+                    if (phase.equals("unregistered")) unregister.invoke(mobManager, custom.getUniqueId());
+                    if (phase.equals("reregistered")) register.invoke(mobManager, activeCustom);
+                    boolean expectedActive = !phase.equals("unregistered");
+                    boolean activeBefore = ((Optional<?>) getActive.invoke(mobManager, custom.getUniqueId())).isPresent();
+                    boolean pdcPresent = (boolean) mobManager.getClass().getMethod("isMythicMob", Entity.class)
+                            .invoke(mobManager, custom);
+                    if (activeBefore != expectedActive || !pdcPresent)
+                        throw new IllegalStateException("Invalid lifecycle scene");
+                    for (String type : populationTypes) {
+                        int expectedCount = type.equals("MUSHROOM_COW") || type.equals("HelsteraRadiusAuditMob") && expectedActive ? 1 : 0;
+                        for (String mode : List.of("caster", "location", "target-location")) {
+                            for (int amount : new int[]{0, 1}) {
+                                String source = "mobsInRadius{r=5;t=" + type + ";a=" + amount + "}";
+                                Object config = configImpl.getConstructor(String.class).newInstance(source);
+                                Object condition = nativeType.getConstructor(String.class, configType).newInstance(source, config);
+                                resolveTypes.invoke(condition, (Object) type.split(","), config);
+                                Object context = execution.invoke(null, mode.equals("location") ? null : model,
+                                        null, 1.0, -1.0, 0L, "radius-lifecycle", null, null, List.of(), center);
+                                if (mode.equals("target-location"))
+                                    context = contextType.getMethod("withLocationTarget", Location.class).invoke(context, center);
+                                for (boolean negate : new boolean[]{false, true}) {
+                                    boolean nativeBase = mode.equals("caster") ? (boolean) casterCheck.invoke(condition, metadata)
+                                            : (boolean) locationCheck.invoke(condition, adaptLocation.invoke(null, center));
+                                    String expression = (negate ? "!" : "") + source;
+                                    Object mapped = translate.invoke(null, "?" + expression);
+                                    boolean translated = (boolean) mapped.getClass().getMethod("translated").invoke(mapped);
+                                    String key = translated ? (String) bind.invoke(skills, mapped.getClass().getMethod("condition").invoke(mapped)) : null;
+                                    String directKey = (String) bind.invoke(skills, expression);
+                                    boolean imported = key != null && (boolean) test.invoke(registry, key, context);
+                                    boolean direct = directKey != null && (boolean) test.invoke(registry, directKey, context);
+                                    boolean expected = negate != (expectedCount == amount);
+                                    boolean activeAfter = ((Optional<?>) getActive.invoke(mobManager, custom.getUniqueId())).isPresent();
+                                    boolean matched = key != null && directKey != null && nativeBase == (expectedCount == amount)
+                                            && imported == expected && direct == expected && activeAfter == expectedActive;
+                                    probe.getLogger().info("MOB_RADIUS_LIFECYCLE|phase=" + phase + "|type=" + type
+                                            + "|mode=" + mode + "|amount=" + amount + "|negated=" + negate
+                                            + "|nativeBase=" + nativeBase + "|imported=" + imported + "|direct=" + direct
+                                            + "|expected=" + expected + "|activeAfter=" + activeAfter + "|matched=" + matched);
+                                    if (!matched) throw new IllegalStateException("Radius alias/lifecycle differs");
+                                    lifecycleRows++;
+                                }
+                            }
+                        }
+                    }
+                }
+            } finally {
+                register.invoke(mobManager, activeCustom);
+            }
+            boolean restored = ((Optional<?>) getActive.invoke(mobManager, custom.getUniqueId())).isPresent();
+            probe.getLogger().info("MOB_RADIUS_LIFECYCLE_SUMMARY|comparisons=" + lifecycleRows
+                    + "|aliases=5|persistentMarker=true|restored=" + restored + "|passed=true");
+            if (lifecycleRows != 216 || !restored) throw new IllegalStateException("Incomplete lifecycle audit");
         } finally {
             entities.forEach(Entity::remove);
         }

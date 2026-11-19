@@ -1,16 +1,16 @@
 # MythicMobs Parity Roadmap
 
-Random and dynamic MobsInRadius update (2026-11-19): focused strict fixture
-`srv-paper-random-spawn-replace-20261119-r38` passes 21 probes. It adds 48 native
-random-radius condition comparisons and 256 independent native/runtime draw
-pairs, retaining 120 constant mob and 132 player comparisons, 96 dynamic checks
-and six public placeholder oracles. Bare `AtoB`/`A-B` intervals resample in all
-scopes, including location conditions. The public MM numeric factory supports
-these intervals but replaces other dynamic radii with static `1`; Premium
-expression equivalence remains unverified. `MobsNearOrigin` is a native targeter
-and a Helstera condition extension. See the
-[contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and
-[Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
+MobsInRadius active-registry update (2026-11-19): focused strict fixture
+`srv-paper-random-spawn-replace-20261119-r42` passes 22 probes on Paper 1.21.1-133
+with public MythicMobs 5.7.2. Its 216 new comparisons cover registered,
+unregistered-but-persistent and restored mobs, five native aliases, name
+collisions, three scopes, exact-zero/exact-one amounts and negation. Radius
+queries no longer reload unregistered mobs through the API helper. The fixture
+retains 120 constant mob and 132 player comparisons, 96 dynamic checks, six
+placeholder oracles, 48 random-radius comparisons and 256 independent draw
+pairs. Premium expressions, complete native dispatch and other versions remain
+unverified; the complete Conditions row remains `mapped-unverified`. See the
+[contract](docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md).
 
 
 This is the ordered worklist for closing the compatibility gaps recorded in the
@@ -20,12 +20,15 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after the random/dynamic MobsInRadius implementation:
+Immediate continuation after the MobsInRadius active-registry implementation:
 
-1. Audit native condition dispatch, MythicEntity aliases and loaded-entity fallback.
-   Bare random-radius intervals now have scoped native evidence; boundary-crossing
-   stochastic populations and full dispatch remain unverified. The pinned 5.7.2
-   `MobsNearOrigin` name is a targeter; its Helstera condition is an extension.
+1. Audit native condition dispatch and the remaining MythicEntity catalog.
+   Five aliases, custom-name priority and unregister/reregister lifecycle now
+   have scoped native evidence. Stable native `isLoadedMob` requires an ActiveMob;
+   its later missing-ActiveMob fallback was not observed. ModelEngine hitbox-parent
+   lookup, boundary-crossing stochastic populations and full dispatch remain open.
+   The pinned 5.7.2 `MobsNearOrigin` name is a targeter; its Helstera condition is
+   an extension.
 2. Compare Premium-enabled dynamic radius when an appropriate native artifact is
    available. The public-build static-1 boundary and public string placeholders
    provide scoped evidence only; do not treat them as Premium condition parity.

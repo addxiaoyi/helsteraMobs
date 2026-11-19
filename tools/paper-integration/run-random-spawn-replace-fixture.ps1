@@ -435,6 +435,21 @@ if ($MobRadiusAudit) {
         observations = @($randomLines | ForEach-Object { $_.Value }) +
             @($sampleLines | ForEach-Object { $_.Value }) + @($randomSummary.Value)
     }
+    $lifecycleLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_LIFECYCLE\|phase=[^\r\n]+$')
+    $aliasLines = [regex]::Matches($log, '(?m)^.*MOB_RADIUS_ALIAS\|type=[^\r\n]+$')
+    $lifecycleSummary = [regex]::Match($log,
+        '(?m)^.*MOB_RADIUS_LIFECYCLE_SUMMARY\|comparisons=216\|aliases=5\|persistentMarker=true\|restored=true\|passed=true\s*$')
+    if ($lifecycleLines.Count -ne 216 -or $aliasLines.Count -ne 5 -or -not $lifecycleSummary.Success -or
+            @($lifecycleLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0 -or
+            @($aliasLines | Where-Object { $_.Value -notmatch '\|nativeKnown=true$' }).Count -ne 0) {
+        throw 'Incomplete radius alias/lifecycle evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'mobRadius.alias-active-lifecycle'
+        status = 'passed'
+        observations = @($lifecycleLines | ForEach-Object { $_.Value }) +
+            @($aliasLines | ForEach-Object { $_.Value }) + @($lifecycleSummary.Value)
+    }
 }
 $fixtureSource = Join-Path $fixtureDir 'src/main/java/dev/helstera/test/randomspawn/RandomSpawnPaperFixture.java'
 $report = [ordered]@{

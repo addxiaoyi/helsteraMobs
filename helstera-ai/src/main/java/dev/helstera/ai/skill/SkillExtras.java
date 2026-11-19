@@ -232,6 +232,10 @@ public final class SkillExtras {
     public interface MythicMobTypeQuery {
         boolean isKnownType(String mobType);
         java.util.Optional<Boolean> matches(Entity entity, String mobType);
+        default boolean isKnownRadiusType(String mobType) { return isKnownType(mobType); }
+        default java.util.Optional<Boolean> matchesRadiusType(Entity entity, String mobType) {
+            return matches(entity, mobType);
+        }
     }
     private static volatile MythicMobTypeQuery mythicMobTypeQuery;
     private static volatile AuraRegistry auraRegistry;
@@ -9637,7 +9641,7 @@ public final class SkillExtras {
             } catch (IllegalArgumentException ignored) {
                 // Custom names need a working registry, including when the population is zero.
             }
-            if (query != null && query.isKnownType(type)) custom.add(type);
+            if (query != null && query.isKnownRadiusType(type)) custom.add(type);
             else if (!bukkitType) throw new IllegalStateException("Unavailable MythicMob type: " + type);
         }
         java.util.UUID sourceId = source == null ? null : source.getUniqueId();
@@ -9665,7 +9669,7 @@ public final class SkillExtras {
     private static boolean matchesMobRadiusCustomType(Entity entity, Set<String> types, MythicMobTypeQuery query) {
         boolean unavailable = false;
         for (String type : types) {
-            java.util.Optional<Boolean> match = query.matches(entity, type);
+            java.util.Optional<Boolean> match = query.matchesRadiusType(entity, type);
             if (match == null || match.isEmpty()) unavailable = true;
             else if (match.get()) return true;
         }

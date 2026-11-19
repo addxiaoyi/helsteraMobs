@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-random-radius-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `7afd6fefe63b1849660b33ccf31aef25ff6c61493d282dd3cc52517d0f461197`. [Strict report](reports/paper-1.21.1-random-radius-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-random-radius-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-random-radius-strict-20261119-r1.client-logs.zip) This artifact passes 2,308 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-radius-active-strict-20261119-r2` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `94a4cbe1f73dd48ec296d4ba48f54689f08e7e1654ae2be8eef8e46eb6e6cc70`. [Strict report](reports/paper-1.21.1-radius-active-strict-20261119-r2.json) · [Redacted server log](reports/paper-1.21.1-radius-active-strict-20261119-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-radius-active-strict-20261119-r2.client-logs.zip) This artifact passes 2,311 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,16 +9,59 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `6985e75a4d6009b6cde79e6fbd7479f59cb813c64f1290d96c4f42a508e7c813`;
-redacted server log SHA-256: `1b9d411e3ea967624cc4b9b572dfb1658e2852e315ab6db6212a776a42e91e7a`;
-redacted client logs SHA-256: `fde1d269172eaa5c0189a2dd5c39e46a01331a74f05078997ce74ec9b03de7b2`.
-The preceding `srv-paper-dynamic-radius-strict-20261119-r1`,
+Current full-report SHA-256: `51c508e56a359c82cc21ad0a9e7ba376db3a30c97918d84f9c5fcf1ea356ed0f`;
+redacted server log SHA-256: `38f846764d84427dde112f380904b0ac78c9a46218cdbc105c4ac15960a35a4f`;
+redacted client logs SHA-256: `54eabe878c624a131e2a98d4d6ec03dd3c7c0de012f6d526fe979d8096d59247`.
+The preceding `srv-paper-radius-active-strict-20261119-r1`,
+`srv-paper-random-radius-strict-20261119-r1`,
+`srv-paper-dynamic-radius-strict-20261119-r1`,
 `srv-paper-mob-radius-strict-20261119-r2` and
 `srv-paper-player-syntax-strict-20261119-r2` reports remain archived in the release manifest.
 
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Active registry, aliases and persistent markers
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r42` passes all
+22 probes on plugin `94a4cbe1f73dd48ec296d4ba48f54689f08e7e1654ae2be8eef8e46eb6e6cc70`.
+The 216 new native/imported/direct comparisons exercise three lifecycle phases
+(active, unregistered with its PDC marker intact, and registered again), six type
+filters, caster/location/explicit-location scopes, exact-zero/exact-one amounts
+and negation. Each comparison checks that querying did not change the active
+registry. The saved ActiveMob is restored and spawned audit entities are removed.
+
+Five native aliases resolve: `BABY_ZOMBIE`, `BABY_HUSK`, `BABY_VILLAGER_ZOMBIE`,
+`PIG_ZOMBIE` and `MUSHROOM_COW`. A custom COW named `MUSHROOM_COW` wins over the
+alias; an ordinary baby Husk is not selected by `BABY_HUSK`. Valid aliases can
+have zero matches. The native stable-registry loaded check requires an ActiveMob;
+no claim is made for the later missing-ActiveMob fallback or ModelEngine hitboxes.
+Optional alias binding failures preserve working custom-name/active queries.
+A missing active-query interface rejects evaluation even for empty scenes,
+covered by the adapter regression assertions.
+
+All prior constant/dynamic/random mob and player comparisons pass. Natural
+sampling records 6/6 cancellations at light 0; alternatives are 7:9 over 16
+valid events, without a distribution claim. The final build passes 2,311 Maven
+tests and SpotBugs, and the full strict report above validates the same JAR.
+
+- [Report](reports/paper-1.21.1-random-spawn-replace-20261119-r42.json), SHA-256
+  `4bfbb28d7a4d06a0bb6708bd1243aabd890dcb15b465ecdbd12b018485c97616`.
+- [Redacted log](reports/paper-1.21.1-random-spawn-replace-20261119-r42.log.gz), SHA-256
+  `d3ee9d1f21a5cb85ce2b46249f92fcc7fcbbe80f8797a9253a51265d5cfac93a`.
+
+Preliminary `srv-paper-random-spawn-replace-20261119-r39` passed on an earlier
+build, but is excluded from the release manifest. The final-artifact attempt
+`srv-paper-random-spawn-replace-20261119-r40` failed its scene expectation: naming
+a custom COW `BABY_ZOMBIE` also activates native MM overrides for baby Zombies
+already in the scene. Its native/imported/direct results agreed but differed
+from the assumed count. The final fixture uses `MUSHROOM_COW` with no ordinary
+Mooshrooms in the scene, preserving the real name-collision test without that
+population interference. The production JAR did not change between r40 and r41.
+The passing `srv-paper-random-spawn-replace-20261119-r41` is retained as earlier
+evidence; r42 repeats it after adding the missing-interface guard.
+See the [compatibility contract](../../docs/MOB_RADIUS_CONDITION_COMPATIBILITY.md).
 
 ## Random radius native comparison
 

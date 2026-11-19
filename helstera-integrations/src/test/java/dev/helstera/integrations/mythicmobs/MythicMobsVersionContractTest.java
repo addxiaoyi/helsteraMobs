@@ -78,13 +78,84 @@ class MythicMobsVersionContractTest {
     }
 
     private static Entity entityProxy() {
+        java.util.UUID id = java.util.UUID.randomUUID();
         return (Entity) Proxy.newProxyInstance(Entity.class.getClassLoader(), new Class<?>[]{Entity.class},
                 (proxy, method, arguments) -> switch (method.getName()) {
+                    case "getUniqueId" -> id;
                     case "toString" -> "fixture-entity";
                     case "hashCode" -> System.identityHashCode(proxy);
                     case "equals" -> proxy == arguments[0];
                     default -> throw new UnsupportedOperationException(method.getName());
                 });
+    }
+
+    @Test void radiusLookupDoesNotResurrectPersistedEntitiesAndPreservesAliasValidity() throws Exception {
+        var adapter = new MythicMobsAdapter(null, null, null);
+        Entity entity = entityProxy();
+        var registry = new ActiveRegistry();
+        var helper = new ReloadingHelper(entity);
+        adapter.bindMythicMobLookup(helper, registry);
+        adapter.bindMythicEntityLookup(EntityTypes.class);
+        assertTrue(adapter.hasRadiusType("BABY_ZOMBIE"));
+        assertFalse(adapter.hasRadiusType("not-a-type"));
+        assertFalse(adapter.hasMythicMobType("BABY_ZOMBIE"));
+        assertFalse(adapter.matchesActiveRadiusType(entity, "ForestGuardian").orElseThrow());
+        assertFalse(helper.instanceQueried, "unregistered persistent entity must not be reloaded");
+        registry.active = java.util.Optional.of(new FakeActiveMob());
+        assertTrue(adapter.matchesActiveRadiusType(entity, "forestguardian").orElseThrow());
+        assertFalse(adapter.matchesActiveRadiusType(entity, "BABY_ZOMBIE").orElseThrow());
+        registry.active = java.util.Optional.empty();
+        assertFalse(adapter.matchesActiveRadiusType(entity, "ForestGuardian").orElseThrow());
+        assertFalse(helper.instanceQueried);
+        registry.fail = true;
+        assertTrue(adapter.matchesActiveRadiusType(entity, "ForestGuardian").isEmpty());
+        adapter.bindMythicMobLookup(helper); // Rebinding must discard both old registry and aliases.
+        assertTrue(adapter.matchesActiveRadiusType(entity, "ForestGuardian").isEmpty());
+        assertFalse(adapter.hasRadiusType("BABY_ZOMBIE"));
+        assertThrows(IllegalStateException.class, () -> adapter.hasRadiusType("ForestGuardian"),
+                "Missing active lookup must reject even before querying an empty scene");
+        adapter.bindMythicEntityLookup(EntityTypes.class);
+        assertThrows(IllegalStateException.class, () -> adapter.hasRadiusType("BABY_ZOMBIE"));
+    }
+
+    @Test void radiusAliasProviderFailuresAreDistinctFromUnknownTypes() throws Exception {
+        var adapter = new MythicMobsAdapter(null, null, null);
+        Entity entity = entityProxy();
+        var registry = new ActiveRegistry();
+        registry.active = java.util.Optional.of(new FakeActiveMob());
+        adapter.bindMythicMobLookup(new TypedFakeApiHelper(entity), registry);
+        adapter.bindMythicEntityLookup(FailingEntityTypes.class);
+        assertThrows(IllegalStateException.class, () -> adapter.hasRadiusType("BABY_ZOMBIE"));
+        assertThrows(NoSuchMethodException.class, () -> adapter.bindMythicEntityLookup(Object.class));
+        assertFalse(adapter.hasRadiusType("BABY_ZOMBIE"));
+        assertTrue(adapter.hasRadiusType("ForestGuardian"));
+        assertTrue(adapter.matchesActiveRadiusType(entity, "ForestGuardian").orElseThrow());
+    }
+
+    public static class ActiveRegistry {
+        java.util.Optional<FakeActiveMob> active = java.util.Optional.empty();
+        boolean fail;
+        public java.util.Optional<FakeActiveMob> getActiveMob(java.util.UUID id) {
+            if (fail) throw new IllegalStateException("Registry unavailable");
+            return active;
+        }
+    }
+
+    public static class ReloadingHelper extends TypedFakeApiHelper {
+        boolean instanceQueried;
+        ReloadingHelper(Entity entity) { super(entity); }
+        @Override public java.util.Optional<FakeActiveMob> getMythicMobInstance(Entity entity) {
+            instanceQueried = true;
+            return super.getMythicMobInstance(entity);
+        }
+    }
+
+    public static class EntityTypes {
+        public static Object getMythicEntity(String name) { return name.equals("BABY_ZOMBIE") ? new Object() : null; }
+    }
+
+    public static class FailingEntityTypes {
+        public static Object getMythicEntity(String name) { throw new IllegalStateException("Unavailable"); }
     }
 
     public static class FakeApiHelper {
