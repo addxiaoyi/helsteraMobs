@@ -24,15 +24,21 @@ final class ComparisonDispatchAudit {
     private record Scene(String name, List<LivingEntity> targets, Entity trigger, Location point, float pitch) {}
 
     static void run(JavaPlugin probe, Plugin helstera, Plugin mythic, Location center) throws Exception {
+        run(probe, helstera, mythic, center, false);
+        run(probe, helstera, mythic, center, true);
+    }
+
+    private static void run(JavaPlugin probe, Plugin helstera, Plugin mythic, Location center, boolean extended) throws Exception {
         List<Entity> owned = new ArrayList<>();
+        Relations relations = null;
         try {
             Location base = center.clone().add(80, 20, 0);
             base.setYaw(0); base.setPitch(0);
-            Cow caster = cow(base, owned);
-            Cow front = cow(base.clone().add(0, 0, 4), owned);
+            Cow caster = extended ? nativeCow(base, owned, mythic) : cow(base, owned);
+            Cow front = extended ? nativeCow(base.clone().add(0, 0, 4), owned, mythic) : cow(base.clone().add(0, 0, 4), owned);
             Cow precision = cow(base.clone().add(0, 0, 4.00000001), owned);
-            Cow back = cow(base.clone().add(0, 0, -4), owned);
-            Cow above = cow(base.clone().add(0, 4, 0), owned);
+            Cow back = extended ? nativeCow(base.clone().add(0, 0, -4), owned, mythic) : cow(base.clone().add(0, 0, -4), owned);
+            Cow above = extended ? nativeCow(base.clone().add(0, 4, 0), owned, mythic) : cow(base.clone().add(0, 4, 0), owned);
             Cow below = cow(base.clone().add(0, -4, 0), owned);
             Cow side = cow(base.clone().add(4, 0, 0), owned);
             Cow overlap = cow(base.clone().add(0, 0, .2), owned);
@@ -67,6 +73,21 @@ final class ComparisonDispatchAudit {
                     new Scene("location-back", List.of(), back, eye.clone().add(0, 0, -4), 0),
                     new Scene("location-cross-world", List.of(), cross, otherPoint, 0),
                     new Scene("location-at-eye", List.of(), caster, eye, 0));
+            if (extended) {
+                var expanded = new ArrayList<>(scenes);
+                expanded.addAll(List.of(
+                        new Scene("related-removed-item", List.of(back), removedItem, null, 0),
+                        new Scene("related-removed-living", List.of(removed), removed, null, 0),
+                        new Scene("related-item", List.of(back), itemEye, null, 0),
+                        new Scene("no-relations", List.of(front), front, null, 0),
+                        new Scene("no-faction", List.of(cross), cross, null, 0),
+                        new Scene("empty-faction", List.of(cross), cross, null, 0),
+                        new Scene("unregistered", List.of(front), front, null, 0),
+                        new Scene("occluded", List.of(front), front, null, 0),
+                        new Scene("mounted", List.of(above), above, null, 0),
+                        new Scene("dismounted", List.of(above), above, null, 0)));
+                scenes = List.copyOf(expanded);
+            }
             String[][] cases = {
                     {"distance{d=0}", "DistanceCondition"}, {"distance{d=4}", "DistanceCondition"},
                     {"distance{d=<4}", "DistanceCondition"}, {"distance{d=>4}", "DistanceCondition"},
@@ -79,6 +100,20 @@ final class ComparisonDispatchAudit {
                     {"bbsoverlap{so=4}", "BoundingBoxesOverlapCondition"},
                     {"boundingboxesoverlap{fo=-4}", "BoundingBoxesOverlapCondition"},
                     {"iscaster", "IsCasterCondition"}};
+            if (extended) {
+                String min = coordinates(base.clone().add(-4, -4, -4));
+                String max = coordinates(base.clone().add(4, 4, 4));
+                cases = new String[][] {
+                        {"cuboid{a=-4,-4,-4;b=4,4,4;r=true}", "CuboidCondition"},
+                        {"cuboid{l1=4,4,4;l2=-4,-4,-4;relative=true}", "CuboidCondition"},
+                        {"cuboid{location1=" + min + ";location2=" + max + "}", "CuboidCondition"},
+                        {"cuboid{loc1=" + min + ";loc2=" + max + ";r=true}", "CuboidCondition"},
+                        {"cuboid{a=0,0,0;b=0,0,0;r=true}", "CuboidCondition"},
+                        {"cuboid{a=0,0,0;b=4,4,4;r=true}", "CuboidCondition"},
+                        {"owner", "OwnerCondition"}, {"isparent", "IsParentCondition"},
+                        {"samefaction", "FactionSameCondition"}, {"lineofsight", "LineOfSightCondition"},
+                        {"vehicleisdead", "VehicleIsDeadCondition"}};
+            }
             ClassLoader nativeLoader = mythic.getClass().getClassLoader();
             ClassLoader runtimeLoader = helstera.getClass().getClassLoader();
             Class<?> abstractEntity = Class.forName("io.lumine.mythic.api.adapters.AbstractEntity", true, nativeLoader);
@@ -126,6 +161,8 @@ final class ComparisonDispatchAudit {
                     double.class, double.class, long.class, String.class, String.class, Entity.class,
                     List.class, Location.class, treeType);
             Location origin = base.clone().add(100, 100, 100);
+            if (extended) relations = new Relations(helstera, mythic, caster, front, back, above, base, owned);
+            String marker = extended ? "RELATIONAL_DISPATCH" : "COMPARISON_DISPATCH";
             int rows = 0;
             for (String[] test : cases) for (boolean outcome : List.of(true, false)) {
                 String expression = test[0] + " " + outcome;
@@ -167,6 +204,7 @@ final class ComparisonDispatchAudit {
                         yaml.set("skills.observe.on-decision", List.of("comparison-observe"));
                         skillsType.getMethod("loadSkills", ConfigurationSection.class).invoke(skills, yaml.getConfigurationSection("skills"));
                         for (Scene scene : scenes) {
+                            if (relations != null) relations.configure(scene);
                             caster.setRotation(0, scene.pitch());
                             Object nativeMeta = metadataImpl.getConstructor(triggerType, skillCaster, abstractEntity)
                                     .newInstance(triggerType.getMethod("get", String.class).invoke(null, "API"), nativeCaster,
@@ -204,7 +242,7 @@ final class ComparisonDispatchAudit {
                                         && contextType.getMethod("conditionScope").invoke(action).toString().equals("EXECUTION");
                                 if (scene.point() != null) matched &= ((Optional<?>) contextType.getMethod("targetLocation").invoke(action)).orElseThrow().equals(scene.point());
                             }
-                            probe.getLogger().info("COMPARISON_DISPATCH|condition=" + test[0] + "|mode=" + mode
+                            probe.getLogger().info(marker + "|condition=" + test[0] + "|mode=" + mode
                                     + "|outcome=" + outcome + "|scene=" + scene.name() + "|path=" + (importedPath ? "imported" : "direct")
                                     + "|native=" + expected + "|runtime=" + !observed.isEmpty() + "|matched=" + matched);
                             if (!matched) throw new IllegalStateException("Comparison dispatch differs: " + expression + " " + mode + " " + scene.name());
@@ -213,10 +251,128 @@ final class ComparisonDispatchAudit {
                     }
                 }
             }
-            if (rows != 6720) throw new IllegalStateException("Incomplete comparison dispatch evidence: " + rows);
-            probe.getLogger().info("COMPARISON_DISPATCH_SUMMARY|comparisons=" + rows + "|conditions=16|scenes=21|modes=5|passed=true");
+            int expectedRows = extended ? 6820 : 6720;
+            if (rows != expectedRows) throw new IllegalStateException("Incomplete comparison dispatch evidence: " + rows);
+            probe.getLogger().info(marker + "_SUMMARY|comparisons=" + rows + "|conditions=" + cases.length
+                    + "|scenes=" + scenes.size() + "|modes=5|passed=true");
         } finally {
-            for (Entity entity : owned) entity.remove();
+            try { if (relations != null) relations.close(); }
+            finally { for (Entity entity : owned) entity.remove(); }
+        }
+    }
+
+    private static String coordinates(Location point) {
+        return point.getX() + "," + point.getY() + "," + point.getZ();
+    }
+
+    private static Cow nativeCow(Location location, List<Entity> owned, Plugin mythic) throws Exception {
+        Object api = mythic.getClass().getMethod("getAPIHelper").invoke(mythic);
+        Cow cow = (Cow) api.getClass().getMethod("spawnMythicMob", String.class, Location.class)
+                .invoke(api, "HelsteraRadiusAuditMob", location);
+        if (cow == null) throw new IllegalStateException("Native relation mob missing");
+        owned.add(cow); cow.setAI(false); cow.setGravity(false); cow.setInvulnerable(true);
+        return cow;
+    }
+
+    /** Uses public native ownership/faction APIs and production Helstera relation storage. */
+    private static final class Relations implements AutoCloseable {
+        private final Class<?> factions, tableType, relationType, activeType, casterType;
+        private final Object priorTable, table, manager, activeCaster;
+        private final Cow caster, front, above, vehicle;
+        private final List<Cow> nativeMembers;
+        private final Location aboveStart;
+        private boolean obstructed;
+        private final Method adaptEntity, register, unregister, bind;
+        private final List<org.bukkit.block.BlockState> wall = new ArrayList<>();
+        private boolean registered = true;
+
+        Relations(Plugin helstera, Plugin mythic, Cow caster, Cow front, Cow back, Cow above,
+                  Location base, List<Entity> owned) throws Exception {
+            this.caster = caster; this.front = front; this.above = above;
+            aboveStart = above.getLocation();
+            nativeMembers = List.of(caster, front, back, above);
+            ClassLoader runtime = helstera.getClass().getClassLoader(), nativeLoader = mythic.getClass().getClassLoader();
+            factions = Class.forName("dev.helstera.api.behavior.Factions", true, runtime);
+            tableType = Class.forName("dev.helstera.api.behavior.FactionTable", true, runtime);
+            relationType = Class.forName("dev.helstera.api.behavior.MobRelations", true, runtime);
+            table = Class.forName("dev.helstera.ai.FactionService", true, runtime).getConstructor().newInstance();
+            bind = table.getClass().getMethod("bindInstance", UUID.class, String.class);
+            priorTable = factions.getMethod("table").invoke(null);
+            manager = mythic.getClass().getMethod("getMobManager").invoke(mythic);
+            activeType = Class.forName("io.lumine.mythic.core.mobs.ActiveMob", true, nativeLoader);
+            casterType = Class.forName("io.lumine.mythic.api.skills.SkillCaster", true, nativeLoader);
+            adaptEntity = Class.forName("io.lumine.mythic.bukkit.BukkitAdapter", true, nativeLoader).getMethod("adapt", Entity.class);
+            register = manager.getClass().getMethod("registerActiveMob", activeType);
+            unregister = manager.getClass().getMethod("unregisterActiveMob", UUID.class);
+            activeCaster = active(caster);
+            setFaction(front, "Guards"); setFaction(back, "guards"); setFaction(above, "Raiders");
+            vehicle = cow(base.clone().add(12, 0, 0), owned);
+            // Isolate the only obstruction, and restore exact block data after each scene.
+            for (int x = -1; x <= 1; x++) for (int y = 0; y <= 3; y++)
+                wall.add(base.clone().add(x, y, 2).getBlock().getState());
+            factions.getMethod("install", tableType).invoke(null, table);
+        }
+
+        private Object active(Entity entity) throws Exception {
+            return ((Optional<?>) manager.getClass().getMethod("getActiveMob", UUID.class)
+                    .invoke(manager, entity.getUniqueId())).orElseThrow();
+        }
+
+        private void setFaction(Entity entity, String value) throws Exception {
+            activeType.getMethod("setFaction", String.class).invoke(active(entity), value);
+            bind.invoke(table, entity.getUniqueId(), value);
+        }
+
+        void configure(Scene scene) throws Exception {
+            if (!registered) { register.invoke(manager, activeCaster); registered = true; }
+            vehicle.eject();
+            if (!above.getLocation().equals(aboveStart) && !above.teleport(aboveStart))
+                throw new IllegalStateException("Could not restore subject position");
+            if (obstructed) for (var block : wall) block.update(true, false);
+            obstructed = scene.name().equals("occluded");
+            if (obstructed) for (var block : wall) block.getBlock().setType(org.bukkit.Material.STONE, false);
+            if (scene.name().equals("mounted") && !vehicle.addPassenger(above))
+                throw new IllegalStateException("Could not mount subject");
+            if (scene.name().equals("dismounted")) {
+                if (!vehicle.addPassenger(above)) throw new IllegalStateException("Could not mount subject");
+                vehicle.eject();
+            }
+            String faction = switch (scene.name()) {
+                case "no-faction", "unregistered" -> null;
+                case "empty-faction" -> "";
+                default -> "Guards";
+            };
+            activeType.getMethod("setFaction", String.class).invoke(activeCaster, faction);
+            bind.invoke(table, caster.getUniqueId(), faction);
+            Entity related = scene.name().startsWith("related-") ? scene.trigger() : front;
+            if (scene.name().equals("no-relations") || scene.name().equals("unregistered")) related = null;
+            relationType.getMethod("removeOwner", Entity.class).invoke(null, caster);
+            relationType.getMethod("clearParent", Entity.class).invoke(null, caster);
+            activeType.getMethod("removeOwner").invoke(activeCaster);
+            activeType.getMethod("setParent", casterType).invoke(activeCaster, new Object[]{null});
+            if (related != null) {
+                activeType.getMethod("setOwner", UUID.class).invoke(activeCaster, related.getUniqueId());
+                Object adapted = adaptEntity.invoke(null, related);
+                Object parent = Proxy.newProxyInstance(casterType.getClassLoader(), new Class<?>[]{casterType},
+                        (proxy, method, args) -> switch (method.getName()) {
+                            case "getEntity" -> adapted;
+                            case "addChild" -> null;
+                            default -> throw new UnsupportedOperationException(method.getName());
+                        });
+                activeType.getMethod("setParent", casterType).invoke(activeCaster, parent);
+                relationType.getMethod("setOwner", Entity.class, Entity.class).invoke(null, caster, related);
+                relationType.getMethod("setParent", Entity.class, Entity.class).invoke(null, caster, related);
+            }
+            if (scene.name().equals("unregistered")) {
+                unregister.invoke(manager, caster.getUniqueId()); registered = false;
+            }
+        }
+
+        @Override public void close() throws Exception {
+            try {
+                for (var block : wall) block.update(true, false);
+                for (Entity entity : nativeMembers) unregister.invoke(manager, entity.getUniqueId());
+            } finally { factions.getMethod("install", tableType).invoke(null, priorTable); }
         }
     }
 

@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-comparison-dispatch-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `9d75bd8a09ec2a645c5de6b6ad9c24f616613710ce3cd80a69b0aa6d87a5e4af`. [Strict report](reports/paper-1.21.1-comparison-dispatch-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-comparison-dispatch-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-comparison-dispatch-strict-20261119-r1.client-logs.zip) This artifact passes 2,321 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-relational-dispatch-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `0a53fdf2a7c0ffe90c76d5910a73801c6e4015f3abd66888eb65e16248f4b522`. [Strict report](reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-relational-dispatch-strict-20261119-r1.client-logs.zip) This artifact passes 2,326 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,10 +9,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `25e5592312da8d7cfb791e007f41a219cd5ab0e21ae0a6296c955e9a243083ec`;
-redacted server log SHA-256: `7f169190374941aebc4397589a358555bbd361ebe5b329ada0732a030c3755e4`;
-redacted client logs SHA-256: `c8e678e9108b375e9d024bc825f9e3220372b7004779f1094f6734f82dfd726e`.
-The preceding `srv-paper-trigger-dispatch-strict-20261119-r1`,
+Current full-report SHA-256: `c630ba6ed56df1f8cceaece9c98d52ca5cadc45ca6e40ac09d95d22c619c07f7`;
+redacted server log SHA-256: `fc2996b895c8ef2f9dff30bdfac7d2480938c0b45baaf2b1c9fdfb4c8dc05dec`;
+redacted client logs SHA-256: `9e39d1b814dfa05833e6fbe3cc049400555a28eec330b5715c42cda1ba7259f4`.
+The preceding `srv-paper-comparison-dispatch-strict-20261119-r1`,
+`srv-paper-trigger-dispatch-strict-20261119-r1`,
 `srv-paper-location-guards-strict-20261119-r3`,
 `srv-paper-radius-dispatch-strict-20261119-r1`,
 `srv-paper-radius-active-strict-20261119-r2`,
@@ -25,6 +26,53 @@ The preceding `srv-paper-trigger-dispatch-strict-20261119-r1`,
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Cuboid and relational comparison dispatch
+
+Focused strict fixture `srv-paper-random-spawn-replace-20261119-r57` passes all
+27 probes on plugin `0a53fdf2a7c0ffe90c76d5910a73801c6e4015f3abd66888eb65e16248f4b522`. The new
+6,820-row probe covers 11 expressions across Cuboid, Owner, IsParent,
+FactionSame, LineOfSight and VehicleIsDead, 31 scenes, five named/inline modes,
+true/false outcomes and imported/direct skills. It invokes actual public native
+framework evaluators and compares named previews, action counts, retained UUIDs
+and execution context. The original 6,720 comparison rows and all radius,
+non-living-trigger, targeter-boundary and RandomSpawns controls also pass.
+
+Cuboid's maximum faces are excluded. Relative offsets apply to entity subjects,
+while caster and explicit-location dispatch prefer its absolute single-location
+interface. Owner/parent gates use stored UUIDs even for removed triggers.
+FactionSame preserves case and treats absent factions as `NONE`, while combat
+alliances retain normalized IDs. LineOfSight uses the actual entity subject;
+a real stone wall changes the positive scene into rejection. VehicleIsDead uses
+the subject's vehicle and includes invalid vehicles. Real Paper verifies absent/
+live vehicles and dismount cleanup; dead/invalid vehicle references and
+non-living caster adapter errors have unit evidence only.
+
+Native mobs use public spawn, owner/parent and faction setters. The suite checks
+live/removed item relations, cleared relations, absent/empty/case-different
+factions and native unregister/reregister behavior. It restores obstruction
+blocks and the global faction table and unregisters/removes its temporary mobs.
+This does not establish summon wiring or relationship persistence parity.
+See the [relational contract](../../docs/RELATIONAL_CONDITION_COMPATIBILITY.md).
+
+The same artifact passes 2,326 Maven tests with no failures/errors/skips and
+SpotBugs. Full strict fixture `srv-paper-relational-dispatch-strict-20261119-r1`
+passes all 471 probes (452 passed, 19 expected rejections), preserving the prior
+Potion/client/runtime workflows. The initial Maven attempt identified incorrect
+nested Mockito stubbing in the new relation test; the test setup was corrected.
+The first real Paper attempt passed. Current release gates and version-matrix
+validation pass; archived credentials are scanned before publication.
+
+- [Focused report](reports/paper-1.21.1-random-spawn-replace-20261119-r57.json), SHA-256
+  `2519479e2cc92f746e6624f01cfd73c59f59f95ced0ebc53418b1476c55ffc0f`.
+- [Redacted focused log](reports/paper-1.21.1-random-spawn-replace-20261119-r57.log.gz), SHA-256
+  `f9f2e01be47de378d274d8f098074cd53c89f5e78ad37df230888ee05dfda32a`.
+
+The pinned artifact contains 11 IEntityComparisonCondition implementations;
+all now have scoped framework evidence. Dynamic placeholders, wider view angles,
+player faction providers, relationship lifecycle/restart, other condition
+families, condition actions, Premium expressions and other versions remain open.
+Complete matrix rows retain their existing status.
 
 ## Entity and location comparison dispatch
 

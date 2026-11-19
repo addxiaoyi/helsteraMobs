@@ -2223,6 +2223,76 @@ public final class SkillExtras {
         }
     }
 
+    static boolean comparisonLineOfSight(BehaviorContext ctx) {
+        comparisonDispatch(ctx, false);
+        if (ctx == null || !ctx.instanceValid()) return false;
+        Entity caster = casterEntity(ctx);
+        Entity target = comparisonTarget(ctx);
+        if (caster == null || target == null) return false;
+        if (ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION
+                && caster.getWorld() != target.getWorld()) return false;
+        if (!(caster instanceof LivingEntity living)) {
+            // Native adapter casts to LivingEntity; failure rejects before inversion.
+            if (ctx.conditionScope() != BehaviorContext.ConditionScope.EXECUTION)
+                throw new dev.helstera.ai.ConditionDispatchException(false);
+            return false;
+        }
+        return living.hasLineOfSight(target);
+    }
+
+    private static org.bukkit.util.Vector cuboidVector(String raw) {
+        if (raw == null || raw.isBlank()) throw new IllegalArgumentException("cuboid requires two corners");
+        if (raw.startsWith("@")) {
+            if (!Set.of("@origin", "@selflocation", "@targetlocation", "@triggerlocation")
+                    .contains(raw.toLowerCase(Locale.ROOT)))
+                throw new IllegalArgumentException("invalid cuboid location selector");
+            return null; // Helstera location-selector extension.
+        }
+        String[] values = raw.split(",", -1);
+        if (values.length != 3 && values.length != 4 || values[0].isBlank())
+            throw new IllegalArgumentException("cuboid corners require three coordinates");
+        int offset = values.length - 3;
+        var vector = new org.bukkit.util.Vector(finiteDouble(values[offset].trim(), "cuboid x"),
+                finiteDouble(values[offset + 1].trim(), "cuboid y"), finiteDouble(values[offset + 2].trim(), "cuboid z"));
+        return offset == 0 ? vector : null; // Explicit-world coordinates retain extension semantics.
+    }
+
+    private static SkillCatalog.ConditionFactory cuboidCondition() {
+        return args -> {
+            Map<String, String> named = strictConditionValues(args, Map.of(
+                    "location1", "first", "loc1", "first", "l1", "first", "a", "first",
+                    "location2", "second", "loc2", "second", "l2", "second", "b", "second",
+                    "relative", "relative", "r", "relative"), "cuboid");
+            if (named == null && (args == null || args.size() < 2 || args.size() > 3))
+                throw new IllegalArgumentException("cuboid requires two corners and optional relative flag");
+            String first = named == null ? args.get(0) : named.get("first");
+            String second = named == null ? args.get(1) : named.get("second");
+            String rawRelative = named == null ? args.size() == 3 ? args.get(2) : "false"
+                    : named.getOrDefault("relative", "false");
+            boolean relative = SpecArgs.bool(List.of(rawRelative), 0, false);
+            var firstVector = cuboidVector(first);
+            var secondVector = cuboidVector(second);
+            var box = firstVector == null || secondVector == null ? null
+                    : org.bukkit.util.BoundingBox.of(firstVector, secondVector);
+            return ctx -> {
+                if (ctx == null) return false;
+                if (ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION || box == null)
+                    return boundsMatch(ctx, "cuboid", first, second, null, null, null, relative);
+                boolean casterScope = ctx.conditionScope() == BehaviorContext.ConditionScope.CASTER;
+                Location subject = casterScope ? comparisonCasterLocation(ctx) : comparisonTargetLocation(ctx);
+                if (subject == null) throw new dev.helstera.ai.ConditionDispatchException(false);
+                var evaluated = box;
+                // Caster and explicit-position dispatch prefer ILocationCondition, which ignores relative.
+                if (relative && !casterScope && !locationComparisonTarget(ctx)) {
+                    Location caster = comparisonCasterLocation(ctx);
+                    if (caster == null) throw new dev.helstera.ai.ConditionDispatchException(false);
+                    evaluated = box.clone().shift(caster.toVector());
+                }
+                return evaluated.contains(subject.toVector());
+            };
+        };
+    }
+
     private static boolean boundsMatch(BehaviorContext ctx, String shape,
                                        String firstRaw, String secondRaw, String centerRaw,
                                        String radiusRaw, String heightRaw, boolean relative) {
@@ -3468,8 +3538,10 @@ public final class SkillExtras {
                     return ctx -> {
                         if (ctx == null || !ctx.instanceValid()) return false;
                         Entity caster = ctx.instance().baseEntity().orElse(null);
-                        Entity target = targetOnlyEntity(ctx);
-                        java.util.UUID owner = ownerId(caster);
+                        comparisonDispatch(ctx, false);
+                        Entity target = comparisonTarget(ctx);
+                        java.util.UUID owner = ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION
+                                ? ownerId(caster) : dev.helstera.api.behavior.MobRelations.ownerId(caster);
                         return owner != null && target != null
                                 && owner.equals(target.getUniqueId());
                     };
@@ -3495,11 +3567,13 @@ public final class SkillExtras {
                     requireNoConditionArguments(a, "is-parent");
                     return ctx -> {
                         if (ctx == null || !ctx.instanceValid()) return false;
-                        Entity parent = ctx.targetEntity().orElse(null);
+                        comparisonDispatch(ctx, false);
+                        Entity parent = comparisonTarget(ctx);
                         Entity caster = ctx.instance().baseEntity().orElse(null);
                         return parent != null && caster != null
                                 && parent.getUniqueId().equals(dev.helstera.api.behavior.MobRelations.parentId(caster))
-                                && parent.isValid() && !parent.isDead();
+                                && (ctx.conditionScope() != BehaviorContext.ConditionScope.EXECUTION
+                                || parent.isValid() && !parent.isDead());
                     };
                 }),
                 Map.entry("is-child", (SkillCatalog.ConditionFactory) a -> {
@@ -3552,8 +3626,11 @@ public final class SkillExtras {
                 Map.entry("vehicle-is-dead", (SkillCatalog.ConditionFactory) a -> {
                     requireNoConditionArguments(a, "vehicle-is-dead");
                     return ctx -> {
-                        Entity caster = casterEntity(ctx);
-                        return caster != null && caster.getVehicle() != null && caster.getVehicle().isDead();
+                        comparisonDispatch(ctx, false);
+                        Entity subject = ctx != null && ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION
+                                ? casterEntity(ctx) : comparisonTarget(ctx);
+                        Entity vehicle = subject == null ? null : subject.getVehicle();
+                        return vehicle != null && (vehicle.isDead() || !vehicle.isValid());
                     };
                 }),
                 Map.entry("is-vehicle", (SkillCatalog.ConditionFactory) a -> {
@@ -3727,15 +3804,22 @@ public final class SkillExtras {
                         return actual != null && !table.alliedFactions(actual, wanted);
                     };
                 }),
-                Map.entry("same-faction", (SkillCatalog.ConditionFactory) a -> ctx -> {
+                Map.entry("same-faction", noArgumentCondition("same-faction", ctx -> {
+                    comparisonDispatch(ctx, false);
                     if (ctx == null || !ctx.instanceValid()) return false;
-                    Entity caster = ctx.instance().baseEntity().orElse(null);
-                    Entity target = targetOnlyEntity(ctx);
-                    String casterFaction = dev.helstera.api.behavior.Factions.factionOf(caster);
-                    String targetFaction = dev.helstera.api.behavior.Factions.factionOf(target);
-                    return casterFaction != null && targetFaction != null
-                            && casterFaction.equalsIgnoreCase(targetFaction);
-                }),
+                    Entity caster = casterEntity(ctx);
+                    Entity target = comparisonTarget(ctx);
+                    if (caster == null || target == null) return false;
+                    if (ctx.conditionScope() == BehaviorContext.ConditionScope.EXECUTION) {
+                        String first = dev.helstera.api.behavior.Factions.factionOf(caster);
+                        String second = dev.helstera.api.behavior.Factions.factionOf(target);
+                        return first != null && second != null && first.equalsIgnoreCase(second);
+                    }
+                    var table = dev.helstera.api.behavior.Factions.table();
+                    String first = table == null ? null : table.comparisonFactionOf(caster);
+                    String second = table == null ? null : table.comparisonFactionOf(target);
+                    return (first == null ? "NONE" : first).equals(second == null ? "NONE" : second);
+                })),
                 Map.entry("different-faction", (SkillCatalog.ConditionFactory) a -> ctx -> {
                     if (ctx == null || !ctx.instanceValid()) return false;
                     Entity caster = ctx.instance().baseEntity().orElse(null);
@@ -4721,17 +4805,7 @@ public final class SkillExtras {
                                 && origin.getBlockZ() == (int) Math.floor(expectedZ);
                     };
                 }),
-                Map.entry("cuboid", (SkillCatalog.ConditionFactory) a -> {
-                    String first = keyedArg(a, "location1", "loc1", "l1", "a");
-                    if (first == null) first = str(a, 0, "");
-                    String second = keyedArg(a, "location2", "loc2", "l2", "b");
-                    if (second == null) second = str(a, 1, "");
-                    boolean relative = keyedBoolean(a, 2, false, "relative", "r");
-                    final String firstPoint = first;
-                    final String secondPoint = second;
-                    return ctx -> boundsMatch(ctx, "cuboid", firstPoint, secondPoint,
-                            null, null, null, relative);
-                }),
+                Map.entry("cuboid", cuboidCondition()),
                 Map.entry("in-bounds", (SkillCatalog.ConditionFactory) a -> {
                     String shape = keyedArg(a, "shape");
                     if (shape == null) shape = str(a, 0, "cuboid");

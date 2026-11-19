@@ -76,13 +76,14 @@ After building, use an unused revision to reproduce the focused suite:
 
 ```powershell
 ./mvnw -B -pl helstera-plugin -am verify
-pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision r57 -MobRadiusStrict -VanillaCachePath <verified-vanilla-cache>
+pwsh -NoProfile -File tools/paper-integration/run-random-spawn-replace-fixture.ps1 -EvidenceRevision r58 -MobRadiusStrict -VanillaCachePath <verified-vanilla-cache>
 ```
 
 ## Open boundaries
 
-Cuboid, faction/owner/parent/line-of-sight and vehicle comparison interfaces,
-dynamic distance placeholders, the broader generic entity condition catalog,
+Cuboid, faction/owner/parent/line-of-sight and vehicle comparisons have additional
+scoped evidence in the [relational contract](RELATIONAL_CONDITION_COMPATIBILITY.md).
+Dynamic distance placeholders, the broader generic entity condition catalog,
 FOV angles beyond the existing 0..180 binding range, condition action suffixes
 beyond true/false, Premium expressions and other MM/Paper versions remain open.
 The complete Conditions and Context Targeters rows remain `mapped-unverified`.

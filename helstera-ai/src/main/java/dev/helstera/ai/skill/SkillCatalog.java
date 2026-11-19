@@ -382,14 +382,8 @@ public final class SkillCatalog {
                 // 无目标时按「看不见」处理：条件用于 require 时，
                 // 无视距的生物不该因为缺少视线判定而一直放行。
                 java.util.Map.entry("has-line-of-sight", (ConditionFactory) a -> {
-                    return ctx -> {
-                        if (!ctx.instanceValid()) return false;
-                        var self = ctx.instance().baseEntity().orElse(null);
-                        var tgt = ctx.targetEntity().orElse(null);
-                        if (self == null || tgt == null) return false;
-                        if (self.getWorld() != tgt.getWorld()) return false;
-                        return self instanceof LivingEntity le && le.hasLineOfSight(tgt);
-                    };
+                    if (a != null && !a.isEmpty()) throw new IllegalArgumentException("has-line-of-sight takes no arguments");
+                    return SkillExtras::comparisonLineOfSight;
                 }),
 
                 // 目标类型判定。玩家/生物/生物群系分别可用 kind 支持的取值，

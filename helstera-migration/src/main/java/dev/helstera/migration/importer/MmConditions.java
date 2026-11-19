@@ -598,16 +598,22 @@ public final class MmConditions {
                     : new Mapped("dimension-is " + value, true);
         }
         if ("cuboid".equals(name) || "incuboid".equals(name)) {
-            String first = keyedValue(body, "location1", "loc1", "l1", "a");
-            String second = keyedValue(body, "location2", "loc2", "l2", "b");
-            if (first == null) first = positionalSection(body, 0);
-            if (second == null) second = positionalSection(body, 1);
-            String relative = keyedArgument(body, "relative", "r");
-            if (relative == null) relative = "false";
-            return validBoundsLocation(first) && validBoundsLocation(second)
+            Map<String, String> arguments;
+            if (body != null && !body.contains("=")) {
+                String[] values = body.split(";", -1);
+                if (values.length < 2 || values.length > 3) return new Mapped(s, false);
+                arguments = Map.of("first", values[0].trim(), "second", values[1].trim(),
+                        "relative", values.length == 3 ? values[2].trim() : "false");
+            } else arguments = strictValueArguments(body, Map.of(
+                    "location1", "first", "loc1", "first", "l1", "first", "a", "first",
+                    "location2", "second", "loc2", "second", "l2", "second", "b", "second",
+                    "relative", "relative", "r", "relative"), null);
+            if (arguments == null) return new Mapped(s, false);
+            String first = arguments.get("first"), second = arguments.get("second");
+            String relative = normalizedBoolean(arguments.getOrDefault("relative", "false"));
+            return relative != null && validBoundsLocation(first) && validBoundsLocation(second)
                     ? new Mapped("cuboid loc1=" + first + " loc2=" + second
-                    + " relative=" + relative, true)
-                    : new Mapped(s, false);
+                    + " relative=" + relative, true) : new Mapped(s, false);
         }
         if ("inbounds".equals(name) || "withinbounds".equals(name)
                 || "insidebounds".equals(name)) {
@@ -3167,9 +3173,9 @@ public final class MmConditions {
             return reference.equals("origin") || reference.equals("selflocation")
                     || reference.equals("targetlocation") || reference.equals("triggerlocation");
         }
-        String[] parts = value.split("\\s*,\\s*");
+        String[] parts = value.split("\\s*,\\s*", -1);
         int offset = parts.length == 4 ? 1 : 0;
-        if (parts.length != 3 && parts.length != 4) return false;
+        if (parts.length != 3 && parts.length != 4 || parts[0].isBlank()) return false;
         return validFiniteNumber(parts[offset]) && validFiniteNumber(parts[offset + 1])
                 && validFiniteNumber(parts[offset + 2]);
     }

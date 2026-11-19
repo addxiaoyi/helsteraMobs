@@ -27,6 +27,11 @@ public interface FactionTable {
      */
     String factionOf(Entity entity);
 
+    /** Original faction spelling for case-sensitive Mythic condition comparisons. */
+    default String comparisonFactionOf(Entity entity) {
+        return factionOf(entity);
+    }
+
     /**
      * 两个实体是否属于同盟（互不攻击）。
      *

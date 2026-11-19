@@ -144,8 +144,102 @@ class ComparisonConditionContractTest {
         assertFalse(test("boundingboxesoverlap{f=4}", ctx));
     }
 
+    @Test void cuboidUsesHalfOpenBoundsAndNativeDispatchPrecedence() {
+        var ctx = context(BehaviorContext.ConditionScope.TARGET);
+        String relative = "cuboid{a=-1,-1,0;b=1,5,4;r=true}";
+        assertFalse(test(relative, ctx), "max Z face is excluded");
+        when(target.getLocation()).thenReturn(new Location(world, 0, 64, 3.999));
+        assertTrue(test(relative, ctx));
+        when(target.getLocation()).thenReturn(new Location(world, -1, 63, 0));
+        assertTrue(test(relative, ctx), "min faces are included");
+        assertTrue(test("cuboid{a=1,5,4;b=-1,-1,0;r=true}", ctx));
+        assertFalse(test(relative, ctx.withConditionScope(BehaviorContext.ConditionScope.CASTER)));
+        assertFalse(test(relative, ctx.withLocationTarget(new Location(world, 0, 64, 1))
+                .withConditionScope(BehaviorContext.ConditionScope.TARGET)));
+        assertTrue(test("cuboid{a=-1,63,-1;b=1,65,1;r=true}",
+                ctx.withConditionScope(BehaviorContext.ConditionScope.CASTER)), "caster ignores relative");
+        assertTrue(test("cuboid{a=-1,63,-1;b=1,65,1;r=true}", ctx.withLocationTarget(new Location(world, 0, 64, 0))
+                .withConditionScope(BehaviorContext.ConditionScope.TARGET)), "location dispatch ignores relative");
+        assertTrue(test(relative, ctx.withConditionScope(BehaviorContext.ConditionScope.TRIGGER)));
+        when(trigger.getLocation()).thenReturn(new Location(mock(World.class), 0, 68, 0));
+        assertTrue(test(relative, ctx.withConditionScope(BehaviorContext.ConditionScope.TRIGGER)));
+    }
+
+    @Test void comparisonOnlyConditionsKeepDispatchDecisionsUnderNegation() {
+        var ctx = context(BehaviorContext.ConditionScope.CASTER);
+        for (String expression : List.of("owner", "isparent", "samefaction", "lineofsight", "vehicleisdead")) {
+            assertFalse(test(expression, ctx));
+            assertFalse(test("!" + expression, ctx));
+            var point = ctx.withLocationTarget(new Location(world, 0, 64, 4))
+                    .withConditionScope(BehaviorContext.ConditionScope.TARGET);
+            assertTrue(test(expression, point));
+            assertTrue(test("!" + expression, point));
+        }
+    }
+
+    @Test void relationsCompareGenericTriggerUuidEvenAfterRemoval() {
+        var ctx = context(BehaviorContext.ConditionScope.TRIGGER);
+        var data = mock(org.bukkit.persistence.PersistentDataContainer.class);
+        when(caster.getPersistentDataContainer()).thenReturn(data);
+        String relatedId = trigger.getUniqueId().toString();
+        when(data.get(new org.bukkit.NamespacedKey("helstera", "mythic_owner_uuid"),
+                org.bukkit.persistence.PersistentDataType.STRING)).thenReturn(relatedId);
+        when(data.get(new org.bukkit.NamespacedKey("helstera", "mythic_parent_uuid"),
+                org.bukkit.persistence.PersistentDataType.STRING)).thenReturn(relatedId);
+        when(trigger.isValid()).thenReturn(false);
+        when(trigger.isDead()).thenReturn(true);
+        assertTrue(test("owner", ctx));
+        assertTrue(test("isparent", ctx));
+        assertFalse(test("owner", ctx.withConditionScope(BehaviorContext.ConditionScope.TARGET)));
+        assertFalse(test("isparent", ctx.withConditionScope(BehaviorContext.ConditionScope.TARGET)));
+    }
+
+    @Test void vehicleAndSightUseTriggerRatherThanSelectedTargetOrCaster() {
+        var ctx = context(BehaviorContext.ConditionScope.TRIGGER);
+        var vehicle = mock(Entity.class);
+        when(trigger.getVehicle()).thenReturn(vehicle);
+        when(vehicle.isValid()).thenReturn(false);
+        assertTrue(test("vehicleisdead", ctx), "invalid vehicle also counts");
+        assertFalse(test("vehicleisdead", ctx.withConditionScope(BehaviorContext.ConditionScope.TARGET)));
+        when(vehicle.isValid()).thenReturn(true);
+        assertFalse(test("vehicleisdead", ctx));
+        when(vehicle.isDead()).thenReturn(true);
+        assertTrue(test("vehicleisdead", ctx));
+        when(caster.hasLineOfSight(trigger)).thenReturn(true);
+        when(caster.hasLineOfSight(target)).thenReturn(false);
+        assertTrue(test("lineofsight", ctx));
+        assertFalse(test("lineofsight", ctx.withConditionScope(BehaviorContext.ConditionScope.TARGET)));
+        when(model.baseEntity()).thenReturn(Optional.of(mock(Item.class)));
+        assertFalse(test("!lineofsight", ctx), "native adapter failure is not inverted");
+    }
+
+    @Test void sameFactionPreservesSpellingAndNoneWithoutChangingCombatAlliances() {
+        var ctx = context(BehaviorContext.ConditionScope.TARGET);
+        var prior = dev.helstera.api.behavior.Factions.table();
+        var factions = new dev.helstera.ai.FactionService();
+        dev.helstera.api.behavior.Factions.install(factions);
+        try {
+            assertTrue(test("samefaction", ctx));
+            assertFalse(factions.allied(caster, target), "unassigned mobs are still hostile");
+            factions.bindInstance(caster.getUniqueId(), "Guards");
+            factions.bindInstance(target.getUniqueId(), "guards");
+            assertFalse(test("samefaction", ctx));
+            assertTrue(factions.allied(caster, target), "combat aliases remain case-insensitive");
+            factions.bindInstance(target.getUniqueId(), "Guards");
+            assertTrue(test("samefaction", ctx));
+            assertFalse(test("samefaction", ctx.withConditionScope(BehaviorContext.ConditionScope.TRIGGER)));
+            factions.bindInstance(caster.getUniqueId(), "NONE");
+            assertTrue(test("samefaction", ctx.withConditionScope(BehaviorContext.ConditionScope.TRIGGER)));
+            factions.unbindInstance(caster.getUniqueId());
+            assertNull(factions.comparisonFactionOf(caster));
+            assertFalse(factions.allied(caster, target));
+        } finally { dev.helstera.api.behavior.Factions.install(prior); }
+    }
+
     @Test void malformedComparisonArgumentsAreRejectedAndPreserved() {
-        for (String expression : List.of("distance{d=4;distance=5}", "distance{bad=4}", "distance{d=NaN}",
+        for (String expression : List.of("cuboid{a=0,0,0;b=1,1,1;r=maybe}", "cuboid{a=0,0,0;l1=0,0,0;b=1,1,1}",
+                "cuboid{a=0,0,0;b=NaN,1,1}", "cuboid{a=0,0,0;b=1,1,1;bad=true}",
+                "cuboid{a=0,0;b=1,1,1}", "cuboid{a=0,0,0,;b=1,1,1}", "cuboid{a=0,0,0}", "distance{d=4;distance=5}", "distance{bad=4}", "distance{d=NaN}",
                 "distance{d=1toInfinity}", "ydiff{d=1;diff=2}", "ydiff{bad=3}",
                 "boundingboxesoverlap{f=4;fo=5}", "boundingboxesoverlap{f=Infinity}", "boundingboxesoverlap{bad=3}")) {
             assertNull(skills.bindCondition(expression), expression);

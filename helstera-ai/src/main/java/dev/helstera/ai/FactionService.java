@@ -155,13 +155,18 @@ public final class FactionService implements FactionTable {
 
     @Override
     public String factionOf(Entity entity) {
+        String faction = comparisonFactionOf(entity);
+        return faction == null ? null : faction.toLowerCase(Locale.ROOT);
+    }
+
+    @Override
+    public String comparisonFactionOf(Entity entity) {
         if (entity == null) return null;
         // 先查模型实例：其阵营来自档案，可能随 mobs/*.yml 热改
         String cached = instanceFactions.get(entity.getUniqueId().toString());
         if (cached != null) return cached;
         if (entity instanceof Player) {
-            return playerFaction == null ? null
-                    : playerFaction.toLowerCase(Locale.ROOT);
+            return playerFaction;
         }
         return null;
     }
@@ -170,7 +175,7 @@ public final class FactionService implements FactionTable {
     public void bindInstance(UUID entityId, String faction) {
         if (entityId == null) return;
         if (faction == null) instanceFactions.remove(entityId.toString());
-        else instanceFactions.put(entityId.toString(), faction.toLowerCase(Locale.ROOT));
+        else instanceFactions.put(entityId.toString(), faction);
     }
 
     /** 注销模型实例（销毁时调用），避免 map 随实例生成无限增长。 */

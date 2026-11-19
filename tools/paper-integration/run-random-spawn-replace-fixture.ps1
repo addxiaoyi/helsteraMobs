@@ -471,6 +471,18 @@ if ($MobRadiusAudit) {
         status = 'passed'
         observations = @($comparisonLines | ForEach-Object { $_.Value }) + @($comparisonSummary.Value)
     }
+    $relationLines = [regex]::Matches($log, '(?m)^.*RELATIONAL_DISPATCH\|condition=[^\r\n]+$')
+    $relationSummary = [regex]::Match($log,
+        '(?m)^.*RELATIONAL_DISPATCH_SUMMARY\|comparisons=6820\|conditions=11\|scenes=31\|modes=5\|passed=true\s*$')
+    if ($relationLines.Count -ne 6820 -or -not $relationSummary.Success -or
+            @($relationLines | Where-Object { $_.Value -notmatch '\|matched=true$' }).Count -ne 0) {
+        throw 'Incomplete native relation/cuboid comparison evidence.'
+    }
+    $probes += [ordered]@{
+        id = 'condition.relational-dispatch'
+        status = 'passed'
+        observations = @($relationLines | ForEach-Object { $_.Value }) + @($relationSummary.Value)
+    }
     $locationLines = [regex]::Matches($log, '(?m)^.*LOCATION_TARGET_GUARD\|scene=[^\r\n]+$')
     $locationSummary = [regex]::Match($log,
         '(?m)^.*LOCATION_TARGET_GUARD_SUMMARY\|comparisons=672\|selectors=7\|aliases=4\|publicNativeGuardApplied=false\|reference=condition-library\|passed=true\s*$')
