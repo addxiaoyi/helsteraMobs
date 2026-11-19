@@ -2510,12 +2510,14 @@ public final class SkillService {
     }
 
     public java.util.Optional<dev.helstera.api.behavior.SkillTreeContext.Snapshot> snapshotOf(int instanceId) {
-        return java.util.Optional.ofNullable(persistedTrees.get(instanceId));
+        long now = System.currentTimeMillis();
+        return java.util.Optional.ofNullable(persistedTrees.computeIfPresent(instanceId,
+                (id, snapshot) -> snapshot.withoutExpiredValues(now)));
     }
 
     public void restoreSkillTreeSnapshot(int instanceId,
                                          dev.helstera.api.behavior.SkillTreeContext.Snapshot snapshot) {
-        if (snapshot != null) persistedTrees.put(instanceId, snapshot);
+        if (snapshot != null) persistedTrees.put(instanceId, snapshot.withoutExpiredValues(System.currentTimeMillis()));
     }
 
     /** Writes the currently retained per-instance trees as one snapshot file per instance. */
@@ -2525,8 +2527,10 @@ public final class SkillService {
         int saved = 0;
         for (var entry : persistedTrees.entrySet()) {
             try {
+                var snapshot = snapshotOf(entry.getKey());
+                if (snapshot.isEmpty()) continue;
                 dev.helstera.api.behavior.SkillTreeSnapshotStore.save(
-                        new java.io.File(directory, entry.getKey() + ".yml"), entry.getValue());
+                        new java.io.File(directory, entry.getKey() + ".yml"), snapshot.orElseThrow());
                 saved++;
             } catch (java.io.IOException | RuntimeException ex) {
                 warn("SkillTree snapshot save failed for instance " + entry.getKey() + ": " + ex.getMessage());
@@ -2550,7 +2554,7 @@ public final class SkillService {
                 } catch (NumberFormatException ignored) {
                     continue;
                 }
-                persistedTrees.put(instanceId,
+                restoreSkillTreeSnapshot(instanceId,
                         dev.helstera.api.behavior.SkillTreeSnapshotStore.load(file));
                 loaded++;
             } catch (java.io.IOException | RuntimeException ex) {

@@ -49,6 +49,23 @@ previous six-argument Snapshot constructor remains available. New format-4 files
 require the current reader; older plugin builds cannot load them. Existing skill-tree
 collection/branch snapshots retain their own evidence.
 
+Retained per-instance snapshots are also filtered on load, read and shutdown save,
+including parent snapshots. Expired values and their deadlines are removed together;
+surviving deadlines remain unchanged. This does not resolve or load Bukkit worlds.
+The original immutable snapshot remains a record of the moment it was captured.
+Invalid expiry metadata remains subject to the persistence validator.
+
+The persistent-mob restart runner now uses three actual Paper processes and two
+UUID-keyed mobs with the same mob ID. It saves 90-second and 180-second deadlines,
+stops before each deadline, and waits for real elapsed time before the next boot.
+Seven scalar/collection types, locations, parent state, permanent replacements and
+explicit unsets are checked on each boot. The second boot confirms that the first
+set expired during downtime while the second set retains its exact deadline, then
+kills one mob. The third boot confirms the survivor restores without expired values
+or the dead mob's snapshot returning. Copies of all four shutdown snapshots are
+checked and archived alongside all three boot logs. This validates Helstera's
+persisted skill-tree extension; it does not implement native registry `save=true`.
+
 Validation uses real native variable mechanics and production runtime actions
 through both direct and imported paths. Three actual-time phases cover short,
 zero and negative duration, replacement, refresh, retained deadlines, unset,
@@ -63,7 +80,7 @@ for artifact hashes and counts.
 
 This milestone does not implement native `save=true` persistence for entity,
 player, world or global registries. World unload lifecycle, player logout/login,
-real server restart with timed variables, nested dynamic variable names, native
+nested dynamic variable names, native
 SetVariable expression/default-value semantics, the full arithmetic/location
 mechanic catalog, all save combinations and other server or
 MythicMobs versions remain open. Full MythicMobs parity is still incomplete.

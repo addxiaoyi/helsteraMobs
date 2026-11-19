@@ -12,6 +12,7 @@ Add-Type -AssemblyName System.IO.Compression
 
 function Protect-Log([string]$Text) {
     $safe = [regex]::Replace($Text, '(?i)([?&]token=)[^&\s"<>]+', '$1[REDACTED]')
+    $safe = [regex]::Replace($safe, '(?i)(__cf_bm=)[^;\s"''<>]+', '$1[REDACTED]')
     $safe = [regex]::Replace($safe, '(令牌[ \t]*[:：][ \t]*)[A-Za-z0-9._~-]+', '$1[REDACTED]')
     return [regex]::Replace($safe, '(?i)(\bauthorization\s*:\s*bearer\s+)[^\s"<>]+', '$1[REDACTED]')
 }
@@ -36,7 +37,7 @@ if ((Protect-Log $evidenceText) -cne $evidenceText) {
 }
 $evidence = $evidenceText | ConvertFrom-Json
 $required = @(
-    $evidence.schemaVersion -eq 1
+    $evidence.schemaVersion -in @(1, 2)
     $evidence.fixtureDirectory -ceq $FixtureDirectory
     $evidence.firstBoot.result -ceq 'passed'
     $evidence.firstBoot.branchStateSaved -eq $true
@@ -56,9 +57,25 @@ $required = @(
     $evidence.entityDeath.survivorSnapshotRetained -eq $true
 )
 if ($required -contains $false) { throw 'Fixture evidence is incomplete or does not pass every restart assertion.' }
+$evidenceFiles = @('skilltree-write.log', 'skilltree-verify.log')
+if ($evidence.schemaVersion -eq 2) {
+    & (Join-Path $PSScriptRoot 'assert-skilltree-expiry-evidence.ps1') -FixturePath $fixturePath
+    $evidenceFiles += @('skilltree-final.log') + @($evidence.snapshots.path)
+    $matrix = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'version-matrix.json') -Raw | ConvertFrom-Json
+    $baseline = @($matrix.combinations | Where-Object { $_.releaseValidated -eq $true })
+    if ($baseline.Count -ne 1 -or $baseline[0].serverVersion -cne '1.21.1-133' -or
+            $evidence.paperJarSha256 -cne $baseline[0].serverJarSha256 -or $evidence.paperVersion -notlike '1.21.1-133-*') {
+        throw 'Timed restart evidence does not match the pinned Paper release baseline.'
+    }
+    $pluginJar = Join-Path $root 'helstera-plugin/target/helsteraMobs-1.0.0-full.jar'
+    if ((Get-FileHash -LiteralPath $pluginJar -Algorithm SHA256).Hash.ToLowerInvariant() -cne $evidence.pluginSha256) {
+        throw 'Timed restart evidence does not match the currently built plugin artifact.'
+    }
+}
 
 $revisionDate = [datetime]::Parse([string]$evidence.generatedAtUtc).ToUniversalTime().ToString('yyyyMMdd')
-$reportBase = "paper-1.21.1-skilltree-dotted-names-restart-$revisionDate-$EvidenceRevision"
+$series = if ($evidence.schemaVersion -eq 2) { 'skilltree-expiry-restart' } else { 'skilltree-dotted-names-restart' }
+$reportBase = "paper-1.21.1-$series-$revisionDate-$EvidenceRevision"
 $reportsPath = Join-Path $PSScriptRoot 'reports'
 $reportDestination = Join-Path $reportsPath "$reportBase.json"
 $logsDestination = Join-Path $reportsPath "$reportBase-logs.zip"
@@ -69,7 +86,7 @@ foreach ($destination in @($reportDestination, $logsDestination)) {
 
 $created = [System.Collections.Generic.List[string]]::new()
 try {
-    foreach ($name in @('skilltree-write.log', 'skilltree-verify.log')) {
+    foreach ($name in $evidenceFiles) {
         $source = Join-Path $fixturePath $name
         if (-not (Test-Path -LiteralPath $source -PathType Leaf) -or (Get-Item -LiteralPath $source).LinkType) {
             throw "Missing regular boot log: $name"
@@ -83,7 +100,7 @@ try {
         $archive = [System.IO.Compression.ZipArchive]::new(
             $archiveFile, [System.IO.Compression.ZipArchiveMode]::Create)
         try {
-            foreach ($name in @('skilltree-write.log', 'skilltree-verify.log')) {
+            foreach ($name in $evidenceFiles) {
                 $source = Join-Path $fixturePath $name
                 $text = Protect-Log ([System.IO.File]::ReadAllText($source))
                 if ((Protect-Log $text) -cne $text) { throw "Log redaction is incomplete: $name" }

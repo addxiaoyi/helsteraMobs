@@ -30996,6 +30996,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Location spawn = getServer().getWorlds().get(0).getSpawnLocation().clone().add(0, 3, 0);
             var entities = new java.util.ArrayList<org.bukkit.entity.LivingEntity>();
             boolean foundationUnlocked = true;
+            boolean expiryPassed = true;
+            long offlineDeadline = System.currentTimeMillis() + 90_000;
+            long retainedDeadline = offlineDeadline + 90_000;
             for (int index = 0; index < 2; index++) {
                 Location at = spawn.clone().add(index * 2, 0, 0);
                 int instanceId = spawnMobAt("skilltree_probe", at, null);
@@ -31008,7 +31011,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 living.setGravity(false);
                 living.setInvulnerable(true);
                 entities.add(living);
-                var tree = new dev.helstera.api.behavior.SkillTreeContext(living, java.util.List.of(living), at);
+                var tree = SkillTreeExpiryProbe.create(living, at, offlineDeadline, retainedDeadline);
                 tree.setVariable("restart-marker", "saved-on-first-boot:" + living.getUniqueId());
                 tree.setVariable("skill.counter", "dotted-name:" + living.getUniqueId());
                 tree.setVariable("skill.list", java.util.List.of("red", 7, false));
@@ -31024,6 +31027,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 foundationUnlocked &= tree.unlockBranch("restart-foundation");
                 foundationUnlocked &= tree.unlockBranch("unlocked");
                 skills.restoreSkillTreeSnapshot(instanceId, tree.snapshot());
+                expiryPassed &= SkillTreeExpiryProbe.inspect(skills.snapshotOf(instanceId).orElse(null),
+                        living.getUniqueId(), "write", getLogger()::info);
             }
             boolean unsupportedRejected = false;
             try {
@@ -31035,7 +31040,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
             String uuids = entities.stream().map(entity -> entity.getUniqueId().toString())
                     .sorted().collect(java.util.stream.Collectors.joining(","));
-            boolean passed = foundationUnlocked && unsupportedRejected && entities.size() == 2
+            boolean passed = foundationUnlocked && unsupportedRejected && expiryPassed && entities.size() == 2
                     && entities.stream().allMatch(entity -> "skilltree_probe".equals(
                     entity.getPersistentDataContainer().get(
                             persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING)));
@@ -31043,7 +31048,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + (passed ? "passed" : "failed") + " mob-id=skilltree_probe entities=" + entities.size()
                     + " entity-uuids=" + uuids + " marker=saved-on-first-boot"
                     + " foundation-unlocked=" + foundationUnlocked
-                    + " unsupported-value-rejected=" + unsupportedRejected);
+                    + " unsupported-value-rejected=" + unsupportedRejected + " expiry-passed=" + expiryPassed);
             return;
         }
         String expectedMobId = "skilltree_probe";
@@ -31054,8 +31059,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 .sorted(java.util.Comparator.comparing(instance -> instance.baseEntity().orElseThrow()
                         .getUniqueId().toString()))
                 .toList();
-        if (restored.size() != 2) {
-            getLogger().warning("[SelfTest] skilltree-restart stage=verify result=failed mob-id="
+        boolean finalBoot = "final".equalsIgnoreCase(stage);
+        if (restored.size() != (finalBoot ? 1 : 2)) {
+            getLogger().warning("[SelfTest] skilltree-restart stage=" + stage + " result=failed mob-id="
                     + expectedMobId + " restored-entities=" + restored.size());
             return;
         }
@@ -31101,16 +31107,22 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                         "unlocked", java.util.List.of("root", "advanced"))
                         .equals(snapshot.variables().get("skill.map")))
                 .orElse(false));
+        boolean expiryPassed = true;
+        for (var instance : restored) {
+            expiryPassed &= SkillTreeExpiryProbe.inspect(skills.snapshotOf(instance.instanceId()).orElse(null),
+                    instance.baseEntity().orElseThrow().getUniqueId(), finalBoot ? "final" : "verify", getLogger()::info);
+        }
         boolean passed = uniqueMarkers && foundationRestored && prerequisiteRestored
-                && dottedNamesRestored && collectionsRestored && advancedUnlocked;
-        getLogger().info("[SelfTest] skilltree-restart stage=verify result=" + (passed ? "passed" : "failed")
+                && dottedNamesRestored && collectionsRestored && advancedUnlocked && expiryPassed;
+        getLogger().info("[SelfTest] skilltree-restart stage=" + (finalBoot ? "final" : "verify")
+                + " result=" + (passed ? "passed" : "failed")
                 + " mob-id=" + expectedMobId + " entities=" + restored.size()
                 + " uuid-markers=" + uniqueMarkers + " foundation-restored=" + foundationRestored
                 + " prerequisite-restored=" + prerequisiteRestored
                 + " dotted-names-restored=" + dottedNamesRestored
                 + " collections-restored=" + collectionsRestored
-                + " advanced-unlocked=" + advancedUnlocked);
-        if (!passed) return;
+                + " advanced-unlocked=" + advancedUnlocked + " expiry-passed=" + expiryPassed);
+        if (!passed || finalBoot) return;
 
         var victim = (org.bukkit.entity.LivingEntity) restored.get(0).baseEntity().orElseThrow();
         var survivor = (org.bukkit.entity.LivingEntity) restored.get(1).baseEntity().orElseThrow();

@@ -49,6 +49,34 @@ public final class SkillTreeContext {
             parent = parent == null ? Optional.empty() : parent;
         }
 
+        /** Removes elapsed values without resolving worlds or changing surviving deadlines. */
+        public Snapshot withoutExpiredValues(long now) {
+            if (variableExpirations.isEmpty() && locationExpirations.isEmpty() && parent.isEmpty()) return this;
+            Map<String, Object> liveVariables = new java.util.LinkedHashMap<>(variables);
+            Map<String, LocationSnapshot> liveLocations = new java.util.LinkedHashMap<>(locations);
+            Map<String, Long> liveVariableExpirations = new java.util.LinkedHashMap<>(variableExpirations);
+            Map<String, Long> liveLocationExpirations = new java.util.LinkedHashMap<>(locationExpirations);
+            removeExpired(liveVariables, liveVariableExpirations, now);
+            removeExpired(liveLocations, liveLocationExpirations, now);
+            Optional<Snapshot> liveParent = parent.map(value -> value.withoutExpiredValues(now));
+            if (liveVariables.size() == variables.size() && liveLocations.size() == locations.size()
+                    && liveVariableExpirations.size() == variableExpirations.size()
+                    && liveLocationExpirations.size() == locationExpirations.size()
+                    && liveParent.equals(parent)) return this;
+            return new Snapshot(liveVariables, liveLocations, branchRequirements, unlockedBranches,
+                    damageTags, liveParent, liveVariableExpirations, liveLocationExpirations);
+        }
+
+        private static void removeExpired(Map<String, ?> values, Map<String, Long> expirations, long now) {
+            // Invalid metadata remains visible to the persistence validator.
+            expirations.entrySet().removeIf(entry -> {
+                if (!values.containsKey(entry.getKey()) || entry.getValue() <= 1 || entry.getValue() > now)
+                    return false;
+                values.remove(entry.getKey());
+                return true;
+            });
+        }
+
         private static Map<String, Set<String>> copyRequirements(Map<String, Set<String>> value) {
             Map<String, Set<String>> copy = new java.util.LinkedHashMap<>();
             if (value != null) value.forEach((key, deps) -> copy.put(key, Set.copyOf(deps == null ? Set.of() : deps)));

@@ -1,6 +1,6 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-variable-expiry-strict-20261119-r2` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `19821e88d1aa8babd357ab9f168d047d734f2dfda8a075f9754183be84c8b2d4`. [Strict report](reports/paper-1.21.1-variable-expiry-strict-20261119-r2.json) · [Redacted server log](reports/paper-1.21.1-variable-expiry-strict-20261119-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-variable-expiry-strict-20261119-r2.client-logs.zip) This artifact passes 2,356 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-skilltree-expiry-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `355bb38ace9484b2a944385f1d6c610e7e6b1624a40f0d39f403e5ef2d63c83d`. [Strict report](reports/paper-1.21.1-skilltree-expiry-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-skilltree-expiry-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-skilltree-expiry-strict-20261119-r1.client-logs.zip) This artifact passes 2,358 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -9,10 +9,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `d8dbe7e4ce5ff2d8d962d1e4b6a918df6ea73fb2d17c449491e8b93d8e126568`;
-redacted server log SHA-256: `2de7c12ba18fa534e89dcfb11dc6494926f71d8ddafceba4d3267710464dde9a`;
-redacted client logs SHA-256: `303b5dea39a203bcde8899a099810fb80546b990ba3ee1f9a62a7484f63a93dd`.
-The preceding `srv-paper-variable-placeholders-strict-20261119-r1`,
+Current full-report SHA-256: `611111094ece88a1090eac70beffbc6f4f2ec84a3ae94868e12dd985c1c1e029`;
+redacted server log SHA-256: `9027ae97e5165476e5cd0e7ccc07fbe743a6e63392858c8bb538cb91af34b4cc`;
+redacted client logs SHA-256: `5333febe5fdd9adda7172b2adb07c97a59632ef60473b318df48bcb67e8e816f`.
+The preceding `srv-paper-variable-expiry-strict-20261119-r2`,
+`srv-paper-variable-placeholders-strict-20261119-r1`,
 `srv-paper-trigger-placeholders-strict-20261119-r1`,
 `srv-paper-dynamic-distance-strict-20261119-r1`,
 `srv-paper-view-angle-strict-20261119-r1`,
@@ -31,6 +32,53 @@ The preceding `srv-paper-variable-placeholders-strict-20261119-r1`,
 Previous full-catalog fixture `srv-paper-velocity-ai-target-strict-20261118-r2` also passed 471 registered probes (452 passed and 19 expected rejections). It is retained as historical evidence. [Strict report](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.json) · [Redacted server log](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-velocity-ai-target-strict-20261118-r1.client-logs.zip)
 
 Previous full-catalog fixture `srv-paper-integration-numeric-release-20261118-r2` passed the full strict gate with 471 registered probes (452 passed and 19 expected rejections). The Numeric/Potion runtime, timing, and lifecycle assertions passed. The per-player spawner limit probe accepted one spawn and rejected a second attempt at the same location near the player. Plugin SHA-256: `2327b88f29238e09d72f1b623f4b35ea9cfffd7adeca315d2fcbcbb54c14b2cf`. [Strict report](reports/paper-1.21.1-potion-sync-strict-20261118-r2.json) · [Redacted server log](reports/paper-1.21.1-potion-sync-strict-20261118-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-potion-sync-strict-20261118-r2.client-logs.zip)
+
+## Timed SkillTree restart and retained snapshots
+
+Fixture `srv-paper-skilltree-expiry-restart-20261119-r1` passes 115 observations across three real
+Paper 1.21.1-133 processes on plugin `355bb38ace9484b2a944385f1d6c610e7e6b1624a40f0d39f403e5ef2d63c83d`. The first boot creates
+two persistent pigs sharing a mob ID and retains distinct UUID-keyed skill trees.
+Seven variable types (INTEGER, FLOAT, string, boolean, list, set and nested map),
+locations and parent state use absolute 90-second and 180-second deadlines.
+The runner stops before each deadline and waits using the real clock before the
+next boot. No clock or saved expiry metadata is patched.
+
+The second boot finds the first group absent and the second group unchanged with
+exact original deadlines, then kills one mob. The third boot restores only the
+survivor, with the second timed group and timed parent state now absent. Permanent
+values/replacements, unset values, dotted names, collections, branch prerequisites
+and unlock state remain checked. There are 46/46/23 timed observations per boot.
+Four shutdown snapshots contain 18/18/10/0 expiry fields respectively; elapsed
+values and the dead entity's snapshot are never written back. The first and second
+shutdowns precede their deadlines by 41,643 and 36,413 milliseconds respectively.
+
+The investigation also found retained immutable per-instance snapshots bypassed
+read-time expiry. SkillService now filters their values and deadlines on restore,
+read and shutdown save, recursively including parent snapshots, without resolving
+worlds or resetting live deadlines. Unit tests cover exact boundaries, immutable
+originals, parent state, invalid metadata preservation and retained service saves.
+Maven passes 2,358 tests, zero failures/errors/skips, and SpotBugs.
+
+The schema-2 restart validator checks all expected names and identities, exact
+original deadlines, real-time ordering, unique observations and snapshot hashes.
+Twelve negative controls reject missing/duplicate observations, wrong survivor,
+changed snapshots, removed parent coverage and inconsistent timing/deadlines.
+The archived ZIP contains all three redacted logs and all four shutdown snapshots;
+all snapshot hashes match the JSON. This is Helstera's persisted SkillTree extension,
+not native registry save=true equivalence. The latter and player/world lifecycle,
+broader reload/client behavior and full SkillTree parity remain open.
+
+- [Restart report](reports/paper-1.21.1-skilltree-expiry-restart-20261119-r1.json), SHA-256
+  `931de05a8b60f6ccd1b58bb3c85723d5d348b9a4b4ba170ad81c99d20037a1fa`.
+- [Three boot logs and four snapshots](reports/paper-1.21.1-skilltree-expiry-restart-20261119-r1-logs.zip), SHA-256
+  `8adbe173d9aaafc64ba6f789b3260516cd5179026435449df4a0db6338dbab4b`.
+- Focused native follow-up `srv-paper-random-spawn-replace-20261119-r70` passes all 31 probes, including
+  420 variable lifecycle comparisons, six snapshot observations and prior controls,
+  on the same JAR: [report](reports/paper-1.21.1-random-spawn-replace-20261119-r70.json), SHA-256
+  `6dff2bb799a43238247c2c0f96c9fe101631e60d8a59a4da75fcd51f9bdb7439`; [redacted log](reports/paper-1.21.1-random-spawn-replace-20261119-r70.log.gz), SHA-256
+  `b35b99b84eea2fe97fc7daf3664e6257380b2629c3ee894bf9851736f156e8f2`.
+- Full strict `srv-paper-skilltree-expiry-strict-20261119-r1` passes all 471 probes (452 passed,
+  19 expected rejections), zero failed/incomplete, on the same JAR.
 
 ## Variable expiry and snapshot deadlines
 

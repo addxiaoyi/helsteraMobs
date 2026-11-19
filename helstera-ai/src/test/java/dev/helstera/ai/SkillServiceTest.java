@@ -3772,6 +3772,37 @@ class SkillServiceTest {
     }
 
     @Test
+    void retainedSnapshotReadsAndShutdownSavesRemoveElapsedValues(
+            @org.junit.jupiter.api.io.TempDir java.nio.file.Path directory) throws Exception {
+        var svc = service();
+        var tree = new dev.helstera.api.behavior.SkillTreeContext(null, List.of());
+        long deadline = System.currentTimeMillis() + 1000;
+        tree.setVariable("timed", 7, deadline);
+        tree.setVariable("keep", "permanent");
+        tree.setLocation("timed-location", new Location(null, 1, 2, 3), deadline);
+        svc.restoreSkillTreeSnapshot(75, tree.snapshot());
+        assertEquals(deadline, svc.snapshotOf(75).orElseThrow().variableExpirations().get("timed"));
+        Thread.sleep(Math.max(1, deadline - System.currentTimeMillis() + 10));
+        var after = svc.snapshotOf(75).orElseThrow();
+        assertEquals(Map.of("keep", "permanent"), after.variables());
+        assertTrue(after.locations().isEmpty());
+        assertTrue(after.variableExpirations().isEmpty());
+        assertTrue(after.locationExpirations().isEmpty());
+        assertEquals(1, svc.savePersistedSkillTrees(directory.toFile()));
+        var saved = dev.helstera.api.behavior.SkillTreeSnapshotStore.load(directory.resolve("75.yml").toFile());
+        assertEquals(after, saved);
+
+        var elapsed = new dev.helstera.api.behavior.SkillTreeContext.Snapshot(
+                Map.of("gone", 9), Map.of(), Map.of(), java.util.Set.of(), java.util.Set.of(),
+                Optional.empty(), Map.of("gone", 2L), Map.of());
+        dev.helstera.api.behavior.SkillTreeSnapshotStore.save(directory.resolve("76.yml").toFile(), elapsed);
+        assertEquals(2, svc.loadPersistedSkillTrees(directory.toFile()));
+        assertTrue(svc.snapshotOf(76).orElseThrow().variables().isEmpty());
+        svc.restoreSkillTreeSnapshot(77, elapsed);
+        assertTrue(svc.snapshotOf(77).orElseThrow().variables().isEmpty());
+    }
+
+    @Test
     @DisplayName("branch-requires gate restores unlocked branches across fresh cast contexts")
     void branchGateRestoresSnapshotAcrossCasts() {
         var fired = new AtomicInteger();

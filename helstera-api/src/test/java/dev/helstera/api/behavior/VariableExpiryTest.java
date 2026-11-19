@@ -13,6 +13,31 @@ import static org.junit.jupiter.api.Assertions.*;
 class VariableExpiryTest {
     @TempDir Path directory;
 
+    @Test void retainedSnapshotsPruneParentStateAtTheDeadlineWithoutResolvingWorlds() {
+        var parent = new SkillTreeContext.Snapshot(Map.of("shadow", "parent", "gone", 1), Map.of(),
+                Map.of("branch", java.util.Set.of()), java.util.Set.of("branch"), java.util.Set.of("tag"),
+                java.util.Optional.empty(), Map.of("gone", 100L), Map.of());
+        var location = new SkillTreeContext.LocationSnapshot("unloaded-world", 1, 2, 3, 0, 0);
+        var snapshot = new SkillTreeContext.Snapshot(Map.of("shadow", "child", "live", 3.5F),
+                Map.of("expired", location, "live", location), Map.of(), java.util.Set.of(), java.util.Set.of(),
+                java.util.Optional.of(parent), Map.of("shadow", 100L, "live", 200L),
+                Map.of("expired", 100L, "live", 200L));
+        assertSame(snapshot, snapshot.withoutExpiredValues(99));
+        var pruned = snapshot.withoutExpiredValues(100);
+        assertEquals(Map.of("live", 3.5F), pruned.variables());
+        assertEquals(Map.of("live", 200L), pruned.variableExpirations());
+        assertEquals(Map.of("live", location), pruned.locations());
+        assertEquals(Map.of("live", 200L), pruned.locationExpirations());
+        assertEquals(Map.of("shadow", "parent"), pruned.parent().orElseThrow().variables());
+        assertEquals(parent.branchRequirements(), pruned.parent().orElseThrow().branchRequirements());
+        assertEquals(parent.damageTags(), pruned.parent().orElseThrow().damageTags());
+        assertEquals("child", snapshot.variables().get("shadow"));
+        assertSame(pruned, pruned.withoutExpiredValues(50));
+        var malformed = new SkillTreeContext.Snapshot(Map.of(), Map.of(), Map.of(), java.util.Set.of(),
+                java.util.Set.of(), java.util.Optional.empty(), Map.of("missing", 2L), Map.of());
+        assertSame(malformed, malformed.withoutExpiredValues(100));
+    }
+
     @Test void deadlinesExpireAtBoundaryWithoutRemovingReplacements() {
         var now = new AtomicLong(1000);
         var variables = new ExpiringVariables<String>(now::get);

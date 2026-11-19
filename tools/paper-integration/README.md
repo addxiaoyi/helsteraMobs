@@ -1,5 +1,22 @@
 # Isolated Paper Integration Server
 
+Timed SkillTree restart update (2026-11-19): `srv-paper-skilltree-expiry-restart-20261119-r1`
+passes 115 observations across three real Paper 1.21.1-133 boots. Two persistent
+mobs retain distinct UUID state; variables that expire during downtime stay absent,
+while surviving scalar/collection/location values and parent state keep their
+original absolute deadlines. Permanent replacements, explicit unsets, branch
+restoration and death cleanup remain verified. Four shutdown snapshots and all
+three boot logs are archived. Retained per-instance snapshots now discard elapsed
+values on load/read/save, including parents. The evidence validator rejects 12
+missing, duplicate, altered-deadline and changed-snapshot controls.
+Focused native fixture `srv-paper-random-spawn-replace-20261119-r70` passes all 31 existing probes
+on this artifact, including 420 variable lifecycle comparisons and six snapshot
+observations. Full strict fixture `srv-paper-skilltree-expiry-strict-20261119-r1` passes
+471 probes (452 passed, 19 expected rejections), with 2,358 Maven tests and SpotBugs.
+This completes the timed persistent SkillTree restart slice; native entity/world/global
+registry save persistence, player lifecycle and full MythicMobs parity remain open.
+See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](STARTUP_EVIDENCE.md).
+
 Variable-lifecycle update (2026-11-19): focused strict fixture
 `srv-paper-random-spawn-replace-20261119-r69` passes 31 probes on Paper 1.21.1-133
 with public MythicMobs 5.7.2. Imported/direct duration aliases now reach shared
@@ -12,7 +29,7 @@ phases and two paths), plus six Paper snapshot-file observations. It retains
 6,720 variable outputs, 1,020 trigger outputs and 17,680 dynamic Distance comparisons.
 Skill-tree snapshot format 4 preserves absolute deadlines and reads formats 1–3.
 Native location-mechanic deadline behavior and the separate Helstera arithmetic
-extensions are documented. Entity/world/global save persistence, timed server
+extensions are documented. Entity/world/global save persistence and native registry
 restart, connected players, broader catalogs and other versions remain open.
 Full Conditions, Mechanics/Skills and Context Targeters remain `mapped-unverified`.
 See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md) and [Paper evidence](STARTUP_EVIDENCE.md).
@@ -184,7 +201,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-variable-expiry-strict-20261119-r2` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `19821e88d1aa8babd357ab9f168d047d734f2dfda8a075f9754183be84c8b2d4`. See the [strict report](reports/paper-1.21.1-variable-expiry-strict-20261119-r2.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,356 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-skilltree-expiry-strict-20261119-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `355bb38ace9484b2a944385f1d6c610e7e6b1624a40f0d39f403e5ef2d63c83d`. See the [strict report](reports/paper-1.21.1-skilltree-expiry-strict-20261119-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,358 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player
@@ -3045,10 +3062,18 @@ Persistent SkillTree restart verification is opt-in:
 powershell -ExecutionPolicy Bypass -File tools/paper-integration/test-skilltree-restart.ps1
 ```
 
-It uses two `PIG` persistent mobs with the same mob ID, runs two Paper
+It uses two `PIG` persistent mobs with the same mob ID, runs three Paper
 boots against the same isolated world, and verifies their UUID-keyed SkillTree
-markers and branches restore independently. The second boot kills one mob and
-checks that shutdown removes only its snapshot. For a non-release Paper fixture, pass
+markers, branches, collections and deadlines restore independently. Two sets of
+timed values expire after 90 and 180 seconds of real elapsed time. Each of the first
+two shutdowns must precede the next deadline; the runner waits until that deadline
+before restarting. The second boot kills one mob and checks that shutdown removes
+only its snapshot. The third boot checks the surviving mob's permanent state and
+the absence of both expired sets. All 115 observations and four shutdown snapshots
+are validated, with three boot logs retained. The validator rejects changed
+deadlines, missing/duplicate observations and changed snapshot hashes. Native
+entity/world/global registry `save=true` persistence remains outside this fixture.
+For a non-release Paper fixture, pass
 `-Exploratory -PaperJarPath <path-to-paper.jar>` and set
 `PAPER_LIBRARIES_PATH` to the matching Paper runtime libraries directory; the
 run is evidence only and does not satisfy the strict Paper 1.21.1 gate.
