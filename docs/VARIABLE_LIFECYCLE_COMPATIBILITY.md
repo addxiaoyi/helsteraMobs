@@ -183,10 +183,43 @@ controls reject missing observations, graceful-save contamination, stale files,
 wrong identities/types/deadlines and resurrected data. Reports and source/artifact
 hashes are indexed in [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
 
-This proves recovery of completed periodic saves after process termination.
+The death/respawn fixture uses two real local clients and actual Bukkit player
+death/respawn events. Each player remains dead for four seconds so two-second
+values expire before respawn. Existing scalar/location variables survive with
+unchanged types and deadlines; fixture listeners write a value of one during
+death and two during respawn through both native and runtime actions. Both
+callback values are checked immediately and the final value survives reconnects.
+These listeners exercise action binding/importing inside actual events; they do
+not establish complete configured skill-trigger dispatch or arbitrary on-death
+skill ordering. The runtime context uses the harness ModelInstance adapter.
+
+After respawn, each client makes four consecutive reconnects, calling connect
+inside the previous socket's end callback without a timer or a disk-save wait.
+The native repository performs its ordinary asynchronous quit save and join load;
+observations wait only for the joined native profile to become available. Five
+successive generation values detect stale restoration, while clearing all other
+variables before the last reconnect checks deletion persistence. Ten actual quits
+release both registries. After the final quit, the runner waits for ordinary native
+save completion and checks exact disk contents: four generation entries and two
+event-hook entries per player. No save method or native callback is replaced.
+
+All 700 observations (672 variable rows and 28 retained event-hook rows), actual
+client/server event sequences, eight callback writes and four final disk files
+pass independent validation. Forty-one mutation controls reject missing/duplicate
+observations, wrong identities/types/values, reset deadlines, lost events, stale
+files and archive tampering. In this fixture, server quit-to-join intervals are
+20–53 ms and client reconnect initiation takes 0.018–0.050 ms. These are measured
+local sessions, not a proof that every possible native async save/load interleaving
+is race-free. Native and runtime autosave are configured to 300 seconds; the client
+scenario completes in 5.38 seconds. See the report, source hashes and redacted logs
+in [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
+
+The separate autosave fixture proves recovery of completed periodic saves after
+process termination.
 Writes after the last completed save can be lost. Killing during a file write,
-host/power failure, large-player save performance, immediate reconnect races, player
-death/respawn, chunk/world unload/reload parity, non-persistent entity cleanup,
+host/power failure, large-player save performance, asynchronous save/load races,
+configured death/respawn skill dispatch, chunk/world unload/reload parity,
+non-persistent entity cleanup,
 nested dynamic variable names,
 SetVariable expression/default-value semantics, the full arithmetic/location
 mechanic catalog, broader save combinations and other server/MythicMobs versions

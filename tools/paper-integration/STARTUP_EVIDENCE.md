@@ -1,5 +1,23 @@
 # Paper Startup Evidence
 
+Player death/respawn and immediate reconnect update (2026-11-20):
+`srv-paper-player-life-20261120-r1` passes 700 observations on Paper 1.21.1-133
+against public MM 5.7.2. Two real clients die, wait four seconds, respawn and each
+reconnect four times directly from the socket-end callback. Values, types, locations,
+original deadlines, death-time expiry, event writes, successive generations and
+player isolation agree through direct/imported actions; deleted data stays absent.
+All ten quits release both registries, and final disk files contain exactly the
+six expected values per player. The independent validator rejects 41 altered-evidence
+controls. Observed server quit-to-join intervals are 20–53 ms; client reconnect
+initiation takes 0.018–0.050 ms. This establishes the observed local sessions,
+not every native asynchronous save/load race. Event writes use fixture Bukkit
+listeners, so configured death/respawn skill dispatch remains separately unverified.
+Production code/JAR is unchanged; the existing 2,377-test, SpotBugs and 471-probe
+strict results still apply to the same artifact. World/chunk lifecycle, interrupted
+writes, broader catalogs and versions remain open. Matrix totals remain
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin; full MythicMobs parity is incomplete.
+
 Player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
 passes 480 direct/imported observations across three actual Paper 1.21.1-133
 boots with public MM 5.7.2. Two clients stay online while the ordinary configured
@@ -18,11 +36,26 @@ The current artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
 `srv-paper-player-autosave-strict-20261120-r1` passes all 471 checks
 (452 passed, 19 expected rejections, zero failed or incomplete). Recovery is proven
 for completed checkpoints; mid-write interruption, power loss, performance under
-large player counts, immediate reconnect, death/respawn and world/chunk lifecycle
-remain open. Full MythicMobs parity remains incomplete; matrix totals stay
+large player counts, asynchronous save/load races and world/chunk lifecycle remain
+open. Death/respawn and immediate local reconnects now have the scoped evidence above.
+Full MythicMobs parity remains incomplete; matrix totals stay
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
+
+Player death/respawn and immediate reconnect comparison:
+[report](reports/paper-1.21.1-player-life-20261120-r1.json), SHA-256
+`72b7e134506f9acbe54016ef3079f24dc99a15168d544ff262b34a7381e5e8d8`;
+[redacted server/client logs and final player snapshots](reports/paper-1.21.1-player-life-20261120-r1-logs.zip),
+SHA-256 `bbd66fa691658393d5137cab5f39e05543e9f5d6881df0ffc371121c9dac8371`.
+Plugin SHA-256 `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`.
+The report pins Paper/MM/probe artifacts and eight runner/client/validator/harness
+sources. Seven phases each contain 96 variable comparisons and four event-hook
+observations. Two actual deaths/respawns, eight immediate reconnects, ten quit
+unloads, eight event writes and exact final disk contents pass validation;
+41 mutation controls are rejected. Client elapsed time is 5.38 seconds with
+ordinary 300-second save configuration. This custom report is separate from the
+full strict release schema and does not promote complete catalog rows.
 
 Current native regression: [report](reports/paper-1.21.1-random-spawn-replace-20261120-r73.json),
 SHA-256 `fda89fadf12d23f39263daeffd017b8624f2bab061d82522818b2d04fc859503`; [redacted log](reports/paper-1.21.1-random-spawn-replace-20261120-r73.log.gz),
@@ -104,8 +137,9 @@ Focused native regression `srv-paper-random-spawn-replace-20261119-r72` passes
 all 31 probes on the same plugin artifact; both are separate from the custom
 740-observation player lifecycle report.
 Autosave and recovery from completed checkpoints now have the evidence above.
-Immediate reconnect races, player death/respawn, chunk/world lifecycle, broader
-catalogs and other versions remain open.
+Death/respawn and immediate local reconnects now have scoped evidence above.
+Asynchronous save/load races, chunk/world lifecycle, broader catalogs and other
+versions remain open.
 Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.

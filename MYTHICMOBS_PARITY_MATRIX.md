@@ -1,5 +1,23 @@
 # MythicMobs Parity Matrix
 
+Player death/respawn and immediate reconnect update (2026-11-20):
+`srv-paper-player-life-20261120-r1` passes 700 observations on Paper 1.21.1-133
+against public MM 5.7.2. Two real clients die, wait four seconds, respawn and each
+reconnect four times directly from the socket-end callback. Values, types, locations,
+original deadlines, death-time expiry, event writes, successive generations and
+player isolation agree through direct/imported actions; deleted data stays absent.
+All ten quits release both registries, and final disk files contain exactly the
+six expected values per player. The independent validator rejects 41 altered-evidence
+controls. Observed server quit-to-join intervals are 20–53 ms; client reconnect
+initiation takes 0.018–0.050 ms. This establishes the observed local sessions,
+not every native asynchronous save/load race. Event writes use fixture Bukkit
+listeners, so configured death/respawn skill dispatch remains separately unverified.
+Production code/JAR is unchanged; the existing 2,377-test, SpotBugs and 471-probe
+strict results still apply to the same artifact. World/chunk lifecycle, interrupted
+writes, broader catalogs and versions remain open. Matrix totals remain
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin; full MythicMobs parity is incomplete.
+
 Player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
 passes 480 direct/imported observations across three actual Paper 1.21.1-133
 boots with public MM 5.7.2. Two clients stay online while the ordinary configured
@@ -18,8 +36,9 @@ The current artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
 `srv-paper-player-autosave-strict-20261120-r1` passes all 471 checks
 (452 passed, 19 expected rejections, zero failed or incomplete). Recovery is proven
 for completed checkpoints; mid-write interruption, power loss, performance under
-large player counts, immediate reconnect, death/respawn and world/chunk lifecycle
-remain open. Full MythicMobs parity remains incomplete; matrix totals stay
+large player counts, asynchronous save/load races and world/chunk lifecycle remain
+open. Death/respawn and immediate local reconnects now have the scoped evidence above.
+Full MythicMobs parity remains incomplete; matrix totals stay
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](./docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
@@ -43,8 +62,9 @@ Focused native regression `srv-paper-random-spawn-replace-20261119-r72` passes
 all 31 probes on the same plugin artifact; both are separate from the custom
 740-observation player lifecycle report.
 Autosave and recovery from completed checkpoints now have the evidence above.
-Immediate reconnect races, player death/respawn, chunk/world lifecycle, broader
-catalogs and other versions remain open.
+Death/respawn and immediate local reconnects now have scoped evidence above.
+Asynchronous save/load races, chunk/world lifecycle, broader catalogs and other
+versions remain open.
 Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
@@ -3507,7 +3527,7 @@ both sides of the caster remaining-air threshold through the production
 condition service; its report completes 262 probes (250 passed, 12 expected
 negative controls, zero incomplete). The condition now has strict runtime
 evidence, while the full Conditions catalog remains `mapped-unverified`.
-| Full SkillTree semantics | mapped-unverified | Native entity/world/global shutdown persistence now has 432 direct/imported comparisons across three boots in `srv-paper-variable-persistence-comparison-20261119-r2`, including typed restoration, retained deadlines, world save filtering, explicit unsets and eight stable UUIDs. Player logout/login, offline expiry and online shutdown now have 740 observations in `srv-paper-player-variables-comparison-20261119-r2`; periodic autosave and completed-checkpoint crash recovery now add 480 observations in `srv-paper-player-autosave-20261120-r2`; immediate reconnect, death/respawn and chunk/world lifecycle remain open. Timed restart fixture `srv-paper-skilltree-expiry-restart-20261119-r1` verifies 115 observations over three real boots, four shutdown snapshots, parent expiry, no deadline reset and no dead-entity resurrection. Retained instance snapshots now prune expired values on load/read/save. Clean two-boot Paper 1.21.1-133 fixture `srv-paper-skilltree-atomic-restart-20261110-r2` creates two persistent mobs with the same ID, verifies distinct UUID snapshots and branch restoration, then confirms a real Bukkit death event deletes only the victim snapshot; focused evidence and redacted boot logs are archived under `tools/paper-integration/reports`. Follow-up `srv-paper-skilltree-dotted-names-20261119-r1` verifies dotted variable/location/branch names and reserved `unlocked` branch restoration with legacy YAML reads. Latest `srv-paper-skilltree-typed-values-20261119-r4` verifies version-3 list/set/nested-map variable persistence, branch state, and real-death cleanup on the rebuilt artifact; evidence hashes are in `tools/paper-integration/STARTUP_EVIDENCE.md`. Historical full strict catalog fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all 422 registered probes. `PersistentMobSkillTreeStoreTest` covers same-ID isolation, UUID-over-legacy precedence, legacy fallback, and single-entity deletion. Earlier Paper 1.21.11 exploratory fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` proves force-loaded chunk loading and stable PDC reattachment. Strict Paper `skillTreeBranches` verifies condition-denied/condition-allowed branch unlock and prerequisite transitions; `skillTreeCastPersistence` verifies named-skill gating and fresh-context execution. Branch metadata is predeclared from loaded skill definitions and condition evaluators are service-local. Complete Mythic SkillTree semantics and broader reload/client parity remain open; see `tools/paper-integration/STARTUP_EVIDENCE.md` |
+| Full SkillTree semantics | mapped-unverified | Native entity/world/global shutdown persistence now has 432 direct/imported comparisons across three boots in `srv-paper-variable-persistence-comparison-20261119-r2`, including typed restoration, retained deadlines, world save filtering, explicit unsets and eight stable UUIDs. Player logout/login, offline expiry and online shutdown now have 740 observations in `srv-paper-player-variables-comparison-20261119-r2`; periodic autosave and completed-checkpoint crash recovery now add 480 observations in `srv-paper-player-autosave-20261120-r2`; real player death/respawn and eight immediate local reconnects add 700 observations in `srv-paper-player-life-20261120-r1`; asynchronous save/load races, configured death/respawn skill dispatch and chunk/world lifecycle remain open. Timed restart fixture `srv-paper-skilltree-expiry-restart-20261119-r1` verifies 115 observations over three real boots, four shutdown snapshots, parent expiry, no deadline reset and no dead-entity resurrection. Retained instance snapshots now prune expired values on load/read/save. Clean two-boot Paper 1.21.1-133 fixture `srv-paper-skilltree-atomic-restart-20261110-r2` creates two persistent mobs with the same ID, verifies distinct UUID snapshots and branch restoration, then confirms a real Bukkit death event deletes only the victim snapshot; focused evidence and redacted boot logs are archived under `tools/paper-integration/reports`. Follow-up `srv-paper-skilltree-dotted-names-20261119-r1` verifies dotted variable/location/branch names and reserved `unlocked` branch restoration with legacy YAML reads. Latest `srv-paper-skilltree-typed-values-20261119-r4` verifies version-3 list/set/nested-map variable persistence, branch state, and real-death cleanup on the rebuilt artifact; evidence hashes are in `tools/paper-integration/STARTUP_EVIDENCE.md`. Historical full strict catalog fixture `srv-paper-skilltree-atomic-strict-20261110-r1` passes all 422 registered probes. `PersistentMobSkillTreeStoreTest` covers same-ID isolation, UUID-over-legacy precedence, legacy fallback, and single-entity deletion. Earlier Paper 1.21.11 exploratory fixture `srv-paper-skilltree-restart-034f7c7c184b48a9b2c57db5453effdb` proves force-loaded chunk loading and stable PDC reattachment. Strict Paper `skillTreeBranches` verifies condition-denied/condition-allowed branch unlock and prerequisite transitions; `skillTreeCastPersistence` verifies named-skill gating and fresh-context execution. Branch metadata is predeclared from loaded skill definitions and condition evaluators are service-local. Complete Mythic SkillTree semantics and broader reload/client parity remain open; see `tools/paper-integration/STARTUP_EVIDENCE.md` |
 
 ## 6. Spawner, Random Spawn, Custom Menu
 
