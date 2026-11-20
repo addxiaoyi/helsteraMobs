@@ -1625,37 +1625,46 @@ public final class SkillTriggers implements Listener {
             return;
         }
 
-        double healthRatio = 1.0;
-        double distance = -1;
-        if (instance.baseEntity().orElse(null) instanceof LivingEntity le && le.getMaxHealth() > 0) {
-            healthRatio = le.getHealth() / le.getMaxHealth();
-        }
-        if (target != null && loc != null && target.getWorld() != null
-                && target.getWorld().equals(loc.getWorld())) {
-            distance = target.getLocation().distance(loc);
-        }
-        var skillTree = new dev.helstera.api.behavior.SkillTreeContext(
-                triggerEntity, inheritedTargets, loc);
-        Entity damageVictim = cancellableEvent instanceof org.bukkit.event.entity.EntityDamageEvent damageEvent
-                ? damageEvent.getEntity() : null;
-        skillTree.damageTags(SkillCatalog.currentDamageTags(damageVictim));
-        BehaviorContext ctx = BehaviorContext.continueExecution(instance, target, healthRatio, distance,
-                0, trigger.configName(), null, triggerEntity, inheritedTargets, loc,
-                skillTree,
-                cancellableEvent, damageCause);
+        TerminalSkillContext terminal = skills != null && java.util.Set.of(
+                SkillTrigger.DESPAWN, SkillTrigger.REMOVE, SkillTrigger.DEATH,
+                SkillTrigger.ON_DEATH_SKILL).contains(trigger) ? skills.beginTerminal(instance) : null;
+        if (terminal != null) instance = terminal;
+        try {
 
-        // 阶段切换独立于事件触发器：血量可能在任意一次事件里跨过阈值，
-        // 若只在 on-damage 里判定，没受伤的脱战回血就永远触发不了阶段切换。
-        if (!suspended) firePhaseTransition(profile, instance, ctx);
-
-        for (String cond : spec.require) {
-            if (!registry.testCondition(cond, ctx)) {
-                trace(trigger, "条件未通过 " + cond);
-                return;
+            double healthRatio = 1.0;
+            double distance = -1;
+            if (instance.baseEntity().orElse(null) instanceof LivingEntity le && le.getMaxHealth() > 0) {
+                healthRatio = le.getHealth() / le.getMaxHealth();
             }
+            if (target != null && loc != null && target.getWorld() != null
+                    && target.getWorld().equals(loc.getWorld())) {
+                distance = target.getLocation().distance(loc);
+            }
+            var skillTree = new dev.helstera.api.behavior.SkillTreeContext(
+                    triggerEntity, inheritedTargets, loc);
+            Entity damageVictim = cancellableEvent instanceof org.bukkit.event.entity.EntityDamageEvent damageEvent
+                    ? damageEvent.getEntity() : null;
+            skillTree.damageTags(SkillCatalog.currentDamageTags(damageVictim));
+            BehaviorContext ctx = BehaviorContext.continueExecution(instance, target, healthRatio, distance,
+                    0, trigger.configName(), null, triggerEntity, inheritedTargets, loc,
+                    skillTree,
+                    cancellableEvent, damageCause);
+
+            // 阶段切换独立于事件触发器：血量可能在任意一次事件里跨过阈值，
+            // 若只在 on-damage 里判定，没受伤的脱战回血就永远触发不了阶段切换。
+            if (!suspended) firePhaseTransition(profile, instance, ctx);
+
+            for (String cond : spec.require) {
+                if (!registry.testCondition(cond, ctx)) {
+                    trace(trigger, "条件未通过 " + cond);
+                    return;
+                }
+            }
+            runActions(trigger, spec.actions, ctx);
+            fired.incrementAndGet();
+        } finally {
+            if (terminal != null) skills.finishTerminalDispatch(terminal);
         }
-        runActions(trigger, spec.actions, ctx);
-        fired.incrementAndGet();
     }
 
     /**
@@ -1667,6 +1676,7 @@ public final class SkillTriggers implements Listener {
      */
     void runActions(SkillTrigger trigger, java.util.List<String> actions, BehaviorContext ctx) {
         for (String act : actions) {
+            if (ctx.instance() instanceof TerminalSkillContext terminal && !terminal.isValid()) return;
             try {
                 // Trigger actions are expanded to registered behavior keys during
                 // profile loading. Check those first: keys such as

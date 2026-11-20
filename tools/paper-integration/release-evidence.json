@@ -1,5 +1,76 @@
 [
   {
+    "fixtureId": "srv-paper-terminal-callback-strict-20261120-r3",
+    "reportFixtureDirectory": "srv-paper-terminal-callback-strict-20261120-r3",
+    "pluginSha256": "d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8",
+    "fullReleaseCatalog": true,
+    "report": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-strict-20261120-r3.json",
+    "reportSha256": "1121d1323541426695fd12b722366582bdd12a5a0ee4e148e14857275e372310",
+    "log": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-strict-20261120-r3.log.gz",
+    "logSha256": "b02a49a1bade2af748be9d33b5b53d95a918a7ae2cd8237d49b3ab76d751cf4e",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-strict-20261120-r3.client-logs.zip",
+    "clientLogSha256": "04adc27e23bf8e3e774bd56272b75465fe745304c5716a492f700104235c3605",
+    "despawnCrashEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r4.json",
+      "reportSha256": "6edb58313f498b7569b46c812ecff09cacbc809ea909beadfa6799caec4a9e97"
+    },
+    "reentrantCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r6.json",
+      "reportSha256": "a5874c9d7b4739cac23a68f3b1281e8a7ad786ff2030654a942a2ff092f4fdae"
+    },
+    "unloadedCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r9.json",
+      "reportSha256": "4e692b354137462e00eacc2aff9c37227e4546d4e8f2648da364e8b5d2083215"
+    },
+    "mobCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r8.json",
+      "reportSha256": "70fa751d65cb5b020e6f656bba7aa4a1055614918ca89404540e26e24d640c69"
+    },
+    "despawnDistanceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r12.json",
+      "reportSha256": "1947b92f275abdcced90b257707a00b8a95db298b7be8e9f957bbbf3f5f709b3"
+    },
+    "despawnPrecedenceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r7.json",
+      "reportSha256": "2ac982f0fa41d93d943cf3fb2e5a9b5ef17cb09bee444b958421a495abcc509c"
+    },
+    "rapidReloadEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r5.json",
+      "reportSha256": "1d1e7aeba21087d7d308797318d1e98f85cb8babb9b882dbbb03aad118f85f96"
+    },
+    "terminalCallbackEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r7.json",
+      "reportSha256": "f287d61078067009b2fea8a39ed864982e71b8b7c553ad00913da87551b4ac1b"
+    },
+    "despawnCrashBoundaryEvidence": [
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-20261120-r2.json",
+        "reportSha256": "90a667f2b3d46d4c8b546461df077e6cc429a0d6f256ae31cc0ea03f1df29a9d"
+      },
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-clock-20261120-r2.json",
+        "reportSha256": "e5172734ef248f9663d7e122074e7f9d657d9b2333fee9d74669a3d34ffe7366"
+      },
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r3.json",
+        "reportSha256": "e032593b02d736a6179f76ddf07a75f8edf784112e40b1616cec98a82cf2c19c"
+      }
+    ]
+  },
+  {
+    "fixtureId": "srv-paper-terminal-callback-strict-20261120-r2",
+    "reportFixtureDirectory": "srv-paper-terminal-callback-strict-20261120-r2",
+    "pluginSha256": "f775150fac2af5c959671fdbf9926392c868002864522b580f605d361c8fbd5d",
+    "fullReleaseCatalog": true,
+    "supersededBy": "srv-paper-terminal-callback-strict-20261120-r3",
+    "report": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-strict-20261120-r2.json",
+    "reportSha256": "2061aeab15e1ef3eaebef4202fdefad26bfa49ac30e02e29e18fd17085562efc",
+    "log": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-strict-20261120-r2.log.gz",
+    "logSha256": "9f2a79e3f161e0b180d63c798b5797eed60f0e541b863c098f5f1ed5c78dea40",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-strict-20261120-r2.client-logs.zip",
+    "clientLogSha256": "cbe71d2f19f16f57d6477d187868b0705a0f42ce8a5b656d56e098d01560a7d0"
+  },
+  {
     "fixtureId": "srv-paper-despawn-crash-strict-20261120-r1",
     "reportFixtureDirectory": "srv-paper-despawn-crash-strict-20261120-r1",
     "pluginSha256": "b7aab2b68eeb55b923a72470780fff62b14a5e353ed55b7f8bc6bc66b4acf898",
@@ -55,7 +126,8 @@
     "terminalCallbackEvidence": {
       "report": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r3.json",
       "reportSha256": "f04e3ade51b6b5d33e19fa956c54063b3f877c0599ac10b503995c4ae0dc8513"
-    }
+    },
+    "supersededBy": "srv-paper-terminal-callback-strict-20261120-r3"
   },
   {
     "fixtureId": "srv-paper-reentrant-command-strict-20261120-r1",

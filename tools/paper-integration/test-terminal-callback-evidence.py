@@ -1,4 +1,4 @@
-"""Reject erased gaps and correlated falsifications of terminal lifecycle evidence."""
+"""Reject erased gaps, orphan executions and falsified terminal lifecycle evidence."""
 import copy
 import importlib.util
 from pathlib import Path
@@ -6,6 +6,7 @@ import sys
 sys.dont_write_bytecode=True
 s=importlib.util.spec_from_file_location('v',Path(__file__).with_name('validate-terminal-callback.py'));v=importlib.util.module_from_spec(s);s.loader.exec_module(v)
 report,payloads=v.main(sys.argv[1]);controls=[]
+parity=report['evidenceMode']=='comparison-with-exception'
 def row(label,key,backend,phase,change):
     r=copy.deepcopy(report);p=dict(payloads);i=next(i for i,l in enumerate(r['observations']) if f'key={key}|' in l and f'backend={backend}|' in l and f'phase={phase}|' in l)
     before=r['observations'][i];after=change(before);assert before!=after,label;r['observations'][i]=after;p['server.log']=p['server.log'].replace(before.encode(),after.encode());controls.append((label,r,p))
@@ -20,7 +21,7 @@ for label,b,phase,change in [
  ('orphan marker','runtime','cleaned',lambda t:t.replace('|marker=absent','|marker=73')),
  ('orphan visuals','runtime','cleaned',lambda t:t.replace('|visuals=0','|visuals=11')),
  ('native delayed children lost','native','settled',lambda t:t.replace('|children=2','|children=0')),
- ('gap called matched','runtime','settled',lambda t:t.replace('|children=0','|children=2')),
+ ('terminal child outcome changed','runtime','settled',lambda t:t.replace('|children=2','|children=0') if parity else t.replace('|children=0','|children=2')),
  ('native child cleanup lost','native','cleaned',lambda t:t.replace('|children=0','|children=2')),
  ('phase repeated','runtime','settled',lambda t:t.replace('|phase=settled','|phase=initial'))]:
     row(label,'command_cow_direct',b,phase,change)
@@ -56,13 +57,18 @@ text('mapped trigger lost','imports/tc_command_cow_imported.yml',lambda t:t.repl
 text('wrong persistent child mode','imports/mythic_tc_child_persistent.yml',lambda t:t.replace('despawn: PERSISTENT','despawn: NEVER'))
 for label,change in [
  ('wrong schema',lambda r:r.update(schemaVersion=0)),('observer passed as validated',lambda r:r.update(evidenceMode='observation')),
- ('gap called parity evidence',lambda r:r.update(evidenceMode='comparison-with-exception')),
- ('gap called complete',lambda r:r.update(parityStatus='complete')),('hidden gap cases',lambda r:r.update(gapCases=[])),
+ ('evidence scope relabeled',lambda r:r.update(evidenceMode='diagnostic-known-gap' if parity else 'comparison-with-exception')),
+ ('gap called complete',lambda r:r.update(parityStatus='complete')),('gap cases changed',lambda r:r.update(gapCases=['command_cow_direct'] if parity else [])),
  ('undocumented difference',lambda r:r.update(knownExceptions=[])),('wrong Paper',lambda r:r.update(paperJarSha256='0'*64)),
  ('wrong oracle',lambda r:r.update(mythicMobsSha256='0'*64)),('missing source hashes',lambda r:r['sourceHashes'].clear()),
  ('unclean exit',lambda r:r['boot'].update(exitCode=-9)),('invalid boot timing',lambda r:r['boot'].update(stoppedAtUtc=r['boot']['startedAtUtc']))]:
     r=copy.deepcopy(report);change(r);controls.append((label,r,payloads))
 p=dict(payloads);p['snapshots/entity-orphan.yml']=b'bad';controls.append(('orphan tree',report,p))
+if report['schemaVersion']>=2:
+    row('orphan terminal execution','command_cow_direct','runtime','cleaned',lambda t:t.replace('|terminalExecutions=0','|terminalExecutions=1'))
+if report['schemaVersion']>=3:
+    row('orphan summon owner','command_cow_direct','runtime','cleaned',lambda t:t.replace('|ownerRecords=0','|ownerRecords=1'))
+    row('orphan summon child','command_cow_direct','runtime','cleaned',lambda t:t.replace('|minionRecords=0','|minionRecords=1'))
 for label,r,p in controls:
     try:v.validate(r,p)
     except (ValueError,KeyError):continue

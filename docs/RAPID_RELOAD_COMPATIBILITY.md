@@ -7,12 +7,24 @@ or 40 server ticks after the real ChunkUnloadEvent. Every combination runs three
 times. PERSISTENT force-loading is explicitly released to permit the test.
 No native clocks, handlers, private registries or bytecode are modified.
 
-Verified comparison: [r3 report](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r3.json)
+Current comparison: [r5 report](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r5.json)
+and [raw archive](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r5-logs.zip)
+use plugin `d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8`,
+the same artifact as the current 471-probe strict catalog. All 3,360 observations
+and 420 UUIDs validate, including 224 inactive-registry rows, six stale-binding
+rows and three explicitly paired native duplicate-callback cases. The duplicates
+occur in `r2_d5_npc_direct`, `r2_d5_npc_imported` and
+`r2_d10_chunk_imported`, each two ticks after its single unload. All Helstera
+callbacks execute once. All 55 current evidence mutations and twelve historical
+duplicate-diagnostic mutations are rejected. Report/archive and exact artifact
+hashes are pinned by the release gate.
+
+Historical verified comparison: [r3 report](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r3.json)
 and [redacted raw archive](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r3-logs.zip).
-The production artifact is `b7aab2b68eeb55b923a72470780fff62b14a5e353ed55b7f8bc6bc66b4acf898`.
-It is the same JAR as the current 471-probe strict catalog, crash comparisons and
-command regressions. The release gate now also requires this report and its
-validated archive to match that exact artifact and Paper build. All 53 evidence
+That artifact is `b7aab2b68eeb55b923a72470780fff62b14a5e353ed55b7f8bc6bc66b4acf898`.
+It is the same JAR as the historical crash-strict catalog and its focused
+command regressions. At that milestone its report/archive were pinned to the same artifact and Paper
+build. All 53 original evidence
 mutation controls are rejected. Report r3 enumerates 240 inactive-registry rows
 and six stale-binding rows; it observed one terminal callback for each of the
 420 UUIDs and 126 native public despawn events, with no duplicates.
@@ -56,12 +68,33 @@ and runtime behavior. An absent early checkpoint is permitted only while the
 original native entity and registry objects remain active; stable recovery always
 requires a saved marker.
 
-The separate historical lifecycle r7 diagnostic observed repeated native despawn
-commands. The rapid-reload observer did not reproduce those duplicates. That
-historical failure remains unresolved; it is not erased by successful repetitions
-and is not attributed to this registration race without further evidence.
-Native public despawn events retain their originating stacks; any duplicate command
-also records a stack and makes the comparison fail.
+The [r4 capture](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r4.json)
+reproduces duplicate native callbacks on the current artifact. It remains a
+rejected observation under its original schema; the report and archive are not
+relabeled. Cases `r1_d40_chunk_imported` and `r1_d40_npc_imported` each record
+one entity unload, two public native despawn events for the same ActiveMob object,
+and two command callbacks. Both events and both commands occur three ticks after
+the unload, before any reload. Runtime counterparts execute once and all final
+entity, registry, variable, tree and visual cleanup checks hold.
+
+Native public event stacks pass through `BukkitBootstrap.handleMobDespawnEvent`;
+the repeated commands pass through `CommandMechanic.castAtEntity` on the main
+scheduler. This establishes duplicate native emission rather than a duplicated
+report row. Inspection of the pinned artifact shows unload processing can reach
+both `setDespawned` and `setUnloaded`, with the latter emitting its trigger before
+marking the mob dead in `remove`. The exact competing invocation that produced
+this capture is not established by deferred stacks and remains open.
+
+Schema 2 accounts for this as `MM-5.7.2-duplicate-native-unload-callback`, never
+as native/runtime agreement. A duplicate is allowed only for native CHUNK/NPC:
+exactly two commands paired with two public events, the original UUID and
+ActiveMob object, consecutive counts 1/2, one dispatch tick within five ticks of
+the original unload, and a matching duplicate command stack. Runtime, retained
+mob, death, unpaired, unbounded and later duplicate callbacks remain rejected.
+Every accepted duplicate must be listed in `nativeDuplicateCallbacks`.
+Schema 1 retains its original single-callback requirement. Regression tests replay
+r4 in memory to exercise the new accounting and twelve corruptions; its stored
+observation report is unchanged and still cannot pass the release gate.
 
 The fixture observes eight checkpoints per UUID: initial, immediate reload,
 +1/+5/+10/+40 ticks, stable recovery, and final cleanup. Independent validation
@@ -85,6 +118,6 @@ Run serially with an unused revision and the pinned local jars; fixtures share
 port 25731:
 
 ```bash
-python3 tools/paper-integration/run-rapid-reload-fixture.py --revision r3 --cache-directory srv-paper-player-life-20261120-r1
-python3 tools/paper-integration/test-rapid-reload-evidence.py tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r3.json
+python3 tools/paper-integration/run-rapid-reload-fixture.py --revision r5 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/test-rapid-reload-evidence.py tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r5.json tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r4.json
 ```

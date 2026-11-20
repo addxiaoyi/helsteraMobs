@@ -135,7 +135,11 @@ public final class TerminalCallbackProbe extends JavaPlugin implements Listener 
             else if(b.equals("runtime")){Object vars=extras.getMethod("scopedVariableSnapshot",String.class).invoke(null,"entity:"+uuid);marker=((Map<?,?>)registryType.getMethod("variables").invoke(vars)).get("Marker");}
             long childCount=children.entrySet().stream().filter(e->e.getValue().startsWith(b+"_")&&Bukkit.getEntity(e.getKey())!=null).count();
             long visuals=Arrays.stream(world.getChunkAt(x(b),Z).getEntities()).filter(e->e instanceof Display||e instanceof Interaction||e instanceof ArmorStand).count();
-            getLogger().info("TCALL_ROW|key="+key+"|backend="+b+"|phase="+phase+"|uuid="+uuid+"|entity="+(Bukkit.getEntity(uuid)!=null)+"|registry="+(reg!=null)+"|marker="+(marker==null?"absent":marker)+"|children="+childCount+"|visuals="+visuals+"|tick="+Bukkit.getCurrentTick());rows++;
+            int terminalExecutions=((Number)service.getClass().getMethod("terminalExecutionCount").invoke(service)).intValue();
+            Object ai=runtime.getClass().getMethod("ai").invoke(runtime),minions=ai.getClass().getMethod("minions").invoke(ai);
+            int ownerRecords=((Number)minions.getClass().getMethod("trackedOwnerCount").invoke(minions)).intValue();
+            int minionRecords=((Number)minions.getClass().getMethod("totalMinions").invoke(minions)).intValue();
+            getLogger().info("TCALL_ROW|key="+key+"|backend="+b+"|phase="+phase+"|uuid="+uuid+"|entity="+(Bukkit.getEntity(uuid)!=null)+"|registry="+(reg!=null)+"|marker="+(marker==null?"absent":marker)+"|children="+childCount+"|visuals="+visuals+"|terminalExecutions="+terminalExecutions+"|ownerRecords="+ownerRecords+"|minionRecords="+minionRecords+"|tick="+Bukkit.getCurrentTick());rows++;
         }
         for(var e:children.entrySet())getLogger().info("TCALL_CHILD_STATE|key="+key+"|phase="+phase+"|kind="+e.getValue()+"|uuid="+e.getKey()+"|entity="+(Bukkit.getEntity(e.getKey())!=null)+"|nativeRegistry="+(active(e.getKey())!=null)+"|runtimeRegistry="+(instance(e.getKey())!=null));
     }

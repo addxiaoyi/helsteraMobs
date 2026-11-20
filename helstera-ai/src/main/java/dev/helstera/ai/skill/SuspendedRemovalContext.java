@@ -13,8 +13,9 @@ import java.util.UUID;
 
 /**
  * Synchronous terminal callback view of a suspended caster. It exposes identity and
- * location without reattaching the destroyed model. Closing invalidates contexts
- * retained by delayed skills; model mutation cannot recreate suspended visuals.
+ * location without reattaching the destroyed model. SkillService wraps terminal
+ * continuations in their own execution context; this synchronous model view still
+ * closes at dispatch exit and cannot recreate suspended visuals.
  */
 final class SuspendedRemovalContext implements ModelInstance, AutoCloseable {
     private final ModelInstance source;

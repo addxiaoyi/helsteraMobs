@@ -1234,17 +1234,24 @@ try {
     $terminalPolicy.releasePolicy | Add-Member -NotePropertyName requiresTerminalCallbackEvidence -NotePropertyValue $true
     @($terminalPolicy.combinations | Where-Object releaseValidated)[0] | Add-Member -NotePropertyName serverJarSha256 -NotePropertyValue '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
     [System.IO.File]::WriteAllText($versionMatrixPath, ($terminalPolicy | ConvertTo-Json -Depth 20))
-    foreach ($case in @('missing', 'unsafe', 'missing-file', 'changed-file', 'wrong-plugin', 'wrong-server', 'invalid-archive')) {
+    foreach ($case in @('missing', 'unsafe', 'missing-file', 'changed-file', 'wrong-plugin', 'wrong-server', 'invalid-archive', 'old-schema', 'missing-ownership-schema', 'known-gap', 'incomplete')) {
         $terminalManifest = @($originalCommandManifest | ConvertFrom-Json)
         $terminalEntry = @($terminalManifest | Where-Object { $_.fullReleaseCatalog })[0]
         $terminalReference = 'tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r99.json'
         $terminalFile = Join-Path $temporaryRoot $terminalReference
         $terminalMetadata = [pscustomobject]@{
+            schemaVersion = 3
+            evidenceMode = 'comparison-with-exception'
+            parityStatus = 'scoped-match'
             pluginSha256 = $testPluginHash
             paperJarSha256 = '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
         }
         if ($case -eq 'wrong-plugin') { $terminalMetadata.pluginSha256 = ('0' * 64) }
         if ($case -eq 'wrong-server') { $terminalMetadata.paperJarSha256 = ('0' * 64) }
+        if ($case -eq 'old-schema') { $terminalMetadata.schemaVersion = 1 }
+        if ($case -eq 'missing-ownership-schema') { $terminalMetadata.schemaVersion = 2 }
+        if ($case -eq 'known-gap') { $terminalMetadata.evidenceMode = 'diagnostic-known-gap' }
+        if ($case -eq 'incomplete') { $terminalMetadata.parityStatus = 'incomplete' }
         [System.IO.File]::WriteAllText($terminalFile, ($terminalMetadata | ConvertTo-Json))
         $terminalReferenceData = [pscustomobject]@{
             report = $terminalReference
@@ -1257,6 +1264,7 @@ try {
             'changed-file' { $terminalReferenceData.reportSha256 = ('0' * 64); 'report is missing or changed' }
             { $_ -in @('wrong-plugin', 'wrong-server') } { 'artifact/server' }
             'invalid-archive' { 'Terminal callback evidence validation failed' }
+            { $_ -in @('old-schema', 'missing-ownership-schema', 'known-gap', 'incomplete') } { 'must prove the scoped' }
         }
         if ($case -ne 'missing') { $terminalEntry | Add-Member -NotePropertyName terminalCallbackEvidence -NotePropertyValue $terminalReferenceData }
         [System.IO.File]::WriteAllText($manifestPath, ($terminalManifest | ConvertTo-Json -Depth 20))

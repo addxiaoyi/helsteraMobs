@@ -70,6 +70,56 @@ public final class SkillService {
     private final Map<Integer, Integer> pendingScheduledActions = new ConcurrentHashMap<>();
     /** In-flight action chains, invalidated if their instance is detached. */
     private final Map<Integer, List<boolean[]>> inFlightActions = new HashMap<>();
+    private final Map<Integer, TerminalSkillContext> terminalContexts = new LinkedHashMap<>();
+    private int nextTerminalExecutionId = -2;
+
+    private static int executionId(dev.helstera.api.behavior.BehaviorContext context) {
+        if (context == null || context.instance() == null) return -1;
+        return context.instance() instanceof TerminalSkillContext terminal
+                ? terminal.executionId : context.instance().instanceId();
+    }
+
+    TerminalSkillContext beginTerminal(dev.helstera.api.instance.ModelInstance source) {
+        if (nextTerminalExecutionId == Integer.MIN_VALUE) throw new IllegalStateException("Terminal execution IDs exhausted");
+        var terminal = new TerminalSkillContext(source, nextTerminalExecutionId--);
+        terminalContexts.put(terminal.executionId, terminal);
+        return terminal;
+    }
+
+    void finishTerminalDispatch(TerminalSkillContext terminal) {
+        terminal.dispatching = false;
+        cleanupTerminal(terminal.executionId);
+    }
+
+    /** Capture while the live registry still exists, before entity teardown erases it. */
+    public void detachTerminalVariables(int instanceId) {
+        var shared = terminalContexts.values().stream().filter(t -> t.instanceId() == instanceId)
+                .map(TerminalSkillContext::detachedVariables).filter(java.util.Objects::nonNull).findFirst().orElse(null);
+        for (var terminal : terminalContexts.values()) {
+            if (terminal.instanceId() == instanceId) shared = terminal.detachVariables(shared);
+        }
+    }
+
+    private void cleanupTerminal(int executionId) {
+        var terminal = terminalContexts.get(executionId);
+        if (terminal == null || terminal.dispatching || pendingScheduledActions.containsKey(executionId)
+                || inFlightActions.containsKey(executionId) || isInstanceBusy(executionId)
+                || activeCasts.values().stream().anyMatch(c -> c.instanceId() == executionId)) return;
+        terminalContexts.remove(executionId);
+        terminal.close();
+        forget(executionId);
+    }
+
+    /** Reload and shutdown cancel terminal continuations as well as ordinary work. */
+    public void cancelTerminalExecutions() {
+        for (var terminal : List.copyOf(terminalContexts.values())) {
+            terminal.close();
+            forget(terminal.executionId);
+        }
+        terminalContexts.clear();
+    }
+
+    public int terminalExecutionCount() { return terminalContexts.size(); }
     /** Per-instance SkillTree state retained across separate casts. */
     private final Map<Integer, dev.helstera.api.behavior.SkillTreeContext.Snapshot> persistedTrees =
             new ConcurrentHashMap<>();
@@ -1623,7 +1673,7 @@ public final class SkillService {
                     };
                 } else if ("cancel-cast".equals(actionName) && factory != null) {
                     action = ctx -> {
-                        if (ctx != null && ctx.instanceValid()) cancelCast(ctx.instance().instanceId());
+                        if (ctx != null && ctx.instanceValid()) cancelCast(executionId(ctx));
                     };
                 } else if (ref != null) {
                     String nestedSkill = ref;
@@ -1631,8 +1681,7 @@ public final class SkillService {
                     long requiredInlineCooldown = inlineCooldownMillis;
                     action = ctx -> {
                         if (requiredInlineCooldown > 0) {
-                            int instanceId = ctx != null && ctx.instance() != null
-                                    ? ctx.instance().instanceId() : -1;
+                            int instanceId = executionId(ctx);
                             String cooldownKey = instanceId + "|" + inlineScope;
                             long now = System.currentTimeMillis();
                             Long previous = inlineCooldowns.get(cooldownKey);
@@ -1686,6 +1735,7 @@ public final class SkillService {
     /** Executes a previously bound action in the supplied skill context. */
     public boolean runAction(String key, dev.helstera.api.behavior.BehaviorContext context) {
         if (key == null || key.isBlank() || context == null) return false;
+        if (context.instance() instanceof TerminalSkillContext terminal && !terminal.isValid()) return false;
         return registry.runAction(key, context);
     }
 
@@ -1822,8 +1872,9 @@ public final class SkillService {
     private void invokeTimed(Consumer<dev.helstera.api.behavior.BehaviorContext> action,
                              dev.helstera.api.behavior.BehaviorContext ctx,
                              long delayTicks, int repeat, long repeatInterval) {
+        if (ctx != null && ctx.instance() instanceof TerminalSkillContext terminal && !terminal.isValid()) return;
         int executions = repeat <= 0 ? 1 : (repeatInterval > 0 ? repeat + 1 : repeat);
-        int instanceId = ctx != null && ctx.instance() != null ? ctx.instance().instanceId() : -1;
+        int instanceId = executionId(ctx);
         long generation = executionGenerations.getOrDefault(instanceId, 0L);
         scheduleInvocation(action, ctx, Math.max(0, delayTicks), executions,
                 Math.max(0, repeatInterval), instanceId, generation);
@@ -1833,30 +1884,39 @@ public final class SkillService {
                                      dev.helstera.api.behavior.BehaviorContext ctx,
                                      long delayTicks, int remaining, long intervalTicks,
                                      int instanceId, long generation) {
-        boolean scheduled = delayTicks != 0 || remaining != 1;
+        // A zero-delay first repetition is immediate even outside the scheduler
+        // heartbeat (for example an entity-unload event). Keep zero-interval
+        // batches scheduled to avoid unbounded synchronous recursion.
+        boolean scheduled = delayTicks != 0 || remaining != 1 && intervalTicks == 0;
+        boolean tracked = scheduled || remaining > 1;
         Runnable run = () -> {
             try {
                 if (executionGenerations.getOrDefault(instanceId, 0L) != generation) return;
+                if (ctx != null && ctx.instance() instanceof TerminalSkillContext terminal && !terminal.isValid()) return;
                 action.accept(ctx);
                 if (remaining > 1) {
                     scheduleInvocation(action, ctx, intervalTicks, remaining - 1, intervalTicks,
                             instanceId, generation);
                 }
             } finally {
-                if (scheduled) pendingScheduledActions.computeIfPresent(instanceId, (key, count) ->
+                if (tracked) pendingScheduledActions.computeIfPresent(instanceId, (key, count) ->
                         count <= 1 ? null : count - 1);
                 cleanupExecutionGeneration(instanceId);
+                cleanupTerminal(instanceId);
             }
         };
+        // Track the immediate first repetition too: reentrant removal must retain
+        // its invalidated generation until all later repetitions have drained.
+        if (tracked) pendingScheduledActions.merge(instanceId, 1, Integer::sum);
         if (!scheduled) {
             run.run();
             return;
         }
-        pendingScheduledActions.merge(instanceId, 1, Integer::sum);
         if (!SkillCatalog.schedule(run, delayTicks)) {
             pendingScheduledActions.computeIfPresent(instanceId, (key, count) ->
                     count <= 1 ? null : count - 1);
             cleanupExecutionGeneration(instanceId);
+            cleanupTerminal(instanceId);
             warn("延迟技能动作无法调度：Bukkit 插件调度器未就绪");
         }
     }
@@ -1926,6 +1986,7 @@ public final class SkillService {
     }
 
     public void loadSkills(ConfigurationSection root) {
+        cancelTerminalExecutions();
         inFlightActions.values().forEach(chains -> chains.forEach(chain -> chain[0] = false));
         inFlightActions.clear();
         // Invalidate old delayed continuations before replacing definitions.
@@ -2186,6 +2247,7 @@ public final class SkillService {
      * @return 是否真正执行
      */
     public boolean castSkill(String skillName, dev.helstera.api.behavior.BehaviorContext ctx) {
+        if (ctx != null && ctx.instance() instanceof TerminalSkillContext terminal && !terminal.isValid()) return false;
         if (skillName == null || skillName.isBlank()) return false;
         SkillDef def = defs.get(skillName.toLowerCase(Locale.ROOT));
         if (def == null) return false;
@@ -2217,7 +2279,7 @@ public final class SkillService {
         var tree = ctx == null ? null : ctx.skillTree().orElse(null);
         boolean restoreQueuedTree = tree == null;
         if (tree == null && ctx != null) {
-            int treeInstanceId = ctx.instance() == null ? -1 : ctx.instance().instanceId();
+            int treeInstanceId = executionId(ctx);
             var saved = persistedTrees.get(treeInstanceId);
             tree = saved == null
                     ? new dev.helstera.api.behavior.SkillTreeContext(
@@ -2244,16 +2306,16 @@ public final class SkillService {
                 return false;
             }
         }
-        int instId = ctx.instance() != null ? ctx.instance().instanceId() : -1;
+        int instId = executionId(ctx);
         if (metaskillConditionEvaluationActive()
                 && (def.castMillis > 0 || def.deferredActions
-                || instId >= 0 && isInstanceBusy(instId))) {
+                || instId != -1 && isInstanceBusy(instId))) {
             return false;
         }
         if (cooldownOverrides.getOrDefault(cdKey, def.cooldownMillis) > 0) cooldowns.put(cdKey, now);
 
         // 队列门控：同一实例有技能正在执行时入队
-        if (instId >= 0 && isInstanceBusy(instId)) {
+        if (instId != -1 && isInstanceBusy(instId)) {
             enqueueSkill(instId, def, ctx, restoreQueuedTree);
             return true;
         }
@@ -2468,7 +2530,7 @@ public final class SkillService {
 
     /** 执行技能动作集合并启动读条（复用 castSkill 的逻辑分支）。 */
     private void executeSkillActions(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
-        Integer instanceId = ctx == null || ctx.instance() == null ? null : ctx.instance().instanceId();
+        Integer instanceId = ctx == null || ctx.instance() == null ? null : executionId(ctx);
         boolean[] valid = {true};
         inFlightActions.computeIfAbsent(instanceId, ignored -> new ArrayList<>()).add(valid);
         try {
@@ -2492,6 +2554,8 @@ public final class SkillService {
     private void rememberSkillTree(dev.helstera.api.behavior.BehaviorContext ctx) {
         if (metaskillConditionEvaluationActive()) return;
         if (ctx == null || ctx.instance() == null || ctx.skillTree().isEmpty()) return;
+        // Terminal skill trees belong only to their continuation, never to a dead caster's disk file.
+        if (ctx.instance() instanceof TerminalSkillContext) return;
         try {
             persistedTrees.put(ctx.instance().instanceId(), ctx.skillTree().orElseThrow().snapshot());
         } catch (IllegalStateException ex) {
@@ -2583,7 +2647,7 @@ public final class SkillService {
      * @return 是否成功取消
      */
     private void beginCast(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
-        int instId = ctx != null && ctx.instance() != null ? ctx.instance().instanceId() : -1;
+        int instId = executionId(ctx);
         activeCasts.put(instId + "|" + def.name,
                 new SkillCast(def, System.currentTimeMillis(), instId, ctx));
     }
@@ -2596,11 +2660,18 @@ public final class SkillService {
             if (cast.context() == null) continue;
             executeSkillActions(cast.def(), cast.context());
             processQueue(cast.instanceId());
+            cleanupTerminal(cast.instanceId());
         }
     }
 
     public boolean cancelCast(int instId) {
         boolean removed = activeCasts.values().removeIf(c -> c.instanceId() == instId);
+        var terminal = terminalContexts.remove(instId);
+        if (terminal != null) {
+            terminal.close();
+            forget(instId);
+            return true;
+        }
         invalidateScheduledActions(instId);
         if (removed) processQueue(instId);
         return removed;
@@ -2664,7 +2735,7 @@ public final class SkillService {
      * 表现却是「技能偶尔只对一只生效」。</p>
      */
     private String cooldownKey(SkillDef def, dev.helstera.api.behavior.BehaviorContext ctx) {
-        int id = ctx != null && ctx.instance() != null ? ctx.instance().instanceId() : -1;
+        int id = executionId(ctx);
         return cooldownKey(def, id);
     }
 
@@ -2692,6 +2763,7 @@ public final class SkillService {
 
     /** Releases per-instance dynamic cooldown state during entity teardown. */
     public void forget(int instanceId) {
+        detachTerminalVariables(instanceId);
         invalidateScheduledActions(instanceId);
         var chains = inFlightActions.remove(instanceId);
         if (chains != null) chains.forEach(chain -> chain[0] = false);

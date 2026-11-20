@@ -21,12 +21,19 @@ public final class VariableLocations {
     }
 
     public static void set(String scope, String name, BehaviorContext context, Location location, long expiresAt) {
+        var detached = EntityVariableContext.find(context, scope);
+        if (detached.isPresent()) {
+            if (name != null && !name.isBlank() && location != null) detached.get().setLocation(name, location, expiresAt);
+            return;
+        }
         String key = scopeKey(scope, context);
         if (key == null || name == null || name.isBlank() || location == null) return;
         VALUES.computeIfAbsent(key, ignored -> new ExpiringVariables<>()).put(name, new StoredLocation(location), expiresAt);
     }
 
     public static Optional<Location> get(String scope, String name, BehaviorContext context) {
+        var detached = EntityVariableContext.find(context, scope);
+        if (detached.isPresent()) return detached.get().location(name);
         return getByKey(scopeKey(scope, context), name);
     }
 
@@ -43,12 +50,16 @@ public final class VariableLocations {
     }
 
     public static long expirationTime(String scope, String name, BehaviorContext context) {
+        var detached = EntityVariableContext.find(context, scope);
+        if (detached.isPresent()) return detached.get().locationExpiration(name);
         String key = scopeKey(scope, context);
         ExpiringVariables<StoredLocation> values = key == null ? null : VALUES.get(key);
         return values == null ? 0 : values.expirationTime(name);
     }
 
     public static Optional<Location> unset(String scope, String name, BehaviorContext context) {
+        var detached = EntityVariableContext.find(context, scope);
+        if (detached.isPresent()) return detached.get().unsetLocation(name);
         String key = scopeKey(scope, context);
         if (key == null || name == null || name.isBlank()) return Optional.empty();
         Map<String, StoredLocation> values = VALUES.get(key);

@@ -453,6 +453,7 @@ public final class AiManager implements Listener {
     }
 
     private void detach(int instanceId, boolean unloading) {
+        if (skills != null) skills.detachTerminalVariables(instanceId);
         var gone = controlled.remove(instanceId);
         // 先取实体 UUID 再删档案：反了就得遍历全量实例才能找到那一个
         if (gone != null) {
@@ -586,6 +587,7 @@ public final class AiManager implements Listener {
         };
     }
     public void stop() {
+        if (skills != null) skills.cancelTerminalExecutions();
         if (task != null) {
             task.cancel();
             task = null;

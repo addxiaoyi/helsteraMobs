@@ -29752,6 +29752,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("[生物] " + fallbackNote);
                 mobWarnings.add(fallbackNote);
             }
+            if (existingEntity == null) {
+                // Paper may load terrain before its entity section. Complete that load
+                // before spawning so the first new mob is valid during onSpawn @self.
+                loc.getChunk().getEntities();
+            }
             org.bukkit.entity.Entity spawnedEntity = existingEntity != null ? existingEntity
                     : loc.getWorld().spawnEntity(loc, et);
             if (!(spawnedEntity instanceof org.bukkit.entity.LivingEntity ent)) {
@@ -30482,6 +30487,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public void onConfirmedEntityDeath(org.bukkit.event.entity.EntityDeathEvent e) {
         if (!e.isCancelled()) {
             if (!(e.getEntity() instanceof org.bukkit.entity.Player)) {
+                var dyingInstance = findInstance(e.getEntity());
+                var skills = skillService();
+                if (dyingInstance != null && skills != null) {
+                    skills.detachTerminalVariables(dyingInstance.instanceId());
+                }
                 dev.helstera.ai.skill.SkillExtras.forgetEntity(e.getEntity());
                 dev.helstera.api.behavior.VariableLocations.clearEntity(e.getEntity());
             }

@@ -477,7 +477,7 @@ foreach ($item in $releaseEvidence) {
             $terminal = $item.terminalCallbackEvidence
             if ($null -eq $terminal -or [string]$terminal.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-terminal-callback-[0-9]{8}-r[1-9][0-9]*\.json$' -or
                     [string]$terminal.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
-                throw 'Latest full release requires pinned terminal callback diagnostic.'
+                throw 'Latest full release requires pinned terminal callback comparison.'
             }
             $terminalPath = Join-Path $Root ([string]$terminal.report)
             if (-not (Test-Path -LiteralPath $terminalPath -PathType Leaf) -or
@@ -488,6 +488,11 @@ foreach ($item in $releaseEvidence) {
             if ([string]$terminalReport.pluginSha256 -cne [string]$report.pluginSha256 -or
                     [string]$terminalReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
                 throw 'Terminal callback evidence does not match the release artifact/server.'
+            }
+            if ($terminalReport.schemaVersion -ne 3 -or
+                    [string]$terminalReport.evidenceMode -cne 'comparison-with-exception' -or
+                    [string]$terminalReport.parityStatus -cne 'scoped-match') {
+                throw 'Terminal callback release evidence must prove the scoped continuation fix; a historical gap diagnostic is insufficient.'
             }
             $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
             & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-terminal-callback.py') $terminalPath

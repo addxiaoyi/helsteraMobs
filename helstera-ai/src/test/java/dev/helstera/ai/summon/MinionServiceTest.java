@@ -72,6 +72,24 @@ class MinionServiceTest {
         assertEquals(0, s.depthOf(10), "已移除的召唤物深度归零");
     }
 
+    @Test
+    void terminalSummonsReleaseRemovedOwnerRecordsAfterLastChildCleanup() {
+        MinionService s = new MinionService();
+        for (int owner = 100; owner < 200; owner++) {
+            s.forget(owner);
+            int first = owner * 10;
+            assertNull(s.register(owner, first, 1));
+            assertNull(s.register(owner, first + 1, 1));
+            assertEquals(1, s.trackedOwnerCount());
+            s.forget(first);
+            assertEquals(1, s.trackedOwnerCount());
+            assertEquals(1, s.minionCount(owner));
+            s.forget(first + 1);
+            assertEquals(0, s.totalMinions());
+            assertEquals(0, s.trackedOwnerCount(), "removed owners must not accumulate empty records");
+        }
+    }
+
     /**
      * 实例 id 超出 Integer 缓存范围时，{@code forget} 仍要真正移除。
      *

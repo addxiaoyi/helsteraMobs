@@ -1,4 +1,4 @@
-"""Verify a known compatibility gap; this diagnostic must never be called parity success."""
+"""Verify scoped terminal parity while preserving the historical known-gap contract."""
 from datetime import datetime
 import hashlib
 import importlib.util
@@ -20,6 +20,7 @@ contract=module('callback_contract','terminal-callback-cases.py')
 require,fields,unique=registry.require,registry.fields,registry.unique_pairs
 BACKENDS=('native','runtime')
 EXCEPTIONS=['Helstera-terminal-continuations-cancelled','MM-5.7.2-deferred-terminal-command-dispatch']
+PARITY_EXCEPTIONS=['MM-5.7.2-deferred-terminal-command-dispatch']
 SOURCES={'run-terminal-callback-fixture.py','run-player-variable-fixture.py','terminal-callback-cases.py',
          'validate-terminal-callback.py','validate-player-variables.py','test-terminal-callback-evidence.py',
          'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/TerminalCallbackProbe.java'}
@@ -29,8 +30,10 @@ def digest(b):return hashlib.sha256(b).hexdigest()
 def flag(b):return str(bool(b)).lower()
 
 def validate(report,payloads):
-    require(report['schemaVersion']==1 and report['evidenceMode']=='diagnostic-known-gap','not a known-gap diagnostic')
-    require(report['knownExceptions']==EXCEPTIONS and report['parityStatus']=='incomplete','gap hidden or called parity')
+    parity=report['evidenceMode']=='comparison-with-exception'
+    require(report['schemaVersion'] in (1,2,3) and report['evidenceMode'] in ('diagnostic-known-gap','comparison-with-exception'),'wrong schema or mode')
+    require(not parity or report['schemaVersion']>=2,'old diagnostic relabeled as parity')
+    require(report['knownExceptions']==(PARITY_EXCEPTIONS if parity else EXCEPTIONS) and report['parityStatus']==('scoped-match' if parity else 'incomplete'),'gap hidden or wrong parity scope')
     require(report['paperJarSha256']=='39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9','wrong Paper')
     require(report['mythicMobsSha256']=='9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f','wrong native oracle')
     require(all(re.fullmatch('[a-f0-9]{64}',report[k]) for k in ('pluginSha256','probeJarSha256')),'invalid artifact hash')
@@ -83,8 +86,8 @@ def validate(report,payloads):
     for marker in ('TCALL_HOOK|','TCALL_CHILD|','TCALL_REQUEST|','TCALL_UNLOAD|','TCALL_COMMAND|'):
         for _,r in marked(marker):require((r['key'],r['backend']) in ids,'unknown event identity')
     child_ids=unique((r['uuid'],(i,r)) for i,r in children)
-    require(len(child_ids)==48 and not set(child_ids)&{r['uuid'] for _,r in ids.values()},'missing/duplicate child UUID')
-    require(len(hooks)==216 and len(child_states)==96,'missing/duplicate callback or child observations')
+    require(len(child_ids)==(80 if parity else 48) and not set(child_ids)&{r['uuid'] for _,r in ids.values()},'missing/duplicate child UUID')
+    require(len(hooks)==(328 if parity else 216) and len(child_states)==(160 if parity else 96),'missing/duplicate callback or child observations')
     gaps=[]
     for key,(scenario,kind,path) in contract.CASES.items():
         action_at,action=actions[key];action_tick=int(action['tick']);seal_at,seal=seals[key]
@@ -93,15 +96,18 @@ def validate(report,payloads):
             parent_at,parent=ids[(key,b)];initial_at,initial=rowmap[(key,b,'initial')];settled_at,settled=rowmap[(key,b,'settled')];clean_at,clean=rowmap[(key,b,'cleaned')]
             require(parent_at<initial_at<action_at<settled_at<clean_at<seal_at,'wrong lifecycle ordering')
             spawn_tick=int(parent['tick']);require(int(initial['tick'])==spawn_tick and int(settled['tick'])==action_tick+130 and int(clean['tick'])==action_tick+230,'wrong observation times')
-            live=scenario=='control';child_count=2 if b=='native' or live else 0
+            live=scenario=='control';child_count=2 if parity or b=='native' or live else 0
             for phase,present,count in [('initial',True,0),('settled',live,child_count),('cleaned',False,0)]:
                 _,r=rowmap[(key,b,phase)]
                 require(r['uuid']==parent['uuid'] and r['entity']==r['registry']==flag(present) and r['marker']==('73' if present else 'absent'),'parent lost, resurrected or stale')
                 require(r['children']==str(count) and r['visuals']==str((int(present)+count)*11 if b=='runtime' else 0),'missing/orphan children or visuals')
+                if report['schemaVersion']>=2:require(r['terminalExecutions']=='0','terminal execution leaked across checkpoints')
+                if report['schemaVersion']>=3:
+                    require(r['ownerRecords']==('1' if phase=='settled' else '0') and r['minionRecords']==('2' if phase=='settled' else '0'),'orphan or missing summon ownership')
             hs=[(i,r) for i,r in hooks if r['key']==key and r['backend']==b]
             require(all(r['uuid']==parent['uuid'] and r['marker']=='73' and r['primary']=='true' and r['cleaning']=='false' and initial_at<i<settled_at for i,r in hs),'wrong callback context or cleanup replay')
             labels={name:[int(r['tick']) for _,r in hs if r['label']==name] for name in ('immediate','delay1','delay10','repeat','nested','afterchild','pending')}
-            full=b=='native' or live
+            full=parity or b=='native' or live
             require(len(labels['immediate'])==1,'terminal callback missing or replayed');start=labels['immediate'][0]
             if scenario=='control':require(start==spawn_tick+10 and action_tick==spawn_tick+25,'wrong positive-control timing')
             elif scenario in ('command','death','suspended'):require(action_tick<=start<=action_tick+(2 if b=='native' else 0),'terminal callback outside removal window')
@@ -117,7 +123,7 @@ def validate(report,payloads):
                 require(all(not labels[k] for k in ('delay1','delay10','repeat','nested','afterchild')),'baseline terminal-gap behavior changed; reclassify with evidence')
                 gaps.append(key)
             require(labels['pending']==([spawn_tick+80] if live else []),'ordinary pending work survives removal or positive control lost')
-            require(len(hs)==(9 if live else 8 if b=='native' else 1),'unexpected callback label')
+            require(len(hs)==(9 if live else 8 if full else 1),'unexpected callback label')
             born=[(i,r) for i,r in children if r['key']==key and r['backend']==b]
             require(len(born)==child_count and {r['mode'] for _,r in born}==({'NEVER','PERSISTENT'} if child_count else set()),'wrong callback children')
             for born_at,child in born:
@@ -162,5 +168,6 @@ def main(path):
         name=f['path'];require(not Path(name).is_absolute() and '..' not in Path(name).parts and '\\' not in name and name not in seen,'unsafe/duplicate member');seen.add(name)
         if not archived:payloads[name]=(p/name).read_bytes()
         require(digest(payloads[name])==f['sha256'],'member changed')
-    print(f'Validated {validate(report,payloads)} observations, 40 parents, 48 children; 16 terminal callback cases remain incompatible.');return report,payloads
+    count=validate(report,payloads)
+    print(f"Validated {count} observations, 40 parents; mode={report['evidenceMode']}; unresolved cases={len(report['gapCases'])}.");return report,payloads
 if __name__=='__main__':main(sys.argv[1])

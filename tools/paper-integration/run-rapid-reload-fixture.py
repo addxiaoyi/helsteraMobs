@@ -59,7 +59,7 @@ def main():
     (data/'skills.yml').write_text('skills: {}\n');(data/'spawners.yml').write_text('spawners: {}\n');(data/'mobs').mkdir()
     sources=[Path(__file__).resolve(),TOOLS/'run-player-variable-fixture.py',TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/RapidReloadProbe.java']
     if validator:sources.extend(TOOLS/n for n in ('validate-rapid-reload.py','validate-player-variables.py','test-rapid-reload-evidence.py'))
-    report={'schemaVersion':1,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception','knownExceptions':[] if validator is None else validator.EXCEPTIONS,
+    report={'schemaVersion':2,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception','knownExceptions':[] if validator is None else validator.EXCEPTIONS,
         'generatedAtUtc':datetime.now(timezone.utc).isoformat(),'pluginSha256':digest(plugin),'paperJarSha256':common.PAPER_HASH,'mythicMobsSha256':common.NATIVE_HASH,'probeJarSha256':digest(probe_jar),
         'sourceHashes':{str(p.relative_to(ROOT)):digest(p) for p in sources},'observations':[],'files':[]}
     latest=server/'logs/latest.log';error=None;started=datetime.now(timezone.utc).isoformat()
@@ -96,6 +96,13 @@ def main():
         if r['checkpoint']=='absent':kinds.append('no-checkpoint-yet')
         report['nativeExceptions'].extend({'key':r['key'],'phase':r['phase'],'kind':kind} for kind in kinds)
     report['nativeExceptions'].sort(key=lambda r:(r['key'],r['phase'],r['kind']))
+    native_hooks=[dict(pair.split('=',1) for pair in l.split('RRELOAD_HOOK|',1)[1].split('|')) for l in (server/'server.log').read_text().splitlines() if 'RRELOAD_HOOK|' in l]
+    initial_rows=[dict(pair.split('=',1) for pair in l.split('RRELOAD_ROW|',1)[1].split('|')) for l in report['observations']]
+    report['nativeDuplicateCallbacks']=sorted([{'key':h['key'],'uuid':h['uuid'],
+        'active':next(r['active'] for r in initial_rows if r['key']==h['key'] and r['backend']=='native' and r['phase']=='initial'),
+        'tick':int(h['tick']),'callbacks':int(h['count']),
+        'nativeEvents':sum('RRELOAD_NATIVE_EVENT|key='+h['key']+'|' in l for l in (server/'server.log').read_text().splitlines())}
+        for h in native_hooks if h['backend']=='native' and int(h['count'])>1],key=lambda r:r['key'])
     for name,expected in report['sourceHashes'].items():
         if digest(ROOT/name)!=expected:raise RuntimeError('Source changed during fixture')
     for p,key in [(server/'paper.jar','paperJarSha256'),(plugins/'MythicMobs.jar','mythicMobsSha256'),(plugins/'helsteraMobs.jar','pluginSha256'),(probe_jar,'probeJarSha256')]:

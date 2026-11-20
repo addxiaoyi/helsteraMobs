@@ -25,6 +25,7 @@ def main():
     parser.add_argument('--revision',required=True)
     parser.add_argument('--cache-directory',required=True)
     parser.add_argument('--observe-only',action='store_true')
+    parser.add_argument('--expect-parity',action='store_true')
     args=parser.parse_args()
     import yaml
     if not re.fullmatch(r'r[1-9][0-9]*',args.revision):raise ValueError('Invalid revision')
@@ -59,8 +60,8 @@ def main():
     (data/'skills.yml').write_text('skills: {}\n');(data/'spawners.yml').write_text('spawners: {}\n');(data/'mobs').mkdir()
     sources=[Path(__file__).resolve(),TOOLS/'run-player-variable-fixture.py',TOOLS/'terminal-callback-cases.py',TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/TerminalCallbackProbe.java']
     if validator:sources.extend(TOOLS/n for n in ('validate-terminal-callback.py','validate-player-variables.py','test-terminal-callback-evidence.py'))
-    report={'schemaVersion':1,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'diagnostic-known-gap','knownExceptions':[] if validator is None else validator.EXCEPTIONS,
-        'parityStatus':'unassessed' if args.observe_only else 'incomplete',
+    report={'schemaVersion':3,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception' if args.expect_parity else 'diagnostic-known-gap','knownExceptions':[] if validator is None else validator.PARITY_EXCEPTIONS if args.expect_parity else validator.EXCEPTIONS,
+        'parityStatus':'unassessed' if args.observe_only else 'scoped-match' if args.expect_parity else 'incomplete',
         'generatedAtUtc':datetime.now(timezone.utc).isoformat(),'pluginSha256':digest(plugin),'paperJarSha256':common.PAPER_HASH,'mythicMobsSha256':common.NATIVE_HASH,'probeJarSha256':digest(probe_jar),
         'sourceHashes':{str(p.relative_to(ROOT)):digest(p) for p in sources},'observations':[],'files':[]}
     latest=server/'logs/latest.log';error=None;started=datetime.now(timezone.utc).isoformat()

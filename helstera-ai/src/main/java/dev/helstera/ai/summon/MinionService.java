@@ -71,8 +71,11 @@ public final class MinionService {
         String blocked = whyBlocked(owner, minionDepth - 1);
         if (blocked != null) return blocked;
         parentOf.put(minion, owner);
-        childrenOf.computeIfAbsent(owner, k -> java.util.Collections.synchronizedList(new ArrayList<>()))
-                .add(minion);
+        childrenOf.compute(owner, (key, kids) -> {
+            if (kids == null) kids = java.util.Collections.synchronizedList(new ArrayList<>());
+            kids.add(minion);
+            return kids;
+        });
         return null;
     }
 
@@ -95,11 +98,13 @@ public final class MinionService {
     public void forget(int minionId) {
         Integer parent = parentOf.remove(minionId);
         if (parent != null) {
-            List<Integer> kids = childrenOf.get(parent);
-            // 显式 null 检查：childrenOf 的 List 由 computeIfAbsent 创建，
-            // 理论不会含 null，但 register 是 public，外部若传入就会让
-            // removeIf 的谓词在 k 上 NPE，把「清理失败」变成「清理时崩溃」。
-            if (kids != null) kids.removeIf(k -> k != null && k == minionId);
+            childrenOf.computeIfPresent(parent, (key, kids) -> {
+                kids.removeIf(k -> k != null && k == minionId);
+                // A terminal callback can summon after its owner was forgotten.
+                // No later owner removal will clean this record, so release it
+                // when the last child leaves. Compute also serializes registration.
+                return kids.isEmpty() ? null : kids;
+            });
         }
         // 自身若是召唤主，也清掉它的孩子列表
         childrenOf.remove(minionId);
@@ -112,6 +117,11 @@ public final class MinionService {
 
     public int totalMinions() {
         return parentOf.size();
+    }
+
+    /** Number of retained owner records, including owners already removed from the world. */
+    public int trackedOwnerCount() {
+        return childrenOf.size();
     }
 
     /** 召唤主的全部直系召唤物。 */

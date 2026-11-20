@@ -9353,8 +9353,12 @@ public final class SkillExtras {
             else if (hasInstance(ctx) && value instanceof Number number) varsOf(id(ctx)).put(ref.name(), number.doubleValue(), expiresAt);
             return;
         }
-        String key = VariableLocations.scopeKey(ref.scope(), ctx);
-        if (key != null) scopedValuesOf(key).put(ref.name(), value, expiresAt);
+        var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, ref.scope());
+        if (detached.isPresent()) detached.get().setVariable(ref.name(), value, expiresAt);
+        else {
+            String key = VariableLocations.scopeKey(ref.scope(), ctx);
+            if (key != null) scopedValuesOf(key).put(ref.name(), value, expiresAt);
+        }
     }
 
     private static Location resolveLocationValue(BehaviorContext ctx, LocationValue value) {
@@ -9400,6 +9404,10 @@ public final class SkillExtras {
 
     private static void unsetScopedVariable(BehaviorContext ctx, VariableRef ref) {
         if (ctx == null || ref == null || ref.name().isEmpty()) return;
+        var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, ref.scope());
+        if (detached.isPresent()) {
+            detached.get().unsetVariable(ref.name());detached.get().unsetLocation(ref.name());return;
+        }
         if (ref.scope().equals("skill")) {
             if (ctx.skillTree().isPresent()) {
                 ctx.skillTree().orElseThrow().unsetVariable(ref.name());
@@ -9454,6 +9462,9 @@ public final class SkillExtras {
 
     private static Object rawVariable(BehaviorContext ctx, VariableRef ref) {
         if (ctx == null || ref == null || ref.name().isEmpty()) return null;
+        var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, ref.scope());
+        if (detached.isPresent()) return detached.get().variable(ref.name()).orElseGet(
+                () -> detached.get().location(ref.name()).orElse(null));
         if (ref.scope().equals("skill")) {
             Object value = ctx.skillTree().flatMap(tree -> tree.variable(ref.name())).orElse(null);
             if (value != null) return value;
@@ -9469,6 +9480,9 @@ public final class SkillExtras {
     }
 
     private static long variableExpiration(BehaviorContext ctx, VariableRef ref) {
+        var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, ref.scope());
+        if (detached.isPresent()) return detached.get().variable(ref.name()).isPresent()
+                ? detached.get().variableExpiration(ref.name()) : detached.get().locationExpiration(ref.name());
         if (ref.scope().equals("skill")) {
             if (ctx.skillTree().isPresent()) {
                 var tree = ctx.skillTree().orElseThrow();
@@ -9485,6 +9499,9 @@ public final class SkillExtras {
     /** Read the action/condition variable store without allocating a registry on a miss. */
     static Object placeholderVariable(BehaviorContext ctx, String scope, String name) {
         if (ctx == null || name == null || name.isEmpty()) return null;
+        var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, scope);
+        if (detached.isPresent()) return detached.get().variable(name).orElseGet(
+                () -> detached.get().location(name).orElse(null));
         if (scope.equals("trigger")) {
             Entity entity = ctx.trigger().orElse(null);
             String key = VariableLocations.entityScopeKey(entity);

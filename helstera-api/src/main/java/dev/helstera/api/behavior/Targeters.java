@@ -334,7 +334,10 @@ public final class Targeters {
             // Other selectors and ordinary execution still reject dead entities.
             return base instanceof LivingEntity living && (isActiveLiving(living)
                     || "on-death".equalsIgnoreCase(context.state()) && living.isDead()
-                    || "on-despawn".equalsIgnoreCase(context.state()))
+                    || "on-despawn".equalsIgnoreCase(context.state())
+                    || context.instance() instanceof EntityVariableContext
+                    && ("on-remove".equalsIgnoreCase(context.state())
+                    || "on-death-skill".equalsIgnoreCase(context.state())))
                     ? List.of(living) : List.of();
         }
         if (name.equals("target")) {
