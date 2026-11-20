@@ -2,6 +2,7 @@ package dev.helstera.ai.skill;
 
 import dev.helstera.api.util.EntityTypeSelector;
 import dev.helstera.api.behavior.BehaviorContext;
+import dev.helstera.api.behavior.EntityVariableContext;
 import dev.helstera.api.behavior.SkillTreeContext;
 import dev.helstera.api.behavior.Targeters;
 import dev.helstera.api.behavior.VariableLocations;
@@ -7153,6 +7154,7 @@ public final class SkillExtras {
                     VariableLifetime lifetime = VariableLifetime.parse(a);
                     return ctx -> {
                         if (ctx == null || ref.name().isEmpty()) return;
+                        if (EntityVariableContext.isDetachedTarget(ctx, ref.scope())) return;
                         Location location = ctx.targetLocation().orElseGet(() -> ctx.targetEntity()
                                 .map(org.bukkit.entity.Entity::getLocation)
                                 .orElseGet(() -> ctx.origin().orElse(null)));
@@ -7187,6 +7189,7 @@ public final class SkillExtras {
                     String amount = raw;
                     return ctx -> {
                         if (ctx == null || ref.name().isEmpty()) return;
+                        if (EntityVariableContext.isDetachedTarget(ctx, ref.scope())) return;
                         // Capture the deadline before the value: a boundary crossing cannot make it permanent.
                         long previousExpiration = variableExpiration(ctx, ref);
                         Object current = rawVariable(ctx, ref);
@@ -9336,6 +9339,7 @@ public final class SkillExtras {
 
     private static void setRawVariable(BehaviorContext ctx, VariableRef ref, Object value, long expiresAt) {
         if (ctx == null || ref == null || ref.name().isEmpty() || value == null) return;
+        if (EntityVariableContext.isDetachedTarget(ctx, ref.scope())) return;
         if (value instanceof LocationValue locationValue) {
             Location location = resolveLocationValue(ctx, locationValue);
             if (location == null) return;
@@ -9404,6 +9408,7 @@ public final class SkillExtras {
 
     private static void unsetScopedVariable(BehaviorContext ctx, VariableRef ref) {
         if (ctx == null || ref == null || ref.name().isEmpty()) return;
+        if (EntityVariableContext.isDetachedTarget(ctx, ref.scope())) return;
         var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, ref.scope());
         if (detached.isPresent()) {
             detached.get().unsetVariable(ref.name());detached.get().unsetLocation(ref.name());return;

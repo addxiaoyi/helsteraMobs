@@ -49,12 +49,14 @@ text('failed fixture','server.log',lambda t:t+'\nRRELOAD_FAILED|\n')
 text('checkpoint load failed','server.log',lambda t:t+'\nVariable checkpoint load failed\n')
 text('orphan registry','snapshots/scoped-variables.yml',lambda t:t.replace('registries: {}','registries: {orphan: bad}'))
 for label,change in [('wrong schema',lambda r:r.update(schemaVersion=0)),('observation passed as verified',lambda r:r.update(evidenceMode='observation')),
+ ('rejected evidence relabelled',lambda r:r.update(validationResult='rejected: missing/duplicate callback')),
+ ('empty validation result',lambda r:r.update(validationResult=None)),
  ('undocumented exception',lambda r:r.update(knownExceptions=[])),('hidden native race',lambda r:r.update(nativeExceptions=[])),('wrong server',lambda r:r.update(paperJarSha256='0'*64)),
  ('wrong native oracle',lambda r:r.update(mythicMobsSha256='0'*64)),('missing sources',lambda r:r['sourceHashes'].clear()),
  ('unclean shutdown',lambda r:r['boot'].update(exitCode=-9)),('invalid boot timing',lambda r:r['boot'].update(stoppedAtUtc=r['boot']['startedAtUtc']))]:
     r=copy.deepcopy(report);change(r);controls.append((label,r,payloads))
 p=dict(payloads);p['snapshots/entity-orphan.yml']=b'bad';controls.append(('orphan tree file',report,p))
-if report['schemaVersion']==2:
+if report['schemaVersion'] in (2,3):
     r=copy.deepcopy(report);r['nativeDuplicateCallbacks']=[{'key':'invented'}];controls.append(('invented duplicate exception',r,payloads))
     text('runtime duplicate callback','server.log',lambda t:t+'\n'+next(l for l in t.splitlines() if 'RRELOAD_HOOK|' in l and '|backend=runtime|' in l))
 for label,r,p in controls:
@@ -65,16 +67,24 @@ print('Rejected',len(controls),'rapid reload evidence mutations.')
 
 # Replay a frozen rejected capture only inside this test. Its on-disk report
 # remains observation-only; it must never be accepted by main() or a release gate.
-if len(sys.argv)>2:
-    diagnostic=Path(sys.argv[2]);original=v.js(diagnostic.read_text())
-    assert original['evidenceMode']=='observation' and original['validationResult']=='rejected: failed fixture: RRELOAD_DUPLICATE_STACK|'
+for diagnostic_arg in sys.argv[2:]:
+    diagnostic=Path(diagnostic_arg);frozen=diagnostic.read_bytes();original=v.js(frozen)
+    assert original['evidenceMode']=='observation'
+    normal_capture=original['validationResult']=='rejected: missing/duplicate callback'
+    assert normal_capture or original['validationResult']=='rejected: failed fixture: RRELOAD_DUPLICATE_STACK|'
+    try:v.main(diagnostic)
+    except ValueError:pass
+    else:raise AssertionError('Accepted frozen observation as release evidence')
     archive=diagnostic.parent/original['logArchive'];assert v.digest(archive.read_bytes())==original['logArchiveSha256']
     with v.zipfile.ZipFile(archive) as z:
         assert len(z.namelist())==len(set(z.namelist()))
         raw={n:z.read(n) for n in z.namelist()}
     assert set(raw)=={f['path'] for f in original['files']}
     for f in original['files']:assert v.digest(raw[f['path']])==f['sha256']
-    replay=copy.deepcopy(original);replay.update(schemaVersion=2,evidenceMode='comparison-with-exception',knownExceptions=v.EXCEPTIONS)
+    replay=copy.deepcopy(original)
+    replay.pop('validationResult')  # Only this in-memory replay loses the rejection marker.
+    replay.update(schemaVersion=3 if normal_capture else 2,evidenceMode='comparison-with-exception',
+                  knownExceptions=v.NORMAL_EXCEPTIONS if normal_capture else v.EXCEPTIONS)
     lines=raw['server.log'].decode().splitlines()
     hooks=[v.fields(l,'RRELOAD_HOOK|') for l in lines if 'RRELOAD_HOOK|' in l]
     rows=[v.fields(l,'RRELOAD_ROW|') for l in lines if 'RRELOAD_ROW|' in l]
@@ -83,6 +93,9 @@ if len(sys.argv)>2:
         'tick':int(h['tick']),'callbacks':2,'nativeEvents':2}
         for h in hooks if h['backend']=='native' and h['count']=='2'],key=lambda r:r['key'])
     assert len(replay['nativeDuplicateCallbacks'])==2
+    if normal_capture:
+        assert original['schemaVersion']==2 and original['nativeDuplicateCallbacks']==replay['nativeDuplicateCallbacks']
+        assert {r['key'] for r in replay['nativeDuplicateCallbacks']}=={'r2_d10_chunk_direct','r2_d10_normal_imported'}
     assert v.validate(replay,raw)==3360
     mutations=[]
     for label,change in [
@@ -101,9 +114,80 @@ if len(sys.argv)>2:
         ('duplicate origin changed','CommandMechanic.castAtEntity','OtherMechanic.castAtEntity'),
         ('missing native event','RRELOAD_NATIVE_EVENT|','UNKNOWN|')]:
         p=dict(raw);p['server.log']=raw['server.log'].replace(before.encode(),after.encode(),1);mutations.append((label,replay,p))
-    for label,r,p in mutations:
+    if normal_capture:
+        normal_key='r2_d10_normal_imported'
+        def matching(line,marker,key=normal_key,backend=None):
+            return marker in line and f'|key={key}|' in line and (backend is None or f'|backend={backend}|' in line)
+        def value(line,name,replacement):
+            return v.re.sub(r'\|'+name+r'=[^|]*',lambda _:f'|{name}={replacement}',line)
+        def normal_entry(r):
+            return next(e for e in r['nativeDuplicateCallbacks'] if e['key']==normal_key)
+        def mutate_log(label,change,reason,metadata=lambda r:None):
+            r=copy.deepcopy(replay);p=dict(raw);changed=change(list(lines))
+            assert changed!=lines,label
+            p['server.log']=('\n'.join(changed)+'\n').encode()
+            # Keep the report correlated so failures exercise callback bounds,
+            # rather than merely detecting disagreement with the archived log.
+            r['observations']=[l for l in changed if 'RRELOAD_ROW|' in l]
+            metadata(r);mutations.append((label,r,p,reason))
+        def extra_hook(log,key,backend):
+            at=max(i for i,l in enumerate(log) if matching(l,'RRELOAD_HOOK|',key,backend))
+            hook=v.fields(log[at],'RRELOAD_HOOK|');count=int(hook['count'])+1
+            log.insert(at+1,value(log[at],'count',count))
+            field='despawns' if hook['event']=='despawn' else 'deaths'
+            for i in range(at+2,len(log)):
+                if matching(log[i],'RRELOAD_ROW|',key,backend):log[i]=value(log[i],field,count)
+            return log
+        for label,change,reason in [
+            ('schema2 cannot admit NORMAL',lambda r:r.update(schemaVersion=2,knownExceptions=v.EXCEPTIONS),'missing/duplicate callback'),
+            ('schema3 requires NORMAL exception',lambda r:r.update(knownExceptions=v.EXCEPTIONS),'undocumented exceptions'),
+            ('relabelled rejected NORMAL capture',lambda r:r.update(validationResult=original['validationResult']),'rejected evidence cannot be compared'),
+            ('empty rejected NORMAL marker',lambda r:r.update(validationResult=''),'rejected evidence cannot be compared'),
+            ('hidden NORMAL metadata',lambda r:r.update(nativeDuplicateCallbacks=[e for e in r['nativeDuplicateCallbacks'] if e['key']!=normal_key]),'hidden or altered native duplicate callbacks'),
+            ('missing duplicate metadata',lambda r:r.pop('nativeDuplicateCallbacks'),None),
+            ('wrong NORMAL metadata tick',lambda r:normal_entry(r).update(tick=2416),'hidden or altered native duplicate callbacks')]:
+            r=copy.deepcopy(replay);change(r);mutations.append((label,r,raw,reason))
+        mutate_log('NORMAL runtime duplicate',lambda log:extra_hook(log,normal_key,'runtime'),'missing/duplicate callback')
+        for mode in ('never','persistent'):
+            mutate_log('retained '+mode+' duplicate',lambda log,m=mode:extra_hook(log,'r2_d10_'+m+'_imported','native'),'missing/duplicate callback')
+        def third_pair(log):
+            log=extra_hook(log,normal_key,'native')
+            at=max(i for i,l in enumerate(log) if matching(l,'RRELOAD_NATIVE_EVENT|'))
+            log.insert(at+1,log[at]);return log
+        mutate_log('three paired NORMAL callbacks',third_pair,'missing/duplicate callback',
+                   lambda r:normal_entry(r).update(callbacks=3,nativeEvents=3))
+        unload=next(v.fields(l,'RRELOAD_CHUNK_UNLOAD|') for l in lines
+                    if matching(l,'RRELOAD_CHUNK_UNLOAD|',backend='native') and '|phase=rapid-unload|' in l)
+        assert int(unload['tick'])==2412 and normal_entry(replay)['tick']==2415
+        late_tick=int(unload['tick'])+6
+        mutate_log('late paired NORMAL callbacks',lambda log:[value(l,'tick',late_tick)
+                   if matching(l,'RRELOAD_NATIVE_EVENT|') or matching(l,'RRELOAD_HOOK|',backend='native') else l for l in log],
+                   'duplicate events outside bounded dispatch window',lambda r:normal_entry(r).update(tick=late_tick))
+        mutate_log('NORMAL callbacks on different ticks',lambda log:[value(l,'tick',2416)
+                   if matching(l,'RRELOAD_HOOK|',backend='native') and '|count=2|' in l else l for l in log],
+                   'duplicate callback outside original unload')
+        mutate_log('NORMAL callbacks outside original phase',lambda log:[value(l,'phase','stable-unload')
+                   if matching(l,'RRELOAD_HOOK|',backend='native') else l for l in log],
+                   'duplicate callback outside original unload')
+        def unpaired(log):
+            at=next(i for i,l in enumerate(log) if matching(l,'RRELOAD_NATIVE_EVENT|'))
+            log.pop(at);return log
+        mutate_log('unpaired NORMAL native event',unpaired,'native events/callbacks do not pair',
+                   lambda r:normal_entry(r).update(nativeEvents=1))
+        mutate_log('NORMAL event on different tick',lambda log:[value(l,'tick',2416)
+                   if matching(l,'RRELOAD_NATIVE_EVENT|') else l for l in log],
+                   'duplicate events outside bounded dispatch window')
+        for label,marker,before,after,reason in [
+            ('NORMAL native origin','RRELOAD_NATIVE_EVENT|','handleMobDespawnEvent','wrongOrigin','invalid native event origin'),
+            ('NORMAL command origin','RRELOAD_DUPLICATE_STACK|','CommandMechanic.castAtEntity','OtherMechanic.castAtEntity','missing/invalid duplicate dispatch origin'),
+            ('NORMAL scheduler origin','RRELOAD_DUPLICATE_STACK|','CraftScheduler.mainThreadHeartbeat','wrongScheduler','missing/invalid duplicate dispatch origin')]:
+            mutate_log(label,lambda log,m=marker,b=before,a=after:[l.replace(b,a) if matching(l,m) else l for l in log],reason)
+    for label,r,p,*reason in mutations:
         try:v.validate(r,p)
-        except (ValueError,KeyError):continue
+        except (ValueError,KeyError) as exc:
+            if reason and reason[0]:assert reason[0] in str(exc),(label,str(exc))
+            continue
         raise AssertionError('Accepted invalid duplicate diagnostic replay: '+label)
-    assert v.js(diagnostic.read_text())==original
+    assert diagnostic.read_bytes()==frozen
+    assert v.digest(archive.read_bytes())==original['logArchiveSha256']
     print('Rejected',len(mutations),'duplicate diagnostic mutations; original capture remains observation-only.')

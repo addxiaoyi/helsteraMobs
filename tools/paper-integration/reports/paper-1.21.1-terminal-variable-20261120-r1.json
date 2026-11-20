@@ -1,0 +1,294 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-terminal-variable-20261120-r1",
+  "evidenceMode": "observation",
+  "knownExceptions": [],
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-20T11:22:45.901790+00:00",
+  "pluginSha256": "d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "b91dff6446c134f5412c05e249ed682d29777c81945cadbd7ca7e0a0af31cf7c",
+  "sourceHashes": {
+    "tools/paper-integration/run-terminal-variable-fixture.py": "c2bd25a9eb73baf7fc772d23f7dd0d7fa43881512f75d5d4a6d2eae1419898ab",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/terminal-variable-cases.py": "57ecdf9b06b6ee0e9da5273d2932ab75bb37f96da480fb58c022d03d701da761",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/TerminalVariableProbe.java": "57ce42ad372bfb98de0a37b21e9b6f464278c28aa537b641006a3d3b33f7b405"
+  },
+  "observations": [
+    "[11:23:06] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_direct|backend=native|phase=initial|uuid=26f6ac04-7b9f-4762-ac2b-d83122476d6d|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=99|millis=1795173786929",
+    "[11:23:06] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_direct|backend=runtime|phase=initial|uuid=77518b7a-9333-4887-9f95-63c882004671|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=99|millis=1795173786931",
+    "[11:23:18] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_direct|backend=native|phase=settled|uuid=26f6ac04-7b9f-4762-ac2b-d83122476d6d|entity=true|registry=true|marker=91|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=334|millis=1795173798311",
+    "[11:23:18] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_direct|backend=runtime|phase=settled|uuid=77518b7a-9333-4887-9f95-63c882004671|entity=true|registry=true|marker=80|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=334|millis=1795173798311",
+    "[11:23:19] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_direct|backend=native|phase=cleaned|uuid=26f6ac04-7b9f-4762-ac2b-d83122476d6d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=354|millis=1795173799311",
+    "[11:23:19] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_direct|backend=runtime|phase=cleaned|uuid=77518b7a-9333-4887-9f95-63c882004671|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=354|millis=1795173799311",
+    "[11:23:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_imported|backend=native|phase=initial|uuid=e2436da5-b6a6-4aa3-91b1-e12e61218dee|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=364|millis=1795173802069",
+    "[11:23:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_imported|backend=runtime|phase=initial|uuid=7fb56192-ce18-48d2-8c1d-ae4a8960fad7|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=364|millis=1795173802069",
+    "[11:23:33] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_imported|backend=native|phase=settled|uuid=e2436da5-b6a6-4aa3-91b1-e12e61218dee|entity=true|registry=true|marker=91|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=599|millis=1795173813522",
+    "[11:23:33] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_imported|backend=runtime|phase=settled|uuid=7fb56192-ce18-48d2-8c1d-ae4a8960fad7|entity=true|registry=true|marker=80|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=599|millis=1795173813523",
+    "[11:23:34] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_imported|backend=native|phase=cleaned|uuid=e2436da5-b6a6-4aa3-91b1-e12e61218dee|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=619|millis=1795173814522",
+    "[11:23:34] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_cow_imported|backend=runtime|phase=cleaned|uuid=7fb56192-ce18-48d2-8c1d-ae4a8960fad7|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=619|millis=1795173814522",
+    "[11:23:37] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_direct|backend=native|phase=initial|uuid=a06c25fa-5067-4a14-9190-1b3b38d2f7aa|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=629|millis=1795173817359",
+    "[11:23:37] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_direct|backend=runtime|phase=initial|uuid=a9e828ff-421a-4d62-ab2b-ed891b4d031c|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=629|millis=1795173817359",
+    "[11:23:48] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_direct|backend=native|phase=settled|uuid=a06c25fa-5067-4a14-9190-1b3b38d2f7aa|entity=true|registry=true|marker=91|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=864|millis=1795173828850",
+    "[11:23:48] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_direct|backend=runtime|phase=settled|uuid=a9e828ff-421a-4d62-ab2b-ed891b4d031c|entity=true|registry=true|marker=80|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=864|millis=1795173828850",
+    "[11:23:49] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_direct|backend=native|phase=cleaned|uuid=a06c25fa-5067-4a14-9190-1b3b38d2f7aa|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=884|millis=1795173829850",
+    "[11:23:49] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_direct|backend=runtime|phase=cleaned|uuid=a9e828ff-421a-4d62-ab2b-ed891b4d031c|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=884|millis=1795173829850",
+    "[11:23:52] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_imported|backend=native|phase=initial|uuid=b8f77850-22ec-48fa-adad-11db48de8fbe|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=894|millis=1795173832305",
+    "[11:23:52] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_imported|backend=runtime|phase=initial|uuid=2ad8a789-e819-412e-818e-9f13af26d487|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=894|millis=1795173832305",
+    "[11:24:03] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_imported|backend=native|phase=settled|uuid=b8f77850-22ec-48fa-adad-11db48de8fbe|entity=true|registry=true|marker=91|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1129|millis=1795173843799",
+    "[11:24:03] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_imported|backend=runtime|phase=settled|uuid=2ad8a789-e819-412e-818e-9f13af26d487|entity=true|registry=true|marker=80|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=1129|millis=1795173843800",
+    "[11:24:04] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_imported|backend=native|phase=cleaned|uuid=b8f77850-22ec-48fa-adad-11db48de8fbe|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1149|millis=1795173844799",
+    "[11:24:04] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=control_zombie_imported|backend=runtime|phase=cleaned|uuid=2ad8a789-e819-412e-818e-9f13af26d487|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1149|millis=1795173844799",
+    "[11:24:07] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_direct|backend=native|phase=initial|uuid=ff128ae9-1937-47a6-9700-295879ceea8d|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1159|millis=1795173847575",
+    "[11:24:07] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_direct|backend=runtime|phase=initial|uuid=81afbce1-15ee-4e16-89fd-b60aef67ef99|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=1159|millis=1795173847575",
+    "[11:24:19] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_direct|backend=native|phase=settled|uuid=ff128ae9-1937-47a6-9700-295879ceea8d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1394|millis=1795173859002",
+    "[11:24:19] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_direct|backend=runtime|phase=settled|uuid=81afbce1-15ee-4e16-89fd-b60aef67ef99|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1394|millis=1795173859002",
+    "[11:24:20] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_direct|backend=native|phase=cleaned|uuid=ff128ae9-1937-47a6-9700-295879ceea8d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1414|millis=1795173860002",
+    "[11:24:20] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_direct|backend=runtime|phase=cleaned|uuid=81afbce1-15ee-4e16-89fd-b60aef67ef99|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1414|millis=1795173860002",
+    "[11:24:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_imported|backend=native|phase=initial|uuid=27f2ceb6-693f-42d9-8fc1-41d384f11c45|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1424|millis=1795173862467",
+    "[11:24:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_imported|backend=runtime|phase=initial|uuid=9f60d34d-33df-436f-9dd2-5a0742a13f1a|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=1424|millis=1795173862467",
+    "[11:24:34] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_imported|backend=native|phase=settled|uuid=27f2ceb6-693f-42d9-8fc1-41d384f11c45|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1659|millis=1795173874012",
+    "[11:24:34] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_imported|backend=runtime|phase=settled|uuid=9f60d34d-33df-436f-9dd2-5a0742a13f1a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1659|millis=1795173874012",
+    "[11:24:35] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_imported|backend=native|phase=cleaned|uuid=27f2ceb6-693f-42d9-8fc1-41d384f11c45|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1679|millis=1795173875012",
+    "[11:24:35] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_cow_imported|backend=runtime|phase=cleaned|uuid=9f60d34d-33df-436f-9dd2-5a0742a13f1a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1679|millis=1795173875012",
+    "[11:24:37] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_direct|backend=native|phase=initial|uuid=b40042bb-5be2-4569-a698-5172c51ef1e4|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1689|millis=1795173877475",
+    "[11:24:37] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_direct|backend=runtime|phase=initial|uuid=814d28e4-e77b-4911-8cee-d65ff3ba03c7|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=1689|millis=1795173877475",
+    "[11:24:48] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_direct|backend=native|phase=settled|uuid=b40042bb-5be2-4569-a698-5172c51ef1e4|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1924|millis=1795173888888",
+    "[11:24:48] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_direct|backend=runtime|phase=settled|uuid=814d28e4-e77b-4911-8cee-d65ff3ba03c7|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1924|millis=1795173888888",
+    "[11:24:49] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_direct|backend=native|phase=cleaned|uuid=b40042bb-5be2-4569-a698-5172c51ef1e4|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1944|millis=1795173889888",
+    "[11:24:49] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_direct|backend=runtime|phase=cleaned|uuid=814d28e4-e77b-4911-8cee-d65ff3ba03c7|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1944|millis=1795173889888",
+    "[11:24:52] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_imported|backend=native|phase=initial|uuid=5fcf2eae-011f-43e0-908f-a40df9f7203a|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1954|millis=1795173892808",
+    "[11:24:52] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_imported|backend=runtime|phase=initial|uuid=a35950fc-a504-44b4-a844-0e3ee515ca3e|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=1954|millis=1795173892808",
+    "[11:25:04] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_imported|backend=native|phase=settled|uuid=5fcf2eae-011f-43e0-908f-a40df9f7203a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2189|millis=1795173904280",
+    "[11:25:04] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_imported|backend=runtime|phase=settled|uuid=a35950fc-a504-44b4-a844-0e3ee515ca3e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2189|millis=1795173904280",
+    "[11:25:05] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_imported|backend=native|phase=cleaned|uuid=5fcf2eae-011f-43e0-908f-a40df9f7203a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2209|millis=1795173905280",
+    "[11:25:05] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=command_zombie_imported|backend=runtime|phase=cleaned|uuid=a35950fc-a504-44b4-a844-0e3ee515ca3e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2209|millis=1795173905280",
+    "[11:25:08] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_direct|backend=native|phase=initial|uuid=4cacc5ca-a9d3-49e0-be8a-aabcdc9a08e2|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2219|millis=1795173908343",
+    "[11:25:08] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_direct|backend=runtime|phase=initial|uuid=40ffbe87-1451-4059-94c3-98eea8381841|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=2219|millis=1795173908343",
+    "[11:25:19] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_direct|backend=native|phase=settled|uuid=4cacc5ca-a9d3-49e0-be8a-aabcdc9a08e2|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2454|millis=1795173919750",
+    "[11:25:19] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_direct|backend=runtime|phase=settled|uuid=40ffbe87-1451-4059-94c3-98eea8381841|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2454|millis=1795173919750",
+    "[11:25:20] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_direct|backend=native|phase=cleaned|uuid=4cacc5ca-a9d3-49e0-be8a-aabcdc9a08e2|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2474|millis=1795173920750",
+    "[11:25:20] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_direct|backend=runtime|phase=cleaned|uuid=40ffbe87-1451-4059-94c3-98eea8381841|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2474|millis=1795173920750",
+    "[11:25:23] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_imported|backend=native|phase=initial|uuid=4bf85e6b-ef41-439d-b979-ec70301ac1ef|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2484|millis=1795173923547",
+    "[11:25:23] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_imported|backend=runtime|phase=initial|uuid=20ef93a3-e679-408d-b53d-f474bc467abd|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=2484|millis=1795173923547",
+    "[11:25:34] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_imported|backend=native|phase=settled|uuid=4bf85e6b-ef41-439d-b979-ec70301ac1ef|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2719|millis=1795173934943",
+    "[11:25:34] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_imported|backend=runtime|phase=settled|uuid=20ef93a3-e679-408d-b53d-f474bc467abd|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2719|millis=1795173934943",
+    "[11:25:35] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_imported|backend=native|phase=cleaned|uuid=4bf85e6b-ef41-439d-b979-ec70301ac1ef|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2739|millis=1795173935942",
+    "[11:25:35] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_cow_imported|backend=runtime|phase=cleaned|uuid=20ef93a3-e679-408d-b53d-f474bc467abd|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2739|millis=1795173935943",
+    "[11:25:38] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_direct|backend=native|phase=initial|uuid=c5ddb66b-dfa7-46a7-8857-4a97e00c09b7|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2749|millis=1795173938929",
+    "[11:25:38] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_direct|backend=runtime|phase=initial|uuid=c685352c-2338-494c-b257-8f7e2b6f90b1|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=2749|millis=1795173938929",
+    "[11:25:50] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_direct|backend=native|phase=settled|uuid=c5ddb66b-dfa7-46a7-8857-4a97e00c09b7|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2984|millis=1795173950330",
+    "[11:25:50] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_direct|backend=runtime|phase=settled|uuid=c685352c-2338-494c-b257-8f7e2b6f90b1|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2984|millis=1795173950330",
+    "[11:25:51] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_direct|backend=native|phase=cleaned|uuid=c5ddb66b-dfa7-46a7-8857-4a97e00c09b7|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3004|millis=1795173951330",
+    "[11:25:51] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_direct|backend=runtime|phase=cleaned|uuid=c685352c-2338-494c-b257-8f7e2b6f90b1|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3004|millis=1795173951330",
+    "[11:25:54] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_imported|backend=native|phase=initial|uuid=0e246eeb-1094-4d96-8ffb-01760d49ceba|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3014|millis=1795173954126",
+    "[11:25:54] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_imported|backend=runtime|phase=initial|uuid=b8136cf5-5275-4129-9e9a-a380bcc4ae96|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=3014|millis=1795173954127",
+    "[11:26:05] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_imported|backend=native|phase=settled|uuid=0e246eeb-1094-4d96-8ffb-01760d49ceba|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3249|millis=1795173965576",
+    "[11:26:05] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_imported|backend=runtime|phase=settled|uuid=b8136cf5-5275-4129-9e9a-a380bcc4ae96|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3249|millis=1795173965577",
+    "[11:26:06] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_imported|backend=native|phase=cleaned|uuid=0e246eeb-1094-4d96-8ffb-01760d49ceba|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3269|millis=1795173966577",
+    "[11:26:06] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=death_zombie_imported|backend=runtime|phase=cleaned|uuid=b8136cf5-5275-4129-9e9a-a380bcc4ae96|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3269|millis=1795173966577",
+    "[11:26:09] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_direct|backend=native|phase=initial|uuid=91107b42-177d-442b-860c-b49548aeb40a|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3279|millis=1795173969638",
+    "[11:26:09] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_direct|backend=runtime|phase=initial|uuid=bd546cbb-8a58-40b4-ab7f-2d9d0fe26c5d|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=3279|millis=1795173969638",
+    "[11:26:21] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_direct|backend=native|phase=settled|uuid=91107b42-177d-442b-860c-b49548aeb40a|entity=true|registry=true|marker=91|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3514|millis=1795173981037",
+    "[11:26:21] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_direct|backend=runtime|phase=settled|uuid=bd546cbb-8a58-40b4-ab7f-2d9d0fe26c5d|entity=true|registry=true|marker=80|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=3514|millis=1795173981037",
+    "[11:26:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_direct|backend=native|phase=cleaned|uuid=91107b42-177d-442b-860c-b49548aeb40a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3534|millis=1795173982037",
+    "[11:26:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_direct|backend=runtime|phase=cleaned|uuid=bd546cbb-8a58-40b4-ab7f-2d9d0fe26c5d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3534|millis=1795173982037",
+    "[11:26:24] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_imported|backend=native|phase=initial|uuid=0c4bae2c-8a92-43b9-9165-b69ab1e9d5ff|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3544|millis=1795173984496",
+    "[11:26:24] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_imported|backend=runtime|phase=initial|uuid=467554ca-e214-42a8-bf5a-21df7e62dd9b|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=3544|millis=1795173984496",
+    "[11:26:35] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_imported|backend=native|phase=settled|uuid=0c4bae2c-8a92-43b9-9165-b69ab1e9d5ff|entity=true|registry=true|marker=91|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3779|millis=1795173995946",
+    "[11:26:35] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_imported|backend=runtime|phase=settled|uuid=467554ca-e214-42a8-bf5a-21df7e62dd9b|entity=true|registry=true|marker=80|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=3779|millis=1795173995946",
+    "[11:26:36] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_imported|backend=native|phase=cleaned|uuid=0c4bae2c-8a92-43b9-9165-b69ab1e9d5ff|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3799|millis=1795173996946",
+    "[11:26:36] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_cow_imported|backend=runtime|phase=cleaned|uuid=467554ca-e214-42a8-bf5a-21df7e62dd9b|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3799|millis=1795173996947",
+    "[11:26:39] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_direct|backend=native|phase=initial|uuid=7d2d27f0-cfa5-4c9d-84fb-ed796b9b9825|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3809|millis=1795173999583",
+    "[11:26:39] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_direct|backend=runtime|phase=initial|uuid=8ca699e7-7aa1-4f64-9c3d-de8e68e22722|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=3809|millis=1795173999584",
+    "[11:26:50] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_direct|backend=native|phase=settled|uuid=7d2d27f0-cfa5-4c9d-84fb-ed796b9b9825|entity=true|registry=true|marker=91|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4044|millis=1795174010967",
+    "[11:26:50] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_direct|backend=runtime|phase=settled|uuid=8ca699e7-7aa1-4f64-9c3d-de8e68e22722|entity=true|registry=true|marker=80|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=4044|millis=1795174010967",
+    "[11:26:51] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_direct|backend=native|phase=cleaned|uuid=7d2d27f0-cfa5-4c9d-84fb-ed796b9b9825|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4064|millis=1795174011967",
+    "[11:26:51] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_direct|backend=runtime|phase=cleaned|uuid=8ca699e7-7aa1-4f64-9c3d-de8e68e22722|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4064|millis=1795174011967",
+    "[11:26:54] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_imported|backend=native|phase=initial|uuid=88a0d2fc-5eee-4a7d-9bea-6c78f32c51da|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4074|millis=1795174014977",
+    "[11:26:54] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_imported|backend=runtime|phase=initial|uuid=f0687ba5-8fe7-4d2e-89c0-074ac609630d|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=4074|millis=1795174014978",
+    "[11:27:06] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_imported|backend=native|phase=settled|uuid=88a0d2fc-5eee-4a7d-9bea-6c78f32c51da|entity=true|registry=true|marker=91|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4309|millis=1795174026357",
+    "[11:27:06] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_imported|backend=runtime|phase=settled|uuid=f0687ba5-8fe7-4d2e-89c0-074ac609630d|entity=true|registry=true|marker=80|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=4309|millis=1795174026358",
+    "[11:27:07] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_imported|backend=native|phase=cleaned|uuid=88a0d2fc-5eee-4a7d-9bea-6c78f32c51da|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4329|millis=1795174027357",
+    "[11:27:07] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=cancelled_zombie_imported|backend=runtime|phase=cleaned|uuid=f0687ba5-8fe7-4d2e-89c0-074ac609630d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4329|millis=1795174027358",
+    "[11:27:10] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_direct|backend=native|phase=initial|uuid=2ddc1cf3-f5c4-49c8-ad32-e56ab437ffac|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4339|millis=1795174030160",
+    "[11:27:10] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_direct|backend=runtime|phase=initial|uuid=0cba5adf-750a-414a-8be9-dcde8a7869bc|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=4339|millis=1795174030160",
+    "[11:27:21] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_direct|backend=native|phase=settled|uuid=2ddc1cf3-f5c4-49c8-ad32-e56ab437ffac|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4575|millis=1795174041620",
+    "[11:27:21] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_direct|backend=runtime|phase=settled|uuid=0cba5adf-750a-414a-8be9-dcde8a7869bc|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4575|millis=1795174041621",
+    "[11:27:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_direct|backend=native|phase=cleaned|uuid=2ddc1cf3-f5c4-49c8-ad32-e56ab437ffac|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4595|millis=1795174042620",
+    "[11:27:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_direct|backend=runtime|phase=cleaned|uuid=0cba5adf-750a-414a-8be9-dcde8a7869bc|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4595|millis=1795174042620",
+    "[11:27:25] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_imported|backend=native|phase=initial|uuid=886df0ca-1ea6-4fa4-8fd2-b9299552c8dd|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4605|millis=1795174045096",
+    "[11:27:25] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_imported|backend=runtime|phase=initial|uuid=28e532f0-0877-4f47-8730-f6b35978e45d|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=4605|millis=1795174045096",
+    "[11:27:36] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_imported|backend=native|phase=settled|uuid=886df0ca-1ea6-4fa4-8fd2-b9299552c8dd|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4841|millis=1795174056614",
+    "[11:27:36] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_imported|backend=runtime|phase=settled|uuid=28e532f0-0877-4f47-8730-f6b35978e45d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4841|millis=1795174056614",
+    "[11:27:37] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_imported|backend=native|phase=cleaned|uuid=886df0ca-1ea6-4fa4-8fd2-b9299552c8dd|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4861|millis=1795174057614",
+    "[11:27:37] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_cow_imported|backend=runtime|phase=cleaned|uuid=28e532f0-0877-4f47-8730-f6b35978e45d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4861|millis=1795174057614",
+    "[11:27:40] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_direct|backend=native|phase=initial|uuid=d53303c0-1484-4272-9bab-4fc1d3df8c3e|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4871|millis=1795174060550",
+    "[11:27:40] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_direct|backend=runtime|phase=initial|uuid=e7187d92-baed-4c3c-b85b-766160757db9|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=4871|millis=1795174060551",
+    "[11:27:52] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_direct|backend=native|phase=settled|uuid=d53303c0-1484-4272-9bab-4fc1d3df8c3e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5107|millis=1795174072003",
+    "[11:27:52] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_direct|backend=runtime|phase=settled|uuid=e7187d92-baed-4c3c-b85b-766160757db9|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5107|millis=1795174072003",
+    "[11:27:53] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_direct|backend=native|phase=cleaned|uuid=d53303c0-1484-4272-9bab-4fc1d3df8c3e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5127|millis=1795174073003",
+    "[11:27:53] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_direct|backend=runtime|phase=cleaned|uuid=e7187d92-baed-4c3c-b85b-766160757db9|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5127|millis=1795174073003",
+    "[11:27:55] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_imported|backend=native|phase=initial|uuid=c6885284-6ec9-4516-bb18-d86a314deb6b|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5137|millis=1795174075909",
+    "[11:27:55] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_imported|backend=runtime|phase=initial|uuid=1a93fff0-291b-467c-94d4-c5fdd428182d|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=5137|millis=1795174075909",
+    "[11:28:07] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_imported|backend=native|phase=settled|uuid=c6885284-6ec9-4516-bb18-d86a314deb6b|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5373|millis=1795174087366",
+    "[11:28:07] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_imported|backend=runtime|phase=settled|uuid=1a93fff0-291b-467c-94d4-c5fdd428182d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5373|millis=1795174087366",
+    "[11:28:08] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_imported|backend=native|phase=cleaned|uuid=c6885284-6ec9-4516-bb18-d86a314deb6b|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5393|millis=1795174088366",
+    "[11:28:08] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=chunk_zombie_imported|backend=runtime|phase=cleaned|uuid=1a93fff0-291b-467c-94d4-c5fdd428182d|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5393|millis=1795174088366",
+    "[11:28:11] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_direct|backend=native|phase=initial|uuid=f5acbaa0-1531-4512-aa0e-e8ccc8c42311|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5403|millis=1795174091166",
+    "[11:28:11] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_direct|backend=runtime|phase=initial|uuid=a9771814-09ff-46a2-941a-2383e28fbbd3|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=5403|millis=1795174091166",
+    "[11:28:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_direct|backend=native|phase=settled|uuid=f5acbaa0-1531-4512-aa0e-e8ccc8c42311|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5639|millis=1795174102623",
+    "[11:28:22] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_direct|backend=runtime|phase=settled|uuid=a9771814-09ff-46a2-941a-2383e28fbbd3|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5639|millis=1795174102623",
+    "[11:28:23] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_direct|backend=native|phase=cleaned|uuid=f5acbaa0-1531-4512-aa0e-e8ccc8c42311|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5659|millis=1795174103623",
+    "[11:28:23] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_direct|backend=runtime|phase=cleaned|uuid=a9771814-09ff-46a2-941a-2383e28fbbd3|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5659|millis=1795174103623",
+    "[11:28:26] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_imported|backend=native|phase=initial|uuid=475de3cb-ebfc-4076-8deb-3c81fd907296|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5669|millis=1795174106105",
+    "[11:28:26] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_imported|backend=runtime|phase=initial|uuid=255e5238-befd-417a-975e-b94e85f4ddfa|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=5669|millis=1795174106106",
+    "[11:28:37] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_imported|backend=native|phase=settled|uuid=475de3cb-ebfc-4076-8deb-3c81fd907296|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5905|millis=1795174117615",
+    "[11:28:37] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_imported|backend=runtime|phase=settled|uuid=255e5238-befd-417a-975e-b94e85f4ddfa|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5905|millis=1795174117615",
+    "[11:28:38] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_imported|backend=native|phase=cleaned|uuid=475de3cb-ebfc-4076-8deb-3c81fd907296|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5925|millis=1795174118614",
+    "[11:28:38] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_cow_imported|backend=runtime|phase=cleaned|uuid=255e5238-befd-417a-975e-b94e85f4ddfa|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5925|millis=1795174118615",
+    "[11:28:41] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_direct|backend=native|phase=initial|uuid=bcd4c1a6-0131-426c-a219-3ced3df85c47|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5935|millis=1795174121225",
+    "[11:28:41] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_direct|backend=runtime|phase=initial|uuid=f2a37d0b-8b1c-4027-b487-50592063c875|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=5935|millis=1795174121226",
+    "[11:28:52] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_direct|backend=native|phase=settled|uuid=bcd4c1a6-0131-426c-a219-3ced3df85c47|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6171|millis=1795174132760",
+    "[11:28:52] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_direct|backend=runtime|phase=settled|uuid=f2a37d0b-8b1c-4027-b487-50592063c875|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6171|millis=1795174132760",
+    "[11:28:53] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_direct|backend=native|phase=cleaned|uuid=bcd4c1a6-0131-426c-a219-3ced3df85c47|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6191|millis=1795174133760",
+    "[11:28:53] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_direct|backend=runtime|phase=cleaned|uuid=f2a37d0b-8b1c-4027-b487-50592063c875|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6191|millis=1795174133760",
+    "[11:28:56] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_imported|backend=native|phase=initial|uuid=3df68e54-40d8-4fff-89e4-89034cf9c433|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6201|millis=1795174136394",
+    "[11:28:56] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_imported|backend=runtime|phase=initial|uuid=93d26aa2-d8f2-4bfe-859d-dde37aec8442|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=6201|millis=1795174136394",
+    "[11:29:07] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_imported|backend=native|phase=settled|uuid=3df68e54-40d8-4fff-89e4-89034cf9c433|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6437|millis=1795174147854",
+    "[11:29:07] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_imported|backend=runtime|phase=settled|uuid=93d26aa2-d8f2-4bfe-859d-dde37aec8442|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6437|millis=1795174147854",
+    "[11:29:08] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_imported|backend=native|phase=cleaned|uuid=3df68e54-40d8-4fff-89e4-89034cf9c433|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6457|millis=1795174148854",
+    "[11:29:08] [Server thread/INFO]: [HelsteraTerminalVariableProbe] TVAR_ROW|key=suspended_zombie_imported|backend=runtime|phase=cleaned|uuid=93d26aa2-d8f2-4bfe-859d-dde37aec8442|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6457|millis=1795174148854"
+  ],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "1d729eef8863a7568273c452a3d7b7d0fbd16a55c766e327affb54c3f578fb17"
+    },
+    {
+      "path": "source-mobs.yml",
+      "sha256": "d607a23392e24c39f742e4eb51912a59dd7768770e76f7fca9d16585c01b698f"
+    },
+    {
+      "path": "source-skills.yml",
+      "sha256": "c51a0c90b8bbadc9310542880febd3dd86709c9abb204e2a794dfcaa8d7ef1f6"
+    },
+    {
+      "path": "snapshots/final-scoped.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "snapshots/scoped-variables.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "imports/skills.yml",
+      "sha256": "d854b4dbefce327c04cf24a631cd986956dd39ad050062c475764b05b680d25e"
+    },
+    {
+      "path": "imports/tv_cancelled_cow_direct.yml",
+      "sha256": "8d40d195b08ee4f5c08b70304c6e2a5bd368e886c079348b582e464a64890149"
+    },
+    {
+      "path": "imports/tv_cancelled_cow_imported.yml",
+      "sha256": "a7cd3c31ad4d165017d9f9827a2396e63709f4198e133bb8fbc35601b5beadf8"
+    },
+    {
+      "path": "imports/tv_cancelled_zombie_direct.yml",
+      "sha256": "5363bd62bc248c157ed0eb230b1825e5894648264e6a3a8f317a89e73cfc1bf0"
+    },
+    {
+      "path": "imports/tv_cancelled_zombie_imported.yml",
+      "sha256": "d5aa047d41781fbec44acdbe14d4fda718d94129ecac9eef147c07f556d7f4e0"
+    },
+    {
+      "path": "imports/tv_chunk_cow_direct.yml",
+      "sha256": "f540f5a2755e5e3571606c576ec0e530e44230677d38189744be1fbc1b839cec"
+    },
+    {
+      "path": "imports/tv_chunk_cow_imported.yml",
+      "sha256": "8a2203a0bb2d326798f0d1c9b01719e8d62ea6f87927da1f882b7762640ce5d3"
+    },
+    {
+      "path": "imports/tv_chunk_zombie_direct.yml",
+      "sha256": "7df2a107d1dac42fe4aaf3c1bdb168983741c7b3d1a1976a21c8e2aee3c98605"
+    },
+    {
+      "path": "imports/tv_chunk_zombie_imported.yml",
+      "sha256": "9475e4662cde13a86ee850bd4c795102718ec7a80e949ce533f42e7c9feb6096"
+    },
+    {
+      "path": "imports/tv_command_cow_direct.yml",
+      "sha256": "8827cd7248a12d1665245f4f779a00ca1d7cc3513818afa5650ea1f91cd65b2f"
+    },
+    {
+      "path": "imports/tv_command_cow_imported.yml",
+      "sha256": "3d35a2c0183d76b3f91a25ee5aed0f4b7466187d43ea75bde007f8d28f587a8c"
+    },
+    {
+      "path": "imports/tv_command_zombie_direct.yml",
+      "sha256": "e5233a422fb26c6f59d58d95a5126b913893656d878795dcc0d4bc006343f826"
+    },
+    {
+      "path": "imports/tv_command_zombie_imported.yml",
+      "sha256": "b949fdb6c16219ded61fc1fcbd85934e869787b0529df1a3fe997300cfa4c440"
+    },
+    {
+      "path": "imports/tv_control_cow_direct.yml",
+      "sha256": "5f4abc346c647e977e7a8177b7a176d8dc1a8d00ccd66983900c5574ebb53e5b"
+    },
+    {
+      "path": "imports/tv_control_cow_imported.yml",
+      "sha256": "dbc2e48ce378b30b34556dc7c4196e4f0e645721a19ffc207c4ffceecfdd04f3"
+    },
+    {
+      "path": "imports/tv_control_zombie_direct.yml",
+      "sha256": "cbf3a7854b5f3797ed02589e578eb3014b120c4cd786c3c82442a580d0c9fa13"
+    },
+    {
+      "path": "imports/tv_control_zombie_imported.yml",
+      "sha256": "dca2d223cddcb39c4c7cbbfa588d8a075b39ae45cd74465ece59e7f109bf3e72"
+    },
+    {
+      "path": "imports/tv_death_cow_direct.yml",
+      "sha256": "1494e4f3a06625fd5d958e0894d1ab14b0b9479c3bc2abe04643ec2ff5ad8cc4"
+    },
+    {
+      "path": "imports/tv_death_cow_imported.yml",
+      "sha256": "236529907cc9814b2cab662e6080bd2b8971918cb9ff1ab68577d64517872dde"
+    },
+    {
+      "path": "imports/tv_death_zombie_direct.yml",
+      "sha256": "ddfa600586cb369aecaad159086ff8b8c82891f6040b528eb0162ef77d968f6b"
+    },
+    {
+      "path": "imports/tv_death_zombie_imported.yml",
+      "sha256": "ed5b9b5c2055b2512b56278d87a2f62fe4ec48f20ef7419704d8bd8a1a418692"
+    },
+    {
+      "path": "imports/tv_suspended_cow_direct.yml",
+      "sha256": "8827cd7248a12d1665245f4f779a00ca1d7cc3513818afa5650ea1f91cd65b2f"
+    },
+    {
+      "path": "imports/tv_suspended_cow_imported.yml",
+      "sha256": "c61fefd75608e24cbc14fa43480446fac36e5f810674bac8fca018d96f6792b2"
+    },
+    {
+      "path": "imports/tv_suspended_zombie_direct.yml",
+      "sha256": "e5233a422fb26c6f59d58d95a5126b913893656d878795dcc0d4bc006343f826"
+    },
+    {
+      "path": "imports/tv_suspended_zombie_imported.yml",
+      "sha256": "3bed5b9c3afe56304d4a8a6bea9ef61e2f46f0f4d1eb6ebaeaae82d86aadc99a"
+    }
+  ],
+  "boot": {
+    "startedAtUtc": "2026-11-20T11:22:45.909031+00:00",
+    "stoppedAtUtc": "2026-11-20T11:29:10.206656+00:00",
+    "exitCode": 0
+  },
+  "gapCases": [],
+  "logArchive": "paper-1.21.1-terminal-variable-20261120-r1-logs.zip",
+  "logArchiveSha256": "5b53f86b024212fce358e949083fa10ebc99692de100eade1be1a8420d1adb3b"
+}

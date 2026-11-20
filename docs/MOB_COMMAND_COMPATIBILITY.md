@@ -1,5 +1,7 @@
 # Mob cleanup command compatibility
 
+Terminal-variable release refresh (2026-11-20): [mob-command](../tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r9.json), [unloaded-command](../tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r10.json), [reentrant-command](../tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r7.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
+
 Helstera provides `/helstera mob kill` and `/helstera mob killall` for definition-owned
 mobs that are loaded or in the brief unload transition. The reference is public
 MythicMobs 5.7.2 on
@@ -129,7 +131,7 @@ python3 tools/paper-integration/test-unloaded-command-evidence.py tools/paper-in
 python3 tools/paper-integration/run-unloaded-command-fixture.py --revision r8 --cache-directory srv-paper-player-life-20261120-r1
 ```
 
-Current artifact SHA-256: `59dc5e9b21762a5306768f13f5ba6a1b1561e6e1c3f03d2a58b7f3421fe04675`. The reentrant command
+Original milestone artifact SHA-256: `59dc5e9b21762a5306768f13f5ba6a1b1561e6e1c3f03d2a58b7f3421fe04675`. The reentrant command
 [report](../tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r3.json)
 and [archive](../tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r3-logs.zip)
 cover 60 cases and 1,920 observations over three boots. The 15 callback actions

@@ -1,5 +1,7 @@
 # Terminal callback continuations
 
+Terminal-variable release refresh (2026-11-20): [terminal-callback](../tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r8.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
+
 Helstera now lets delayed, repeated and nested `onDespawn`/`onDeath` actions
 finish after their caster is removed. Ordinary work pending before removal is
 still cancelled. A terminal execution retains the caster's original UUID,
@@ -7,7 +9,7 @@ origin and scoped variables, then releases its state after the last action or
 cast. It does not recreate the removed parent's controller, visuals or persisted
 SkillTree. Reload and shutdown cancel terminal executions.
 
-Pinned scope: Paper 1.21.1-133 and public MythicMobs 5.7.2. The current artifact
+Pinned scope: Paper 1.21.1-133 and public MythicMobs 5.7.2. The original verified artifact
 SHA-256 is `d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8`. The [r7 comparison](../tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r7.json)
 and [redacted raw archive](../tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r7-logs.zip)
 contain 120 parent observations, 40 parent UUIDs, 80 child UUIDs, 328 command

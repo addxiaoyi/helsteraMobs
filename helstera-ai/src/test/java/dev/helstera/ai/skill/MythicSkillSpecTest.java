@@ -61,6 +61,19 @@ class MythicSkillSpecTest {
     }
 
     @Test
+    void decodesQuotedValuesInMappedKeyedArgumentsWithoutChangingLiteralCommands() {
+        var spec = MythicSkillSpec.parse("set-variable var=caster.Count type=INTEGER value=\"7\" @self");
+        assertEquals(List.of("var=caster.Count", "type=INTEGER", "value=7"), spec.positional());
+        var text = MythicSkillSpec.parse("set-variable var=skill.Text type=STRING value=\"say \\\"hello\\\" @self ?night 25% C:\\\\home \\q\" @trigger");
+        assertEquals("value=say \"hello\" @self ?night 25% C:\\home \\q", text.positional().get(2));
+        assertEquals("trigger", text.targeter());
+        assertEquals(List.of(), text.inlineConditions());
+        assertNull(text.chance());
+        var command = MythicSkillSpec.parse("command \"say value=\\\"7\\\"\" @self");
+        assertEquals(List.of("say value=\"7\""), command.positional());
+    }
+
+    @Test
     void parsesInlineNestedSkillCooldownAndRejectsDuplicates() {
         MythicSkillSpec spec = MythicSkillSpec.parse("skill{s=ember;cooldown=250ms}");
         assertEquals("ember", spec.arguments().get("s"));

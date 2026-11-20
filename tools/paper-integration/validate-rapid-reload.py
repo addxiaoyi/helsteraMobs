@@ -22,6 +22,7 @@ PHASES=('initial','reload','after1','after5','after10','settled','stable','clean
 KEYS={f'r{r}_d{d}_{m.lower()}_{p}':(r,d,m,p) for r,d,m,p in itertools.product(range(1,4),DELAYS,MODES,PATHS)}
 LEGACY_EXCEPTIONS=['MM-5.7.2-rapid-reload-inactive-registry','MM-5.7.2-deferred-disposable-cleanup']
 EXCEPTIONS=LEGACY_EXCEPTIONS+['MM-5.7.2-duplicate-native-unload-callback']
+NORMAL_EXCEPTIONS=EXCEPTIONS+['MM-5.7.2-duplicate-native-normal-unload-callback']
 SOURCES={'run-rapid-reload-fixture.py','run-player-variable-fixture.py','validate-rapid-reload.py','validate-player-variables.py','test-rapid-reload-evidence.py','random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/RapidReloadProbe.java'}
 def js(s):return json.loads(s,object_pairs_hook=unique)
 def doc(s):return yaml.load(s,Loader=registry.UniqueYaml)
@@ -29,8 +30,9 @@ def digest(b):return hashlib.sha256(b).hexdigest()
 def flag(x):return str(bool(x)).lower()
 
 def validate(report,payloads):
-    require(report['schemaVersion'] in (1,2) and report['evidenceMode']=='comparison-with-exception','wrong schema/mode')
-    require(report['knownExceptions']==(EXCEPTIONS if report['schemaVersion']==2 else LEGACY_EXCEPTIONS),'undocumented exceptions')
+    require(report['schemaVersion'] in (1,2,3) and report['evidenceMode']=='comparison-with-exception','wrong schema/mode')
+    require('validationResult' not in report,'rejected evidence cannot be compared')
+    require(report['knownExceptions']=={1:LEGACY_EXCEPTIONS,2:EXCEPTIONS,3:NORMAL_EXCEPTIONS}[report['schemaVersion']],'undocumented exceptions')
     require(report['paperJarSha256']=='39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9','wrong Paper')
     require(report['mythicMobsSha256']=='9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f','wrong native oracle')
     require(all(re.fullmatch('[a-f0-9]{64}',report[k]) for k in ('pluginSha256','probeJarSha256')),'invalid artifact hashes')
@@ -62,7 +64,7 @@ def validate(report,payloads):
         return result
     reqs,unloads,load_requests,entity_events,callbacks=[group(e) for e in (requests,chunks,loads,events,hooks)]
     duplicate_stacks=unique(((r['key'],r['backend']),(i,r)) for i,r in marked('RRELOAD_DUPLICATE_STACK|'))
-    require(report['schemaVersion']==2 or not duplicate_stacks,'historical schema cannot admit duplicate callbacks')
+    require(report['schemaVersion'] in (2,3) or not duplicate_stacks,'historical schema cannot admit duplicate callbacks')
     duplicate_cases=[]
     exceptions=[]
     for key,cell_rows in by_cell.items():
@@ -131,7 +133,8 @@ def validate(report,payloads):
             for phase in ('reload','after1','after5','after10','settled'):require(rmap[phase][1]['live']==rmap['reload'][1]['live'],'entity changed without unload/load')
         expected_hook='death' if retained else 'despawn';cell_hooks=callbacks[key]
         repeated=len(cell_hooks)==2
-        require(len(cell_hooks)==1 or report['schemaVersion']==2 and b=='native' and mode in ('CHUNK','NPC') and repeated,'missing/duplicate callback')
+        duplicate_modes=('NORMAL','CHUNK','NPC') if report['schemaVersion']==3 else ('CHUNK','NPC')
+        require(len(cell_hooks)==1 or report['schemaVersion'] in (2,3) and b=='native' and mode in duplicate_modes and repeated,'missing/duplicate callback')
         for ordinal,(at,h) in enumerate(cell_hooks,1):
             require(h['uuid']==identity and h['event']==expected_hook and h['count']==str(ordinal) and h['thread']=='Server thread','wrong callback identity/type/thread')
             require((rmap['stable'][0] if retained else req[0][0])<at<rmap['cleaned' if retained else 'settled'][0],'callback outside lifecycle')
@@ -158,7 +161,7 @@ def validate(report,payloads):
             require(len([e for _,e in evs if e['event']=='unload'])==1 and all(e['phase']=='rapid-unload' if e['event']=='unload' else e['event']=='load' and e['phase']=='reload' and b=='native' and delay==1 for _,e in evs),'unexpected disposable events')
     require(report['nativeExceptions']==sorted(exceptions,key=lambda r:(r['key'],r['phase'],r['kind'])), 'native exceptions omitted or altered')
     require(set(duplicate_stacks)=={(r['key'],'native') for r in duplicate_cases},'orphan duplicate stack')
-    if report['schemaVersion']==2:require(report['nativeDuplicateCallbacks']==sorted(duplicate_cases,key=lambda r:r['key']),'hidden or altered native duplicate callbacks')
+    if report['schemaVersion'] in (2,3):require(report['nativeDuplicateCallbacks']==sorted(duplicate_cases,key=lambda r:r['key']),'hidden or altered native duplicate callbacks')
     require(len(native_events)==126+len(duplicate_cases) and {r['key'] for _,r in native_events}=={k for k,v in KEYS.items() if v[2] not in ('NEVER','PERSISTENT')},'missing/duplicate native despawn events')
     for at,e in native_events:
         key=(e['key'],'native');initial=by_cell[key][0][1]

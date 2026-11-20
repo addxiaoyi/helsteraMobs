@@ -1,12 +1,14 @@
 # Cancelled death and terminal callbacks
 
+Terminal-variable release refresh (2026-11-20): [cancelled-death](../tools/paper-integration/reports/paper-1.21.1-cancelled-death-20261120-r4.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
+
 Scope: Paper 1.21.1-133, public MythicMobs 5.7.2, COW/ZOMBIE parents,
 direct/imported configurations, health and revive health 20, Despawn NEVER.
 The [r3 report](../tools/paper-integration/reports/paper-1.21.1-cancelled-death-20261120-r3.json)
 and [redacted raw archive](../tools/paper-integration/reports/paper-1.21.1-cancelled-death-20261120-r3-logs.zip)
 use plugin SHA-256
 `d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8`,
-the same artifact as the current 471-probe strict catalog. They contain 96 parent
+the same artifact as that milestone’s 471-probe strict catalog. They contain 96 parent
 observations, 32 parent UUIDs, 64 child UUIDs, 276 command callbacks and 128
 child-state observations. This is a scoped comparison with explicit differences;
 it is not a full parity match or complete Triggers/Mechanics/SkillTree evidence.

@@ -523,6 +523,35 @@ foreach ($item in $releaseEvidence) {
             & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-cancelled-death.py') $cancelledDeathPath
             if ($LASTEXITCODE -ne 0) { throw 'Cancelled death evidence validation failed.' }
         }
+        if ($versionMatrix.releasePolicy.requiresTerminalVariableEvidence -eq $true) {
+            $terminalVariable = $item.terminalVariableEvidence
+            if ($null -eq $terminalVariable -or [string]$terminalVariable.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-terminal-variable-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                    [string]$terminalVariable.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'Latest full release requires pinned terminal variable comparison.'
+            }
+            $terminalVariablePath = Join-Path $Root ([string]$terminalVariable.report)
+            if (-not (Test-Path -LiteralPath $terminalVariablePath -PathType Leaf) -or
+                    (Get-FileHash -LiteralPath $terminalVariablePath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$terminalVariable.reportSha256) {
+                throw 'Terminal variable report is missing or changed.'
+            }
+            $terminalVariableReport = Get-Content -LiteralPath $terminalVariablePath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$terminalVariableReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                    [string]$terminalVariableReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                throw 'Terminal variable evidence does not match the release artifact/server.'
+            }
+            if ($terminalVariableReport.schemaVersion -ne 1 -or
+                    [string]$terminalVariableReport.evidenceMode -cne 'comparison-with-exception' -or
+                    [string]$terminalVariableReport.parityStatus -cne 'scoped-comparison') {
+                throw 'Terminal variable release evidence must prove the scoped variable comparison; an observation or gap diagnostic is insufficient.'
+            }
+            $terminalVariableValidator = Join-Path $PSScriptRoot 'validate-terminal-variable.py'
+            if (-not (Test-Path -LiteralPath $terminalVariableValidator -PathType Leaf)) {
+                throw "Terminal variable evidence validator not found: $terminalVariableValidator"
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            & $python.Source @($python.Prefix) $terminalVariableValidator $terminalVariablePath
+            if ($LASTEXITCODE -ne 0) { throw 'Terminal variable evidence validation failed.' }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

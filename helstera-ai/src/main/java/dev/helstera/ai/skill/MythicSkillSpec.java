@@ -107,7 +107,7 @@ public record MythicSkillSpec(
                             || !conditions.isEmpty() || !targetConditions.isEmpty())) {
                         throw new IllegalArgumentException("unexpected mechanic argument after execution suffix");
                     }
-                    positional.add(unquote(token));
+                    positional.add(unquoteArgument(token));
                 }
             }
         }
@@ -251,6 +251,17 @@ public record MythicSkillSpec(
             return unescaped.toString();
         }
         return value;
+    }
+
+    private static String unquoteArgument(String token) {
+        // Imported space-separated actions quote the value, not the entire
+        // key=value token. Keep it as a positional factory argument but decode
+        // its value just as we do inside mechanic braces.
+        if (!token.startsWith("\"")) {
+            int equals = dev.helstera.api.util.PlaceholderSyntax.argumentEquals(token);
+            if (equals > 0) return token.substring(0, equals + 1) + unquote(token.substring(equals + 1));
+        }
+        return unquote(token);
     }
 }
 

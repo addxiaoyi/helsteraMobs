@@ -53,6 +53,24 @@ class VariablePlaceholderTest {
     }
 
     @Test
+    void mappedQuotedValuesExecuteWithTargetersAndRetainTheirTypes() {
+        World world = world(); var caster = entity(world); var target = entity(world);
+        var c = context(caster, target, caster, world);
+        try {
+            action("set-variable var=caster.Count type=INTEGER value=\"7\" duration=1200 @self", c);
+            action("variable-add var=caster.Count value=\"2\" @self", c);
+            action("set-variable var=target.Rate type=FLOAT value=\"0.125\" @target", c);
+            action("variable-add var=target.Rate value=\"0.125\" @target", c);
+            action("set-variable var=target.Text type=STRING value=\"hello \\\"world\\\" @self ?night 25%\" @target", c);
+            assertEquals("9 0.25 hello \"world\" @self ?night 25%", Placeholders.resolve(
+                    "<caster.var.Count> <target.var.Rate> <target.var.Text>", c));
+            assertInstanceOf(Integer.class, SkillExtras.scopedVariableSnapshot("entity:"+caster.getUniqueId()).variables().get("Count"));
+            assertTrue(SkillExtras.scopedVariableSnapshot("entity:"+caster.getUniqueId()).variableRetention().get("Count") > System.currentTimeMillis());
+            assertNull(skills.bindAction("set-variable var=caster.Invalid type=INTEGER value=\"bad\" @self"));
+        } finally { SkillExtras.forgetEntity(caster); SkillExtras.forgetEntity(target); }
+    }
+
+    @Test
     void entityRolesShareValuesAndConditionsWhileOtherEntitiesStayIsolated() {
         World world = world(); var caster = entity(world); var target = entity(world);
         var c = context(caster, target, caster, world);

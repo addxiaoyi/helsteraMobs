@@ -7,6 +7,14 @@ import java.util.Optional;
 public interface EntityVariableContext {
     Optional<SkillTreeContext> variablesFor(Entity entity);
 
+    /**
+     * Target mutations require an attached registry; only caster mutations may use
+     * retained terminal variables. Entity validity/death does not establish detachment.
+     */
+    static boolean isDetachedTarget(BehaviorContext context, String scope) {
+        return scope != null && scope.trim().equalsIgnoreCase("target") && find(context, scope).isPresent();
+    }
+
     static Optional<SkillTreeContext> find(BehaviorContext context, String scope) {
         if (scope == null || context == null || !(context.instance() instanceof EntityVariableContext owner)) return Optional.empty();
         Entity entity = switch (scope.trim().toLowerCase(java.util.Locale.ROOT)) {

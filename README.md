@@ -1,3 +1,52 @@
+Terminal variable mutation and expiry (2026-11-20): imported quoted values now
+bind correctly, and detached targets cannot mutate retained caster variables.
+`srv-paper-terminal-variable-20261120-r3` verifies 144 observations,
+48 entity identities and 448 command callbacks across 24 native MM 5.7.2/Paper
+1.21.1-133 scenarios, including direct and imported named skills. Set/add/unset,
+shared skill variables, preserved/refreshed/removed expiry, expired-add no-op,
+cancelled death, pending-work cancellation and final cleanup pass. All 520
+semantic and archive evidence mutations are rejected. Earlier terminal-variable
+r1/r2 reports remain observation-only; they exposed the quoted-value and detached
+target-write defects. See [the terminal variable contract](docs/TERMINAL_VARIABLE_COMPATIBILITY.md).
+
+The exact artifact passes 2,459 Maven tests, 11 clean SpotBugs reports and full
+strict `srv-paper-terminal-variable-strict-20261120-r1` (471 probes: 452 passed,
+19 expected rejections, zero failed or incomplete). The release gate requires
+the terminal-variable report, validates its raw archive and rejects changed,
+wrong-artifact, missing, observation-only and invalid evidence. Plugin SHA-256:
+`0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`.
+
+The same JAR also passes terminal continuations
+`srv-paper-terminal-callback-20261120-r8`, cancelled death
+`srv-paper-cancelled-death-20261120-r4`, clean restart
+`srv-paper-despawn-restart-20261120-r11`, reentrant commands
+`srv-paper-reentrant-command-20261120-r7`, unloaded commands
+`srv-paper-unloaded-command-20261120-r10`, loaded commands
+`srv-paper-mob-command-20261120-r9`, distance
+`srv-paper-despawn-distance-20261120-r13`, precedence
+`srv-paper-despawn-precedence-20261120-r8`, and rapid reload
+`srv-paper-rapid-reload-20261120-r7`. Four completed-checkpoint crash
+comparisons pass: `srv-paper-despawn-crash-20261120-r5`,
+`srv-paper-despawn-crash-chunk-20261120-r3`,
+`srv-paper-despawn-crash-clock-20261120-r3`, and
+`srv-paper-despawn-crash-chunk-clock-20261120-r4`. Existing native behavior
+exceptions remain explicit in their contracts; these comparisons do not establish
+full parity. Rejected `srv-paper-rapid-reload-20261120-r6` exposed a native NORMAL
+mode duplicate; it remains observation-only. Schema 3 permits that explicitly
+listed external behavior only with two matching native events, two same-tick
+commands, bounded dispatch timing and verified stack origins. Runtime, retained,
+unpaired and late duplicates still fail. This does not identify the native race's
+underlying competing invocation.
+
+Next: repair and verify MM 5.7.2 model mechanic/condition registration and capability
+reporting ([bounded implementation plan](docs/MYTHIC_MODEL_REGISTRATION_PLAN.md));
+compare target/trigger reads after detachment and reject unsupported
+action scopes. Native MobGoals composition and condition-action branching also
+need focused comparisons. Terminal location/cast/reload coverage remains open. Matrix totals remain 116 implemented-runtime /
+33 mapped-unverified / 3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin.
+Broader catalogs, external plugin contracts and additional Paper versions remain
+open. Historical entries below retain their original artifact scope.
+
 Cancelled-death comparison (2026-11-20):
 `srv-paper-cancelled-death-20261120-r3` validates 96 parent observations,
 32 parents, 64 children, 276 command callbacks and 128 child-state observations
@@ -448,7 +497,7 @@ Full MythicMobs parity is still incomplete. Matrix totals remain
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](./docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
 
-Latest full-catalog strict fixture `srv-paper-terminal-callback-strict-20261120-r3` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-terminal-callback-strict-20261120-r3.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,442 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-terminal-variable-strict-20261120-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-terminal-variable-strict-20261120-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,459 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Timed SkillTree restart update (2026-11-19): `srv-paper-skilltree-expiry-restart-20261119-r1`
 passes 115 observations across three real Paper 1.21.1-133 boots. Two persistent
@@ -2164,7 +2213,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-terminal-callback-strict-20261120-r3` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-terminal-variable-strict-20261120-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -2180,7 +2229,7 @@ all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-terminal-callback-strict-20261120-r3` on plugin SHA-256 `d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8`; the artifact passes 2,442 Maven tests and SpotBugs. Focused native MM comparisons retain their separate scopes.
+Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-terminal-variable-strict-20261120-r1` on plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`; the artifact passes 2,459 Maven tests and SpotBugs. Focused native MM comparisons retain their separate scopes.
 
 Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
 
@@ -2189,7 +2238,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 829 cited IDs; 656 report files; 82 directories without reports; 91 missing directories; 399 archived release reports. The
+   Current fixture inventory: 845 cited IDs; 657 report files; 97 directories without reports; 91 missing directories; 400 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

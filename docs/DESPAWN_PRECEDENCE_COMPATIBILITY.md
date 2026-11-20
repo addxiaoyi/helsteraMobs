@@ -1,5 +1,7 @@
 # Despawn/Persistent precedence compatibility
 
+Terminal-variable release refresh (2026-11-20): [despawn-precedence](../tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r8.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
+
 The reference is public MythicMobs 5.7.2 on Paper 1.21.1-133. Resolution follows
 this order, independently of YAML key order:
 

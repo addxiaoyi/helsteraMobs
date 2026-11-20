@@ -59,7 +59,7 @@ def main():
     (data/'skills.yml').write_text('skills: {}\n');(data/'spawners.yml').write_text('spawners: {}\n');(data/'mobs').mkdir()
     sources=[Path(__file__).resolve(),TOOLS/'run-player-variable-fixture.py',TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/RapidReloadProbe.java']
     if validator:sources.extend(TOOLS/n for n in ('validate-rapid-reload.py','validate-player-variables.py','test-rapid-reload-evidence.py'))
-    report={'schemaVersion':2,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception','knownExceptions':[] if validator is None else validator.EXCEPTIONS,
+    report={'schemaVersion':3,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception','knownExceptions':[] if validator is None else validator.NORMAL_EXCEPTIONS,
         'generatedAtUtc':datetime.now(timezone.utc).isoformat(),'pluginSha256':digest(plugin),'paperJarSha256':common.PAPER_HASH,'mythicMobsSha256':common.NATIVE_HASH,'probeJarSha256':digest(probe_jar),
         'sourceHashes':{str(p.relative_to(ROOT)):digest(p) for p in sources},'observations':[],'files':[]}
     latest=server/'logs/latest.log';error=None;started=datetime.now(timezone.utc).isoformat()

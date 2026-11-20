@@ -1,5 +1,71 @@
 [
   {
+    "fixtureId": "srv-paper-terminal-variable-strict-20261120-r1",
+    "reportFixtureDirectory": "srv-paper-terminal-variable-strict-20261120-r1",
+    "pluginSha256": "0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75",
+    "fullReleaseCatalog": true,
+    "report": "tools/paper-integration/reports/paper-1.21.1-terminal-variable-strict-20261120-r1.json",
+    "reportSha256": "a2342b2ac4cce00c0cd36edd6fabab55218ccb57c515accc8c034b29e336ff74",
+    "log": "tools/paper-integration/reports/paper-1.21.1-terminal-variable-strict-20261120-r1.log.gz",
+    "logSha256": "d08735f4e1527382159310b4da220b41b40009d6c249b2a49a04620335285e46",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-terminal-variable-strict-20261120-r1.client-logs.zip",
+    "clientLogSha256": "0684ac8f7121f34975c9afa81684e44c0a96db3c6d516408b975bf564ea06ed8",
+    "despawnCrashEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r5.json",
+      "reportSha256": "19033d6eacaa0119e13374ca98276942e25c156bafe031df7621805b44a190c9"
+    },
+    "reentrantCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r7.json",
+      "reportSha256": "a7dcdd260af1df0b64ea5c1987a934a352b1fb57ef590690f7e1e78e74ee3f78"
+    },
+    "unloadedCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r10.json",
+      "reportSha256": "3974c54ebeca0e441787c3804d34f814f3f8df93a8eb6658aaa137880432da67"
+    },
+    "mobCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r9.json",
+      "reportSha256": "ca9bc9cd76be79b9028767b1525a78a6fe7da005f7e76b0ebe41a8537cc47256"
+    },
+    "despawnDistanceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r13.json",
+      "reportSha256": "c17d0cbc2eb50b62e8acc6cc290c9f4564209b6acd5ee27b8c6fdfd835d55147"
+    },
+    "despawnPrecedenceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r8.json",
+      "reportSha256": "6d2d3a0c5ae18a6f9b532dd02ffbd7e8d2553bc6d966e42337c1f56655d2e6ec"
+    },
+    "rapidReloadEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r7.json",
+      "reportSha256": "ba54b95df371816346c0fd7eeae8293d22cf35e100f3cab998b263d7d73183ec"
+    },
+    "terminalCallbackEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r8.json",
+      "reportSha256": "2a6d0b675cb192799e61e2ff6cdc21d20b88346e72a2fe6cd1b4cfa02c27f5c4"
+    },
+    "cancelledDeathEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-cancelled-death-20261120-r4.json",
+      "reportSha256": "d3b3f8751ee993afc4dd766f79b353333f8038c74a23e893c1b0e04405f72335"
+    },
+    "terminalVariableEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-terminal-variable-20261120-r3.json",
+      "reportSha256": "3995dcde1f5111aab479bfb2b16380b4101c4400fa16dfb5a9a058a76ac4db29"
+    },
+    "despawnCrashBoundaryEvidence": [
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-20261120-r3.json",
+        "reportSha256": "57f3235d0349647841b993f8a662a8d384c060401edaabc3adb078b3de6ba940"
+      },
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-clock-20261120-r3.json",
+        "reportSha256": "39365ee19a765fc7e0a6f75257b1056ac73defaf4e44c7fd53c551c0824e3a46"
+      },
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r4.json",
+        "reportSha256": "d4e03529318db11ac7ec23c67e721870bea6ac5e2933ff4bf5cf0c944bcfdccf"
+      }
+    ]
+  },
+  {
     "fixtureId": "srv-paper-terminal-callback-strict-20261120-r3",
     "reportFixtureDirectory": "srv-paper-terminal-callback-strict-20261120-r3",
     "pluginSha256": "d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8",
@@ -59,7 +125,8 @@
     "cancelledDeathEvidence": {
       "report": "tools/paper-integration/reports/paper-1.21.1-cancelled-death-20261120-r3.json",
       "reportSha256": "7256b756bd360bfad32b113480b5941133630045e78eda2f0e4485101e11f216"
-    }
+    },
+    "supersededBy": "srv-paper-terminal-variable-strict-20261120-r1"
   },
   {
     "fixtureId": "srv-paper-terminal-callback-strict-20261120-r2",

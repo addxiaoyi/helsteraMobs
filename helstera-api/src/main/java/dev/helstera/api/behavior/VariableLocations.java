@@ -21,6 +21,7 @@ public final class VariableLocations {
     }
 
     public static void set(String scope, String name, BehaviorContext context, Location location, long expiresAt) {
+        if (EntityVariableContext.isDetachedTarget(context, scope)) return;
         var detached = EntityVariableContext.find(context, scope);
         if (detached.isPresent()) {
             if (name != null && !name.isBlank() && location != null) detached.get().setLocation(name, location, expiresAt);
@@ -58,6 +59,7 @@ public final class VariableLocations {
     }
 
     public static Optional<Location> unset(String scope, String name, BehaviorContext context) {
+        if (EntityVariableContext.isDetachedTarget(context, scope)) return Optional.empty();
         var detached = EntityVariableContext.find(context, scope);
         if (detached.isPresent()) return detached.get().unsetLocation(name);
         String key = scopeKey(scope, context);

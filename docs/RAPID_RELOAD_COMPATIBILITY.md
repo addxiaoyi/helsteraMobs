@@ -1,5 +1,7 @@
 # Rapid chunk reload and native registration
 
+Terminal-variable release refresh (2026-11-20): [rapid-reload](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r7.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
+
 Scope: public Paper 1.21.1-133 and MythicMobs 5.7.2, COW mobs, all five Despawn
 modes, direct/imported Helstera configuration, separate native/runtime chunks.
 The fixture requests ordinary chunk unloads and reloads them 1, 4, 5, 6, 10, 11
@@ -10,7 +12,7 @@ No native clocks, handlers, private registries or bytecode are modified.
 Current comparison: [r5 report](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r5.json)
 and [raw archive](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r5-logs.zip)
 use plugin `d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8`,
-the same artifact as the current 471-probe strict catalog. All 3,360 observations
+the same artifact as that milestone’s 471-probe strict catalog. All 3,360 observations
 and 420 UUIDs validate, including 224 inactive-registry rows, six stale-binding
 rows and three explicitly paired native duplicate-callback cases. The duplicates
 occur in `r2_d5_npc_direct`, `r2_d5_npc_imported` and
@@ -95,6 +97,25 @@ Every accepted duplicate must be listed in `nativeDuplicateCallbacks`.
 Schema 1 retains its original single-callback requirement. Regression tests replay
 r4 in memory to exercise the new accounting and twelve corruptions; its stored
 observation report is unchanged and still cannot pass the release gate.
+
+NORMAL duplicate boundary (2026-11-20): the frozen rejected
+[r6 capture](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r6.json)
+records `r2_d10_normal_imported` with one actual entity unload at tick 2412,
+two native public events and two native commands at tick 2415, and one runtime
+command. The two native events share UUID and ActiveMob identity and their
+stacks pass through the same native dispatch paths above. A CHUNK case in that
+capture exhibits the same paired pattern. Its original report remains
+observation-only with `rejected: missing/duplicate callback`.
+
+Schema 3 adds an explicit NORMAL duplicate exception under the same exact
+pairing, timing, identity, stack and final-cleanup constraints. Schema 1/2 keep
+their old scopes; schema 2 cannot accept the NORMAL observation. The schema
+change does not permit duplicates from runtime or retained modes, a third
+callback, unpaired events, changed identities or later dispatch. Frozen replay
+controls run only in memory and never alter or promote the rejected capture.
+The 31 NORMAL diagnostic mutations reject schema-2 relabeling, hidden metadata,
+extra/late/runtime/retained callbacks, unpaired events and wrong stack origins.
+The underlying competing native invocation remains unverified.
 
 The fixture observes eight checkpoints per UUID: initial, immediate reload,
 +1/+5/+10/+40 ticks, stable recovery, and final cleanup. Independent validation

@@ -1321,6 +1321,67 @@ try {
     }
     [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
     [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
+    $terminalVariablePolicy = $originalVersionText | ConvertFrom-Json
+    $terminalVariablePolicy.releasePolicy | Add-Member -NotePropertyName requiresTerminalVariableEvidence -NotePropertyValue $true
+    @($terminalVariablePolicy.combinations | Where-Object releaseValidated)[0] | Add-Member -NotePropertyName serverJarSha256 -NotePropertyValue '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($terminalVariablePolicy | ConvertTo-Json -Depth 20))
+    foreach ($case in @('missing', 'unsafe', 'unsafe-nested', 'wrong-report-name', 'missing-hash', 'invalid-hash', 'uppercase-hash', 'missing-file', 'changed-file', 'wrong-plugin', 'wrong-server', 'missing-schema', 'old-schema', 'future-schema', 'known-gap', 'observation', 'false-match', 'incomplete', 'invalid-archive')) {
+        $terminalVariableManifest = @($originalCommandManifest | ConvertFrom-Json)
+        $terminalVariableEntry = @($terminalVariableManifest | Where-Object { $_.fullReleaseCatalog })[0]
+        $terminalVariableReference = 'tools/paper-integration/reports/paper-1.21.1-terminal-variable-20261120-r99.json'
+        $terminalVariableFile = Join-Path $temporaryRoot $terminalVariableReference
+        $terminalVariableMetadata = [pscustomobject]@{
+            schemaVersion = 1
+            evidenceMode = 'comparison-with-exception'
+            parityStatus = 'scoped-comparison'
+            pluginSha256 = $testPluginHash
+            paperJarSha256 = '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+        }
+        if ($case -eq 'wrong-plugin') { $terminalVariableMetadata.pluginSha256 = ('0' * 64) }
+        if ($case -eq 'wrong-server') { $terminalVariableMetadata.paperJarSha256 = ('0' * 64) }
+        if ($case -eq 'missing-schema') { $terminalVariableMetadata.PSObject.Properties.Remove('schemaVersion') }
+        if ($case -eq 'old-schema') { $terminalVariableMetadata.schemaVersion = 0 }
+        if ($case -eq 'future-schema') { $terminalVariableMetadata.schemaVersion = 2 }
+        if ($case -eq 'known-gap') { $terminalVariableMetadata.evidenceMode = 'diagnostic-known-gap' }
+        if ($case -eq 'observation') { $terminalVariableMetadata.evidenceMode = 'observation' }
+        if ($case -eq 'false-match') { $terminalVariableMetadata.parityStatus = 'scoped-match' }
+        if ($case -eq 'incomplete') { $terminalVariableMetadata.parityStatus = 'incomplete' }
+        if ($case -eq 'invalid-archive') {
+            # Correct metadata and fresh hashes must still reach the independent validator.
+            $terminalVariableLogName = 'paper-1.21.1-terminal-variable-20261120-r99-logs.zip'
+            $terminalVariableLogPath = Join-Path ([System.IO.Path]::GetDirectoryName($terminalVariableFile)) $terminalVariableLogName
+            [System.IO.File]::WriteAllText($terminalVariableLogPath, 'not a ZIP archive')
+            $terminalVariableMetadata | Add-Member -NotePropertyName logArchive -NotePropertyValue $terminalVariableLogName
+            $terminalVariableMetadata | Add-Member -NotePropertyName logArchiveSha256 -NotePropertyValue (Get-FileHash -LiteralPath $terminalVariableLogPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        [System.IO.File]::WriteAllText($terminalVariableFile, ($terminalVariableMetadata | ConvertTo-Json))
+        $terminalVariableReferenceData = [pscustomobject]@{
+            report = $terminalVariableReference
+            reportSha256 = (Get-FileHash -LiteralPath $terminalVariableFile -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        $expectedTerminalVariableFailure = switch ($case) {
+            'missing' { 'requires pinned terminal variable' }
+            'unsafe' { $terminalVariableReferenceData.report = '../outside.json'; 'requires pinned terminal variable' }
+            'unsafe-nested' { $terminalVariableReferenceData.report = 'tools/paper-integration/reports/../paper-1.21.1-terminal-variable-20261120-r99.json'; 'requires pinned terminal variable' }
+            'wrong-report-name' { $terminalVariableReferenceData.report = $terminalVariableReference.Replace('terminal-variable', 'cancelled-death'); 'requires pinned terminal variable' }
+            'missing-hash' { $terminalVariableReferenceData.PSObject.Properties.Remove('reportSha256'); 'requires pinned terminal variable' }
+            'invalid-hash' { $terminalVariableReferenceData.reportSha256 = 'not-a-sha256'; 'requires pinned terminal variable' }
+            'uppercase-hash' { $terminalVariableReferenceData.reportSha256 = ('A' * 64); 'requires pinned terminal variable' }
+            'missing-file' { Remove-Item -LiteralPath $terminalVariableFile; 'report is missing or changed' }
+            'changed-file' { $terminalVariableReferenceData.reportSha256 = ('0' * 64); 'report is missing or changed' }
+            { $_ -in @('wrong-plugin', 'wrong-server') } { 'artifact/server' }
+            { $_ -in @('missing-schema', 'old-schema', 'future-schema', 'known-gap', 'observation', 'false-match', 'incomplete') } { 'must prove the scoped' }
+            'invalid-archive' { 'Terminal variable evidence validation failed' }
+        }
+        if ($case -ne 'missing') { $terminalVariableEntry | Add-Member -NotePropertyName terminalVariableEvidence -NotePropertyValue $terminalVariableReferenceData }
+        [System.IO.File]::WriteAllText($manifestPath, ($terminalVariableManifest | ConvertTo-Json -Depth 20))
+        $terminalVariableFailure = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+        if ($LASTEXITCODE -eq 0 -or $terminalVariableFailure -notmatch $expectedTerminalVariableFailure) {
+            throw "Terminal variable evidence mutation did not fail as expected ($case): $terminalVariableFailure"
+        }
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
     [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))

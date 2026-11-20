@@ -1,0 +1,267 @@
+{
+  "schemaVersion": 3,
+  "fixtureDirectory": "srv-paper-terminal-callback-20261120-r8",
+  "evidenceMode": "comparison-with-exception",
+  "knownExceptions": [
+    "MM-5.7.2-deferred-terminal-command-dispatch"
+  ],
+  "parityStatus": "scoped-match",
+  "generatedAtUtc": "2026-11-20T11:58:23.513681+00:00",
+  "pluginSha256": "0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "f80b94806fe025a120bbef4929f64150ee5edf13f2fe2ccaabbb4c73f7a569fd",
+  "sourceHashes": {
+    "tools/paper-integration/run-terminal-callback-fixture.py": "9bcd9756d5ce3bdf07474ef391887ec7edffaf2a523a106a937ffeba6d97d117",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/terminal-callback-cases.py": "f48efabcf75970453957cee8bb21179e80c9ef16faf9b490a2569c6f066c6b1a",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/TerminalCallbackProbe.java": "453843bc660f7caca05c72a0fee3833b6fe929fe6bc1b75d859610a66821314a",
+    "tools/paper-integration/validate-terminal-callback.py": "3258bbca35344ac04a9dbeb72dbc2a5e3fc74163bae090bffc0ea30d306ac9e7",
+    "tools/paper-integration/validate-player-variables.py": "59f014f63b13a327490260de2915a6380eb397201bf4c47be73240b6bb4b8064",
+    "tools/paper-integration/test-terminal-callback-evidence.py": "efa6c1ac835c7a48c201a4dc79344b7646378d357ed98b9876e6d2a8675247af"
+  },
+  "observations": [
+    "[11:58:42] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_direct|backend=native|phase=initial|uuid=52dc3509-c079-4f67-932a-500166c8173e|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=99",
+    "[11:58:42] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_direct|backend=runtime|phase=initial|uuid=82bd675e-786f-44b8-8de6-0600604bf83b|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=99",
+    "[11:58:50] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_direct|backend=native|phase=settled|uuid=52dc3509-c079-4f67-932a-500166c8173e|entity=true|registry=true|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=254",
+    "[11:58:50] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_direct|backend=runtime|phase=settled|uuid=82bd675e-786f-44b8-8de6-0600604bf83b|entity=true|registry=true|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=254",
+    "[11:58:55] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_direct|backend=native|phase=cleaned|uuid=52dc3509-c079-4f67-932a-500166c8173e|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=354",
+    "[11:58:55] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_direct|backend=runtime|phase=cleaned|uuid=82bd675e-786f-44b8-8de6-0600604bf83b|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=354",
+    "[11:58:57] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_imported|backend=native|phase=initial|uuid=086d209e-32d2-415c-8e5d-e74da860019b|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=364",
+    "[11:58:57] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_imported|backend=runtime|phase=initial|uuid=1e70a741-c89d-4fff-bbf7-bf8b1cb0fc69|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=364",
+    "[11:59:04] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_imported|backend=native|phase=settled|uuid=086d209e-32d2-415c-8e5d-e74da860019b|entity=true|registry=true|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=519",
+    "[11:59:04] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_imported|backend=runtime|phase=settled|uuid=1e70a741-c89d-4fff-bbf7-bf8b1cb0fc69|entity=true|registry=true|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=519",
+    "[11:59:09] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_imported|backend=native|phase=cleaned|uuid=086d209e-32d2-415c-8e5d-e74da860019b|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=619",
+    "[11:59:09] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_cow_imported|backend=runtime|phase=cleaned|uuid=1e70a741-c89d-4fff-bbf7-bf8b1cb0fc69|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=619",
+    "[11:59:12] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_direct|backend=native|phase=initial|uuid=51344dc9-d864-4dea-a3a3-7832552fe8a9|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=629",
+    "[11:59:12] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_direct|backend=runtime|phase=initial|uuid=701a3c31-bc68-4c9c-9cb3-bf045dd59a31|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=629",
+    "[11:59:19] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_direct|backend=native|phase=settled|uuid=51344dc9-d864-4dea-a3a3-7832552fe8a9|entity=true|registry=true|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=784",
+    "[11:59:19] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_direct|backend=runtime|phase=settled|uuid=701a3c31-bc68-4c9c-9cb3-bf045dd59a31|entity=true|registry=true|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=784",
+    "[11:59:24] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_direct|backend=native|phase=cleaned|uuid=51344dc9-d864-4dea-a3a3-7832552fe8a9|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=884",
+    "[11:59:24] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_direct|backend=runtime|phase=cleaned|uuid=701a3c31-bc68-4c9c-9cb3-bf045dd59a31|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=884",
+    "[11:59:26] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_imported|backend=native|phase=initial|uuid=5dcc35f8-f259-4d4a-8272-450f2066f2b1|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=894",
+    "[11:59:26] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_imported|backend=runtime|phase=initial|uuid=9c16bc52-4b01-4a92-ad1e-f5c78d02d017|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=894",
+    "[11:59:34] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_imported|backend=native|phase=settled|uuid=5dcc35f8-f259-4d4a-8272-450f2066f2b1|entity=true|registry=true|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1049",
+    "[11:59:34] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_imported|backend=runtime|phase=settled|uuid=9c16bc52-4b01-4a92-ad1e-f5c78d02d017|entity=true|registry=true|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1049",
+    "[11:59:39] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_imported|backend=native|phase=cleaned|uuid=5dcc35f8-f259-4d4a-8272-450f2066f2b1|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1149",
+    "[11:59:39] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=control_zombie_imported|backend=runtime|phase=cleaned|uuid=9c16bc52-4b01-4a92-ad1e-f5c78d02d017|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1149",
+    "[11:59:41] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_direct|backend=native|phase=initial|uuid=04e910ae-dba8-4c3d-a028-ad0b2e4b1c68|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1159",
+    "[11:59:41] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_direct|backend=runtime|phase=initial|uuid=4ce5d956-9de6-4268-ae7c-935a2e4f1aca|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1159",
+    "[11:59:49] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_direct|backend=native|phase=settled|uuid=04e910ae-dba8-4c3d-a028-ad0b2e4b1c68|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1314",
+    "[11:59:49] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_direct|backend=runtime|phase=settled|uuid=4ce5d956-9de6-4268-ae7c-935a2e4f1aca|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1314",
+    "[11:59:54] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_direct|backend=native|phase=cleaned|uuid=04e910ae-dba8-4c3d-a028-ad0b2e4b1c68|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1414",
+    "[11:59:54] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_direct|backend=runtime|phase=cleaned|uuid=4ce5d956-9de6-4268-ae7c-935a2e4f1aca|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1414",
+    "[11:59:56] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_imported|backend=native|phase=initial|uuid=50575924-1804-4a76-9f5b-799561b4b714|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1424",
+    "[11:59:56] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_imported|backend=runtime|phase=initial|uuid=b7c6ee30-9d12-4400-9607-57126bb02291|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1424",
+    "[12:00:03] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_imported|backend=native|phase=settled|uuid=50575924-1804-4a76-9f5b-799561b4b714|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1579",
+    "[12:00:03] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_imported|backend=runtime|phase=settled|uuid=b7c6ee30-9d12-4400-9607-57126bb02291|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1579",
+    "[12:00:08] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_imported|backend=native|phase=cleaned|uuid=50575924-1804-4a76-9f5b-799561b4b714|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1679",
+    "[12:00:08] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_cow_imported|backend=runtime|phase=cleaned|uuid=b7c6ee30-9d12-4400-9607-57126bb02291|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1679",
+    "[12:00:10] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_direct|backend=native|phase=initial|uuid=8cfc44c2-d6f3-4199-a0c6-2bbf4f45da37|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1689",
+    "[12:00:10] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_direct|backend=runtime|phase=initial|uuid=3a6c4b33-8765-4907-b4e2-a72ad53e7fe4|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1689",
+    "[12:00:18] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_direct|backend=native|phase=settled|uuid=8cfc44c2-d6f3-4199-a0c6-2bbf4f45da37|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1844",
+    "[12:00:18] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_direct|backend=runtime|phase=settled|uuid=3a6c4b33-8765-4907-b4e2-a72ad53e7fe4|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1844",
+    "[12:00:23] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_direct|backend=native|phase=cleaned|uuid=8cfc44c2-d6f3-4199-a0c6-2bbf4f45da37|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1944",
+    "[12:00:23] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_direct|backend=runtime|phase=cleaned|uuid=3a6c4b33-8765-4907-b4e2-a72ad53e7fe4|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1944",
+    "[12:00:25] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_imported|backend=native|phase=initial|uuid=76645d86-4bdf-486c-a097-30751b6d7fcf|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1954",
+    "[12:00:25] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_imported|backend=runtime|phase=initial|uuid=4a6a5dca-08b5-46bd-b183-5cbe2156fb3b|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1954",
+    "[12:00:33] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_imported|backend=native|phase=settled|uuid=76645d86-4bdf-486c-a097-30751b6d7fcf|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2109",
+    "[12:00:33] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_imported|backend=runtime|phase=settled|uuid=4a6a5dca-08b5-46bd-b183-5cbe2156fb3b|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2109",
+    "[12:00:38] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_imported|backend=native|phase=cleaned|uuid=76645d86-4bdf-486c-a097-30751b6d7fcf|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2209",
+    "[12:00:38] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=command_zombie_imported|backend=runtime|phase=cleaned|uuid=4a6a5dca-08b5-46bd-b183-5cbe2156fb3b|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2209",
+    "[12:00:40] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_direct|backend=native|phase=initial|uuid=41ec142e-6745-48fc-a334-3a7b3ca6bae6|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2219",
+    "[12:00:40] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_direct|backend=runtime|phase=initial|uuid=2e74dfed-8451-4739-99cc-071e63eb524c|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2219",
+    "[12:00:48] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_direct|backend=native|phase=settled|uuid=41ec142e-6745-48fc-a334-3a7b3ca6bae6|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2374",
+    "[12:00:48] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_direct|backend=runtime|phase=settled|uuid=2e74dfed-8451-4739-99cc-071e63eb524c|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2374",
+    "[12:00:53] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_direct|backend=native|phase=cleaned|uuid=41ec142e-6745-48fc-a334-3a7b3ca6bae6|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2474",
+    "[12:00:53] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_direct|backend=runtime|phase=cleaned|uuid=2e74dfed-8451-4739-99cc-071e63eb524c|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2474",
+    "[12:00:55] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_imported|backend=native|phase=initial|uuid=adf06c0a-6124-41e0-bed6-483bc1aa5573|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2484",
+    "[12:00:55] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_imported|backend=runtime|phase=initial|uuid=d0cf9044-5650-45d4-bfbe-404686516d31|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2484",
+    "[12:01:02] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_imported|backend=native|phase=settled|uuid=adf06c0a-6124-41e0-bed6-483bc1aa5573|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2639",
+    "[12:01:02] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_imported|backend=runtime|phase=settled|uuid=d0cf9044-5650-45d4-bfbe-404686516d31|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2639",
+    "[12:01:07] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_imported|backend=native|phase=cleaned|uuid=adf06c0a-6124-41e0-bed6-483bc1aa5573|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2739",
+    "[12:01:07] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_cow_imported|backend=runtime|phase=cleaned|uuid=d0cf9044-5650-45d4-bfbe-404686516d31|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2739",
+    "[12:01:09] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_direct|backend=native|phase=initial|uuid=4c0eff43-ec05-4877-b303-6b81a33fdc88|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2749",
+    "[12:01:09] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_direct|backend=runtime|phase=initial|uuid=d773bba2-926c-4659-9e03-555db6e2e34a|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2749",
+    "[12:01:17] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_direct|backend=native|phase=settled|uuid=4c0eff43-ec05-4877-b303-6b81a33fdc88|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2904",
+    "[12:01:17] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_direct|backend=runtime|phase=settled|uuid=d773bba2-926c-4659-9e03-555db6e2e34a|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2904",
+    "[12:01:22] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_direct|backend=native|phase=cleaned|uuid=4c0eff43-ec05-4877-b303-6b81a33fdc88|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3004",
+    "[12:01:22] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_direct|backend=runtime|phase=cleaned|uuid=d773bba2-926c-4659-9e03-555db6e2e34a|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3004",
+    "[12:01:24] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_imported|backend=native|phase=initial|uuid=c64e6a86-220e-402d-86ee-6d60adad3232|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3014",
+    "[12:01:24] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_imported|backend=runtime|phase=initial|uuid=fe5db1cd-e435-4250-89fe-d2cf0bfdd708|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3014",
+    "[12:01:32] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_imported|backend=native|phase=settled|uuid=c64e6a86-220e-402d-86ee-6d60adad3232|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3169",
+    "[12:01:32] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_imported|backend=runtime|phase=settled|uuid=fe5db1cd-e435-4250-89fe-d2cf0bfdd708|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3169",
+    "[12:01:37] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_imported|backend=native|phase=cleaned|uuid=c64e6a86-220e-402d-86ee-6d60adad3232|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3269",
+    "[12:01:37] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=death_zombie_imported|backend=runtime|phase=cleaned|uuid=fe5db1cd-e435-4250-89fe-d2cf0bfdd708|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3269",
+    "[12:01:39] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_direct|backend=native|phase=initial|uuid=99321923-3b81-4420-aeb7-f57ad063dc90|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3279",
+    "[12:01:39] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_direct|backend=runtime|phase=initial|uuid=17efbdb2-d7e0-4b77-9b8a-2429e4ae352a|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3279",
+    "[12:01:47] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_direct|backend=native|phase=settled|uuid=99321923-3b81-4420-aeb7-f57ad063dc90|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3435",
+    "[12:01:47] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_direct|backend=runtime|phase=settled|uuid=17efbdb2-d7e0-4b77-9b8a-2429e4ae352a|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3435",
+    "[12:01:52] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_direct|backend=native|phase=cleaned|uuid=99321923-3b81-4420-aeb7-f57ad063dc90|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3535",
+    "[12:01:52] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_direct|backend=runtime|phase=cleaned|uuid=17efbdb2-d7e0-4b77-9b8a-2429e4ae352a|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3535",
+    "[12:01:54] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_imported|backend=native|phase=initial|uuid=ae3f0a61-ecae-4158-9b12-2a9a21f61a97|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3545",
+    "[12:01:54] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_imported|backend=runtime|phase=initial|uuid=4467e165-75d0-4c75-9c26-860af257767e|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3545",
+    "[12:02:02] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_imported|backend=native|phase=settled|uuid=ae3f0a61-ecae-4158-9b12-2a9a21f61a97|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3701",
+    "[12:02:02] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_imported|backend=runtime|phase=settled|uuid=4467e165-75d0-4c75-9c26-860af257767e|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3701",
+    "[12:02:07] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_imported|backend=native|phase=cleaned|uuid=ae3f0a61-ecae-4158-9b12-2a9a21f61a97|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3801",
+    "[12:02:07] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_cow_imported|backend=runtime|phase=cleaned|uuid=4467e165-75d0-4c75-9c26-860af257767e|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3801",
+    "[12:02:10] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_direct|backend=native|phase=initial|uuid=85f506d7-51d8-4a12-bff6-76bfe8541bbc|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3811",
+    "[12:02:10] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_direct|backend=runtime|phase=initial|uuid=36f5e79e-4be2-4284-9d3d-be088da074de|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3811",
+    "[12:02:17] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_direct|backend=native|phase=settled|uuid=85f506d7-51d8-4a12-bff6-76bfe8541bbc|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3967",
+    "[12:02:17] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_direct|backend=runtime|phase=settled|uuid=36f5e79e-4be2-4284-9d3d-be088da074de|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3967",
+    "[12:02:22] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_direct|backend=native|phase=cleaned|uuid=85f506d7-51d8-4a12-bff6-76bfe8541bbc|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4067",
+    "[12:02:22] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_direct|backend=runtime|phase=cleaned|uuid=36f5e79e-4be2-4284-9d3d-be088da074de|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4067",
+    "[12:02:24] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_imported|backend=native|phase=initial|uuid=7347bf96-d405-43e2-be50-f2d297636dac|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4077",
+    "[12:02:24] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_imported|backend=runtime|phase=initial|uuid=7c14a0c1-4aa6-4233-a88a-0f07ae65ab6b|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4077",
+    "[12:02:32] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_imported|backend=native|phase=settled|uuid=7347bf96-d405-43e2-be50-f2d297636dac|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=4233",
+    "[12:02:32] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_imported|backend=runtime|phase=settled|uuid=7c14a0c1-4aa6-4233-a88a-0f07ae65ab6b|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=4233",
+    "[12:02:37] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_imported|backend=native|phase=cleaned|uuid=7347bf96-d405-43e2-be50-f2d297636dac|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4333",
+    "[12:02:37] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=chunk_zombie_imported|backend=runtime|phase=cleaned|uuid=7c14a0c1-4aa6-4233-a88a-0f07ae65ab6b|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4333",
+    "[12:02:40] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_direct|backend=native|phase=initial|uuid=931e25bb-a2e6-4f97-9b8d-845a75f03288|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4343",
+    "[12:02:40] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_direct|backend=runtime|phase=initial|uuid=40b37958-74c9-4597-aad6-3d4e3c533181|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4343",
+    "[12:02:47] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_direct|backend=native|phase=settled|uuid=931e25bb-a2e6-4f97-9b8d-845a75f03288|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=4499",
+    "[12:02:47] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_direct|backend=runtime|phase=settled|uuid=40b37958-74c9-4597-aad6-3d4e3c533181|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=4499",
+    "[12:02:52] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_direct|backend=native|phase=cleaned|uuid=931e25bb-a2e6-4f97-9b8d-845a75f03288|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4599",
+    "[12:02:52] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_direct|backend=runtime|phase=cleaned|uuid=40b37958-74c9-4597-aad6-3d4e3c533181|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4599",
+    "[12:02:54] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_imported|backend=native|phase=initial|uuid=510f5e97-b3b1-474f-91bd-8655f1e4fe8c|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4609",
+    "[12:02:54] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_imported|backend=runtime|phase=initial|uuid=e636f9b5-aea1-4bdf-863c-7b25bb7cb69a|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4609",
+    "[12:03:02] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_imported|backend=native|phase=settled|uuid=510f5e97-b3b1-474f-91bd-8655f1e4fe8c|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=4765",
+    "[12:03:02] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_imported|backend=runtime|phase=settled|uuid=e636f9b5-aea1-4bdf-863c-7b25bb7cb69a|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=4765",
+    "[12:03:07] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_imported|backend=native|phase=cleaned|uuid=510f5e97-b3b1-474f-91bd-8655f1e4fe8c|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4865",
+    "[12:03:07] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_cow_imported|backend=runtime|phase=cleaned|uuid=e636f9b5-aea1-4bdf-863c-7b25bb7cb69a|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4865",
+    "[12:03:09] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_direct|backend=native|phase=initial|uuid=99cbb226-1222-428e-ba6b-0336b37cd503|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4875",
+    "[12:03:09] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_direct|backend=runtime|phase=initial|uuid=4f84225f-07dd-47a1-994f-5575819c282a|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4875",
+    "[12:03:17] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_direct|backend=native|phase=settled|uuid=99cbb226-1222-428e-ba6b-0336b37cd503|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=5031",
+    "[12:03:17] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_direct|backend=runtime|phase=settled|uuid=4f84225f-07dd-47a1-994f-5575819c282a|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=5031",
+    "[12:03:22] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_direct|backend=native|phase=cleaned|uuid=99cbb226-1222-428e-ba6b-0336b37cd503|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=5131",
+    "[12:03:22] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_direct|backend=runtime|phase=cleaned|uuid=4f84225f-07dd-47a1-994f-5575819c282a|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=5131",
+    "[12:03:24] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_imported|backend=native|phase=initial|uuid=4daadc8f-4814-4639-9358-000834ee4195|entity=true|registry=true|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=5141",
+    "[12:03:24] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_imported|backend=runtime|phase=initial|uuid=4a27ee31-1b8e-4d00-9196-3bf57ce0c184|entity=true|registry=true|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=5141",
+    "[12:03:31] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_imported|backend=native|phase=settled|uuid=4daadc8f-4814-4639-9358-000834ee4195|entity=false|registry=false|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=5297",
+    "[12:03:31] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_imported|backend=runtime|phase=settled|uuid=4a27ee31-1b8e-4d00-9196-3bf57ce0c184|entity=false|registry=false|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=5297",
+    "[12:03:36] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_imported|backend=native|phase=cleaned|uuid=4daadc8f-4814-4639-9358-000834ee4195|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=5397",
+    "[12:03:36] [Server thread/INFO]: [HelsteraTerminalCallbackProbe] TCALL_ROW|key=suspended_zombie_imported|backend=runtime|phase=cleaned|uuid=4a27ee31-1b8e-4d00-9196-3bf57ce0c184|entity=false|registry=false|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=5397"
+  ],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "7fba04706d667a26746ee54e58abf10eed107bb9ff03468ac7a9f1bf1c3fbb83"
+    },
+    {
+      "path": "source-mobs.yml",
+      "sha256": "a3a76fee898205cdbd0ce47b9102787d871c9508c273c0511cb6f0f4d9fe9b57"
+    },
+    {
+      "path": "source-skills.yml",
+      "sha256": "c0772a447533f0a4439c085de5c9e14388edc48a88057b54a0dd8add7e2bf5a0"
+    },
+    {
+      "path": "snapshots/final-scoped.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "snapshots/scoped-variables.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "imports/mythic_tc_child_never.yml",
+      "sha256": "9f08076a41b8887c27b8e04dd8342242b774e2776c1d4cd011770ec15c7ed9a8"
+    },
+    {
+      "path": "imports/mythic_tc_child_persistent.yml",
+      "sha256": "47e99fe78d72a7c7bece16f16f47e42152b4580d395c83617be670feb6be3ca3"
+    },
+    {
+      "path": "imports/skills.yml",
+      "sha256": "b4132b4645ea211828e9dcdcf74d82e2094d690de5fa89ce508f567c2d868703"
+    },
+    {
+      "path": "imports/tc_chunk_cow_direct.yml",
+      "sha256": "34df25af23efbeace12d2350f3733f3ec75cab28473f614d4cb474404a480be1"
+    },
+    {
+      "path": "imports/tc_chunk_cow_imported.yml",
+      "sha256": "2d330ea37058b3e1704f0620145aad23ab47a3727780cf15ca5a283c7838cebf"
+    },
+    {
+      "path": "imports/tc_chunk_zombie_direct.yml",
+      "sha256": "8ddaa0d5316537640e9bb5dd40a1a7482c00a30806fb2b96a2835baf9a6b5f1f"
+    },
+    {
+      "path": "imports/tc_chunk_zombie_imported.yml",
+      "sha256": "dd1f73db5c3cb8bb6cae9528481b657293601b2dddbccc57c8cb7e01291a13dd"
+    },
+    {
+      "path": "imports/tc_command_cow_direct.yml",
+      "sha256": "9546de203b77505e23fd69a3aae993e7edec4d973be5acdc801e00258bceb70c"
+    },
+    {
+      "path": "imports/tc_command_cow_imported.yml",
+      "sha256": "7ddc3d2f93bd82064c63f56dca4db50845efb261bf2759001c4edec4e949130d"
+    },
+    {
+      "path": "imports/tc_command_zombie_direct.yml",
+      "sha256": "8e685f7d55a7c10724f615ed4975da92c2b23e239be85b4e362e7a56ed524541"
+    },
+    {
+      "path": "imports/tc_command_zombie_imported.yml",
+      "sha256": "eb699e6cfb3bd6cada75b362527295342c2aa2c6fa379d67eb7dfb8f858ca21c"
+    },
+    {
+      "path": "imports/tc_control_cow_direct.yml",
+      "sha256": "1875bc9ddf8b44c60583bb3b0145a4a03aee62bf0747d3ef7bad3b4ec5f4349a"
+    },
+    {
+      "path": "imports/tc_control_cow_imported.yml",
+      "sha256": "4ac1b73fcc81b3d94edb0b7a967fcfe116137abcc57b58892bc017e7e913d71a"
+    },
+    {
+      "path": "imports/tc_control_zombie_direct.yml",
+      "sha256": "c3df086c3c9577c8d3c893cd218b37a9b0e41a0484e21b052684afcfb96365a3"
+    },
+    {
+      "path": "imports/tc_control_zombie_imported.yml",
+      "sha256": "ef38850a7b2f752837c77e209d7987178c2adbf04dfc4d92fbf84cd65b0f9842"
+    },
+    {
+      "path": "imports/tc_death_cow_direct.yml",
+      "sha256": "9546de203b77505e23fd69a3aae993e7edec4d973be5acdc801e00258bceb70c"
+    },
+    {
+      "path": "imports/tc_death_cow_imported.yml",
+      "sha256": "8cd03de0a1c068e32bef47d689ba5386364ea37785adfaec40619539c131ccd1"
+    },
+    {
+      "path": "imports/tc_death_zombie_direct.yml",
+      "sha256": "8e685f7d55a7c10724f615ed4975da92c2b23e239be85b4e362e7a56ed524541"
+    },
+    {
+      "path": "imports/tc_death_zombie_imported.yml",
+      "sha256": "d1a38118479a79a109298d12c4d7eb6d8ba068af97bccedf364da41c0f7257da"
+    },
+    {
+      "path": "imports/tc_suspended_cow_direct.yml",
+      "sha256": "9546de203b77505e23fd69a3aae993e7edec4d973be5acdc801e00258bceb70c"
+    },
+    {
+      "path": "imports/tc_suspended_cow_imported.yml",
+      "sha256": "2e44172fa409e8ca53e045808d5780aca6f0b1fc8296b227c98721358547e8ff"
+    },
+    {
+      "path": "imports/tc_suspended_zombie_direct.yml",
+      "sha256": "8e685f7d55a7c10724f615ed4975da92c2b23e239be85b4e362e7a56ed524541"
+    },
+    {
+      "path": "imports/tc_suspended_zombie_imported.yml",
+      "sha256": "6afcb2a4d482c835aba7e84cc67ac1ef73b7dc57e431b135668beaf6a7a11e8c"
+    }
+  ],
+  "boot": {
+    "startedAtUtc": "2026-11-20T11:58:23.520944+00:00",
+    "stoppedAtUtc": "2026-11-20T12:03:38.190554+00:00",
+    "exitCode": 0
+  },
+  "gapCases": [],
+  "logArchive": "paper-1.21.1-terminal-callback-20261120-r8-logs.zip",
+  "logArchiveSha256": "34392a1c0a0a6d9564d6b18c6a6a767b8b239cfea6a9bac0ccbd1a061d5d996f"
+}

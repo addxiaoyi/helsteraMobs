@@ -1,5 +1,7 @@
 # Despawn crash checkpoints
 
+Terminal-variable release refresh (2026-11-20): [despawn-crash](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r5.json), [despawn-crash-chunk](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-20261120-r3.json), [despawn-crash-clock](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-clock-20261120-r3.json), [despawn-crash-chunk-clock](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r4.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
+
 Verified evidence: [r3 report](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r3.json)
 and [redacted logs, snapshots and raw NBT](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r3-logs.zip).
 All 43 mutation controls are rejected. The plugin artifact is
