@@ -63,6 +63,7 @@ final class MobRemovalCommand {
         try { selection = parse(args, sender instanceof Player); }
         catch (IllegalArgumentException e) { sender.sendMessage("§c" + e.getMessage()); return; }
         Location origin = sender instanceof Player player ? player.getLocation() : null;
+        var unloading = plugin.unloadingCommandMobs();
         int count = 0;
         for (var instance : List.copyOf(plugin.instances().allImpl())) {
             var entity = instance.baseEntity().orElse(null);
@@ -70,6 +71,11 @@ final class MobRemovalCommand {
             if (selection.matches(ManagedMobIdentity.mobId(entity), Factions.factionOf(entity),
                     instance.options().despawnMode(), entity.getLocation(), origin)
                     && plugin.removeMobByCommand(instance.instanceId())) count++;
+        }
+        for (var entry : unloading) {
+            var entity = entry.instance().entity();
+            if (selection.matches(entry.mobId(), entry.faction(), entry.instance().options().despawnMode(),
+                    entity.getLocation(), origin) && plugin.removeUnloadingMobByCommand(entry, selection.radius() != null)) count++;
         }
         sender.sendMessage("§a已清理 " + count + " 个生物");
     }

@@ -6,7 +6,8 @@
     "unlistedCombinationsAreUnverified": true,
     "requiresDespawnDistanceEvidence": true,
     "requiresDespawnPrecedenceEvidence": true,
-    "requiresMobCommandEvidence": true
+    "requiresMobCommandEvidence": true,
+    "requiresUnloadedCommandEvidence": true
   },
   "combinations": [
     {
@@ -17,8 +18,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-mob-command-strict-20261120-r1",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-mob-command-strict-20261120-r1.json"
+      "releaseFixtureId": "srv-paper-unloaded-command-strict-20261120-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-unloaded-command-strict-20261120-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",

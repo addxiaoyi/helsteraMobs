@@ -1,4 +1,39 @@
-Mob cleanup commands (2026-11-20): `/helstera mob kill` and `killall` now
+Unloaded mob commands (2026-11-20): cleanup now preserves native selection
+through the brief unload transition. Named kill and forced killall remove saved
+NEVER/PERSISTENT targets; default killall exempts PERSISTENT. Matching radius
+commands load the selected chunk. Stable unloaded targets remain saved and
+restore their original UUID, variables and SkillTree. Terminal callbacks retain
+caster context, then cancel newly queued work and delete state for removed mobs.
+
+`srv-paper-unloaded-command-20261120-r6` verifies 3,910 observations over 23
+scenarios and three Paper 1.21.1-133/MM 5.7.2 boots, using 460 distinct UUIDs.
+Samples at ticks 1/4/5/6/10, independent native/runtime chunks, radius/world
+negative controls, 460 callbacks across removal and final cleanup, snapshots and
+final restart absence pass. All 42 evidence mutations are rejected. Native
+callback scheduling and inactive-registry representation are explicit differences;
+synchronous command callbacks are the verified scope. Renderer teardown now
+removes owned entity objects even when UUID lookup is already empty during unload,
+including attachments. Observers r2/r3 exposed the
+original gap; r4 exposed missing callback context and premature tick-5 expiry;
+rejected r5 exposed transient orphan visuals after rapid radius-triggered reload.
+See the [command contract](docs/MOB_COMMAND_COMPATIBILITY.md).
+
+The current artifact passes 2,421 Maven tests and SpotBugs. Full strict
+`srv-paper-unloaded-command-strict-20261120-r1` passes 471 probes (452 passed,
+19 expected rejections, none failed/incomplete). The same JAR passes loaded
+commands `srv-paper-mob-command-20261120-r5` (2,600 observations, 29 mutations),
+distance `srv-paper-despawn-distance-20261120-r9` (448 observations, 44 mutations)
+and precedence `srv-paper-despawn-precedence-20261120-r4` (1,296 observations,
+twelve boots, 30 mutations). The release gate requires all four focused archives
+for the exact plugin JAR and pinned server build.
+
+Matrix totals remain 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin. Callback
+recursion and delayed/visual callback mechanics, mode-specific crash recovery,
+native chunk callback replay, broader catalogs, external integrations and other
+versions remain open. Full MythicMobs parity is incomplete.
+
+Previous-artifact loaded mob commands (2026-11-20): `/helstera mob kill` and `killall` now
 remove loaded definition-owned mobs with native name/faction filters and mode
 exemptions. `killall` exempts NPC/PERSISTENT; `-p` bypasses this. Named kill includes
 all modes. Player radius is inclusive and same-world. Misleading named/zero/console
@@ -13,7 +48,7 @@ two Paper 1.21.1-133/MM 5.7.2 boots. All 29 evidence mutation controls are rejec
 Observers r1/r2 and rejected r3 remain diagnostics; r3 used an incorrect display
 count for unnamed bound controls. See the [command contract](docs/MOB_COMMAND_COMPATIBILITY.md).
 
-The current artifact passes 2,416 Maven tests and SpotBugs. Full strict
+That artifact passes 2,416 Maven tests and SpotBugs. Full strict
 `srv-paper-mob-command-strict-20261120-r1` passes 471 probes (452 passed,
 19 expected rejections, zero failed/incomplete). The same JAR passes distance
 `srv-paper-despawn-distance-20261120-r8` (448 observations, ten player controls,
@@ -113,13 +148,14 @@ catalogs and other versions remain open. Matrix totals at that checkpoint were
 0 missing / 2 blocked-by-external-plugin. Full MythicMobs parity remains incomplete.
 See the [Despawn lifecycle contract](docs/DESPAWN_LIFECYCLE_COMPATIBILITY.md).
 
-Next scoped target: unloaded command-removal semantics. Loaded name/faction,
-mode, permission, radius, callback and snapshot cleanup now have native Paper
-evidence. Observe NEVER/NPC entities after genuine chunk unload, execute native
-and runtime commands without loading the chunk, and compare registry/save state
-on reload and restart. Define the unloaded contract before expanding selection.
-Then test callback-driven reentrant removal/spawning, mode-specific crash
-recovery and native chunk callback replay. Continue the full work packages below.
+Next scoped target: callback-driven removal and spawning recursion. Exercise
+nested named/global/radius cleanup, the same suspended UUID selected more than
+once, and callback-created entities; compare native callback counts and final
+entity/state ownership. Keep delayed/asynchronous/visual callbacks explicitly
+unverified until separate evidence exists. Then validate mode-specific crash
+recovery and investigate the retained native chunk callback replay failure.
+Continue the catalog and version work packages below; this milestone does not
+upgrade the broad Mob Options or complete SkillTree rows.
 
 Previous-artifact timed SkillTree regression
 `srv-paper-despawn-skilltree-restart-20261120-r3` also passes 115 observations
@@ -344,7 +380,7 @@ Audited against the matrix on 2026-11-20:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-mob-command-strict-20261120-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `9797f89f37f9de80506570fded644ed16b06340dde0fd91f35cf767b1653f82b`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,416 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-unloaded-command-strict-20261120-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `0f68cdb23aa16ad8d8af6661488482838dee2b641879b45baa4251ce1bee203e`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,421 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

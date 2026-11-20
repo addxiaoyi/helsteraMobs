@@ -999,6 +999,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             savePersistentMobSkillTrees(skills);
         }
         suspendedMobSkillTrees.clear();
+        unloadingMobCommands.clear();
         HelsteraApi.unregister();
         if (scheduler != null) ((HelsteraScheduler) scheduler).stop();
         if (refresher != null) ((VisibilityRefresher) refresher).stop();
@@ -31037,6 +31038,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         String mode = cfg.getString("mob.despawn", cfg.getString("despawn", "NORMAL"));
         if (!dev.helstera.api.instance.SpawnOptions.defaults().despawnMode(mode).retainsOnUnload()) return false;
         MobSpawn result = spawnMobCore(mobId, null, living.getLocation(), false, null, living);
+        if (result != null && result.instanceId() > 0) unloadingMobCommands.restored(entity.getUniqueId());
         if (result != null && result.instanceId() > 0
                 && skillService instanceof dev.helstera.ai.skill.SkillService skills) {
             try {
@@ -31055,10 +31057,62 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private final java.util.Map<java.util.UUID, dev.helstera.api.behavior.SkillTreeContext.Snapshot> suspendedMobSkillTrees =
             new java.util.HashMap<>();
 
+    private final UnloadingMobCommands unloadingMobCommands = new UnloadingMobCommands();
+
+    java.util.List<UnloadingMobCommands.Entry> unloadingCommandMobs() {
+        return unloadingMobCommands.snapshot();
+    }
+
+    boolean removeUnloadingMobByCommand(UnloadingMobCommands.Entry entry, boolean radius) {
+        // Remove first: callbacks, chunk loading and nested commands must not select it twice.
+        var entity = entry.instance().entity();
+        if (!unloadingMobCommands.take(entry)) {
+            // Loading a previous candidate's chunk can restore every remaining candidate
+            // in that chunk. They still belong to this command's original selection.
+            var restored = radius ? findInstance(entity) : null;
+            return restored != null && removeMobByCommand(restored.instanceId());
+        }
+        if (radius) {
+            // MM's radius isLoaded check calls Location.getChunk and can load the chunk.
+            // A restored live instance must use the normal removal path.
+            entity.getLocation().getChunk().getEntities();
+            var restored = findInstance(entity);
+            if (restored != null) return removeMobByCommand(restored.instanceId());
+        }
+        try {
+            if (skillTriggers instanceof SkillTriggers triggers) {
+                triggers.fireSuspendedRemoval(entry.instance(), entry.profile());
+            }
+        } finally {
+            dev.helstera.api.behavior.VariableLocations.clearEntity(entity);
+            dev.helstera.ai.skill.SkillExtras.forgetEntity(entity);
+            suspendedMobSkillTrees.remove(entity.getUniqueId());
+            entity.remove();
+            try {
+                var store = persistentMobSkillTreeStore();
+                store.delete(entity.getUniqueId());
+                store.deleteInstance(entry.instance().instanceId());
+            } catch (java.io.IOException ex) {
+                getLogger().warning("[Persistent] Unloaded command snapshot delete failed for "
+                        + entity.getUniqueId() + ": " + ex.getMessage());
+            }
+        }
+        return true;
+    }
+
     private void suspendPersistentMob(org.bukkit.entity.Entity entity, String cause) {
         var instance = findInstance(entity);
         if (instance == null || !(entity instanceof org.bukkit.entity.LivingEntity living)
                 || living.isDead() || !instance.options().retainsOnUnload()) return;
+        if ("chunk_unload".equals(cause)) {
+            var entry = unloadingMobCommands.remember(instance,
+                    ai() == null ? null : ai().profileOf(instance.instanceId()),
+                    dev.helstera.api.behavior.Factions.factionOf(entity));
+            // Pinned MM observes the unloaded entity on the next tick, then waits
+            // five ticks before removing it from command-visible active entries.
+            if (entry != null) getServer().getScheduler().runTaskLater(this,
+                    () -> unloadingMobCommands.take(entry), 6L);
+        }
         if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
             var snapshot = skills.snapshotOf(instance.instanceId()).orElseGet(() ->
                     new dev.helstera.api.behavior.SkillTreeContext(null, java.util.List.of(), null).snapshot());

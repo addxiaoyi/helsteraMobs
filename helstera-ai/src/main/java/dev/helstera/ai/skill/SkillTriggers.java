@@ -1575,15 +1575,40 @@ public final class SkillTriggers implements Listener {
                                   org.bukkit.event.Cancellable cancellableEvent,
                                   org.bukkit.event.entity.EntityDamageEvent.DamageCause damageCause,
                                   AiProfile.TriggerSpec selectedSpec) {
+        dispatchWithProfile(trigger, instance, target, loc, triggerEntity, inheritedTargets,
+                cancellableEvent, damageCause, selectedSpec, null, false);
+    }
+
+    /** Terminal callback for the short native command window after visual/controller suspension. */
+    public void fireSuspendedRemoval(ModelInstance instance, AiProfile profile) {
+        if (instance == null || instance.isValid() || profile == null) return;
+        try (var context = new SuspendedRemovalContext(instance)) {
+            for (SkillTrigger trigger : java.util.List.of(SkillTrigger.DESPAWN, SkillTrigger.REMOVE)) {
+                dispatchWithProfile(trigger, context, null, context.location(), null, java.util.List.of(),
+                        null, null, null, profile, true);
+            }
+        } finally {
+            SkillSignals.global().purgeInstance(instance.instanceId());
+            if (skills != null) skills.forget(instance.instanceId());
+        }
+    }
+
+    private void dispatchWithProfile(SkillTrigger trigger, ModelInstance instance, LivingEntity target,
+                                     org.bukkit.Location loc, Entity triggerEntity,
+                                     java.util.List<? extends LivingEntity> inheritedTargets,
+                                     org.bukkit.event.Cancellable cancellableEvent,
+                                     org.bukkit.event.entity.EntityDamageEvent.DamageCause damageCause,
+                                     AiProfile.TriggerSpec selectedSpec, AiProfile suspendedProfile,
+                                     boolean suspended) {
         if (instance == null) {
             trace(trigger, "实例为 null");
             return;
         }
-        if (!instance.isValid()) {
+        if (!instance.isValid() && !suspended) {
             trace(trigger, "实例 #" + instance.instanceId() + " 已失效（实体未完成添加或已移除）");
             return;
         }
-        AiProfile profile = ai.profileOf(instance.instanceId());
+        AiProfile profile = suspended ? suspendedProfile : ai.profileOf(instance.instanceId());
         if (profile == null) {
             trace(trigger, "实例 #" + instance.instanceId() + " 未绑定 AI 档案（该生物 yml 缺少 ai 节）");
             return;
@@ -1621,7 +1646,7 @@ public final class SkillTriggers implements Listener {
 
         // 阶段切换独立于事件触发器：血量可能在任意一次事件里跨过阈值，
         // 若只在 on-damage 里判定，没受伤的脱战回血就永远触发不了阶段切换。
-        firePhaseTransition(profile, instance, ctx);
+        if (!suspended) firePhaseTransition(profile, instance, ctx);
 
         for (String cond : spec.require) {
             if (!registry.testCondition(cond, ctx)) {

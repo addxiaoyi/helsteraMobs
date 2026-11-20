@@ -52,4 +52,41 @@ class SkillTriggersActionDispatchTest {
             SkillSignals.resetGlobal(previous);
         }
     }
+    @Test
+    void suspendedRemovalUsesCapturedProfileButOrdinaryInvalidDispatchRemainsBlocked() {
+        var registry = new BehaviorRegistryImpl();
+        var calls = new java.util.ArrayList<String>();
+        var captured = new AtomicReference<ModelInstance>();
+        registry.registerAction("despawn-test", ctx -> {
+            org.junit.jupiter.api.Assertions.assertTrue(ctx.instanceValid());
+            captured.set(ctx.instance());
+            calls.add(ctx.state());
+        });
+        registry.registerAction("remove-test", ctx -> calls.add(ctx.state()));
+        var profile = new dev.helstera.ai.AiProfile("captured");
+        for (String name : List.of("on-despawn", "on-remove")) {
+            var spec = new dev.helstera.ai.AiProfile.TriggerSpec();
+            spec.actions.add(name.equals("on-despawn") ? "despawn-test" : "remove-test");
+            profile.triggers.put(name, spec);
+        }
+        var instance = mock(ModelInstance.class);
+        when(instance.baseEntity()).thenReturn(java.util.Optional.empty());
+        when(instance.instanceId()).thenReturn(18);
+        var plugin = mock(org.bukkit.plugin.Plugin.class);
+        when(plugin.getConfig()).thenReturn(new org.bukkit.configuration.file.YamlConfiguration());
+        var triggers = new SkillTriggers(plugin, null, registry,
+                new HelsteraEventBus(), Logger.getAnonymousLogger(), null);
+        triggers.dispatch(SkillTrigger.DESPAWN, instance, (LivingEntity) null, null);
+        assertEquals(List.of(), calls);
+        triggers.fireSuspendedRemoval(instance, profile);
+        assertEquals(List.of("on-despawn", "on-remove"), calls);
+        org.junit.jupiter.api.Assertions.assertFalse(captured.get().isValid());
+        org.junit.jupiter.api.Assertions.assertFalse(instance.isValid());
+        org.junit.jupiter.api.Assertions.assertThrows(IllegalStateException.class,
+                () -> captured.get().setScale(2));
+        when(instance.isValid()).thenReturn(true);
+        triggers.fireSuspendedRemoval(instance, profile);
+        assertEquals(2, calls.size());
+    }
+
 }

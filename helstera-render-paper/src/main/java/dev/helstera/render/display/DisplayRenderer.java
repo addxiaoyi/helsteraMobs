@@ -47,6 +47,14 @@ public final class DisplayRenderer implements InstanceRenderer {
         /** 与骨骼顺序一一对应的世界矩阵（块单位，含 yaw）。 */
         final List<Matrix4f> worldMatrices = new ArrayList<>();
         final List<Location> bonePositions = new ArrayList<>();
+
+        List<Entity> entities() {
+            List<Entity> result = new ArrayList<>(boneDisplays);
+            if (carrier != null) result.add(carrier);
+            if (hitbox != null) result.add(hitbox);
+            if (nameTag != null) result.add(nameTag);
+            return result;
+        }
     }
 
     private final Plugin plugin;
@@ -300,14 +308,10 @@ public final class DisplayRenderer implements InstanceRenderer {
         Visuals v = visuals.get(inst.instanceId());
         if (v == null) return;
         // 清理旧挂接显示（重新生成）
-        for (UUID id : new ArrayList<>(attachDisplays.getOrDefault(inst.instanceId(), List.of()))) {
-            Entity e = org.bukkit.Bukkit.getEntity(id);
-            if (e != null) e.remove();
-        }
-        attachDisplays.remove(inst.instanceId());
+        removeAttachments(inst.instanceId());
         if (inst.attachments.isEmpty()) return;
 
-        List<UUID> created = new ArrayList<>();
+        List<Entity> created = new ArrayList<>();
         Location base = inst.location();
         if (base == null || base.getWorld() == null) return;
         for (var e : inst.attachments.entrySet()) {
@@ -324,30 +328,35 @@ public final class DisplayRenderer implements InstanceRenderer {
                     dd.setTeleportDuration(interpolationTicks);
                     dd.setPersistent(false);
                 });
-                created.add(d.getUniqueId());
+                created.add(d);
                 entityIndex.put(d.getUniqueId(), inst.instanceId());
             }
         }
         attachDisplays.put(inst.instanceId(), created);
     }
 
-    private final Map<Integer, List<UUID>> attachDisplays = new ConcurrentHashMap<>();
+    private final Map<Integer, List<Entity>> attachDisplays = new ConcurrentHashMap<>();
 
     @Override
     public void destroyVisuals(ModelInstanceImpl inst) {
         Visuals v = visuals.remove(inst.instanceId());
         if (v != null) {
-            for (UUID id : v.allEntityIds) {
-                Entity e = org.bukkit.Bukkit.getEntity(id);
-                if (e != null) e.remove();
-                entityIndex.remove(id);
-            }
+            // UUID lookup can already be empty during unload, while Paper still
+            // retains the entity object for a quick reload of the same chunk.
+            // Remove the owned object itself so those visuals cannot reappear.
+            v.entities().forEach(Entity::remove);
+            v.allEntityIds.forEach(entityIndex::remove);
         }
-        for (UUID id : attachDisplays.getOrDefault(inst.instanceId(), List.of())) {
-            Entity e = org.bukkit.Bukkit.getEntity(id);
-            if (e != null) e.remove();
+        removeAttachments(inst.instanceId());
+    }
+
+    private void removeAttachments(int instanceId) {
+        List<Entity> owned = attachDisplays.remove(instanceId);
+        if (owned == null) return;
+        for (Entity entity : owned) {
+            entity.remove();
+            entityIndex.remove(entity.getUniqueId());
         }
-        attachDisplays.remove(inst.instanceId());
     }
 
     @Override
@@ -362,10 +371,7 @@ public final class DisplayRenderer implements InstanceRenderer {
             Entity entity = org.bukkit.Bukkit.getEntity(id);
             if (entity != null) entities.add(entity);
         }
-        for (UUID id : attachDisplays.getOrDefault(inst.instanceId(), List.of())) {
-            Entity entity = org.bukkit.Bukkit.getEntity(id);
-            if (entity != null) entities.add(entity);
-        }
+        entities.addAll(attachDisplays.getOrDefault(inst.instanceId(), List.of()));
         inst.baseEntity().ifPresent(entities::add);
         if (restricted) {
             for (Entity entity : entities) entity.setVisibleByDefault(false);
@@ -391,18 +397,8 @@ public final class DisplayRenderer implements InstanceRenderer {
     }
 
     public void shutdown() {
-        for (Visuals v : visuals.values()) {
-            for (UUID id : v.allEntityIds) {
-                Entity e = org.bukkit.Bukkit.getEntity(id);
-                if (e != null) e.remove();
-            }
-        }
-        for (List<UUID> ids : attachDisplays.values()) {
-            for (UUID id : ids) {
-                Entity e = org.bukkit.Bukkit.getEntity(id);
-                if (e != null) e.remove();
-            }
-        }
+        for (Visuals v : visuals.values()) v.entities().forEach(Entity::remove);
+        for (int id : List.copyOf(attachDisplays.keySet())) removeAttachments(id);
         visuals.clear();
         entityIndex.clear();
         attachDisplays.clear();

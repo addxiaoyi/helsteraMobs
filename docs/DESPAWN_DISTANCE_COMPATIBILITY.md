@@ -38,12 +38,12 @@ still removes NORMAL mobs if no eligible player is in range, including empty and
 spectator-only worlds. Zero disables that extension and leaves native Paper policy
 active; it does not disable vanilla distance removal.
 
-[Comparison report](../tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r8.json)
-and [redacted logs](../tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r8-logs.zip)
+[Comparison report](../tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r9.json)
+and [redacted logs](../tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r9-logs.zip)
 contain 448 observations across 168 native/runtime pairs: 416 native parity rows
 and 32 explicit-radius extension controls. Both direct configuration and production
 importer paths are exercised. The plugin artifact is
-`9797f89f37f9de80506570fded644ed16b06340dde0fd91f35cf767b1653f82b`.
+`0f68cdb23aa16ad8d8af6661488482838dee2b641879b45baa4251ce1bee203e`.
 The independent validator checks every identity and phase, actual server/client
 positions, removal causes, live registries/controllers, persistence flags and all
 34 configured despawn command executions. Schema 2 also binds the real player
@@ -72,8 +72,8 @@ Run with a fresh revision, an existing pinned Paper cache and PyYAML 6.x from
 `tools/paper-integration/requirements-player-variables.txt` (port 25731 is shared):
 
 ```bash
-python3 tools/paper-integration/run-despawn-distance-fixture.py --revision r9 --cache-directory srv-paper-player-life-20261120-r1
-python3 tools/paper-integration/test-despawn-distance-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r8.json
+python3 tools/paper-integration/run-despawn-distance-fixture.py --revision r10 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/test-despawn-distance-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r9.json
 ```
 
 Persistent/Despawn precedence and global defaults have a separate
@@ -102,3 +102,5 @@ and unload r13 retain their original artifact hashes.
 The current command milestone revalidated this suite against the same release
 artifact; older archives retain their original hashes. Loaded cleanup command
 behavior is covered separately by the [command contract](MOB_COMMAND_COMPATIBILITY.md).
+
+The unloaded-command milestone revalidated this suite against the current release artifact.

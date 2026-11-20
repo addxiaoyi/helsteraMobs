@@ -1,7 +1,8 @@
 # Mob cleanup command compatibility
 
-Helstera provides `/helstera mob kill` and `/helstera mob killall` for loaded,
-definition-owned mobs. The reference is public MythicMobs 5.7.2 on
+Helstera provides `/helstera mob kill` and `/helstera mob killall` for definition-owned
+mobs that are loaded or in the brief unload transition. The reference is public
+MythicMobs 5.7.2 on
 Paper 1.21.1-133. `helstera.mob` permission is required. Existing `mob remove`
 continues to unbind a model; it is not a replacement for these cleanup commands.
 
@@ -10,7 +11,7 @@ continues to unbind a model; it is not a replacement for these cleanup commands.
 | `kill <mob-id>` | Case-sensitive substring of the runtime mob ID, all five Despawn modes |
 | `kill -e <mob-id>` | Case-insensitive exact runtime mob ID, all five modes |
 | `kill -f <name>` | Case-insensitive faction match **and** case-sensitive mob-ID substring |
-| `killall` | All loaded NORMAL, CHUNK and NEVER mobs; exempts NPC and PERSISTENT |
+| `killall` | All command-visible NORMAL, CHUNK and NEVER mobs; exempts NPC and PERSISTENT |
 | `killall -p` | All five modes |
 | `killall [-p] <positive-integer-radius>` | Player's world and inclusive 3D radius, with the same mode policy |
 
@@ -63,22 +64,43 @@ Recipe rendering is outside the fixture. Observer r1 has incorrect permission
 and direct callback setup; observer r2 exposes the missing imported Faction.
 Their original reports remain diagnostics and cannot satisfy the release gate.
 
-This is a loaded-mob command scope. Unloaded entities, unknown native flag
-combinations, legacy aliases, callback-driven spawning/removal recursion,
-external chunk-ticket ownership and failures deleting snapshot files need
-further validation. No deletion of unloaded world data is claimed. The full
-Mob Options/Mechanics catalogs, forced-crash recovery and other Paper/MythicMobs
-versions remain incomplete.
+The unload contract uses real Paper `EntitiesUnloadEvent` boundaries. In the
+pinned build, native retained entries remain selectable at samples 1, 4 and 5
+ticks after unload and disappear by sample 6. MM observes unloading on the next
+tick and then waits five ticks before unregistering. Helstera retains a separate
+short-lived command context after destroying visuals/controllers; it does not
+keep an active AI instance in an unloaded chunk.
 
-Static follow-up for the unloaded target: in pinned 5.7.2, `ActiveMob.setUnloaded`
-saves retained mobs and schedules `MobRegistry.setInactive` five ticks later.
-`MobRegistry.values` exposes active entries only; global killall iterates these
-entries, while radius killall additionally checks `isLoaded`. The five-tick
-transition is therefore an explicit next test boundary. This bytecode audit is
-not runtime evidence for unloaded behavior. Test both the transition and stable
-unloaded state, then reload/restart and inspect UUID variables and saved mobs.
+Named kill and forced killall remove NEVER/PERSISTENT during this transition.
+Default killall removes NEVER and preserves PERSISTENT. A matching player-radius
+command loads the selected chunk: native `isLoaded()` calls `Location.getChunk()`.
+Targets outside the radius or in another world do not load it. Stable unloaded
+entries are no longer selected by any of these commands; saved survivors retain
+the same UUID, variables and SkillTree when explicitly reloaded and restarted.
+This does not implement a global scan or deletion of saved world entities.
 
-Current passing [report](../tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r4.json)
+Native `onDespawn` commands run after scheduling; Helstera dispatches the terminal
+callback synchronously before clearing caster variables. A scoped callback view
+makes `@self` and variable placeholders available for the suspended caster, then
+invalidates itself and cancels newly queued skills. It cannot mutate or recreate
+the destroyed model. The verified callback scope is synchronous command actions;
+delayed/asynchronous actions, visual mutations, target conditions and callback
+SkillTree inheritance need separate evidence. While inactive, native variables
+are absent from the active registry; Helstera keeps a retained scoped snapshot.
+Survivors must restore the same saved values after load/restart.
+
+The unload fixture uses separate native/runtime chunks in the same world so that
+native radius loading cannot restore runtime instances before the runtime command.
+It samples 23 scenarios, five modes and direct/imported paths over three boots:
+unload/command/reload, restart/cleanup, and a final restart. Real unload events,
+command ticks, independent load events, callbacks, visuals and snapshot files are
+recorded. A second cleanup verifies that survivors are removable and cannot return.
+
+Unknown native flag combinations, legacy aliases, callback-driven spawning/removal
+recursion, external chunk-ticket ownership, snapshot I/O failures, crash recovery,
+the broader catalogs and other Paper/MythicMobs versions remain incomplete.
+
+Previous-artifact loaded-command [report](../tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r4.json)
 and [redacted archive](../tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r4-logs.zip)
 use plugin SHA-256 `9797f89f37f9de80506570fded644ed16b06340dde0fd91f35cf767b1653f82b`. All 29 mutation controls pass.
 Rejected r3 preserves the incorrect expectation of 33 control visuals; bound
@@ -86,6 +108,23 @@ controls actually have ten each and the pure model eleven (31 total), which r4
 reads from the renderer as well as counting real world entities.
 
 ```bash
-python3 tools/paper-integration/run-mob-command-fixture.py --revision r5 --cache-directory srv-paper-player-life-20261120-r1
-python3 tools/paper-integration/test-mob-command-evidence.py tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r4.json
+python3 tools/paper-integration/run-mob-command-fixture.py --revision r6 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/test-mob-command-evidence.py tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r5.json
+```
+
+Current artifact SHA-256: `0f68cdb23aa16ad8d8af6661488482838dee2b641879b45baa4251ce1bee203e`. Unloaded comparison
+[report](../tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r6.json) and
+[archive](../tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r6-logs.zip) pass 3,910
+observations and 42 mutations. Loaded command regression
+[report](../tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r5.json) passes 2,600
+observations and 29 mutations on this same artifact. Observer r2 used a shared
+chunk and could mask radius-loading failures; r3 isolated the chunks and exposed
+the original implementation gap. Observer r4 retains missing suspended callbacks
+and early tick-5 expiry. Rejected r5 retains orphan visuals after rapid radius
+loading; the renderer fix removes owned objects directly. None of those failed
+reports satisfies the gate.
+
+```bash
+python3 tools/paper-integration/test-unloaded-command-evidence.py tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r6.json
+python3 tools/paper-integration/run-unloaded-command-fixture.py --revision r7 --cache-directory srv-paper-player-life-20261120-r1
 ```

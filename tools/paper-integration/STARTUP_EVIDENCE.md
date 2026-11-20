@@ -1,8 +1,65 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-mob-command-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `9797f89f37f9de80506570fded644ed16b06340dde0fd91f35cf767b1653f82b`. [Strict report](reports/paper-1.21.1-mob-command-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-mob-command-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-mob-command-strict-20261120-r1.client-logs.zip) This artifact passes 2,416 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-unloaded-command-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `0f68cdb23aa16ad8d8af6661488482838dee2b641879b45baa4251ce1bee203e`. [Strict report](reports/paper-1.21.1-unloaded-command-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-unloaded-command-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-unloaded-command-strict-20261120-r1.client-logs.zip) This artifact passes 2,421 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-Mob cleanup commands (2026-11-20): `/helstera mob kill` and `killall` now
+Unloaded mob commands (2026-11-20): cleanup now preserves native selection
+through the brief unload transition. Named kill and forced killall remove saved
+NEVER/PERSISTENT targets; default killall exempts PERSISTENT. Matching radius
+commands load the selected chunk. Stable unloaded targets remain saved and
+restore their original UUID, variables and SkillTree. Terminal callbacks retain
+caster context, then cancel newly queued work and delete state for removed mobs.
+
+`srv-paper-unloaded-command-20261120-r6` verifies 3,910 observations over 23
+scenarios and three Paper 1.21.1-133/MM 5.7.2 boots, using 460 distinct UUIDs.
+Samples at ticks 1/4/5/6/10, independent native/runtime chunks, radius/world
+negative controls, 460 callbacks across removal and final cleanup, snapshots and
+final restart absence pass. All 42 evidence mutations are rejected. Native
+callback scheduling and inactive-registry representation are explicit differences;
+synchronous command callbacks are the verified scope. Renderer teardown now
+removes owned entity objects even when UUID lookup is already empty during unload,
+including attachments. Observers r2/r3 exposed the
+original gap; r4 exposed missing callback context and premature tick-5 expiry;
+rejected r5 exposed transient orphan visuals after rapid radius-triggered reload.
+See the [command contract](../../docs/MOB_COMMAND_COMPATIBILITY.md).
+
+The current artifact passes 2,421 Maven tests and SpotBugs. Full strict
+`srv-paper-unloaded-command-strict-20261120-r1` passes 471 probes (452 passed,
+19 expected rejections, none failed/incomplete). The same JAR passes loaded
+commands `srv-paper-mob-command-20261120-r5` (2,600 observations, 29 mutations),
+distance `srv-paper-despawn-distance-20261120-r9` (448 observations, 44 mutations)
+and precedence `srv-paper-despawn-precedence-20261120-r4` (1,296 observations,
+twelve boots, 30 mutations). The release gate requires all four focused archives
+for the exact plugin JAR and pinned server build.
+
+Matrix totals remain 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin. Callback
+recursion and delayed/visual callback mechanics, mode-specific crash recovery,
+native chunk callback replay, broader catalogs, external integrations and other
+versions remain open. Full MythicMobs parity is incomplete.
+
+Current evidence: [paper-1.21.1-unloaded-command-20261120-r6.json](reports/paper-1.21.1-unloaded-command-20261120-r6.json), SHA-256 `e173afa512d8310db3ec09672eaa58f2f3be232af7990bd2e9f240d4200cfd3f`.
+
+Current evidence: [paper-1.21.1-unloaded-command-20261120-r6-logs.zip](reports/paper-1.21.1-unloaded-command-20261120-r6-logs.zip), SHA-256 `ec2c747995be50768faff87887a5106195386402e0c94ba3f2071faeff80a31b`.
+
+Current evidence: [paper-1.21.1-mob-command-20261120-r5.json](reports/paper-1.21.1-mob-command-20261120-r5.json), SHA-256 `82b38e4c4a3e96e0e98837ce43fe1ac0eb51ffbad0c6b084c0689791a89d2cb2`.
+
+Current evidence: [paper-1.21.1-mob-command-20261120-r5-logs.zip](reports/paper-1.21.1-mob-command-20261120-r5-logs.zip), SHA-256 `e5527397f2e24a0bf6d6031789d6e19bbfbc1f68356a581ff0605121a490b80a`.
+
+Current evidence: [paper-1.21.1-despawn-precedence-20261120-r4.json](reports/paper-1.21.1-despawn-precedence-20261120-r4.json), SHA-256 `7c2f10ad19e8d60e26ab9da4480402b826484098b922117faec7232607fbfc76`.
+
+Current evidence: [paper-1.21.1-despawn-precedence-20261120-r4-logs.zip](reports/paper-1.21.1-despawn-precedence-20261120-r4-logs.zip), SHA-256 `d71681f70c4e6163e5be64beaf9ca90ff70cce6bfc45bba0bdb7121d2453e14f`.
+
+Current evidence: [paper-1.21.1-despawn-distance-20261120-r9.json](reports/paper-1.21.1-despawn-distance-20261120-r9.json), SHA-256 `daa48b4e603d152708a2071d97385dce6694829b2696e9ba751d1927ffcec80d`.
+
+Current evidence: [paper-1.21.1-despawn-distance-20261120-r9-logs.zip](reports/paper-1.21.1-despawn-distance-20261120-r9-logs.zip), SHA-256 `d8d4bb76931acacdc4c2705d4418107318241e353a45f94df1f9a9833748c507`.
+
+Current evidence: [paper-1.21.1-unloaded-command-strict-20261120-r1.json](reports/paper-1.21.1-unloaded-command-strict-20261120-r1.json), SHA-256 `c751397f9640772bfb1e5807f3903d702c45ef14cd29ab6b08655bb7cb9a7b35`.
+
+Current evidence: [paper-1.21.1-unloaded-command-strict-20261120-r1.log.gz](reports/paper-1.21.1-unloaded-command-strict-20261120-r1.log.gz), SHA-256 `9ba01620ce87695bb730d5005b283c85308edba8f9bd378f267534b7aed48415`.
+
+Current evidence: [paper-1.21.1-unloaded-command-strict-20261120-r1.client-logs.zip](reports/paper-1.21.1-unloaded-command-strict-20261120-r1.client-logs.zip), SHA-256 `3d7d2933227543da1ec93a56da9c696b54b4cac276839202ff0f31a0ce8a8e34`.
+
+Previous-artifact loaded mob commands (2026-11-20): `/helstera mob kill` and `killall` now
 remove loaded definition-owned mobs with native name/faction filters and mode
 exemptions. `killall` exempts NPC/PERSISTENT; `-p` bypasses this. Named kill includes
 all modes. Player radius is inclusive and same-world. Misleading named/zero/console
@@ -17,7 +74,7 @@ two Paper 1.21.1-133/MM 5.7.2 boots. All 29 evidence mutation controls are rejec
 Observers r1/r2 and rejected r3 remain diagnostics; r3 used an incorrect display
 count for unnamed bound controls. See the [command contract](../../docs/MOB_COMMAND_COMPATIBILITY.md).
 
-The current artifact passes 2,416 Maven tests and SpotBugs. Full strict
+That artifact passes 2,416 Maven tests and SpotBugs. Full strict
 `srv-paper-mob-command-strict-20261120-r1` passes 471 probes (452 passed,
 19 expected rejections, zero failed/incomplete). The same JAR passes distance
 `srv-paper-despawn-distance-20261120-r8` (448 observations, ten player controls,
@@ -31,23 +88,23 @@ command targets, callback recursion, mode-specific crash recovery, native chunk
 callback replay, broader catalogs, external integrations and other versions
 remain open. Full MythicMobs parity is incomplete.
 
-Current evidence: [paper-1.21.1-mob-command-20261120-r4.json](reports/paper-1.21.1-mob-command-20261120-r4.json), SHA-256 `65d09d6e02e2077d8d1da4f1e11f691236a37daa49a1f4532ea4cf94d5857ce4`.
+Previous-artifact evidence: [paper-1.21.1-mob-command-20261120-r4.json](reports/paper-1.21.1-mob-command-20261120-r4.json), SHA-256 `65d09d6e02e2077d8d1da4f1e11f691236a37daa49a1f4532ea4cf94d5857ce4`.
 
-Current evidence: [paper-1.21.1-mob-command-20261120-r4-logs.zip](reports/paper-1.21.1-mob-command-20261120-r4-logs.zip), SHA-256 `dccc1c18d5565972db745f35dcc9ee480a167bdf49c5193bf4c5d62a150c03bb`.
+Previous-artifact evidence: [paper-1.21.1-mob-command-20261120-r4-logs.zip](reports/paper-1.21.1-mob-command-20261120-r4-logs.zip), SHA-256 `dccc1c18d5565972db745f35dcc9ee480a167bdf49c5193bf4c5d62a150c03bb`.
 
-Current evidence: [paper-1.21.1-despawn-precedence-20261120-r3.json](reports/paper-1.21.1-despawn-precedence-20261120-r3.json), SHA-256 `19316de54245c7b864dce8b57fd9d77f9ae3b9eaf0b9920f38bf50c4acdc9083`.
+Previous-artifact evidence: [paper-1.21.1-despawn-precedence-20261120-r3.json](reports/paper-1.21.1-despawn-precedence-20261120-r3.json), SHA-256 `19316de54245c7b864dce8b57fd9d77f9ae3b9eaf0b9920f38bf50c4acdc9083`.
 
-Current evidence: [paper-1.21.1-despawn-precedence-20261120-r3-logs.zip](reports/paper-1.21.1-despawn-precedence-20261120-r3-logs.zip), SHA-256 `089411ec02f847fbdc7d59c2d949a7849ccf6009e88942223337c796e9ce791e`.
+Previous-artifact evidence: [paper-1.21.1-despawn-precedence-20261120-r3-logs.zip](reports/paper-1.21.1-despawn-precedence-20261120-r3-logs.zip), SHA-256 `089411ec02f847fbdc7d59c2d949a7849ccf6009e88942223337c796e9ce791e`.
 
-Current evidence: [paper-1.21.1-despawn-distance-20261120-r8.json](reports/paper-1.21.1-despawn-distance-20261120-r8.json), SHA-256 `046392570b31f2e77cf73aa9790bb7ffb47a089194c1247afdea48e2c1d5332e`.
+Previous-artifact evidence: [paper-1.21.1-despawn-distance-20261120-r8.json](reports/paper-1.21.1-despawn-distance-20261120-r8.json), SHA-256 `046392570b31f2e77cf73aa9790bb7ffb47a089194c1247afdea48e2c1d5332e`.
 
-Current evidence: [paper-1.21.1-despawn-distance-20261120-r8-logs.zip](reports/paper-1.21.1-despawn-distance-20261120-r8-logs.zip), SHA-256 `45b2b46632b2a4ab8ee675f80d959b0ab4aa1e49140d230636600583dff94bf8`.
+Previous-artifact evidence: [paper-1.21.1-despawn-distance-20261120-r8-logs.zip](reports/paper-1.21.1-despawn-distance-20261120-r8-logs.zip), SHA-256 `45b2b46632b2a4ab8ee675f80d959b0ab4aa1e49140d230636600583dff94bf8`.
 
-Current evidence: [paper-1.21.1-mob-command-strict-20261120-r1.json](reports/paper-1.21.1-mob-command-strict-20261120-r1.json), SHA-256 `8a0bc1c2d0886792593b2a8422c10aa4c735c4b7911fa673d6ba2236aa481d00`.
+Previous-artifact evidence: [paper-1.21.1-mob-command-strict-20261120-r1.json](reports/paper-1.21.1-mob-command-strict-20261120-r1.json), SHA-256 `8a0bc1c2d0886792593b2a8422c10aa4c735c4b7911fa673d6ba2236aa481d00`.
 
-Current evidence: [paper-1.21.1-mob-command-strict-20261120-r1.log.gz](reports/paper-1.21.1-mob-command-strict-20261120-r1.log.gz), SHA-256 `a974561bae219969695cfbf99ea9531f609739d51c2d153902e9fb6507cd7b8d`.
+Previous-artifact evidence: [paper-1.21.1-mob-command-strict-20261120-r1.log.gz](reports/paper-1.21.1-mob-command-strict-20261120-r1.log.gz), SHA-256 `a974561bae219969695cfbf99ea9531f609739d51c2d153902e9fb6507cd7b8d`.
 
-Current evidence: [paper-1.21.1-mob-command-strict-20261120-r1.client-logs.zip](reports/paper-1.21.1-mob-command-strict-20261120-r1.client-logs.zip), SHA-256 `66baad57a1d534523cbf44f85dfdcabeee9dd3601b6916ae534360ca82656756`.
+Previous-artifact evidence: [paper-1.21.1-mob-command-strict-20261120-r1.client-logs.zip](reports/paper-1.21.1-mob-command-strict-20261120-r1.client-logs.zip), SHA-256 `66baad57a1d534523cbf44f85dfdcabeee9dd3601b6916ae534360ca82656756`.
 
 Previous-artifact Despawn precedence update (2026-11-20): effective `Persistent=true` now overrides
 explicit Despawn; Options fields override top-level fields. Global Despawn accepts
