@@ -70,7 +70,10 @@ contains observed failures on the previous artifact and is not passing evidence.
 A separate [rejected diagnostic](../tools/paper-integration/reports/paper-1.21.1-despawn-lifecycle-20261120-r7.json)
 recorded native chunk `onDespawn` commands executing 2–4 times, with runtime
 commands remaining exactly once. The validator rejected all 12 affected rows.
-The cause is unresolved; do not infer an always-once native callback guarantee.
+The cause of duplicate callbacks is unresolved; do not infer an always-once native
+callback guarantee. The separate [rapid-reload contract](RAPID_RELOAD_COMPATIBILITY.md)
+reproduces delayed native registry deactivation, with occasional stale entity
+binding, but does not establish that it caused this historical replay.
 Subsequent instrumented runs r8 and r9 each passed and recorded 18 native public
 MythicMobDespawnEvents, with one event and one command per actual native despawn.
 Further historical runs r10/r11 recorded active-object identities, native
@@ -130,8 +133,7 @@ The [distance contract](DESPAWN_DISTANCE_COMPATIBILITY.md) additionally verifies
 COW/ZOMBIE/VILLAGER/SLIME defaults and 16/64/192-block/no-player/spectator behavior.
 
 Open work: intermittent native chunk callback replay, broader player-distance
-boundaries and entity families, kill-command immunity differences between
-NPC/PERSISTENT and other modes, recovery during unfinished writes for these five modes, external
+boundaries and entity families, recovery during unfinished writes for these five modes, external
 removal paths, late event cancellation, non-living casters, delayed/asynchronous
 shutdown skills and other Paper/MM versions. Clean restart evidence does not
 establish crash or mid-write recovery. Existing timed PERSISTENT restart and

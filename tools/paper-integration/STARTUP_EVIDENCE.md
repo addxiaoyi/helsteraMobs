@@ -2,6 +2,34 @@
 
 Latest full-catalog fixture `srv-paper-despawn-crash-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `b7aab2b68eeb55b923a72470780fff62b14a5e353ed55b7f8bc6bc66b4acf898`. [Strict report](reports/paper-1.21.1-despawn-crash-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-despawn-crash-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-despawn-crash-strict-20261120-r1.client-logs.zip) This artifact passes 2,429 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
+Rapid chunk reload comparison (2026-11-20): the pinned Paper 1.21.1-133/MM 5.7.2
+fixture now isolates delayed native registration loss and stale entity bindings.
+`srv-paper-rapid-reload-20261120-r3` verifies 3,360 observations and 420 UUIDs:
+all five Despawn modes, direct/imported paths, seven reload delays and three
+repetitions, followed by slower reload and real-death cleanup. The same production
+JAR preserves retained variables, SkillTrees and eleven visuals per live mob.
+
+Native registry loss is an explicit compatibility exception, never a matching
+outcome: the original entity and checkpoint can remain present while its active
+entry disappears. Native 1/11-tick boundaries vary; the 40-tick control restores
+normal activity. All 240 inactive-registry and six stale-binding rows are listed and independently
+checked; all 53 evidence mutations are rejected.
+Normal/CHUNK/NPC deferred cleanup has its own explicit timing exception.
+The fixture did not reproduce the historical native callback replay; that failure
+remains open. See the [rapid-reload contract](../../docs/RAPID_RELOAD_COMPATIBILITY.md).
+
+Release requires this report/archive for the exact plugin and Paper hashes,
+including the existing strict catalog and focused crash/command comparisons.
+The production JAR is unchanged, so its 2,429 Maven tests, SpotBugs and 471-probe
+strict report retain their artifact identity. Evidence mutations, gate rejection
+controls and documentation/version checks are rerun for this change.
+
+Matrix totals remain 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin. Full parity
+remains incomplete; delayed/visual callbacks, callback-created child inheritance,
+interrupted writes, broader catalogs, external plugins and additional Paper
+versions remain on the roadmap.
+
 Chunk and periodic-save crash boundaries (2026-11-20): the existing retained-mob
 checkpoint implementation now has three additional native MM 5.7.2 comparisons
 on Paper 1.21.1-133. Each covers 190 observations, 60 native/runtime entity UUIDs,

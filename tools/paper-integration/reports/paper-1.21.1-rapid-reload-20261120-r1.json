@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-rapid-reload-20261120-r1",
+  "evidenceMode": "observation",
+  "knownExceptions": [],
+  "generatedAtUtc": "2026-11-20T08:36:09.252144+00:00",
+  "pluginSha256": "b7aab2b68eeb55b923a72470780fff62b14a5e353ed55b7f8bc6bc66b4acf898",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "7df59611b97edde1b9a7844b56896ed8a63161179c79162f4235f72ecc8e8636",
+  "sourceHashes": {
+    "tools/paper-integration/run-rapid-reload-fixture.py": "d44620465fcf3d28c26aa0bbe0503b5637faad049569d9ccae424a172b93e9fe",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/RapidReloadProbe.java": "2ca3b944ed6fbecca4d81aeb1092a5ddedfc3c829c39349da287d79fd2a85e39"
+  },
+  "observations": [],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "f925b2c380df22af0b529e342a738e96a24f1ce0f9e896096b86fbebf8587b2c"
+    },
+    {
+      "path": "snapshots/scoped-variables.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    }
+  ],
+  "boot": {
+    "startedAtUtc": "2026-11-20T08:36:09.259115+00:00",
+    "stoppedAtUtc": "2026-11-20T08:36:29.489407+00:00",
+    "exitCode": 0
+  },
+  "validationResult": "rejected: Rapid reload probe failed",
+  "logArchive": "paper-1.21.1-rapid-reload-20261120-r1-logs.zip",
+  "logArchiveSha256": "478fb97d2d6d828c05a9bd15179db0648dbe724c5bbd9f2ff2b0a4c27db68ee3"
+}

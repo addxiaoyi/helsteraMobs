@@ -453,6 +453,26 @@ foreach ($item in $releaseEvidence) {
                 if ($LASTEXITCODE -ne 0) { throw 'Despawn crash boundary evidence validation failed.' }
             }
         }
+        if ($versionMatrix.releasePolicy.requiresRapidReloadEvidence -eq $true) {
+            $reload = $item.rapidReloadEvidence
+            if ($null -eq $reload -or [string]$reload.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-rapid-reload-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                    [string]$reload.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'Latest full release requires pinned rapid reload evidence.'
+            }
+            $reloadPath = Join-Path $Root ([string]$reload.report)
+            if (-not (Test-Path -LiteralPath $reloadPath -PathType Leaf) -or
+                    (Get-FileHash -LiteralPath $reloadPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$reload.reportSha256) {
+                throw 'Rapid reload report is missing or changed.'
+            }
+            $reloadReport = Get-Content -LiteralPath $reloadPath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$reloadReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                    [string]$reloadReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                throw 'Rapid reload evidence does not match the release artifact/server.'
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-rapid-reload.py') $reloadPath
+            if ($LASTEXITCODE -ne 0) { throw 'Rapid reload evidence validation failed.' }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

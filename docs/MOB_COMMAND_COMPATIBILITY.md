@@ -159,8 +159,10 @@ Observer r1 retains the pre-fix failures. It also reloaded the native radius-spa
 child one tick after a second unload: native's pending unregister removed the
 active entry after reload, while the entity and saved marker survived restart.
 The accepted fixture samples stable state after 40 ticks, then explicitly loads
-and waits 30 ticks. Rapid native registry behavior remains unverified; no broad
-claim of identical timing is made. Helstera's synchronous callback and native's
+and waits 30 ticks. A separate [rapid-reload contract](RAPID_RELOAD_COMPATIBILITY.md)
+now isolates native delayed deactivation using real events and seven reload
+offsets; the historical callback-created-child path still needs its own timing
+coverage. No broad claim of identical timing is made. Helstera's synchronous callback and native's
 deferred callback are an explicit exception, checked through command depth.
 Delayed/asynchronous/visual callbacks, child SkillTree inheritance, PERSISTENT
 children created by callbacks, pending-child command expiry boundaries, failure

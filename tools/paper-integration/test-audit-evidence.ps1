@@ -1193,6 +1193,43 @@ try {
     }
     [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
     [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
+    $reloadPolicy = $originalVersionText | ConvertFrom-Json
+    $reloadPolicy.releasePolicy | Add-Member -NotePropertyName requiresRapidReloadEvidence -NotePropertyValue $true
+    @($reloadPolicy.combinations | Where-Object releaseValidated)[0] | Add-Member -NotePropertyName serverJarSha256 -NotePropertyValue '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($reloadPolicy | ConvertTo-Json -Depth 20))
+    foreach ($case in @('missing', 'unsafe', 'missing-file', 'changed-file', 'wrong-plugin', 'wrong-server', 'invalid-archive')) {
+        $reloadManifest = @($originalCommandManifest | ConvertFrom-Json)
+        $reloadEntry = @($reloadManifest | Where-Object { $_.fullReleaseCatalog })[0]
+        $reloadReference = 'tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r99.json'
+        $reloadFile = Join-Path $temporaryRoot $reloadReference
+        $reloadMetadata = [pscustomobject]@{
+            pluginSha256 = $testPluginHash
+            paperJarSha256 = '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+        }
+        if ($case -eq 'wrong-plugin') { $reloadMetadata.pluginSha256 = ('0' * 64) }
+        if ($case -eq 'wrong-server') { $reloadMetadata.paperJarSha256 = ('0' * 64) }
+        [System.IO.File]::WriteAllText($reloadFile, ($reloadMetadata | ConvertTo-Json))
+        $reloadReferenceData = [pscustomobject]@{
+            report = $reloadReference
+            reportSha256 = (Get-FileHash -LiteralPath $reloadFile -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        $expectedReloadFailure = switch ($case) {
+            'missing' { 'requires pinned rapid reload' }
+            'unsafe' { $reloadReferenceData.report = '../outside.json'; 'requires pinned rapid reload' }
+            'missing-file' { Remove-Item -LiteralPath $reloadFile; 'report is missing or changed' }
+            'changed-file' { $reloadReferenceData.reportSha256 = ('0' * 64); 'report is missing or changed' }
+            { $_ -in @('wrong-plugin', 'wrong-server') } { 'artifact/server' }
+            'invalid-archive' { 'Rapid reload evidence validation failed' }
+        }
+        if ($case -ne 'missing') { $reloadEntry | Add-Member -NotePropertyName rapidReloadEvidence -NotePropertyValue $reloadReferenceData }
+        [System.IO.File]::WriteAllText($manifestPath, ($reloadManifest | ConvertTo-Json -Depth 20))
+        $reloadFailure = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+        if ($LASTEXITCODE -eq 0 -or $reloadFailure -notmatch $expectedReloadFailure) {
+            throw "Release gate accepted invalid rapid reload evidence ($case): $reloadFailure"
+        }
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
     [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))

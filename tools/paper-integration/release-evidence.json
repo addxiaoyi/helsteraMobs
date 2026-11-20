@@ -47,7 +47,11 @@
         "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r2.json",
         "reportSha256": "fdc71a9393d9f6cb44d1c7e4dc2d6e4b628a05f0d672848a5f7be9c84f921891"
       }
-    ]
+    ],
+    "rapidReloadEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r3.json",
+      "reportSha256": "60753d8a299506dad69dc73659a96c6859a9f4d822e403748fb186230f0ac70a"
+    }
   },
   {
     "fixtureId": "srv-paper-reentrant-command-strict-20261120-r1",

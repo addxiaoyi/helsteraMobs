@@ -10,7 +10,8 @@
     "requiresUnloadedCommandEvidence": true,
     "requiresReentrantCommandEvidence": true,
     "requiresDespawnCrashEvidence": true,
-    "requiresDespawnCrashBoundaryEvidence": true
+    "requiresDespawnCrashBoundaryEvidence": true,
+    "requiresRapidReloadEvidence": true
   },
   "combinations": [
     {
