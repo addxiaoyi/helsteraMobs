@@ -996,6 +996,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             if (saved > 0) getLogger().info("Saved " + saved + " SkillTree snapshots.");
             savePersistentMobSkillTrees(skills);
         }
+        suspendedMobSkillTrees.clear();
         HelsteraApi.unregister();
         if (scheduler != null) ((HelsteraScheduler) scheduler).stop();
         if (refresher != null) ((VisibilityRefresher) refresher).stop();
@@ -30366,6 +30367,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+    public void onEntitiesLoad(org.bukkit.event.world.EntitiesLoadEvent event) {
+        if (instances == null) return;
+        // Entity data can arrive after ChunkLoadEvent on Paper.
+        for (org.bukkit.entity.Entity entity : event.getEntities()) restorePersistentMob(entity);
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR)
+    public void onEntitiesUnload(org.bukkit.event.world.EntitiesUnloadEvent event) {
+        if (instances == null) return;
+        for (org.bukkit.entity.Entity entity : event.getEntities()) suspendPersistentMob(entity, "chunk_unload");
+    }
+
+    @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
+    public void onChunkUnload(org.bukkit.event.world.ChunkUnloadEvent event) {
+        if (instances == null) return;
+        // Remove visuals while their entities are still addressable, before chunk serialization.
+        for (org.bukkit.entity.Entity entity : event.getChunk().getEntities()) suspendPersistentMob(entity, "chunk_unload");
+    }
+
     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.LOWEST, ignoreCancelled = true)
     public void onEntityCombust(org.bukkit.event.entity.EntityCombustEvent e) {
         if (instances == null) return;
@@ -30996,7 +31017,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (result != null && result.instanceId() > 0
                 && skillService instanceof dev.helstera.ai.skill.SkillService skills) {
             try {
-                persistentMobSkillTreeStore().load(entity.getUniqueId(), mobId).ifPresent(snapshot ->
+                var suspended = suspendedMobSkillTrees.remove(entity.getUniqueId());
+                (suspended == null ? persistentMobSkillTreeStore().load(entity.getUniqueId(), mobId)
+                        : java.util.Optional.of(suspended)).ifPresent(snapshot ->
                         skills.restoreSkillTreeSnapshot(result.instanceId(), snapshot));
             } catch (java.io.IOException ex) {
                 getLogger().warning("[Persistent] SkillTree snapshot load failed for "
@@ -31004,6 +31027,26 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             }
         }
         return result != null && result.instanceId() > 0;
+    }
+
+    private final java.util.Map<java.util.UUID, dev.helstera.api.behavior.SkillTreeContext.Snapshot> suspendedMobSkillTrees =
+            new java.util.HashMap<>();
+
+    private void suspendPersistentMob(org.bukkit.entity.Entity entity, String cause) {
+        var instance = findInstance(entity);
+        if (instance == null || !(entity instanceof org.bukkit.entity.LivingEntity living)
+                || living.isDead() || !"PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) return;
+        if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
+            var snapshot = skills.snapshotOf(instance.instanceId()).orElseGet(() ->
+                    new dev.helstera.api.behavior.SkillTreeContext(null, java.util.List.of(), null).snapshot());
+            // Keep the live snapshot if disk saving fails, so reload cannot restore stale data.
+            suspendedMobSkillTrees.put(entity.getUniqueId(), snapshot);
+            try { persistentMobSkillTreeStore().save(entity.getUniqueId(), snapshot); }
+            catch (java.io.IOException ex) {
+                getLogger().warning("[Persistent] SkillTree unload save failed for " + entity.getUniqueId() + ": " + ex.getMessage());
+            }
+        }
+        instances().unloadPersistent(instance.instanceId(), cause);
     }
 
     private void runPersistentSkillTreeSelfTest() {
@@ -31225,6 +31268,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     private void removePersistentMobSkillTreeSnapshot(org.bukkit.entity.Entity entity) {
+        suspendedMobSkillTrees.remove(entity.getUniqueId());
         var instance = findInstance(entity);
         if (instance == null || !"PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) return;
         if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
@@ -31243,6 +31287,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private void savePersistentMobSkillTrees(dev.helstera.ai.skill.SkillService skills) {
         if (instances == null) return;
         var store = persistentMobSkillTreeStore();
+        suspendedMobSkillTrees.forEach((id, snapshot) -> {
+            try { store.save(id, snapshot); }
+            catch (java.io.IOException ex) {
+                getLogger().warning("[Persistent] Suspended SkillTree snapshot save failed for " + id + ": " + ex.getMessage());
+            }
+        });
         for (var instance : instances().allImpl()) {
             var entity = instance.baseEntity().orElse(null);
             if (!(entity instanceof org.bukkit.entity.LivingEntity living)
@@ -33347,10 +33397,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (visibility != null) ((PlayerVisibilityServiceImpl) visibility).handleQuit(e.getPlayer());
     }
 
-    @EventHandler
+    @EventHandler(priority = org.bukkit.event.EventPriority.MONITOR, ignoreCancelled = true)
     public void onWorldUnload(WorldUnloadEvent e) {
         // Scoped variables survive world unload; locations resolve the world lazily when it returns.
-        if (instances != null) ((InstanceManagerImpl) instances).despawnWorld(e.getWorld());
+        if (instances != null) {
+            for (var entity : e.getWorld().getEntities()) suspendPersistentMob(entity, "world_unload");
+            ((InstanceManagerImpl) instances).despawnWorld(e.getWorld());
+        }
     }
 
     // ------------------------------------------------------------------

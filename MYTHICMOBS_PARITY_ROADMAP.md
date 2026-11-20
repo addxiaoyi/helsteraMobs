@@ -1,6 +1,33 @@
 # MythicMobs Parity Roadmap
 
-Player death/respawn and immediate reconnect update (2026-11-20):
+Persistent mob unload/reload update (2026-11-20):
+`srv-paper-world-variable-life-20261120-r8` passes 256 direct/imported variable
+comparisons against public MM 5.7.2 on Paper 1.21.1-133. Actual managed persistent
+mobs retain UUID scalar/location registries and SkillTree state across a real
+chunk unload and two world unload/reloads. Temporary unload releases controllers
+without running removal skills or discarding entity variables. UUID snapshots
+retain the latest tree, including an empty tree; failed writes retain an in-memory
+snapshot for reload and a shutdown retry. Bound persistent mobs recreate unsaved
+visuals on reattachment, fixing display duplication: all four phases contain
+exactly 22 visual entities. Eight tree checks, six disk snapshots and four actual deaths
+verify restoration, cleared state staying absent and final cleanup. The independent
+validator rejects 28 altered-evidence controls. The new production artifact passes
+2,383 Maven tests and SpotBugs. Existing orphan displays from older builds are not
+migrated by this change. Non-persistent entity cleanup, other despawn modes,
+configured player death/respawn skill dispatch, asynchronous save/load races,
+broader catalogs and other versions remain open. Matrix totals stay
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin; full MythicMobs parity remains incomplete.
+
+Current-artifact regression refresh: full strict passes 471 probes (452 passed,
+19 expected rejections), native MM comparison passes 31 probes, player death/respawn
+passes 700 observations, player logout/restart 740, autosave/crash recovery 480,
+entity/world/global restart 432, and timed SkillTree restart 115. These use the same
+production JAR as the 256-observation world/chunk fixture. All 153 focused evidence
+mutation controls and two client-order tests pass. See the latest hashes and scoped
+claims in [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). No broad Matrix status is promoted by these regressions.
+
+Earlier player death/respawn and immediate reconnect update (2026-11-20):
 `srv-paper-player-life-20261120-r1` passes 700 observations on Paper 1.21.1-133
 against public MM 5.7.2. Two real clients die, wait four seconds, respawn and each
 reconnect four times directly from the socket-end callback. Values, types, locations,
@@ -12,13 +39,14 @@ controls. Observed server quit-to-join intervals are 20–53 ms; client reconnec
 initiation takes 0.018–0.050 ms. This establishes the observed local sessions,
 not every native asynchronous save/load race. Event writes use fixture Bukkit
 listeners, so configured death/respawn skill dispatch remains separately unverified.
-Production code/JAR is unchanged; the existing 2,377-test, SpotBugs and 471-probe
-strict results still apply to the same artifact. World/chunk lifecycle, interrupted
-writes, broader catalogs and versions remain open. Matrix totals remain
+That fixture left production code/JAR unchanged; its 2,377-test, SpotBugs and
+471-probe strict results refer to the earlier artifact. Persistent mob unload/reload
+now has the newer evidence above. Interrupted writes, broader catalogs and versions
+remain open. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin; full MythicMobs parity is incomplete.
 
-Player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
+Earlier player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
 passes 480 direct/imported observations across three actual Paper 1.21.1-133
 boots with public MM 5.7.2. Two clients stay online while the ordinary configured
 saving clocks write successive values. Three online checkpoints and two SIGKILL
@@ -32,12 +60,12 @@ passes all 31 existing probes on the current artifact.
 Player saving now defaults to 300 seconds and retries failed logout writes;
 invalid intervals fall back safely, and one failed player does not prevent peers
 from saving. Zero disables periodic saves while logout/shutdown saves remain.
-The current artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
+That earlier artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
 `srv-paper-player-autosave-strict-20261120-r1` passes all 471 checks
 (452 passed, 19 expected rejections, zero failed or incomplete). Recovery is proven
 for completed checkpoints; mid-write interruption, power loss, performance under
-large player counts, asynchronous save/load races and world/chunk lifecycle remain
-open. Death/respawn and immediate local reconnects now have the scoped evidence above.
+large player counts and asynchronous save/load races remain open. Persistent mob
+unload/reload now has separate evidence above. Death/respawn and immediate local reconnects now have the scoped evidence above.
 Full MythicMobs parity remains incomplete; matrix totals stay
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
@@ -63,8 +91,8 @@ all 31 probes on the same plugin artifact; both are separate from the custom
 740-observation player lifecycle report.
 Autosave and recovery from completed checkpoints now have the evidence above.
 Death/respawn and immediate local reconnects now have scoped evidence above.
-Asynchronous save/load races, chunk/world lifecycle, broader catalogs and other
-versions remain open.
+Asynchronous save/load races, non-persistent entity cleanup, broader catalogs and
+other versions remain open. Persistent mob unload/reload has the newer evidence above.
 Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
@@ -137,9 +165,16 @@ Immediate continuation after player death/respawn and reconnect validation:
    Periodic online saving and completed-checkpoint crash recovery now add 480 observations,
    three online checkpoints and two process kills. Real death/respawn and eight immediate
    local reconnects now add 700 observations and 41 evidence mutation controls.
-   Next compare world/chunk unload/reload and non-persistent entity cleanup against
-   native registry lifetime, then configured death/respawn skill dispatch and
-   asynchronous save/load races. Continue broader trigger/general placeholder families, player
+   Persistent mob chunk/world unload/reload now adds 256 comparisons, eight tree
+   checks, six snapshots, stable display counts and four actual deaths.
+   Next compare non-persistent entity cleanup and native despawn modes, then
+   configured death/respawn skill dispatch and asynchronous save/load races.
+   The despawn slice must exercise NORMAL, CHUNK, NPC, NEVER and PERSISTENT
+   through direct/imported real instances: accepted and cancelled chunk/world
+   unloads, scalar/location cleanup, base/visual entities, removal-skill counts,
+   restored UUIDs and death. Review the AI chunk-unload listener's cancellation
+   behavior before treating all modes as covered; the new persistent-mob handlers
+   already ignore cancelled events, while the existing AI path needs its own test. Continue broader trigger/general placeholder families, player
    faction providers, relationship lifecycle/restart, non-living caster combinations
    and remaining generic entity
    predicates (UUID/name/velocity/passengers), non-living placeholders, condition
@@ -160,7 +195,7 @@ Immediate continuation after player death/respawn and reconnect validation:
    preserved features and two external-plugin dependencies below, including
    cross-version Paper evidence and restart/lifecycle coverage.
 
-Audited against the matrix on 2026-11-19:
+Audited against the matrix on 2026-11-20:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
@@ -170,7 +205,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-player-autosave-strict-20261120-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,377 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-world-variable-strict-20261120-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,383 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

@@ -17,9 +17,16 @@ function connect(name, attempt) {
   event({event:'connect', name, attempt});
   const bot = mineflayer.createBot({host:'127.0.0.1', port:25731, username:name, version:'1.21.1', auth:'offline', respawn:false});
   active.set(name, bot);
-  let requested, spawned = false;
+  let requested, pendingControl, spawned = false;
+  function consumeControl() {
+    // Chat can arrive before Mineflayer has emitted its initial spawn callback.
+    if (!spawned || !pendingControl || requested || finished) return;
+    requested = pendingControl.action;
+    event({event:'control', name, attempt, ...pendingControl}); bot.quit();
+  }
   bot.on('spawn', () => {
     event({event:spawned ? 'respawned' : 'join', name, attempt, uuid:bot.player.uuid}); spawned = true;
+    consumeControl();
   });
   bot.on('death', () => {
     event({event:'death', name, attempt});
@@ -27,8 +34,8 @@ function connect(name, attempt) {
   });
   bot.on('messagestr', message => {
     const match = /^PLAYER_LIFE_CONTROL (reconnect|done) (\w+)$/.exec(message);
-    if (!match || requested) return;
-    requested = match[1]; event({event:'control', name, attempt, action:requested, phase:match[2]}); bot.quit();
+    if (!match || pendingControl || requested) return;
+    pendingControl = {action:match[1], phase:match[2]}; consumeControl();
   });
   bot.on('end', () => {
     event({event:'end', name, attempt});

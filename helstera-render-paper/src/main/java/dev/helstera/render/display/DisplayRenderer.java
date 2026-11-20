@@ -91,6 +91,9 @@ public final class DisplayRenderer implements InstanceRenderer {
         Visuals v = new Visuals();
         World world = location.getWorld();
         ModelDefinitionImpl model = inst.modelImpl();
+        // Persistent base entities recreate their visuals when reattached after unloading.
+        boolean persistVisuals = options.persistent() && !(inst.baseEntity().isPresent()
+                && "PERSISTENT".equalsIgnoreCase(options.despawnMode()));
 
         // 隐形载体（位置锚点 + 可攻击碰撞载体）
         // 仅在“纯展示”模型（未绑定真实实体）时创建；绑定实体时以该实体为锚点，避免多出冗余实体。
@@ -100,7 +103,7 @@ public final class DisplayRenderer implements InstanceRenderer {
                 as.setMarker(false); // 非 marker：保留可攻击的实体碰撞盒（整体碰撞盒方案）
                 as.setSmall(true);
                 as.setGravity(false);
-                as.setPersistent(options.persistent());
+                as.setPersistent(persistVisuals);
                 as.setCustomNameVisible(false);
                 as.setCanPickupItems(false);
                 as.getPersistentDataContainer().set(key(), PersistentDataType.INTEGER, inst.instanceId());
@@ -130,7 +133,7 @@ public final class DisplayRenderer implements InstanceRenderer {
                 if (VersionAdapter.canSetShadowRadius()) {
                     d.setShadowRadius(0f);
                 }
-                d.setPersistent(options.persistent());
+                d.setPersistent(persistVisuals);
                 d.setGlowing(options.glowing());
                 d.setBillboard(Display.Billboard.FIXED);
                 d.getPersistentDataContainer().set(key(), PersistentDataType.INTEGER, inst.instanceId());
@@ -148,7 +151,7 @@ public final class DisplayRenderer implements InstanceRenderer {
                 i.setInteractionWidth((float) Math.max(0.1, hb.width() * s));
                 i.setInteractionHeight((float) Math.max(0.1, hb.height() * s));
                 i.setResponsive(true);
-                i.setPersistent(options.persistent());
+                i.setPersistent(persistVisuals);
                 i.getPersistentDataContainer().set(key(), PersistentDataType.INTEGER, inst.instanceId());
             });
             v.hitbox = interaction;
@@ -161,7 +164,7 @@ public final class DisplayRenderer implements InstanceRenderer {
             TextDisplay tag = world.spawn(location, TextDisplay.class, t -> {
                 t.text(LegacyText.parse(options.displayName()));
                 t.setBillboard(Display.Billboard.CENTER);
-                t.setPersistent(options.persistent());
+                t.setPersistent(persistVisuals);
                 t.setShadowed(true);
             });
             v.nameTag = tag;

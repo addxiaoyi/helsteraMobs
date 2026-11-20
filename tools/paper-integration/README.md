@@ -1,6 +1,63 @@
 # Isolated Paper Integration Server
 
-Player death/respawn and immediate reconnect update (2026-11-20):
+Persistent mob unload/reload update (2026-11-20):
+`srv-paper-world-variable-life-20261120-r8` passes 256 direct/imported variable
+comparisons against public MM 5.7.2 on Paper 1.21.1-133. Actual managed persistent
+mobs retain UUID scalar/location registries and SkillTree state across a real
+chunk unload and two world unload/reloads. Temporary unload releases controllers
+without running removal skills or discarding entity variables. UUID snapshots
+retain the latest tree, including an empty tree; failed writes retain an in-memory
+snapshot for reload and a shutdown retry. Bound persistent mobs recreate unsaved
+visuals on reattachment, fixing display duplication: all four phases contain
+exactly 22 visual entities. Eight tree checks, six disk snapshots and four actual deaths
+verify restoration, cleared state staying absent and final cleanup. The independent
+validator rejects 28 altered-evidence controls. The new production artifact passes
+2,383 Maven tests and SpotBugs. Existing orphan displays from older builds are not
+migrated by this change. Non-persistent entity cleanup, other despawn modes,
+configured player death/respawn skill dispatch, asynchronous save/load races,
+broader catalogs and other versions remain open. Matrix totals stay
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin; full MythicMobs parity remains incomplete.
+
+Player lifecycle client timing: control chat can arrive before Mineflayer emits
+its initial spawn callback. The client now queues that control until it has recorded
+the actual join, then quits once. Reconnection still starts directly inside the
+socket-end callback without a timer or disk-save wait. Run
+`node --test tools/paper-integration/test-player-life-client.js` for early/ordinary
+control delivery, duplicate control, immediate reconnect and real-death delay checks.
+The independent evidence validator retains its exact session-order requirements.
+
+The scoped-registry restart probe loads all destination chunks before spawning and
+verifies eight live UUIDs after a settling tick window before allowing shutdown.
+Each later boot must restore those exact entities; absent entities fail the run.
+
+Run the world/chunk comparison after building the production JAR (choose a fresh
+revision and an existing disposable Paper cache directory):
+
+```bash
+python3 tools/paper-integration/run-world-variable-fixture.py \
+  --revision r9 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/validate-world-variable-life.py \
+  tools/paper-integration/reports/paper-1.21.1-world-variable-life-20261120-r8.json
+python3 tools/paper-integration/test-world-variable-evidence.py \
+  tools/paper-integration/reports/paper-1.21.1-world-variable-life-20261120-r8.json
+```
+
+The runner requires the pinned Paper/MM artifacts and `requirements-player-variables.txt`.
+It disables unrelated self-tests, builds the separate probe, pins artifact/source
+hashes, and archives redacted logs plus six SkillTree and final scoped snapshots.
+Its custom comparison schema is indexed in [Paper evidence](STARTUP_EVIDENCE.md);
+it is not a standard strict release report. Serialize Paper runs on port 25731.
+
+Current-artifact regression refresh: full strict passes 471 probes (452 passed,
+19 expected rejections), native MM comparison passes 31 probes, player death/respawn
+passes 700 observations, player logout/restart 740, autosave/crash recovery 480,
+entity/world/global restart 432, and timed SkillTree restart 115. These use the same
+production JAR as the 256-observation world/chunk fixture. All 153 focused evidence
+mutation controls and two client-order tests pass. See the latest hashes and scoped
+claims in [Paper evidence](STARTUP_EVIDENCE.md). No broad Matrix status is promoted by these regressions.
+
+Earlier player death/respawn and immediate reconnect update (2026-11-20):
 `srv-paper-player-life-20261120-r1` passes 700 observations on Paper 1.21.1-133
 against public MM 5.7.2. Two real clients die, wait four seconds, respawn and each
 reconnect four times directly from the socket-end callback. Values, types, locations,
@@ -12,13 +69,14 @@ controls. Observed server quit-to-join intervals are 20–53 ms; client reconnec
 initiation takes 0.018–0.050 ms. This establishes the observed local sessions,
 not every native asynchronous save/load race. Event writes use fixture Bukkit
 listeners, so configured death/respawn skill dispatch remains separately unverified.
-Production code/JAR is unchanged; the existing 2,377-test, SpotBugs and 471-probe
-strict results still apply to the same artifact. World/chunk lifecycle, interrupted
-writes, broader catalogs and versions remain open. Matrix totals remain
+That fixture left production code/JAR unchanged; its 2,377-test, SpotBugs and
+471-probe strict results refer to the earlier artifact. Persistent mob unload/reload
+now has the newer evidence above. Interrupted writes, broader catalogs and versions
+remain open. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin; full MythicMobs parity is incomplete.
 
-Player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
+Earlier player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
 passes 480 direct/imported observations across three actual Paper 1.21.1-133
 boots with public MM 5.7.2. Two clients stay online while the ordinary configured
 saving clocks write successive values. Three online checkpoints and two SIGKILL
@@ -32,12 +90,12 @@ passes all 31 existing probes on the current artifact.
 Player saving now defaults to 300 seconds and retries failed logout writes;
 invalid intervals fall back safely, and one failed player does not prevent peers
 from saving. Zero disables periodic saves while logout/shutdown saves remain.
-The current artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
+That earlier artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
 `srv-paper-player-autosave-strict-20261120-r1` passes all 471 checks
 (452 passed, 19 expected rejections, zero failed or incomplete). Recovery is proven
 for completed checkpoints; mid-write interruption, power loss, performance under
-large player counts, asynchronous save/load races and world/chunk lifecycle remain
-open. Death/respawn and immediate local reconnects now have the scoped evidence above.
+large player counts and asynchronous save/load races remain open. Persistent mob
+unload/reload now has separate evidence above. Death/respawn and immediate local reconnects now have the scoped evidence above.
 Full MythicMobs parity remains incomplete; matrix totals stay
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
@@ -107,8 +165,8 @@ all 31 probes on the same plugin artifact; both are separate from the custom
 740-observation player lifecycle report.
 Autosave and recovery from completed checkpoints now have the evidence above.
 Death/respawn and immediate local reconnects now have scoped evidence above.
-Asynchronous save/load races, chunk/world lifecycle, broader catalogs and other
-versions remain open.
+Asynchronous save/load races, non-persistent entity cleanup, broader catalogs and
+other versions remain open. Persistent mob unload/reload has the newer evidence above.
 Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
@@ -253,7 +311,7 @@ remain open.
 
 The current strict release catalog has 471 probes (452 passed, 19 expected
 rejections), including 66 numeric/Potion runtime, 41 timing, and 47 Potion
-lifecycle assertions. The current JAR passes 2,377 Maven tests and SpotBugs.
+lifecycle assertions. The current JAR passes 2,383 Maven tests and SpotBugs.
 The earlier lifecycle milestone JAR passes focused
 `srv-paper-potion-mechanic-exploratory-20261117-r18` with 144 assertions:
 28 runtime, 22 timing, 47 imported lifecycle, and 47 native MM 5.7.2 lifecycle
@@ -357,7 +415,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-player-autosave-strict-20261120-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`. See the [strict report](reports/paper-1.21.1-player-autosave-strict-20261120-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,377 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-world-variable-strict-20261120-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`. See the [strict report](reports/paper-1.21.1-world-variable-strict-20261120-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,383 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player

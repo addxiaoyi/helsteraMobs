@@ -134,6 +134,20 @@ public final class InstanceManagerImpl implements InstanceManager {
         return true;
     }
 
+    /** Release live rendering/controllers while the persistent base entity is unloaded. */
+    public boolean unloadPersistent(int instanceId, String cause) {
+        if (!"chunk_unload".equals(cause) && !"world_unload".equals(cause))
+            throw new IllegalArgumentException("Unknown unload cause: " + cause);
+        ModelInstanceImpl inst = instances.get(instanceId);
+        if (inst == null || !"PERSISTENT".equalsIgnoreCase(inst.options().despawnMode())) return false;
+        if (!instances.remove(instanceId, inst)) return false;
+        ManagedMobOptions.clear(inst.entity());
+        inst.despawn();
+        logRemoval(inst, cause);
+        bus.post(new ModelRemoveEvent(inst, "persistent_" + cause));
+        return true;
+    }
+
     @Override
     public int despawnAll(String modelId) {
         int n = 0;

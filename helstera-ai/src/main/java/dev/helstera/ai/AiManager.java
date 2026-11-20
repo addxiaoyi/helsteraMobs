@@ -449,13 +449,19 @@ public final class AiManager implements Listener {
     }
 
     public void detach(int instanceId) {
+        detach(instanceId, false);
+    }
+
+    private void detach(int instanceId, boolean unloading) {
         var gone = controlled.remove(instanceId);
         // 先取实体 UUID 再删档案：反了就得遍历全量实例才能找到那一个
         if (gone != null) {
             gone.boundEntityId().ifPresent(factions::unbindInstance);
             gone.baseEntity().ifPresent(entity -> {
-                dev.helstera.api.behavior.VariableLocations.clearEntity(entity);
-                dev.helstera.ai.skill.SkillExtras.forgetEntity(entity);
+                if (!unloading) {
+                    dev.helstera.api.behavior.VariableLocations.clearEntity(entity);
+                    dev.helstera.ai.skill.SkillExtras.forgetEntity(entity);
+                }
             });
         }
         var navSvc = nav;
@@ -516,7 +522,10 @@ public final class AiManager implements Listener {
         // after SkillTriggers has observed ModelRemoveEvent, preserving on-remove
         // skills while preventing stale controllers and per-instance state.
         modelRemoveListener = e -> {
-            if (e != null && e.instance() != null) detach(e.instance().instanceId());
+            if (e != null && e.instance() != null) {
+                if (e.unloading()) detach(e.instance().instanceId(), true);
+                else detach(e.instance().instanceId());
+            }
         };
         bus.register(ModelRemoveEvent.class, modelRemoveListener);
         // Boss 血条挂条：订阅自有事件总线，理由见 onModelSpawn 的注释。

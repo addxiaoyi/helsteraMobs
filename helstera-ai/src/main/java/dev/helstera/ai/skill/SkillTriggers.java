@@ -213,7 +213,7 @@ public final class SkillTriggers implements Listener {
                 };
         java.util.function.Consumer<ModelRemoveEvent> onRemove =
                 e -> {
-                    dispatch(SkillTrigger.REMOVE, e.instance(), null, e.instance().location());
+                    if (!e.unloading()) dispatch(SkillTrigger.REMOVE, e.instance(), null, e.instance().location());
                     e.instance().boundEntityId().ifPresent(id -> {
                         shearDispatchTick.remove(id);
                         potionEndDispatchTick.keySet().removeIf(key -> key.startsWith(id + "|"));

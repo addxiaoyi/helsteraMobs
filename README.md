@@ -1,4 +1,31 @@
-Player death/respawn and immediate reconnect update (2026-11-20):
+Persistent mob unload/reload update (2026-11-20):
+`srv-paper-world-variable-life-20261120-r8` passes 256 direct/imported variable
+comparisons against public MM 5.7.2 on Paper 1.21.1-133. Actual managed persistent
+mobs retain UUID scalar/location registries and SkillTree state across a real
+chunk unload and two world unload/reloads. Temporary unload releases controllers
+without running removal skills or discarding entity variables. UUID snapshots
+retain the latest tree, including an empty tree; failed writes retain an in-memory
+snapshot for reload and a shutdown retry. Bound persistent mobs recreate unsaved
+visuals on reattachment, fixing display duplication: all four phases contain
+exactly 22 visual entities. Eight tree checks, six disk snapshots and four actual deaths
+verify restoration, cleared state staying absent and final cleanup. The independent
+validator rejects 28 altered-evidence controls. The new production artifact passes
+2,383 Maven tests and SpotBugs. Existing orphan displays from older builds are not
+migrated by this change. Non-persistent entity cleanup, other despawn modes,
+configured player death/respawn skill dispatch, asynchronous save/load races,
+broader catalogs and other versions remain open. Matrix totals stay
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin; full MythicMobs parity remains incomplete.
+
+Current-artifact regression refresh: full strict passes 471 probes (452 passed,
+19 expected rejections), native MM comparison passes 31 probes, player death/respawn
+passes 700 observations, player logout/restart 740, autosave/crash recovery 480,
+entity/world/global restart 432, and timed SkillTree restart 115. These use the same
+production JAR as the 256-observation world/chunk fixture. All 153 focused evidence
+mutation controls and two client-order tests pass. See the latest hashes and scoped
+claims in [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). No broad Matrix status is promoted by these regressions.
+
+Earlier player death/respawn and immediate reconnect update (2026-11-20):
 `srv-paper-player-life-20261120-r1` passes 700 observations on Paper 1.21.1-133
 against public MM 5.7.2. Two real clients die, wait four seconds, respawn and each
 reconnect four times directly from the socket-end callback. Values, types, locations,
@@ -10,13 +37,14 @@ controls. Observed server quit-to-join intervals are 20–53 ms; client reconnec
 initiation takes 0.018–0.050 ms. This establishes the observed local sessions,
 not every native asynchronous save/load race. Event writes use fixture Bukkit
 listeners, so configured death/respawn skill dispatch remains separately unverified.
-Production code/JAR is unchanged; the existing 2,377-test, SpotBugs and 471-probe
-strict results still apply to the same artifact. World/chunk lifecycle, interrupted
-writes, broader catalogs and versions remain open. Matrix totals remain
+That fixture left production code/JAR unchanged; its 2,377-test, SpotBugs and
+471-probe strict results refer to the earlier artifact. Persistent mob unload/reload
+now has the newer evidence above. Interrupted writes, broader catalogs and versions
+remain open. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin; full MythicMobs parity is incomplete.
 
-Player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
+Earlier player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
 passes 480 direct/imported observations across three actual Paper 1.21.1-133
 boots with public MM 5.7.2. Two clients stay online while the ordinary configured
 saving clocks write successive values. Three online checkpoints and two SIGKILL
@@ -30,12 +58,12 @@ passes all 31 existing probes on the current artifact.
 Player saving now defaults to 300 seconds and retries failed logout writes;
 invalid intervals fall back safely, and one failed player does not prevent peers
 from saving. Zero disables periodic saves while logout/shutdown saves remain.
-The current artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
+That earlier artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
 `srv-paper-player-autosave-strict-20261120-r1` passes all 471 checks
 (452 passed, 19 expected rejections, zero failed or incomplete). Recovery is proven
 for completed checkpoints; mid-write interruption, power loss, performance under
-large player counts, asynchronous save/load races and world/chunk lifecycle remain
-open. Death/respawn and immediate local reconnects now have the scoped evidence above.
+large player counts and asynchronous save/load races remain open. Persistent mob
+unload/reload now has separate evidence above. Death/respawn and immediate local reconnects now have the scoped evidence above.
 Full MythicMobs parity remains incomplete; matrix totals stay
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
@@ -61,14 +89,14 @@ all 31 probes on the same plugin artifact; both are separate from the custom
 740-observation player lifecycle report.
 Autosave and recovery from completed checkpoints now have the evidence above.
 Death/respawn and immediate local reconnects now have scoped evidence above.
-Asynchronous save/load races, chunk/world lifecycle, broader catalogs and other
-versions remain open.
+Asynchronous save/load races, non-persistent entity cleanup, broader catalogs and
+other versions remain open. Persistent mob unload/reload has the newer evidence above.
 Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](./docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
 
-Latest full-catalog strict fixture `srv-paper-player-autosave-strict-20261120-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-player-autosave-strict-20261120-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,377 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-world-variable-strict-20261120-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-world-variable-strict-20261120-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,383 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Timed SkillTree restart update (2026-11-19): `srv-paper-skilltree-expiry-restart-20261119-r1`
 passes 115 observations across three real Paper 1.21.1-133 boots. Two persistent
@@ -1784,7 +1812,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-player-autosave-strict-20261120-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-world-variable-strict-20261120-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -1795,12 +1823,12 @@ The machine-readable declaration is [tools/paper-integration/version-matrix.json
 
 This is a partial parity release. The matrix currently has `33`
 `mapped-unverified` rows (counted from the status column in
-`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-19). The ordered work packages,
+`MYTHICMOBS_PARITY_MATRIX.md` on 2026-11-20). The ordered work packages,
 all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-player-autosave-strict-20261120-r1`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,377 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-world-variable-strict-20261120-r1`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, while verifying imported variable-condition composition and all three damage-trigger/tag/cancellation checks on plugin SHA-256 `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`. The strict catalog remains separate from focused native MM 5.7.2 comparisons. See the [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md) and [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md). This artifact passes 2,383 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
 
@@ -1809,7 +1837,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 758 cited IDs; 640 report files; 27 directories without reports; 91 missing directories; 385 archived release reports. The
+   Current fixture inventory: 765 cited IDs; 643 report files; 31 directories without reports; 91 missing directories; 387 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

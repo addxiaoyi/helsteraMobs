@@ -16,7 +16,19 @@ public final class VariablePersistenceProbe extends JavaPlugin {
     @Override public void onEnable() {
         Bukkit.getScheduler().runTaskLater(this, () -> {
             try {
-                if (!getConfig().getString("stage", "write").equals("write")) {
+                if (getConfig().getString("stage", "write").equals("write")) {
+                    // Paper may finish loading entity data after a fresh block chunk is available.
+                    // Load every destination before spawning, including the second End chunk.
+                    for (boolean imported : List.of(false, true)) {
+                        Location base = Bukkit.getWorlds().getFirst().getSpawnLocation().clone().add(imported ? 118 : 110, 20, 0);
+                        Location cross = base.clone();
+                        cross.setWorld(Bukkit.getWorlds().stream().filter(w -> w != base.getWorld()).findFirst().orElseThrow());
+                        for (Location point : List.of(base, base.clone().add(0, 0, 4), base.clone().add(4, 0, 0), cross)) {
+                            var chunk = point.getChunk();
+                            chunk.load(); chunk.setForceLoaded(true); chunk.getEntities();
+                        }
+                    }
+                } else {
                     var ids = YamlConfiguration.loadConfiguration(getDataFolder().toPath().resolve("identities.yml").toFile());
                     for (String id : ids.getConfigurationSection("chunks").getKeys(false)) {
                         String path = "chunks." + id;
@@ -146,8 +158,19 @@ public final class VariablePersistenceProbe extends JavaPlugin {
             }
         }
         ids.save(file);
-        getLogger().info("VARIABLE_PERSIST_SUMMARY|stage=" + stage + "|observations=" + rows
-                + "|mode=" + (observeOnly ? "native-observation" : "comparison") + "|passed=true");
+        int observations = rows;
+        Bukkit.getScheduler().runTaskLater(this, () -> {
+            try {
+                for (var harness : harnesses) for (var cow : harness.mobs) {
+                    if (!cow.isValid() || cow.isDead() || Bukkit.getEntity(cow.getUniqueId()) != cow)
+                        throw new IllegalStateException("Persisted test entity not ready: " + cow.getUniqueId());
+                }
+                getLogger().info("VARIABLE_PERSIST_SUMMARY|stage=" + stage + "|observations=" + observations
+                        + "|mode=" + (observeOnly ? "native-observation" : "comparison") + "|passed=true");
+            } catch (Throwable e) {
+                getLogger().severe("VARIABLE_PERSIST_SUMMARY|passed=false|error=" + e); e.printStackTrace();
+            }
+        }, 20);
     }
     private void seed(VariablePlaceholderAudit.Harness h, String variable, String kind, Object meta, Object ctx) throws Exception {
         if (kind.equals("Location")) {

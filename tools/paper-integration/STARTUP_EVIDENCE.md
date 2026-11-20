@@ -1,6 +1,120 @@
 # Paper Startup Evidence
 
-Player death/respawn and immediate reconnect update (2026-11-20):
+Latest full-catalog fixture `srv-paper-world-variable-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`. [Strict report](reports/paper-1.21.1-world-variable-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-world-variable-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-world-variable-strict-20261120-r1.client-logs.zip) This artifact passes 2,383 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+
+Persistent mob unload/reload update (2026-11-20):
+`srv-paper-world-variable-life-20261120-r8` passes 256 direct/imported variable
+comparisons against public MM 5.7.2 on Paper 1.21.1-133. Actual managed persistent
+mobs retain UUID scalar/location registries and SkillTree state across a real
+chunk unload and two world unload/reloads. Temporary unload releases controllers
+without running removal skills or discarding entity variables. UUID snapshots
+retain the latest tree, including an empty tree; failed writes retain an in-memory
+snapshot for reload and a shutdown retry. Bound persistent mobs recreate unsaved
+visuals on reattachment, fixing display duplication: all four phases contain
+exactly 22 visual entities. Eight tree checks, six disk snapshots and four actual deaths
+verify restoration, cleared state staying absent and final cleanup. The independent
+validator rejects 28 altered-evidence controls. The new production artifact passes
+2,383 Maven tests and SpotBugs. Existing orphan displays from older builds are not
+migrated by this change. Non-persistent entity cleanup, other despawn modes,
+configured player death/respawn skill dispatch, asynchronous save/load races,
+broader catalogs and other versions remain open. Matrix totals stay
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin; full MythicMobs parity remains incomplete.
+
+Persistent mob world/chunk comparison:
+[report](reports/paper-1.21.1-world-variable-life-20261120-r8.json), SHA-256
+`3ea39be0dc5044d90204ef0ba8608adf3e9225c05238cfcbc6662d833f825a58`;
+[redacted log and snapshots](reports/paper-1.21.1-world-variable-life-20261120-r8-logs.zip),
+SHA-256 `8912f52f571bd769659e0ddcc87b8e76f47587b711a695ab25ae604351b54e58`.
+Plugin SHA-256 `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`.
+This custom report contains 256 comparisons, eight tree checks, four deaths and
+six disk snapshots; it remains separate from the 471-probe full release gate.
+All 28 mutation controls pass, including altered UUIDs and display counts.
+The world unload path is proven by the real world event, absent Bukkit world/entities
+and subsequent entity-load events; Paper need not emit EntitiesUnloadEvent for this
+world path. The explicit chunk path additionally requires four unload events.
+Native `@origin` is aligned with the runtime target location. Other despawn modes,
+cancelled-unload/native trigger ordering and old orphan-display migration remain open.
+
+Current-artifact release regressions: full strict
+`srv-paper-world-variable-strict-20261120-r1` passes 471 probes (452 passed and
+19 expected rejections), and native comparison
+`srv-paper-random-spawn-replace-20261120-r74` passes all 31 existing probes.
+Both use plugin SHA-256 `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`.
+Strict [report](reports/paper-1.21.1-world-variable-strict-20261120-r1.json)
+SHA-256 `b4d9c4d4a559e88c2765932cf15e544d93981ade623a5940d7c361a4f2b98c6c`;
+[server log](reports/paper-1.21.1-world-variable-strict-20261120-r1.log.gz)
+SHA-256 `36a6275a515841a558bcc730223425a3ffedd06a437ae2ab58acc24c055bc418`;
+[client logs](reports/paper-1.21.1-world-variable-strict-20261120-r1.client-logs.zip)
+SHA-256 `4025e044e63db55d600016e3ef8d5849914fedd299dca413b594750ff75cfd27`.
+Native [report](reports/paper-1.21.1-random-spawn-replace-20261120-r74.json)
+SHA-256 `bf44d76e5ed48a6098096cedaa6c363383faaafefd2dd7ae565e3f02db924778`;
+[log](reports/paper-1.21.1-random-spawn-replace-20261120-r74.log.gz)
+SHA-256 `35c914fa6bc8f81d402e25711e9118b176373088f2e3ca427be23e92facb73b2`.
+These standard reports are in [release-evidence.json](release-evidence.json).
+
+Current-artifact player death/respawn regression:
+`srv-paper-player-life-20261120-r3` passes 700 observations and all 41 evidence
+mutation controls. [Report](reports/paper-1.21.1-player-life-20261120-r3.json) SHA-256
+`149e3a29075ede98600a0160205ca0c68b591bd4272864fb9aaa90fea7a0128e`;
+[redacted logs and final disk files](reports/paper-1.21.1-player-life-20261120-r3-logs.zip) SHA-256
+`bc4590ca366bdc85fbfa2677563b25908f32c00cac85ed1cea2106c6c6fc75bf`.
+The client queues early control chat until its actual spawn callback and still
+reconnects directly from socket-end. Two Node tests reproduce early/ordinary control
+arrival and verify duplicate control handling, the death delay and timer-free reconnect.
+The unchanged independent validator requires all 47 client events in order.
+Server quit-to-join intervals are 27–61 ms; client reconnect
+initiation is 0.025–0.130 ms. These remain local session evidence,
+not complete asynchronous race or configured trigger-dispatch parity.
+The rejected r2 run reached 700 server observations but failed the client event-order
+requirement; it is not cited as passing evidence.
+
+Current-artifact autosave regression:
+`srv-paper-player-autosave-20261120-r4` passes 480 observations, three online
+checkpoints and two SIGKILL recoveries over three boots; all 29 evidence mutation
+controls pass. [Report](reports/paper-1.21.1-player-autosave-20261120-r4.json) SHA-256
+`dec9027a84ed1f0e3b22a608571d5dbfc864c44eab3ef7ae9e07da161563558a`;
+[redacted logs and checkpoint files](reports/paper-1.21.1-player-autosave-20261120-r4-logs.zip) SHA-256
+`254eba49c342554a912ca6a14763e1c0c646557d84585e21525bfc1d8a914314`.
+This verifies completed periodic checkpoints, including changed generations,
+original deadlines and cleared data; it does not establish mid-write/power-loss recovery.
+The interrupted r3 run has no complete report and is not release evidence.
+
+Current-artifact player registry restart regression:
+`srv-paper-player-variables-comparison-20261120-r2` passes all 740 observations and 31
+evidence mutation controls across three boots. The fixture verifies logout/login,
+offline expiry, per-player isolation, explicit deletion and online shutdown writes.
+[Report](reports/paper-1.21.1-player-variables-20261120-r2.json) SHA-256
+`df13b85fe43c5e1a2c92d3c38e5c7c979a5d534aee42ca77b5d1b21a664c9d82`;
+[redacted logs and snapshots](reports/paper-1.21.1-player-variables-20261120-r2-logs.zip) SHA-256
+`e525f6a1b40c226a3ea1e8cab9165ddc532ef0573811426b3342e9e6ed339fad`.
+
+Current-artifact entity/world/global restart regression:
+`srv-paper-variable-persistence-comparison-20261120-r2` passes 432 direct/imported
+observations across three real boots, eight stable UUIDs and three shutdown snapshots;
+all 12 evidence mutation controls pass. [Report](reports/paper-1.21.1-variable-persistence-20261120-r2.json) SHA-256
+`4309136d0e8302d8f0c2f87cd5f308382434e6e2c50f9f6ba619a3d87a444665`;
+[redacted logs and snapshots](reports/paper-1.21.1-variable-persistence-20261120-r2-logs.zip) SHA-256
+`68c135c8276662241d1cb2ecc3d752b1eaed8621c6759cb614ba3683f8d0c449`.
+The fixture now loads every spawn destination, including both End chunks, before
+creating native entities and waits one second to verify all eight live UUIDs before
+publishing each passing phase. A prior r1 attempt failed when one native test cow
+was absent after restart; it is not passing evidence. No replacement entities,
+patched native callbacks or relaxed identity/variable assertions are used.
+
+Current-artifact timed SkillTree restart regression:
+`srv-paper-skilltree-expiry-restart-20261120-r1` passes 115 observations over three
+real boots, four shutdown snapshots and all 12 evidence rejection controls. Original
+absolute deadlines, parent expiry, branch/collection restoration and removal of the
+dead entity snapshot all pass.
+[Report](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r1.json) SHA-256
+`af131550fb21682a5d2740a4435415941f11e31bb9f256c7dbb02cd4f2f087a8`;
+[redacted boot logs and snapshots](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r1-logs.zip)
+SHA-256 `d4dfb2ee274ba849dd59bb355e0d5d899b731be6924548b932a90bcc58366624`.
+This custom restart report is separate from the standard release schema and proves
+only the documented SkillTree persistence extension.
+
+Earlier player death/respawn and immediate reconnect update (2026-11-20):
 `srv-paper-player-life-20261120-r1` passes 700 observations on Paper 1.21.1-133
 against public MM 5.7.2. Two real clients die, wait four seconds, respawn and each
 reconnect four times directly from the socket-end callback. Values, types, locations,
@@ -12,13 +126,14 @@ controls. Observed server quit-to-join intervals are 20–53 ms; client reconnec
 initiation takes 0.018–0.050 ms. This establishes the observed local sessions,
 not every native asynchronous save/load race. Event writes use fixture Bukkit
 listeners, so configured death/respawn skill dispatch remains separately unverified.
-Production code/JAR is unchanged; the existing 2,377-test, SpotBugs and 471-probe
-strict results still apply to the same artifact. World/chunk lifecycle, interrupted
-writes, broader catalogs and versions remain open. Matrix totals remain
+That fixture left production code/JAR unchanged; its 2,377-test, SpotBugs and
+471-probe strict results refer to the earlier artifact. Persistent mob unload/reload
+now has the newer evidence above. Interrupted writes, broader catalogs and versions
+remain open. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin; full MythicMobs parity is incomplete.
 
-Player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
+Earlier player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
 passes 480 direct/imported observations across three actual Paper 1.21.1-133
 boots with public MM 5.7.2. Two clients stay online while the ordinary configured
 saving clocks write successive values. Three online checkpoints and two SIGKILL
@@ -32,12 +147,12 @@ passes all 31 existing probes on the current artifact.
 Player saving now defaults to 300 seconds and retries failed logout writes;
 invalid intervals fall back safely, and one failed player does not prevent peers
 from saving. Zero disables periodic saves while logout/shutdown saves remain.
-The current artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
+That earlier artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
 `srv-paper-player-autosave-strict-20261120-r1` passes all 471 checks
 (452 passed, 19 expected rejections, zero failed or incomplete). Recovery is proven
 for completed checkpoints; mid-write interruption, power loss, performance under
-large player counts, asynchronous save/load races and world/chunk lifecycle remain
-open. Death/respawn and immediate local reconnects now have the scoped evidence above.
+large player counts and asynchronous save/load races remain open. Persistent mob
+unload/reload now has separate evidence above. Death/respawn and immediate local reconnects now have the scoped evidence above.
 Full MythicMobs parity remains incomplete; matrix totals stay
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
@@ -138,14 +253,12 @@ all 31 probes on the same plugin artifact; both are separate from the custom
 740-observation player lifecycle report.
 Autosave and recovery from completed checkpoints now have the evidence above.
 Death/respawn and immediate local reconnects now have scoped evidence above.
-Asynchronous save/load races, chunk/world lifecycle, broader catalogs and other
-versions remain open.
+Asynchronous save/load races, non-persistent entity cleanup, broader catalogs and
+other versions remain open. Persistent mob unload/reload has the newer evidence above.
 Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
-
-Latest full-catalog fixture `srv-paper-player-autosave-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`. [Strict report](reports/paper-1.21.1-player-autosave-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-player-autosave-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-player-autosave-strict-20261120-r1.client-logs.zip) This artifact passes 2,377 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with

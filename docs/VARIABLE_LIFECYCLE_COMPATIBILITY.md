@@ -214,12 +214,45 @@ is race-free. Native and runtime autosave are configured to 300 seconds; the cli
 scenario completes in 5.38 seconds. See the report, source hashes and redacted logs
 in [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
 
+Persistent managed mobs now suspend their runtime instances before an accepted
+chunk/world unload. Controllers and queued casts are released, but UUID scalar and
+location registries survive. Temporary unload does not dispatch the removal skill.
+Event-bus consumers can identify this through `ModelRemoveEvent.unloading()`;
+the causes are `persistent_chunk_unload` and `persistent_world_unload`.
+Entity-load handling reattaches the same base UUID even when Paper loads entity
+data after ChunkLoadEvent. SkillTree state is captured to the UUID snapshot before
+suspension; an in-memory copy takes precedence on reattachment, including an empty
+tree after explicit clearing. A failed disk write leaves that copy available and
+shutdown retries it. Ordinary permanent removal still discards entity variables.
+Cancelled chunk/world unload events are ignored by the production handlers.
+
+Visual entities belonging to a bound PERSISTENT mob are no longer saved with the
+chunk; reattachment recreates them. This prevents a saved set of visuals and a new
+set accumulating together. It does not clean up orphan visuals created by older
+builds, or change pure display/other despawn modes.
+
+The focused world fixture uses actual runtime managed instances and separate native
+ActiveMobs in a disposable world. Four UUIDs and the world UUID survive one actual
+chunk unload and two world unload/reloads. Eight cases across caster/target/world/
+global scopes, direct/imported actions and four phases produce 256 comparisons.
+Timed values keep deadlines; short values expire while unloaded. Native world
+transient values survive this temporary lifecycle, unlike their documented graceful
+shutdown filtering. Eight tree checks and six disk copies verify restoration and
+that cleared trees stay empty. The visual entity count stays 22 across all phases. Four
+actual deaths remove native/runtime registries, runtime instances and snapshots;
+final shutdown writes no deleted scoped data. Native location origin is deliberately
+aligned with the runtime selected target; arbitrary location selectors remain open.
+Twenty-eight mutation controls reject lost/duplicate observations, wrong identities,
+values/types/deadlines, missed events, stale trees, duplicate visuals and stale disk
+state. Source/artifact hashes and redacted logs are indexed in
+[Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
+
 The separate autosave fixture proves recovery of completed periodic saves after
 process termination.
 Writes after the last completed save can be lost. Killing during a file write,
 host/power failure, large-player save performance, asynchronous save/load races,
-configured death/respawn skill dispatch, chunk/world unload/reload parity,
-non-persistent entity cleanup,
+configured death/respawn skill dispatch, non-persistent entity cleanup,
+other despawn modes and cancelled-unload/native trigger-order comparisons,
 nested dynamic variable names,
 SetVariable expression/default-value semantics, the full arithmetic/location
 mechanic catalog, broader save combinations and other server/MythicMobs versions
