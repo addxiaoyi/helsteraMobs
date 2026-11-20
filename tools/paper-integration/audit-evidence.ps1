@@ -552,6 +552,34 @@ foreach ($item in $releaseEvidence) {
             & $python.Source @($python.Prefix) $terminalVariableValidator $terminalVariablePath
             if ($LASTEXITCODE -ne 0) { throw 'Terminal variable evidence validation failed.' }
         }
+        if ($versionMatrix.releasePolicy.requiresModelBridgeEvidence -eq $true) {
+            $modelBridge = $item.modelBridgeEvidence
+            if ($null -eq $modelBridge -or [string]$modelBridge.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-model-bridge-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                    [string]$modelBridge.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'Latest full release requires pinned model bridge comparison.'
+            }
+            $modelBridgePath = Join-Path $Root ([string]$modelBridge.report)
+            if (-not (Test-Path -LiteralPath $modelBridgePath -PathType Leaf) -or
+                    (Get-FileHash -LiteralPath $modelBridgePath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$modelBridge.reportSha256) {
+                throw 'Model bridge report is missing or changed.'
+            }
+            $modelBridgeReport = Get-Content -LiteralPath $modelBridgePath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$modelBridgeReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                    [string]$modelBridgeReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                throw 'Model bridge evidence does not match the release artifact/server.'
+            }
+            if ($modelBridgeReport.schemaVersion -ne 1 -or
+                    [string]$modelBridgeReport.evidenceMode -cne 'scoped-runtime') {
+                throw 'Model bridge release evidence must prove the scoped native model bridge; an observation or gap diagnostic is insufficient.'
+            }
+            $modelBridgeValidator = Join-Path $PSScriptRoot 'validate-model-bridge.py'
+            if (-not (Test-Path -LiteralPath $modelBridgeValidator -PathType Leaf)) {
+                throw "Model bridge evidence validator not found: $modelBridgeValidator"
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            & $python.Source @($python.Prefix) $modelBridgeValidator $modelBridgePath
+            if ($LASTEXITCODE -ne 0) { throw 'Model bridge evidence validation failed.' }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

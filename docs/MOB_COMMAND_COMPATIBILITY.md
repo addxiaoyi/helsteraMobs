@@ -1,5 +1,7 @@
 # Mob cleanup command compatibility
 
+Model-bridge release refresh (2026-11-20): [mob-command](../tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r10.json), [unloaded-command](../tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r11.json), [reentrant-command](../tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r8.json) passed against plugin SHA-256 `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`, also verified by the 471-probe strict catalog. Earlier entries retain their original artifact scope.
+
 Terminal-variable release refresh (2026-11-20): [mob-command](../tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r9.json), [unloaded-command](../tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r10.json), [reentrant-command](../tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r7.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
 
 Helstera provides `/helstera mob kill` and `/helstera mob killall` for definition-owned

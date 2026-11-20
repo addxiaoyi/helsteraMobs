@@ -1,400 +1,226 @@
 package dev.helstera.integrations.mythicmobs;
 
+import dev.helstera.api.animation.AnimationOptions;
+import dev.helstera.api.instance.SpawnOptions;
+import dev.helstera.api.model.ModelRegistry;
 import dev.helstera.runtime.instance.InstanceManagerImpl;
+import dev.helstera.runtime.instance.ModelInstanceImpl;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.event.*;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
-/**
- * 把 helstera 的模型能力注册成 MythicMobs 的 mechanic 与 condition。
- *
- * <p>覆盖的 mechanic：{@code modelspawn / modelremove / modelplay / modelstop / modelscale}；
- * 覆盖的 condition：{@code modelspawned / modelremoved / modelplaying}。
- * 这样 MythicMobs 的技能表里就能直接写 {@code - modelspawn example/emberling 1.2}，
- * 不再需要配合 {@code /helstera} 命令手动绑定。</p>
- *
- * <p>实现方式是 {@link Proxy} 而非编译期依赖：MythicMobs 的
- * {@code MythicCondition.isMet} / {@code Skill.castAt} 参数表在 5.3~5.7 之间多次变动，
- * 而 helstera 必须能在未安装 MythicMobs 的环境下编译。代理按<em>方法名</em>分派、
- * 按<em>类型</em>扫描参数（Entity / List&lt;String&gt; / String[]），因此签名微调不会导致
- * NoSuchMethodError，只会让对应 mechanic 静默不注册（并在适配器状态报告里写明原因）。</p>
- *
- * <p>线程约束：注册在插件启用期（主线程）；mechanic 执行由 MythicMobs 在主线程调用。</p>
- */
-final class MythicMobsModelMechanics {
+/** Native load-event bridge. Retained proxies are invalidated on disable and native reload. */
+final class MythicMobsModelMechanics implements Listener {
+    static final Set<String> MECHANICS = Set.of("modelspawn", "modelremove", "modelplay", "modelstop", "modelscale");
+    static final Set<String> CONDITIONS = Set.of("modelspawned", "modelremoved", "modelplaying");
+    private record Context(InstanceManagerImpl instances, ModelRegistry registry, Plugin host, Plugin nativePlugin) {}
+    private volatile Context context;
+    private volatile int generation;
+    private final Set<String> mechanics = new TreeSet<>(), conditions = new TreeSet<>();
+    private final Set<String> problems = new LinkedHashSet<>();
+    private final Set<BukkitTask> pending = new HashSet<>();
+    private boolean mechanicsReady, conditionsReady;
 
-    private final InstanceManagerImpl instances;
-    private final dev.helstera.api.model.ModelRegistry registry;
-    private final Map<String, String> registered = new LinkedHashMap<>();
-    private final Map<String, MechanicBody> bodies = new LinkedHashMap<>();
-    private final List<String> problems = new ArrayList<>();
-    private volatile boolean active = true;
-
-    MythicMobsModelMechanics(InstanceManagerImpl instances, dev.helstera.api.model.ModelRegistry registry) {
-        this.instances = instances;
-        this.registry = registry;
+    MythicMobsModelMechanics(InstanceManagerImpl instances, ModelRegistry registry, Plugin host, Plugin nativePlugin) {
+        context = new Context(instances, registry, host, nativePlugin);
     }
 
-    /** 已注册的键（mechanic 与 condition 混在一起，用于调试展示）。 */
-    Map<String, String> registered() {
-        return Map.copyOf(registered);
+    static boolean supportsVersion(String version) {
+        return version != null && version.matches("5\\.7\\.2(?:[-+].*)?");
     }
 
-    /** 注册失败原因；空表示全部成功。 */
-    List<String> problems() {
-        return List.copyOf(problems);
+    synchronized boolean listenersReady() { return context != null && (mechanicsReady || conditionsReady); }
+    synchronized boolean hasMechanics() { return context != null && !mechanics.isEmpty(); }
+    synchronized boolean hasConditions() { return context != null && !conditions.isEmpty(); }
+    synchronized String status() {
+        return "模型桥接 listeners[skills=" + mechanicsReady + ", conditions=" + conditionsReady
+                + "] accepted[skills=" + mechanics + ", conditions=" + conditions + "]"
+                + (problems.isEmpty() ? "" : "；" + String.join("；", problems));
+    }
+    synchronized void problem(String problem) {
+        // Bound diagnostics even when many malformed definitions are reloaded.
+        if (problems.size() < 32) problems.add(problem);
+    }
+    synchronized void disable() {
+        context = null;
+        invalidate();
+        HandlerList.unregisterAll(this);
+        mechanicsReady = false; conditionsReady = false;
+    }
+    private synchronized void invalidate() {
+        generation++;
+        for (BukkitTask task : pending) task.cancel();
+        pending.clear(); mechanics.clear(); conditions.clear();
     }
 
-    boolean anyRegistered() {
-        return !registered.isEmpty();
-    }
-
-    void disable() {
-        active = false;
-    }
-
-    /**
-     * 向 MythicMobs 注册全部模型 mechanic 与 condition。
-     *
-     * @return 实际注册成功的条目数
-     */
-    int register(Plugin host) {
-        Object skillManager = resolveSkillManager();
-        if (skillManager == null) return 0;
-
-        registerConditions(skillManager);
-        registerMechanics(skillManager);
-        return registered.size();
-    }
-
-    // ------------------------------------------------------------------
-    // 反射解析
-    // ------------------------------------------------------------------
-
-    /**
-     * 取 MythicLib 的 SkillManager。
-     *
-     * <p>不同版本拿法不同：先是 {@code MythicLib.inst().getSkillManager()}，
-     * 退化到静态 {@code MythicLib.inst()}，再退化到 Bukkit 主插件上的同名方法。</p>
-     */
-    private Object resolveSkillManager() {
+    void register() {
+        Context ctx = context;
+        if (!supportsVersion(ctx.nativePlugin().getDescription().getVersion())) {
+            problem("模型扩展仅适配 5.7.2；其他版本需独立验证"); return;
+        }
+        ClassLoader loader = ctx.nativePlugin().getClass().getClassLoader();
         try {
-            Class<?> mythicLibClass = Class.forName("io.lumine.mythic.lib.MythicLib");
-            Object inst = mythicLibClass.getMethod("inst").invoke(null);
-            if (inst != null) {
-                try {
-                    Object sm = inst.getClass().getMethod("getSkillManager").invoke(inst);
-                    if (sm != null) return sm;
-                } catch (NoSuchMethodException ignored) {
-                    // 旧版本字段直接暴露在 MythicLib 上
-                }
-                for (Method m : inst.getClass().getMethods()) {
-                    if (m.getParameterCount() == 0 && "getSkillManager".equals(m.getName())) {
-                        Object sm = m.invoke(inst);
-                        if (sm != null) return sm;
-                    }
-                }
-            }
-            problems.add("MythicLib.inst() 未能取到 SkillManager");
-            return null;
-        } catch (ClassNotFoundException e) {
-            problems.add("找不到 io.lumine.mythic.lib.MythicLib（MythicMobs 未安装或版本过旧）");
-            return null;
-        } catch (Throwable t) {
-            problems.add("解析 MythicMobs SkillManager 失败: " + t);
-            return null;
+            Class<? extends Event> pre = loader.loadClass("io.lumine.mythic.bukkit.events.MythicPreReloadEvent").asSubclass(Event.class);
+            Bukkit.getPluginManager().registerEvent(pre, this, EventPriority.MONITOR,
+                    (listener, event) -> invalidate(), ctx.host());
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            problem("无法绑定 native reload 生命周期: " + e.getClass().getSimpleName()); return;
         }
-    }
-
-    private void registerConditions(Object skillManager) {
-        put("modelspawned", "condition", "该生物是否已绑定 helstera 模型", (entity, args) -> {
-            // isMet 的返回值由代理层按方法名回填，这里只需执行判定副作用：
-            // 条件语义通过代理返回 true/false 传递，body 只负责求值。
-            conditionResult.set(find(entity) != null);
-        });
-        put("modelremoved", "condition", "该生物是否已解绑 helstera 模型", (entity, args) -> {
-            conditionResult.set(entity != null && !entity.isValid() && find(entity) == null);
-        });
-        put("modelplaying", "condition", "参数: <动画名>；该生物模型是否在播放该动画", (entity, args) -> {
-            var inst = find(entity);
-            if (inst == null) {
-                conditionResult.set(false);
-                return;
-            }
-            if (args.isEmpty()) {
-                conditionResult.set(inst.animation().currentAnimation().isPresent());
-                return;
-            }
-            conditionResult.set(inst.animation().currentAnimation().filter(args.get(0)::equals).isPresent());
-        });
-        for (String name : List.of("modelspawned", "modelremoved", "modelplaying")) {
-            registerCondition(skillManager, name);
-        }
-    }
-
-    private void registerMechanics(Object skillManager) {
-        // modelspawn <modelId> [scale] [animation] [loop]
-        put("modelspawn", "mechanic", "参数: <模型ID> [缩放] [动画] [循环]", (entity, args) -> {
-            if (entity == null || args.isEmpty()) return;
-            if (find(entity) != null) return; // 已绑定则不重复叠加
-            String modelId = args.get(0);
-            if (!registry.isLoaded(modelId)) return;
-            double scale = num(args, 1, 1.0);
-            String anim = args.size() > 2 && !args.get(2).isBlank() ? args.get(2) : null;
-            boolean loop = args.size() > 3 && Boolean.parseBoolean(args.get(3));
-            var opts = dev.helstera.api.instance.SpawnOptions.defaults().scale(scale);
-            var inst = instances.bind(modelId, entity, opts);
-            if (anim != null) {
-                inst.animation().play(anim,
-                        dev.helstera.api.animation.AnimationOptions.defaults().loop(loop));
-            }
-        });
-
-        // modelremove
-        put("modelremove", "mechanic", "解绑该生物的 helstera 模型", (entity, args) -> {
-            var inst = find(entity);
-            if (inst != null) instances.despawn(inst.instanceId());
-        });
-
-        // modelplay <animation> [loop] [priority]
-        put("modelplay", "mechanic", "参数: <动画名> [循环] [优先级]", (entity, args) -> {
-            var inst = find(entity);
-            if (inst == null || args.isEmpty()) return;
-            boolean loop = args.size() > 1 && Boolean.parseBoolean(args.get(1));
-            int priority = (int) num(args, 2, 7);
-            inst.animation().play(args.get(0),
-                    dev.helstera.api.animation.AnimationOptions.defaults().loop(loop).priority(priority));
-        });
-
-        // modelstop [animation]
-        put("modelstop", "mechanic", "参数: [动画名]；省略则停止全部", (entity, args) -> {
-            var inst = find(entity);
-            if (inst == null) return;
-            if (args.isEmpty()) inst.animation().stopAll();
-            else inst.animation().stop(args.get(0));
-        });
-
-        // modelscale <scale>
-        put("modelscale", "mechanic", "参数: <缩放倍率>", (entity, args) -> {
-            var inst = find(entity);
-            if (inst == null || args.isEmpty()) return;
-            inst.setScale(num(args, 0, 1.0));
-        });
-
-        // modelmount / modelunmount：把模型实例挂到生物身上跟随（视觉挂接）
-        put("modelmount", "mechanic", "让模型跟随生物移动（默认绑定即为跟随，此处显式复位）", (entity, args) -> {
-            var inst = find(entity);
-            if (inst != null && entity != null) inst.lastLocationSet(entity.getLocation());
-        });
-        put("modelunmount", "mechanic", "解除跟随并解绑模型", (entity, args) -> {
-            var inst = find(entity);
-            if (inst != null) instances.despawn(inst.instanceId());
-        });
-
-        // modelheal：把模型血量上限同步到载体生物，模型血量归零时销毁实例
-        put("modelheal", "mechanic", "把生物当前血量比例同步为模型缩放比例", (entity, args) -> {
-            var inst = find(entity);
-            if (inst == null || !(entity instanceof LivingEntity le) || le.getMaxHealth() <= 0) return;
-            inst.setScale(Math.max(0.1, le.getHealth() / le.getMaxHealth()));
-        });
-
-        for (String name : List.of("modelspawn", "modelremove", "modelplay", "modelstop",
-                "modelscale", "modelmount", "modelunmount", "modelheal")) {
-            registerSkill(skillManager, name);
-        }
-    }
-
-    // ------------------------------------------------------------------
-    // 注册执行
-    // ------------------------------------------------------------------
-
-    /** mechanic / condition 的统一入口：Entity + 字符串参数 -> 执行动作。 */
-    private interface MechanicBody {
-        void run(Entity entity, List<String> args);
-    }
-
-    /**
-     * 条件的求值出口。
-     *
-     * <p>条件与 mechanic 共用同一 {@link MechanicBody}（都只有 Entity + 参数），
-     * 但 {@code isMet} 必须返回布尔值。body 把结论写进这里，代理层随即读取。
-     * 用 ThreadLocal 而非普通字段：mechanic 在主线程顺序执行不会串值，
-     * 而条件可能在其余线程被求值，普通字段会互相污染。</p>
-     */
-    private final ThreadLocal<Boolean> conditionResult = ThreadLocal.withInitial(() -> Boolean.FALSE);
-
-    private void put(String name, String kind, String description, MechanicBody body) {
-        bodies.put(name, body);
-        registered.put(name, kind + " — " + description);
-    }
-
-    private void registerCondition(Object skillManager, String name) {
-        if (!bodies.containsKey(name)) return;
-        try {
-            Class<?> iface = Class.forName("io.lumine.mythic.core.skills.MythicCondition");
-            Object proxy = newProxy(iface, name, bodies.get(name));
-            invokeRegister(skillManager, "registerCondition", iface, name, proxy);
-            Bukkit.getLogger().info("  MythicMobs 条件已注册: " + name);
-        } catch (ClassNotFoundException e) {
-            problems.add("找不到 MythicCondition 接口，条件 " + name + " 未注册");
-        } catch (Throwable t) {
-            problems.add("注册条件 " + name + " 失败: " + t);
-        }
-    }
-
-    private void registerSkill(Object skillManager, String name) {
-        if (!bodies.containsKey(name)) return;
-        try {
-            Class<?> iface = Class.forName("io.lumine.mythic.core.skills.Skill");
-            Object proxy = newProxy(iface, name, bodies.get(name));
-            invokeRegister(skillManager, "registerSkill", iface, name, proxy);
-            Bukkit.getLogger().info("  MythicMobs mechanic 已注册: " + name);
-        } catch (ClassNotFoundException e) {
-            problems.add("找不到 Skill 接口，mechanic " + name + " 未注册");
-        } catch (Throwable t) {
-            problems.add("注册 mechanic " + name + " 失败: " + t);
-        }
-    }
-
-    /** 按名字找 registerCondition / registerSkill 重载，避免参数类型顺序差异。 */
-    private void invokeRegister(Object skillManager, String methodName, Class<?> iface,
-                                String name, Object proxy) {
-        for (Method m : skillManager.getClass().getMethods()) {
-            if (!methodName.equals(m.getName()) || m.getParameterCount() != 2) continue;
-            Class<?>[] p = m.getParameterTypes();
-            if (!p[0].isAssignableFrom(String.class) && p[0] != String.class) continue;
-            if (!p[1].isInstance(proxy) && p[1] != Object.class) continue;
+        for (boolean condition : List.of(false, true)) {
             try {
-                m.invoke(skillManager, name, proxy);
-                return;
-            } catch (Throwable t) {
-                throw new IllegalStateException(methodName + " 调用失败: " + t, t);
+                MythicModelApi api = MythicModelApi.resolve(loader, condition);
+                Bukkit.getPluginManager().registerEvent(api.event(), this, EventPriority.HIGHEST,
+                        (listener, event) -> receive(api, event, condition), ctx.host());
+                if (condition) conditionsReady = true; else mechanicsReady = true;
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+                problem((condition ? "条件" : "技能") + "加载接口不可用: " + e.getClass().getSimpleName());
             }
         }
-        // 该版本 SkillManager 上没有这个注册入口：作为失败原因上报，
-        // 而不是抛受检异常——调用方统一 catch Throwable 记入 problems。
-        throw new IllegalStateException("SkillManager 上找不到 " + methodName + "("
-                + iface.getSimpleName() + ")");
     }
 
-    /**
-     * 构造 MythicMobs 接口的动态代理。
-     *
-     * <p>按方法名分派：{@code isMet} / {@code castAt} 执行模型动作，
-     * {@code getName} 回显名字，{@code register} 返回自身，其余返回类型默认值。</p>
-     */
-    private Object newProxy(Class<?> iface, String name, MechanicBody body) {
-        InvocationHandler h = (proxy, method, args) -> {
-            String mn = method.getName();
-            switch (mn) {
-                case "isMet", "castAt", "execute" -> {
-                    if (!active) return defaultFor(method.getReturnType(), false);
-                    Entity entity = findEntity(args);
-                    List<String> params = findStringList(args);
-                    boolean wantsResult = "isMet".equals(mn)
-                            && (method.getReturnType() == boolean.class || method.getReturnType() == Boolean.class);
-                    try {
-                        if (wantsResult) conditionResult.set(Boolean.FALSE);
-                        body.run(entity, params);
-                        if (wantsResult) return conditionResult.get();
-                        // mechanic（castAt）返回 void；个别版本声明成 boolean 时按 true 处理
-                        return defaultFor(method.getReturnType(), true);
-                    } catch (Throwable t) {
-                        Bukkit.getLogger().warning("MythicMobs " + name + " 执行失败: " + t);
-                        return defaultFor(method.getReturnType(), false);
+    void receive(MythicModelApi api, Object event, boolean condition) {
+        Context ctx = context;
+        if (ctx == null || !Bukkit.isPrimaryThread()) return;
+        String name = "unknown";
+        try {
+            name = ((String) api.name().invoke(event)).toLowerCase(Locale.ROOT);
+            if (!(condition ? CONDITIONS : MECHANICS).contains(name)) return;
+            if (((Optional<?>) api.readback().invoke(event)).isPresent()) {
+                problem(name + ": existing native registration preserved"); return;
+            }
+            MythicModelArguments arguments = null; String invalid = null;
+            try {
+                String source = condition ? (String) api.source().invoke(api.holder().invoke(event))
+                        : (String) api.line().invoke(api.config().invoke(event));
+                arguments = MythicModelArguments.parse(name, source, condition);
+            } catch (IllegalArgumentException e) {
+                invalid = "Invalid arguments for " + name + ": " + e.getMessage(); problem(invalid);
+            }
+            // A rejected definition still gets an inert handler: native false suffixes must not invert failures.
+            final int epoch = generation;
+            Object proxy = proxy(api, name, arguments, invalid, condition, epoch);
+            api.register().invoke(event, proxy);
+            if (((Optional<?>) api.readback().invoke(event)).orElse(null) != proxy)
+                throw new IllegalStateException("Native registrar did not retain extension");
+            String key = name; boolean valid = invalid == null;
+            BukkitTask task = new org.bukkit.scheduler.BukkitRunnable() {
+                @Override public void run() {
+                    synchronized (MythicMobsModelMechanics.this) {
+                        pending.removeIf(task -> task.getTaskId() == getTaskId());
+                        if (context == null || epoch != generation) return;
+                        try {
+                            Object holder = api.holder().invoke(event);
+                            if (((Optional<?>) api.readback().invoke(event)).orElse(null) != proxy
+                                    || ((Optional<?>) api.retained().invoke(holder)).orElse(null) != proxy) {
+                                problem(key + ": native registration replaced or not retained"); return;
+                            }
+                            if (valid) (condition ? conditions : mechanics).add(key);
+                        } catch (ReflectiveOperationException | RuntimeException e) {
+                            problem(key + ": registration readback failed");
+                        }
                     }
                 }
-                case "getName" -> {
-                    return name;
+            }.runTask(ctx.host());
+            synchronized (this) { pending.add(task); }
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+            problem(name + ": registration failed (" + e.getClass().getSimpleName() + ")");
+        }
+    }
+
+    private Object proxy(MythicModelApi api, String name, MythicModelArguments arguments, String invalid,
+                         boolean condition, int epoch) {
+        return Proxy.newProxyInstance(api.extension().getClassLoader(), new Class<?>[]{api.extension()}, (proxy, method, args) -> {
+            if (method.getDeclaringClass() == Object.class) return switch (method.getName()) {
+                case "equals" -> proxy == args[0];
+                case "hashCode" -> System.identityHashCode(proxy);
+                case "toString" -> "helstera:" + name;
+                default -> throw new UnsupportedOperationException(method.getName());
+            };
+            if (method.equals(api.safety())) return api.sync();
+            if (method.equals(api.execute())) {
+                Context ctx = context;
+                if (ctx == null || epoch != generation) {
+                    if (condition) throw new IllegalStateException("Model condition bridge is inactive");
+                    return api.results().get("MISSING_COMPATIBILITY");
                 }
-                case "register" -> {
-                    return proxy;
+                if (!Bukkit.isPrimaryThread()) {
+                    if (condition) throw new IllegalStateException("Model conditions require the main thread");
+                    return api.results().get("ERROR"); // Native SYNC_ONLY dispatch performs scheduling.
                 }
-                case "toString" -> {
-                    return "helstera:" + name;
+                if (!ctx.host().isEnabled() || !ctx.nativePlugin().isEnabled() || invalid != null) {
+                    if (condition) throw new IllegalStateException(invalid == null ? "Model bridge unavailable" : invalid);
+                    return api.results().get("INVALID_CONFIG");
                 }
-                case "hashCode" -> {
-                    return name.hashCode();
+                Entity target = (Entity) api.entity().invoke(args[condition ? 0 : 1]);
+                if (target == null || !target.isValid()) {
+                    if (condition) throw new IllegalStateException("Invalid model condition target");
+                    return api.results().get("INVALID_TARGET");
                 }
-                case "equals" -> {
-                    return proxy == (args == null ? null : args[0]);
-                }
-                default -> {
-                    return defaultFor(method.getReturnType(), false);
-                }
+                if (condition) return check(ctx, name, arguments, target);
+                try { return api.results().get(apply(ctx, name, arguments, target)); }
+                catch (RuntimeException e) { problem(name + ": execution failed (" + e.getClass().getSimpleName() + ")"); return api.results().get("ERROR"); }
             }
+            if (method.isDefault()) return InvocationHandler.invokeDefault(proxy, method, args);
+            throw new UnsupportedOperationException("Unknown native extension method: " + method.getName());
+        });
+    }
+
+    private static boolean check(Context ctx, String name, MythicModelArguments args, Entity target) {
+        ModelInstanceImpl instance = find(ctx.instances(), target);
+        return switch (name) {
+            case "modelspawned" -> instance != null;
+            case "modelremoved" -> instance == null;
+            case "modelplaying" -> {
+                if (instance == null) yield false;
+                if (args.animation() != null && !instance.animation().hasAnimation(args.animation()))
+                    throw new IllegalStateException("Unknown model animation");
+                yield instance.animation().state().equals("PLAYING") && instance.animation().currentAnimation()
+                        .filter(animation -> args.animation() == null || args.animation().equals(animation)).isPresent();
+            }
+            default -> throw new IllegalStateException("Unknown model condition");
         };
-        return Proxy.newProxyInstance(iface.getClassLoader(), new Class<?>[]{iface}, h);
     }
 
-    private static Object defaultFor(Class<?> type, boolean boolValue) {
-        if (type == void.class) return null;
-        if (type == boolean.class || type == Boolean.class) return boolValue;
-        if (type == int.class || type == Integer.class) return 0;
-        if (type == long.class || type == Long.class) return 0L;
-        if (type == float.class || type == Float.class) return 0f;
-        if (type == double.class || type == Double.class) return 0d;
-        if (type == short.class || type == Short.class) return (short) 0;
-        if (type == byte.class || type == Byte.class) return (byte) 0;
-        if (type == char.class || type == Character.class) return (char) 0;
-        return null;
-    }
-
-    /** 在实参里找承载实体：优先取第二个 Entity（target 优先于 source）。 */
-    private static Entity findEntity(Object[] args) {
-        if (args == null) return null;
-        List<Entity> found = new ArrayList<>(2);
-        for (Object a : args) {
-            if (a instanceof Entity e) found.add(e);
+    private static String apply(Context ctx, String name, MythicModelArguments args, Entity target) {
+        ModelInstanceImpl instance = find(ctx.instances(), target);
+        if (name.equals("modelspawn")) {
+            var model = ctx.registry().get(args.model());
+            if (model.isEmpty() || (args.animation() != null && !model.get().animationNames().contains(args.animation())))
+                return "INVALID_CONFIG";
+            if (instance != null) return instance.model().id().equals(args.model()) ? "SUCCESS" : "INVALID_TARGET";
+            var bound = ctx.instances().bind(args.model(), target, SpawnOptions.defaults().scale(args.scale()));
+            if (args.animation() != null) bound.animation().play(args.animation(), AnimationOptions.defaults().loop(args.loop()));
+            return "SUCCESS";
         }
-        if (found.isEmpty()) return null;
-        return found.size() >= 2 ? found.get(1) : found.get(0);
-    }
-
-    /** 在实参里找字符串参数：List&lt;String&gt; 或 varargs String[]。 */
-    private static List<String> findStringList(Object[] args) {
-        if (args == null) return List.of();
-        for (Object a : args) {
-            if (a instanceof String[] arr) return List.of(arr);
-            if (a instanceof List<?> list) {
-                List<String> out = new ArrayList<>(list.size());
-                for (Object o : list) out.add(String.valueOf(o));
-                return out;
+        if (name.equals("modelremove")) {
+            if (instance != null) ctx.instances().despawn(instance.instanceId());
+            return "SUCCESS";
+        }
+        if (instance == null) return "INVALID_TARGET";
+        if (args.animation() != null && !instance.animation().hasAnimation(args.animation())) return "INVALID_CONFIG";
+        switch (name) {
+            case "modelplay" -> {
+                if (!instance.animation().play(args.animation(), AnimationOptions.defaults().loop(args.loop()).priority(args.priority())))
+                    return "ERROR";
             }
+            case "modelstop" -> { if (args.animation() == null) instance.animation().stopAll(); else instance.animation().stop(args.animation()); }
+            case "modelscale" -> instance.setScale(args.scale());
+            default -> { return "INVALID_CONFIG"; }
         }
-        return List.of();
+        return "SUCCESS";
     }
 
-    // ------------------------------------------------------------------
-    // 工具
-    // ------------------------------------------------------------------
-
-    /** 按绑定实体的 UUID 找实例；这就是 MythicMobs mechanic 与 helstera 实例之间的连接点。 */
-    private dev.helstera.runtime.instance.ModelInstanceImpl find(Entity entity) {
-        if (entity == null || instances == null) return null;
+    static ModelInstanceImpl find(InstanceManagerImpl instances, Entity entity) {
+        if (instances == null || entity == null) return null;
         UUID id = entity.getUniqueId();
-        for (var inst : instances.allImpl()) {
-            if (inst.boundEntityId().map(id::equals).orElse(false)) return inst;
-        }
+        for (var instance : instances.allImpl())
+            if (instance.isValid() && instance.boundEntityId().filter(id::equals).isPresent()) return instance;
         return null;
-    }
-
-    private static double num(List<String> args, int i, double def) {
-        if (args.size() <= i) return def;
-        try {
-            return Double.parseDouble(args.get(i).trim());
-        } catch (NumberFormatException e) {
-            return def;
-        }
     }
 }

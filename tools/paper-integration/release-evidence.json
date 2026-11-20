@@ -1,5 +1,75 @@
 [
   {
+    "fixtureId": "srv-paper-model-bridge-strict-20261120-r1",
+    "reportFixtureDirectory": "srv-paper-model-bridge-strict-20261120-r1",
+    "pluginSha256": "d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051",
+    "fullReleaseCatalog": true,
+    "report": "tools/paper-integration/reports/paper-1.21.1-model-bridge-strict-20261120-r1.json",
+    "reportSha256": "94f6595fa2dd20698fc727ba8d31120cc89915087d6227d9d45471e04836615a",
+    "log": "tools/paper-integration/reports/paper-1.21.1-model-bridge-strict-20261120-r1.log.gz",
+    "logSha256": "83e9b61c5d489a883c2e69eff291aa7012155043e810efa2dee5d81746835717",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-model-bridge-strict-20261120-r1.client-logs.zip",
+    "clientLogSha256": "51911535445d34832290d574801b5d7d8c13b1e784243e7876519684aca20f40",
+    "modelBridgeEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-model-bridge-20261120-r6.json",
+      "reportSha256": "05e7a2a413441ff4396507d8a98945ddd629b090231e732bf6db1e7be55a1521"
+    },
+    "despawnCrashEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r6.json",
+      "reportSha256": "d6c00d0eb751c256f1a1d9248b6e593f90170029bae1c26015049607df4bd854"
+    },
+    "reentrantCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r8.json",
+      "reportSha256": "b41389793bce2450970d3fd16c1d97826176f2f460674a07a51dddcdbda833c2"
+    },
+    "unloadedCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r11.json",
+      "reportSha256": "993672452709c6c36a25019653cf2a870e9fb2f0c367aa5f956eff56318d1065"
+    },
+    "mobCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r10.json",
+      "reportSha256": "ec80de6385b4c42b69bea8d858d8110cbc4350d294782c3e46be89cfbbe7dc28"
+    },
+    "despawnDistanceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r14.json",
+      "reportSha256": "7393ea6108f8b889b65aa3c2f25caa11f78c96341f63b9611bb1cda58acda9b0"
+    },
+    "despawnPrecedenceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r9.json",
+      "reportSha256": "063f7103dbda5ff7dc8ca5758827382fd19d8ce0138aa992834a3a0ffa2ea61b"
+    },
+    "rapidReloadEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r8.json",
+      "reportSha256": "748f3169fa3dd596579660d1c517fa484f8d1ecef96dfdd4b6bf8d929600020a"
+    },
+    "terminalCallbackEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r9.json",
+      "reportSha256": "8ed6a12f9a66532d2e991253257361c9e6301115383149882252affb23ccfc55"
+    },
+    "cancelledDeathEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-cancelled-death-20261120-r5.json",
+      "reportSha256": "663774436bbc0639d3784ca47147fe8ae56f78062d8bdee84b44c3f1859c44c5"
+    },
+    "terminalVariableEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-terminal-variable-20261120-r5.json",
+      "reportSha256": "2c58814dbef93930ceb658d6a063bdb240e364cd6b36370193d7d392e36d2b7e"
+    },
+    "despawnCrashBoundaryEvidence": [
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-20261120-r4.json",
+        "reportSha256": "4997d5585ead2afbb81b1ebe053cfc37a0adff088521dae4d6b1cccc7dd96485"
+      },
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-clock-20261120-r4.json",
+        "reportSha256": "31a27b8b17c06e35ea6d418a9b0b01ca028528e243b9d289c4b404a965f98df4"
+      },
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r5.json",
+        "reportSha256": "1ac98eca5a814ec0a9f1c5250b85c3e3477403c3d58eb3b246c66c0b44fd9bd0"
+      }
+    ]
+  },
+  {
     "fixtureId": "srv-paper-terminal-variable-strict-20261120-r1",
     "reportFixtureDirectory": "srv-paper-terminal-variable-strict-20261120-r1",
     "pluginSha256": "0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75",
@@ -63,7 +133,8 @@
         "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r4.json",
         "reportSha256": "d4e03529318db11ac7ec23c67e721870bea6ac5e2933ff4bf5cf0c944bcfdccf"
       }
-    ]
+    ],
+    "supersededBy": "srv-paper-model-bridge-strict-20261120-r1"
   },
   {
     "fixtureId": "srv-paper-terminal-callback-strict-20261120-r3",

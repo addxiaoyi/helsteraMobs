@@ -1,47 +1,39 @@
-# 可选互通：把已存在的 MythicMobs 生物显示为 helstera 模型
+# 可选互通：将原生 MythicMobs 生物绑定为 helstera 模型。
+# 核心模型/动画/AI 不依赖 MythicMobs。
 #
-# 定位说明：helsteraMobs 不依赖 MythicMobs 提供能力。
-# 本节仅在你已经在用 MythicMobs 时省去手动绑定模型的步骤；
-# 移除 MythicMobs 后，核心模型/动画/AI 功能完全不受影响。
-#
-# 未安装 MythicMobs 时整个小节会被静默忽略。
-#
-# ---------------------------------------------------------------
-# 方式一：本文件声明（MythicMobs 生物生成时自动绑定模型）
-# ---------------------------------------------------------------
+# 方式一：生成事件结束后一 tick 自动绑定；取消生成、重复绑定、未知模型、
+# 未知动画或非法缩放不会新增实例。卸载模型保留原生生物。
 # mythicmobs:
 #   mobs:
 #     SkeletalKnight:
-#       model: example/crystal_golem  # 需为已加载的模型 ID
+#       model: example/emberling
 #       scale: 1.2
 #       default-animation: idle
 #
-# ---------------------------------------------------------------
-# 方式二：MythicMobs 技能表里直接调用模型 mechanic
-# ---------------------------------------------------------------
-# 连接成功时 helsteraMobs 会向 MythicMobs 注册下列 mechanic / 条件，
-# 于是在 MythicMobs 的技能 YAML 里可以直接写：
-#
+# 方式二：MM 5.7.2 模型扩展（其他版本需独立验证）。使用命名括号参数和明确目标：
 #   Skills:
-#   - modelspawn{m=<模型ID>}      绑定模型（已绑定则不重复叠加）
-#       可选参数: modelspawn{m=<模型ID>} <缩放> <动画> <循环>
-#   - modelplay{m=<动画名>}       播放动画
-#       可选参数: modelplay{m=<动画名>} <循环> <优先级>
-#   - modelstop{m=}               停止全部动画
-#       可选参数: modelstop{m=<动画名>}  仅停止指定动画
-#   - modelscale{m=<倍率>}        改缩放
-#   - modelremove{}               解绑并销毁模型
-#   - modelmount{}                显式复位跟随位置
-#   - modelunmount{}              解除跟随并解绑
-#   - modelheal{}                 按载体血量比例同步缩放
+#   - modelspawn{model=example/emberling;scale=1.2;animation=idle;loop=true} @self
+#   - modelplay{animation=walk;loop=true;priority=7} @self
+#   - modelstop{animation=walk} @self
+#   - modelstop{} @self
+#   - modelscale{scale=1.5} @self
+#   - modelremove{} @self
 #
-# 可用条件（用于 MythicMobs 的 Conditions 段）：
-#   modelspawned       该生物是否已绑定模型
-#   modelremoved       该生物是否已解绑模型
-#   modelplaying{m=<动画名>}   是否在播放指定动画（省略参数=是否在播放任意动画）
+# m 别名：modelspawn 的 model；modelplay/modelstop/modelplaying 的 animation；
+# modelscale 的 scale。不可与完整键同时使用；重复键、未知键拒绝执行。
+# 不支持位置参数：MM 5.7.2 会在加载事件前丢弃部分尾随文本，桥接无法检测该文本。
+# 模型与动画为已加载的字面 ID；scale 必须有限且 > 0，loop 为 true/false，priority 为整数。
+# MM 自身的 delay/cooldown/repeat/forcesync 等执行选项仍由 MM 处理。
 #
-# 若启动日志提示「模型 mechanic 未注册」，说明当前 MythicMobs 版本的
-# 内部接口结构与预期不同；此时模型绑定（方式一）仍然可用，
-# 原因详情可用 /helstera debug 集成 查看。
+# Conditions / TargetConditions 支持 true/false 后缀：
+#   - modelspawned true
+#   - modelremoved false
+#   - modelplaying{animation=walk} true
+# modelremoved 表示有效实体没有模型绑定。modelplaying 可省略 animation，暂停不算播放。
+# 无效参数、停用代理和异步条件求值均拒绝通过，包括 false 后缀。
+# modelmount/modelunmount/modelheal 暂未提供，不声明兼容。
+#
+# /helstera debug integrations 显示监听就绪与实际接受的定义，技能/条件分别报告。
+# 停用使 MM 缓存的旧代理失效；重新启用后需 /mm reload 重新解析定义。
 mythicmobs:
   mobs: {}

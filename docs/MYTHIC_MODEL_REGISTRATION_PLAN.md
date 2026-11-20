@@ -1,18 +1,21 @@
-# MythicMobs 5.7.2 model bridge: next development target
+# MythicMobs 5.7.2 model bridge: implementation plan and audit
 
-Status: audited implementation plan, not a supported-capability claim. This work
-follows the terminal-variable release milestone. The pinned public native JAR is
+Status: bounded 5.7.2 implementation completed and verified; see
+[the execution contract](MYTHIC_MODEL_BRIDGE_COMPATIBILITY.md). The original
+audit and acceptance plan follow for traceability. Broader version/client scope
+remains open. This work follows the terminal-variable release milestone.
+The pinned public native JAR is
 `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f` on
 Paper 1.21.1-133. Other declared Mythic versions need their own verification.
 
-## Confirmed defects
+## Original audit findings (resolved by the scoped bridge)
 
-`MythicMobsModelMechanics.put` records advertised entries before registration.
-`MythicMobsAdapter.capabilities` uses the shared nonempty collection to advertise
-both SKILLS and CONDITIONS. Registrar discovery failure therefore does not prove
-those capabilities are absent from the report. The spawn listener also attempts
-`getMobName()`, which is not the pinned event API. `modelremoved` currently
-requires an invalid entity rather than a valid entity without a model binding.
+The previous `MythicMobsModelMechanics.put` recorded advertised entries before
+registration. `MythicMobsAdapter.capabilities` used the shared nonempty collection
+to advertise both SKILLS and CONDITIONS, even after registrar discovery failed.
+The spawn listener attempted `getMobName()`, which is not the pinned event API.
+`modelremoved` required an invalid entity rather than a valid entity without a
+model binding. The scoped bridge replaces these paths.
 
 ## Verified native interfaces
 
@@ -37,7 +40,8 @@ proxy plus native load-event listeners is a bounded implementation path.
 1. Register `modelspawn`, `modelremove`, `modelplay`, `modelstop`, `modelscale`,
    plus `modelspawned`, `modelremoved`, `modelplaying`. Bind immutable arguments
    for each load event. Validate identifiers, finite positive scales and boolean/
-   integer options. Inspect the original line for duplicate or conflicting aliases
+   integer options. Inspect the native compact mechanic config or full condition
+   holder line for duplicate or conflicting aliases
    because native entrySet has already collapsed duplicate keys. Keep framework
    execution arguments distinct. Require explicit entity targeting in examples.
 2. Track mechanic and condition success separately. Distinguish listener readiness

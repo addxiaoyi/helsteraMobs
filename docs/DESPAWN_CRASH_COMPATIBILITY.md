@@ -1,5 +1,7 @@
 # Despawn crash checkpoints
 
+Model-bridge release refresh (2026-11-20): [despawn-crash](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r6.json), [despawn-crash-chunk](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-20261120-r4.json), [despawn-crash-clock](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-clock-20261120-r4.json), [despawn-crash-chunk-clock](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r5.json) passed against plugin SHA-256 `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`, also verified by the 471-probe strict catalog. Earlier entries retain their original artifact scope.
+
 Terminal-variable release refresh (2026-11-20): [despawn-crash](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r5.json), [despawn-crash-chunk](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-20261120-r3.json), [despawn-crash-clock](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-clock-20261120-r3.json), [despawn-crash-chunk-clock](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r4.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
 
 Verified evidence: [r3 report](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r3.json)

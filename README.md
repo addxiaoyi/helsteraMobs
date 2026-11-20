@@ -1,3 +1,48 @@
+Native MythicMobs model bridge (2026-11-20): the MM 5.7.2 load-event API now
+registers five model mechanics and three model conditions, confirms native holder
+ownership and reports SKILLS/CONDITIONS separately. Automatic spawn binding uses
+the native internal mob name, respects final cancellation and prevents duplicates.
+Malformed/unavailable conditions fail before boolean inversion; stale proxies stay
+inactive after disable/re-enable or native reload. See [the scoped bridge contract](docs/MYTHIC_MODEL_BRIDGE_COMPATIBILITY.md).
+
+`srv-paper-model-bridge-20261120-r6` passes 93 observations covering
+actual native skill dispatch, distinct caster/target UUIDs, animation and scale,
+positive/negative gates, malformed input, async dispatch, repeated auto-bind events,
+two reloads and final cleanup. All 510 semantic/archive evidence mutations are
+rejected. Native positional trailing text can be discarded before the extension
+receives it; use named brace arguments. `modelmount`, `modelunmount`, `modelheal`,
+other MM versions and client rendering remain unverified/deferred.
+
+The exact artifact passes 2,474 Maven tests, 11 clean SpotBugs reports and full
+strict `srv-paper-model-bridge-strict-20261120-r1` (471 probes: 452 passed,
+19 expected rejections, zero failed or incomplete). The release gate additionally
+requires the model bridge report and validates its raw archive and artifact hashes.
+Plugin SHA-256: `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`.
+
+The same JAR passes terminal variables `srv-paper-terminal-variable-20261120-r5`,
+terminal continuations `srv-paper-terminal-callback-20261120-r9`,
+cancelled death `srv-paper-cancelled-death-20261120-r5`,
+clean restart `srv-paper-despawn-restart-20261120-r12`,
+reentrant commands `srv-paper-reentrant-command-20261120-r8`,
+unloaded commands `srv-paper-unloaded-command-20261120-r11`,
+loaded commands `srv-paper-mob-command-20261120-r10`,
+distance `srv-paper-despawn-distance-20261120-r14`,
+precedence `srv-paper-despawn-precedence-20261120-r9` and
+rapid reload `srv-paper-rapid-reload-20261120-r8`. Completed-checkpoint
+crash comparisons pass: `srv-paper-despawn-crash-20261120-r6`,
+`srv-paper-despawn-crash-chunk-20261120-r4`,
+`srv-paper-despawn-crash-clock-20261120-r4` and
+`srv-paper-despawn-crash-chunk-clock-20261120-r5`. Their existing native
+behavior exceptions remain explicit; these checks do not establish full parity.
+
+Next targets: [detached target/trigger reads](docs/DETACHED_VARIABLE_READ_PLAN.md) and remaining terminal action scopes;
+native MobGoals composition; condition-action branching; broader catalogs and
+external providers; additional Paper versions. Matrix totals remain
+116 implemented-runtime / 33 mapped-unverified / 3 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin. The broad model bridge row remains
+mapped-unverified with its verified 5.7.2 subset and remaining limits explained.
+Historical entries below retain their original artifact scope.
+
 Terminal variable mutation and expiry (2026-11-20): imported quoted values now
 bind correctly, and detached targets cannot mutate retained caster variables.
 `srv-paper-terminal-variable-20261120-r3` verifies 144 observations,
@@ -38,7 +83,7 @@ commands, bounded dispatch timing and verified stack origins. Runtime, retained,
 unpaired and late duplicates still fail. This does not identify the native race's
 underlying competing invocation.
 
-Next: repair and verify MM 5.7.2 model mechanic/condition registration and capability
+At the terminal-variable milestone, the next target was MM 5.7.2 model mechanic/condition registration and capability
 reporting ([bounded implementation plan](docs/MYTHIC_MODEL_REGISTRATION_PLAN.md));
 compare target/trigger reads after detachment and reject unsupported
 action scopes. Native MobGoals composition and condition-action branching also
@@ -497,7 +542,7 @@ Full MythicMobs parity is still incomplete. Matrix totals remain
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](./docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
 
-Latest full-catalog strict fixture `srv-paper-terminal-variable-strict-20261120-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-terminal-variable-strict-20261120-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,459 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-model-bridge-strict-20261120-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-model-bridge-strict-20261120-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,474 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Timed SkillTree restart update (2026-11-19): `srv-paper-skilltree-expiry-restart-20261119-r1`
 passes 115 observations across three real Paper 1.21.1-133 boots. Two persistent
@@ -2213,7 +2258,7 @@ checkpoints.
 
 | Server / Minecraft | Evidence level | Release status |
 | --- | --- | --- |
-| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-terminal-variable-strict-20261120-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
+| Paper 1.21.1-133 / Minecraft 1.21.1 | Latest strict fixture `srv-paper-model-bridge-strict-20261120-r1` has 471 probes (452 passed, 19 expected rejections), zero failed or incomplete | Declared release baseline; this does not imply full MythicMobs parity |
 | Paper 1.21.4 / Minecraft 1.21.4 | Exploratory fixtures only | Not release-validated |
 | Paper 1.21.11 / Minecraft 1.21.11 | Exploratory fixtures only | Not release-validated |
 | Other Paper, Spigot, Folia, or Minecraft versions | No complete strict matrix | Compatibility unverified |
@@ -2229,7 +2274,7 @@ all 33 open rows, and per-capability completion contract are recorded in the
 [MythicMobs Parity Roadmap](MYTHICMOBS_PARITY_ROADMAP.md). The full remaining
 work is:
 
-Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-terminal-variable-strict-20261120-r1` on plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`; the artifact passes 2,459 Maven tests and SpotBugs. Focused native MM comparisons retain their separate scopes.
+Latest strict report has 471 probes, zero incomplete (452 passed, 19 expected rejections, zero failed). The current full-catalog report is `srv-paper-model-bridge-strict-20261120-r1` on plugin SHA-256 `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`; the artifact passes 2,474 Maven tests and SpotBugs. Focused native MM comparisons retain their separate scopes.
 
 Trigger configuration compatibility update: direct profile loading now applies the same canonical mapping as Mythic import for `onDamaged`/`onHurt`, plus `onPickup`, `onDrop`, `onShoot`, `onMount`, and `onDismount`. These aliases reuse the existing `on-damage`, item, shoot, and vehicle event routes; parser and profile-loading regression tests cover the mapping. This does not expand the strict Paper release baseline or complete the broader Trigger catalog.
 
@@ -2238,7 +2283,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 845 cited IDs; 657 report files; 97 directories without reports; 91 missing directories; 400 archived release reports. The
+   Current fixture inventory: 861 cited IDs; 658 report files; 112 directories without reports; 91 missing directories; 401 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -2594,7 +2639,7 @@ Minecraft（Paper / Spigot）模型引擎插件。采用「资源包 + Display �
 - 网页开发器（Javalin 6 + Jackson）：模型列表 / 预览 / 动画播放 / 生物配置编辑 / 校验 / 保存 / 回滚 / 审计 / 模型 zip 导入导出；**技能**（skills.yml）、**掉落表**（loot.yml，含掷骰预览）、**刷怪点**（spawners.yml）可视化编辑；SSE 实时推送重载事件，保存后无需手动刷新。
 - 外部插件检测与迁移中心（四插件导入器 + 自动备份）；ItemAdder、CraftEngine 物品 API 尚未适配，导入值保留为未支持项。
 - 刷怪点（spawners.yml）：定时 + 半径随机 + 存活上限 + 累计上限 + 玩家门控 + 世界绑定；所有刷怪点共用一个调度任务。**支持 `ai-profile` 字段覆盖 mob 档案的 AI 配置**，无需修改原档案即可指定不同的行为配置。
-- MythicMobs 模型 mechanic 与条件（反射注册，签名变动自动降级）：`modelspawn` / `modelremove` / `modelplay` / `modelstop` / `modelscale` / `modelmount` / `modelunmount` / `modelheal`，以及 `modelspawned` / `modelremoved` / `modelplaying`。
+- MythicMobs 5.7.2 模型加载事件桥接：`modelspawn` / `modelremove` / `modelplay` / `modelstop` / `modelscale`，以及 `modelspawned` / `modelremoved` / `modelplaying`。注册能力分别以原生定义读回为准；`modelmount` / `modelunmount` / `modelheal` 暂不支持。使用命名括号参数，边界见[桥接契约](docs/MYTHIC_MODEL_BRIDGE_COMPATIBILITY.md)。
 
 ## 模块
 

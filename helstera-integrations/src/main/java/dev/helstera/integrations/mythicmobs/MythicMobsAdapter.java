@@ -7,11 +7,9 @@ import dev.helstera.runtime.instance.InstanceManagerImpl;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;
-import org.bukkit.event.EventException;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.EventExecutor;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Method;
@@ -31,6 +29,9 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     private final dev.helstera.api.model.ModelRegistry registry;
     private Plugin host;
     private boolean connected;
+    private boolean spawnReady;
+    private final java.util.Set<org.bukkit.scheduler.BukkitTask> spawnTasks = new java.util.HashSet<>();
+    private int generation;
     private String report;
     private MythicMobsModelMechanics mechanics;
     private Plugin mythicPlugin;
@@ -58,7 +59,7 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     }
 
     @Override public String supportedVersions() {
-        return "5.3.x - 5.7.x declared; installed-plugin runtime compatibility is not CI-verified";
+        return "lookup: 5.3.x - 5.7.x declared; model extensions: 5.7.2 only, Paper 1.21.1-133 scoped fixture";
     }
     @Override public IntegrationContract contract() {
         return new IntegrationContract(pluginName(), supportedVersions(),
@@ -71,41 +72,29 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
 
     @Override
     public Set<Capability> capabilities() {
-        if (!connected) return Set.of();
-        // SKILLS/CONDITIONS 只在 mechanic 真的注册成功后才对外声明：
-        // 声明不实会让第三方插件做出错误的能力判断。
-        if (mechanics != null && mechanics.anyRegistered()) {
-            return Set.of(Capability.MOB_MODEL_BINDING, Capability.EVENTS,
-                    Capability.SKILLS, Capability.CONDITIONS);
-        }
-        return Set.of(Capability.MOB_MODEL_BINDING, Capability.EVENTS);
+        if (!isConnected()) return Set.of();
+        var result = java.util.EnumSet.noneOf(Capability.class);
+        if (spawnReady) result.addAll(Set.of(Capability.MOB_MODEL_BINDING, Capability.EVENTS));
+        if (mechanics != null && mechanics.hasMechanics()) result.add(Capability.SKILLS);
+        if (mechanics != null && mechanics.hasConditions()) result.add(Capability.CONDITIONS);
+        return Set.copyOf(result);
     }
 
     @Override
     public boolean isConnected() {
-        return connected;
+        return connected && mythicPlugin != null && mythicPlugin.isEnabled();
     }
 
     @Override
     public String statusReport() {
-        return report;
+        String bridge = mechanics == null ? null : mechanics.status();
+        return report == null ? bridge : bridge == null ? report : report + "；" + bridge;
     }
 
     @Override
     public boolean enable(Plugin host) {
-        if (mechanics != null) mechanics.disable();
-        mechanics = null;
-        connected = false;
+        disable();
         report = null;
-        mythicPlugin = null;
-        mythicApiHelper = null;
-        isMythicMobMethod = null;
-        getMythicMobInstanceMethod = null;
-        getMythicMobTypeMethod = null;
-        mythicMobRegistry = null;
-        getMythicMobNamesMethod = null;
-        getActiveMobMethod = null;
-        getMythicEntityTypeMethod = null;
         this.host = host;
         Plugin mm = Bukkit.getPluginManager().getPlugin("MythicMobs");
         if (mm == null || !mm.isEnabled()) {
@@ -149,43 +138,29 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
                 // Optional aliases must not disable working custom-name and active-registry queries.
                 getMythicEntityTypeMethod = null;
             }
-            Class<?> eventClass = Class.forName("io.lumine.mythic.bukkit.events.MythicMobSpawnEvent");
-            // 强转无法在编译期校验：MythicMobs 是软依赖，其事件类只有运行时才存在。
-            // 若 MythicMobs 升级改了包名，这里会在 registerEvent 处抛 ClassCastException，
-            // 由外层 catch 转成「未连接」——详见本方法末尾的错误处理。
-            Bukkit.getPluginManager().registerEvent((Class<? extends org.bukkit.event.Event>) eventClass, this, EventPriority.NORMAL,
-                    new SpawnExecutor(), host, true);
-            connected = true;
-            report = null;
-
-            // 注册模型 mechanic / condition，让 MythicMobs 技能表里能直接写
-            // modelspawn / modelplay / modelscale 等。失败不影响上面的绑定能力。
-            StringBuilder mechNote = new StringBuilder();
             try {
-                mechanics = new MythicMobsModelMechanics(instances, registry);
-                int n = mechanics.register(host);
-                if (n > 0) {
-                    mechNote.append("已注册 ").append(n).append(" 个模型 mechanic/条件: ")
-                            .append(String.join(", ", mechanics.registered().keySet()));
-                } else {
-                    mechNote.append("模型 mechanic 未注册（MythicMobs API 结构不匹配）");
-                }
-                if (!mechanics.problems().isEmpty()) {
-                    mechNote.append("；原因: ").append(String.join("；", mechanics.problems()));
-                    report = mechNote.toString();
-                }
-            } catch (Throwable t) {
-                mechNote.append("模型 mechanic 注册异常: ").append(t);
+                Class<? extends Event> eventClass = Class.forName("io.lumine.mythic.bukkit.events.MythicMobSpawnEvent", false,
+                        mm.getClass().getClassLoader()).asSubclass(Event.class);
+                Class<?> mobType = Class.forName("io.lumine.mythic.api.mobs.MythicMob", false, mm.getClass().getClassLoader());
+                Method type = MythicModelApi.exact(eventClass, "getMobType", mobType);
+                Method name = MythicModelApi.exact(mobType, "getInternalName", String.class);
+                Method entity = MythicModelApi.exact(eventClass, "getEntity", Entity.class);
+                if (!org.bukkit.event.Cancellable.class.isAssignableFrom(eventClass))
+                    throw new NoSuchMethodException("Spawn cancellation API unavailable");
+                Bukkit.getPluginManager().registerEvent(eventClass, this, EventPriority.MONITOR,
+                        (listener, event) -> scheduleSpawn(event, type, name, entity), host, true);
+                spawnReady = true;
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError e) {
+                report = "自动模型绑定接口不可用: " + e.getClass().getSimpleName();
             }
-
-            host.getLogger().info("已连接 MythicMobs " + version
-                    + "（生物模型绑定已启用）· " + mechNote);
-            return true;
-        } catch (ClassNotFoundException cnf) {
-            report = "MythicMobs 版本过旧/过新，找不到 io.lumine.mythic.bukkit.events.MythicMobSpawnEvent。";
-            return false;
+            mechanics = new MythicMobsModelMechanics(instances, registry, host, mm);
+            mechanics.register();
+            connected = spawnReady || isMythicMobMethod != null || mechanics.listenersReady();
+            host.getLogger().info("已连接 MythicMobs " + version + " · " + statusReport());
+            return connected;
         } catch (Throwable t) {
-            report = "MythicMobs 钩子注册失败: " + t.getMessage();
+            disable();
+            report = "MythicMobs 钩子注册失败: " + t.getClass().getSimpleName();
             return false;
         }
     }
@@ -193,7 +168,12 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
     @Override
     public void disable() {
         HandlerList.unregisterAll(this);
+        generation++;
+        for (var task : spawnTasks) task.cancel();
+        spawnTasks.clear();
+        spawnReady = false;
         connected = false;
+        host = null;
         mythicPlugin = null;
         mythicApiHelper = null;
         isMythicMobMethod = null;
@@ -409,44 +389,37 @@ public final class MythicMobsAdapter implements IntegrationAdapter, Listener {
         }
     }
 
-    /** 反射事件执行器：MythicMobSpawnEvent -> getMobName() -> 绑定模型。 */
-    private final class SpawnExecutor implements EventExecutor {
-        @Override
-        public void execute(Listener listener, Event event) throws EventException {
-            try {
-                Method getMobName = event.getClass().getMethod("getMobName");
-                Method getEntity = event.getClass().getMethod("getEntity");
-                String mobName = String.valueOf(getMobName.invoke(event));
-                Entity entity = (Entity) getEntity.invoke(event);
-                if (entity == null) return;
-
-                String path = "mythicmobs.mobs." + mobName;
-                String modelId = cfg.getString(path + ".model");
-                if (modelId == null || modelId.isBlank()) return;
-                if (!registry.isLoaded(modelId)) return; // 模型未加载，跳过
-                var opts = dev.helstera.api.instance.SpawnOptions.defaults()
-                        .scale(cfg.getDouble(path + ".scale", 1.0));
-                String anim = cfg.getString(path + ".default-animation");
-                // 绑定模型到该神话生物
-                instances.bind(modelId, entity, opts);
-                if (anim != null) {
-                    var instOpt = findLatest(modelId, entity);
-                    instOpt.ifPresent(inst -> inst.animation().play(anim,
-                            dev.helstera.api.animation.AnimationOptions.defaults().loop(true)));
-                }
-            } catch (Throwable ignored) {
-                // 单次事件失败不影响 MythicMobs
-            }
-        }
-
-        private java.util.Optional<dev.helstera.runtime.instance.ModelInstanceImpl> findLatest(String modelId, Entity e) {
-            for (var inst : instances.allImpl()) {
-                if (inst.model().id().equalsIgnoreCase(modelId)
-                        && inst.boundEntityId().map(u -> u.equals(e.getUniqueId())).orElse(false)) {
-                    return java.util.Optional.of(inst);
+    /** Defer one tick so cancellation by later listeners cannot leave an orphan binding. */
+    private void scheduleSpawn(Event event, Method type, Method name, Method entity) {
+        if (!Bukkit.isPrimaryThread() || !connected) return;
+        int epoch = generation;
+        var task = new org.bukkit.scheduler.BukkitRunnable() {
+            @Override public void run() {
+                spawnTasks.removeIf(pending -> pending.getTaskId() == getTaskId());
+                if (epoch != generation || !connected || host == null || !host.isEnabled()
+                        || mythicPlugin == null || !mythicPlugin.isEnabled()
+                        || ((org.bukkit.event.Cancellable) event).isCancelled()) return;
+                try {
+                    Entity target = (Entity) entity.invoke(event);
+                    if (target == null || !target.isValid() || MythicMobsModelMechanics.find(instances, target) != null) return;
+                    String mobName = (String) name.invoke(type.invoke(event));
+                    String path = "mythicmobs.mobs." + mobName;
+                    String modelId = cfg.getString(path + ".model");
+                    if (modelId == null || modelId.isBlank()) return;
+                    var model = registry.get(modelId);
+                    if (model.isEmpty()) throw new IllegalArgumentException("Configured model is unavailable");
+                    double scale = MythicModelArguments.positiveScale(cfg.getString(path + ".scale", "1"));
+                    String animation = cfg.getString(path + ".default-animation");
+                    if (animation != null && !model.get().animationNames().contains(animation))
+                        throw new IllegalArgumentException("Configured animation is unavailable");
+                    var bound = instances.bind(modelId, target, dev.helstera.api.instance.SpawnOptions.defaults().scale(scale));
+                    if (animation != null) bound.animation().play(animation,
+                            dev.helstera.api.animation.AnimationOptions.defaults().loop(true));
+                } catch (ReflectiveOperationException | RuntimeException e) {
+                    if (mechanics != null) mechanics.problem("自动模型绑定失败: " + e.getClass().getSimpleName());
                 }
             }
-            return java.util.Optional.empty();
-        }
+        }.runTask(host);
+        spawnTasks.add(task);
     }
 }

@@ -1,6 +1,51 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-terminal-variable-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`. [Strict report](reports/paper-1.21.1-terminal-variable-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-terminal-variable-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-terminal-variable-strict-20261120-r1.client-logs.zip) This artifact passes 2,459 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-model-bridge-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`. [Strict report](reports/paper-1.21.1-model-bridge-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-model-bridge-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-model-bridge-strict-20261120-r1.client-logs.zip) This artifact passes 2,474 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+
+Native MythicMobs model bridge (2026-11-20): the MM 5.7.2 load-event API now
+registers five model mechanics and three model conditions, confirms native holder
+ownership and reports SKILLS/CONDITIONS separately. Automatic spawn binding uses
+the native internal mob name, respects final cancellation and prevents duplicates.
+Malformed/unavailable conditions fail before boolean inversion; stale proxies stay
+inactive after disable/re-enable or native reload. See [the scoped bridge contract](../../docs/MYTHIC_MODEL_BRIDGE_COMPATIBILITY.md).
+
+`srv-paper-model-bridge-20261120-r6` passes 93 observations covering
+actual native skill dispatch, distinct caster/target UUIDs, animation and scale,
+positive/negative gates, malformed input, async dispatch, repeated auto-bind events,
+two reloads and final cleanup. All 510 semantic/archive evidence mutations are
+rejected. Native positional trailing text can be discarded before the extension
+receives it; use named brace arguments. `modelmount`, `modelunmount`, `modelheal`,
+other MM versions and client rendering remain unverified/deferred.
+
+The exact artifact passes 2,474 Maven tests, 11 clean SpotBugs reports and full
+strict `srv-paper-model-bridge-strict-20261120-r1` (471 probes: 452 passed,
+19 expected rejections, zero failed or incomplete). The release gate additionally
+requires the model bridge report and validates its raw archive and artifact hashes.
+Plugin SHA-256: `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`.
+
+The same JAR passes terminal variables `srv-paper-terminal-variable-20261120-r5`,
+terminal continuations `srv-paper-terminal-callback-20261120-r9`,
+cancelled death `srv-paper-cancelled-death-20261120-r5`,
+clean restart `srv-paper-despawn-restart-20261120-r12`,
+reentrant commands `srv-paper-reentrant-command-20261120-r8`,
+unloaded commands `srv-paper-unloaded-command-20261120-r11`,
+loaded commands `srv-paper-mob-command-20261120-r10`,
+distance `srv-paper-despawn-distance-20261120-r14`,
+precedence `srv-paper-despawn-precedence-20261120-r9` and
+rapid reload `srv-paper-rapid-reload-20261120-r8`. Completed-checkpoint
+crash comparisons pass: `srv-paper-despawn-crash-20261120-r6`,
+`srv-paper-despawn-crash-chunk-20261120-r4`,
+`srv-paper-despawn-crash-clock-20261120-r4` and
+`srv-paper-despawn-crash-chunk-clock-20261120-r5`. Their existing native
+behavior exceptions remain explicit; these checks do not establish full parity.
+
+Next targets: [detached target/trigger reads](../../docs/DETACHED_VARIABLE_READ_PLAN.md) and remaining terminal action scopes;
+native MobGoals composition; condition-action branching; broader catalogs and
+external providers; additional Paper versions. Matrix totals remain
+116 implemented-runtime / 33 mapped-unverified / 3 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin. The broad model bridge row remains
+mapped-unverified with its verified 5.7.2 subset and remaining limits explained.
+Historical entries below retain their original artifact scope.
 
 Terminal variable mutation and expiry (2026-11-20): imported quoted values now
 bind correctly, and detached targets cannot mutate retained caster variables.
@@ -42,7 +87,7 @@ commands, bounded dispatch timing and verified stack origins. Runtime, retained,
 unpaired and late duplicates still fail. This does not identify the native race's
 underlying competing invocation.
 
-Next: repair and verify MM 5.7.2 model mechanic/condition registration and capability
+At the terminal-variable milestone, the next target was MM 5.7.2 model mechanic/condition registration and capability
 reporting ([bounded implementation plan](../../docs/MYTHIC_MODEL_REGISTRATION_PLAN.md));
 compare target/trigger reads after detachment and reject unsupported
 action scopes. Native MobGoals composition and condition-action branching also

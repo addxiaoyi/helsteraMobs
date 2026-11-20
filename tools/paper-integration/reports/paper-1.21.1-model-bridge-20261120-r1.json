@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-model-bridge-20261120-r1",
+  "evidenceMode": "observation",
+  "generatedAtUtc": "2026-11-20T13:10:17.847751+00:00",
+  "pluginSha256": "e4b3dd8ae54d3407089064d8ad212d89753c2aec30070abcc9e767c7aa1e7de9",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "0d0dfa218e45d4f2d1cd196bcc7275154c64a9839d41fd75d2181f2d51cdf321",
+  "sourceHashes": {
+    "tools/paper-integration/run-model-bridge-fixture.py": "f3747d238176005478a0dae1cb6b18eda04f152ecf24db5efa47facf26ec8cf2",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/model-bridge-cases.py": "c09f63efddaa573d98d61e4cffdcbe8dbb1764ca9aae0d06eb4e386a4b3f2f2d",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ModelBridgeProbe.java": "7332d4a04675e634e40fb789777b5b8b28bad3b4340fa6cf7fd9a412c1ae1cdf"
+  },
+  "observations": [
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=cold_capabilities|skills=true|conditions=true|binding=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=initial|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=0|casterBindings=0|scale=absent|animation=absent|state=absent|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_caster_spawned_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_caster_spawned_false|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_caster_removed_true|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_caster_removed_false|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_caster_playing_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_caster_playing_false|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_target_spawned_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_target_spawned_false|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_target_removed_true|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_target_removed_false|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_target_playing_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=pre_target_playing_false|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=bad_model|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=0|casterBindings=0|scale=absent|animation=absent|state=absent|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=bad_spawn_animation|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=0|casterBindings=0|scale=absent|animation=absent|state=absent|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=spawn|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=1.25|animation=idle|state=PLAYING|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=repeat_spawn|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=1.25|animation=idle|state=PLAYING|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=scale|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=idle|state=PLAYING|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=play|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=walk|state=PLAYING|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_caster_spawned_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_caster_spawned_false|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_caster_removed_true|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_caster_removed_false|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_caster_playing_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_caster_playing_false|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_caster_walk_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_caster_walk_false|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_spawned_true|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_spawned_false|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_removed_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_removed_false|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_playing_true|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_playing_false|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_walk_true|hooks=1|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_walk_false|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_unknown_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_unknown_false|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_invalid_true|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=playing_target_invalid_false|hooks=0|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=stop|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=bad_animation|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=bad_scale|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=duplicate|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=alias_conflict|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=bad_boolean|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=bad_integer|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=bad_key|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99",
+    "[13:10:35] [Server thread/INFO]: [HelsteraModelBridgeProbe] MODEL_ROW|key=empty_target|uuid=2b59f31d-95c0-4d1a-b296-90e804356bb6|caster=a9703304-4bec-4ecd-803b-90f9167e93e1|bindings=1|casterBindings=0|scale=2.0|animation=absent|state=IDLE|valid=true|tick=99"
+  ],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "bd2eada48b50a67ba7aaffc4742604ecf7fe7bb53495078094e7f74286f98034"
+    },
+    {
+      "path": "source-mobs.yml",
+      "sha256": "1b4ab8b2501cf7c854f4dbac04d17efff4dc23edc4872ddea7af913716a6935c"
+    },
+    {
+      "path": "source-skills.yml",
+      "sha256": "3da3938666c6596328aed0cc8846d1e1514acc33563f69879572d53bcbb30b6f"
+    },
+    {
+      "path": "source-integrations.yml",
+      "sha256": "926771856f5ac8e6e914313c257c8fa1d4e4f8855ae654e89e9cd043479af190"
+    },
+    {
+      "path": "reloaded-skills.yml",
+      "sha256": "3da3938666c6596328aed0cc8846d1e1514acc33563f69879572d53bcbb30b6f"
+    }
+  ],
+  "boot": {
+    "startedAtUtc": "2026-11-20T13:10:17.855173+00:00",
+    "stoppedAtUtc": "2026-11-20T13:10:36.283751+00:00",
+    "exitCode": 0
+  },
+  "validationResult": "rejected: Model bridge probe failed",
+  "logArchive": "paper-1.21.1-model-bridge-20261120-r1-logs.zip",
+  "logArchiveSha256": "b9cf11a4af59be26ec975b448e5d15db2ad331605384bcee42b865a181ef49aa"
+}

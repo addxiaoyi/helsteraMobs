@@ -1,5 +1,7 @@
 # Rapid chunk reload and native registration
 
+Model-bridge release refresh (2026-11-20): [rapid-reload](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r8.json) passed against plugin SHA-256 `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`, also verified by the 471-probe strict catalog. Earlier entries retain their original artifact scope.
+
 Terminal-variable release refresh (2026-11-20): [rapid-reload](../tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r7.json) passed against plugin SHA-256 `0d9070b2764868a8de94888c140238d03dc3691ce3ac01355e3d766d444c3d75`, also verified by the 471-probe strict catalog. Earlier entries below describe their original artifacts; their documented behavior exceptions remain unchanged.
 
 Scope: public Paper 1.21.1-133 and MythicMobs 5.7.2, COW mobs, all five Despawn

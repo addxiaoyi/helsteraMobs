@@ -1382,6 +1382,64 @@ try {
     }
     [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
     [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
+    $modelBridgePolicy = $originalVersionText | ConvertFrom-Json
+    $modelBridgePolicy.releasePolicy | Add-Member -NotePropertyName requiresModelBridgeEvidence -NotePropertyValue $true
+    @($modelBridgePolicy.combinations | Where-Object releaseValidated)[0] | Add-Member -NotePropertyName serverJarSha256 -NotePropertyValue '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($modelBridgePolicy | ConvertTo-Json -Depth 20))
+    foreach ($case in @('missing', 'unsafe', 'unsafe-nested', 'wrong-report-name', 'missing-hash', 'invalid-hash', 'uppercase-hash', 'missing-file', 'changed-file', 'wrong-plugin', 'wrong-server', 'missing-schema', 'old-schema', 'future-schema', 'known-gap', 'observation', 'invalid-archive')) {
+        $modelBridgeManifest = @($originalCommandManifest | ConvertFrom-Json)
+        $modelBridgeEntry = @($modelBridgeManifest | Where-Object { $_.fullReleaseCatalog })[0]
+        $modelBridgeReference = 'tools/paper-integration/reports/paper-1.21.1-model-bridge-20261120-r99.json'
+        $modelBridgeFile = Join-Path $temporaryRoot $modelBridgeReference
+        $modelBridgeMetadata = [pscustomobject]@{
+            schemaVersion = 1
+            evidenceMode = 'scoped-runtime'
+            pluginSha256 = $testPluginHash
+            paperJarSha256 = '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+        }
+        if ($case -eq 'wrong-plugin') { $modelBridgeMetadata.pluginSha256 = ('0' * 64) }
+        if ($case -eq 'wrong-server') { $modelBridgeMetadata.paperJarSha256 = ('0' * 64) }
+        if ($case -eq 'missing-schema') { $modelBridgeMetadata.PSObject.Properties.Remove('schemaVersion') }
+        if ($case -eq 'old-schema') { $modelBridgeMetadata.schemaVersion = 0 }
+        if ($case -eq 'future-schema') { $modelBridgeMetadata.schemaVersion = 2 }
+        if ($case -eq 'known-gap') { $modelBridgeMetadata.evidenceMode = 'diagnostic-known-gap' }
+        if ($case -eq 'observation') { $modelBridgeMetadata.evidenceMode = 'observation' }
+        if ($case -eq 'invalid-archive') {
+            # Correct metadata and fresh hashes must still reach the independent validator.
+            $modelBridgeLogName = 'paper-1.21.1-model-bridge-20261120-r99-logs.zip'
+            $modelBridgeLogPath = Join-Path ([System.IO.Path]::GetDirectoryName($modelBridgeFile)) $modelBridgeLogName
+            [System.IO.File]::WriteAllText($modelBridgeLogPath, 'not a ZIP archive')
+            $modelBridgeMetadata | Add-Member -NotePropertyName logArchive -NotePropertyValue $modelBridgeLogName
+            $modelBridgeMetadata | Add-Member -NotePropertyName logArchiveSha256 -NotePropertyValue (Get-FileHash -LiteralPath $modelBridgeLogPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        [System.IO.File]::WriteAllText($modelBridgeFile, ($modelBridgeMetadata | ConvertTo-Json))
+        $modelBridgeReferenceData = [pscustomobject]@{
+            report = $modelBridgeReference
+            reportSha256 = (Get-FileHash -LiteralPath $modelBridgeFile -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        $expectedModelBridgeFailure = switch ($case) {
+            'missing' { 'requires pinned model bridge' }
+            'unsafe' { $modelBridgeReferenceData.report = '../outside.json'; 'requires pinned model bridge' }
+            'unsafe-nested' { $modelBridgeReferenceData.report = 'tools/paper-integration/reports/../paper-1.21.1-model-bridge-20261120-r99.json'; 'requires pinned model bridge' }
+            'wrong-report-name' { $modelBridgeReferenceData.report = $modelBridgeReference.Replace('model-bridge', 'cancelled-death'); 'requires pinned model bridge' }
+            'missing-hash' { $modelBridgeReferenceData.PSObject.Properties.Remove('reportSha256'); 'requires pinned model bridge' }
+            'invalid-hash' { $modelBridgeReferenceData.reportSha256 = 'not-a-sha256'; 'requires pinned model bridge' }
+            'uppercase-hash' { $modelBridgeReferenceData.reportSha256 = ('A' * 64); 'requires pinned model bridge' }
+            'missing-file' { Remove-Item -LiteralPath $modelBridgeFile; 'report is missing or changed' }
+            'changed-file' { $modelBridgeReferenceData.reportSha256 = ('0' * 64); 'report is missing or changed' }
+            { $_ -in @('wrong-plugin', 'wrong-server') } { 'artifact/server' }
+            { $_ -in @('missing-schema', 'old-schema', 'future-schema', 'known-gap', 'observation') } { 'must prove the scoped' }
+            'invalid-archive' { 'Model bridge evidence validation failed' }
+        }
+        if ($case -ne 'missing') { $modelBridgeEntry | Add-Member -NotePropertyName modelBridgeEvidence -NotePropertyValue $modelBridgeReferenceData }
+        [System.IO.File]::WriteAllText($manifestPath, ($modelBridgeManifest | ConvertTo-Json -Depth 20))
+        $modelBridgeFailure = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+        if ($LASTEXITCODE -eq 0 -or $modelBridgeFailure -notmatch $expectedModelBridgeFailure) {
+            throw "Model bridge evidence mutation did not fail as expected ($case): $modelBridgeFailure"
+        }
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
     [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))

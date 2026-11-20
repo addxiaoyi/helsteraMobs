@@ -85,7 +85,7 @@ public final class IntegrationRegistryImpl implements dev.helstera.api.integrati
                     .append(" fail-closed=").append(contract.failClosed())
                     .append(" 保留源值=").append(contract.preservesSourceValues())
                     .append('\n');
-            if (!a.isConnected() && a.statusReport() != null) {
+            if (a.statusReport() != null) {
                 sb.append("  └ ").append(a.statusReport()).append('\n');
             }
         }

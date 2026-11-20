@@ -1,5 +1,7 @@
 # Terminal variable mutation and expiry
 
+Model-bridge release refresh (2026-11-20): [terminal-variable](../tools/paper-integration/reports/paper-1.21.1-terminal-variable-20261120-r5.json) passed against plugin SHA-256 `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`, also verified by the 471-probe strict catalog. Earlier entries retain their original artifact scope.
+
 The imported `set-variable ... value="..." @self` syntax now decodes the keyed
 value before binding the action. Numeric values keep their declared type, and
 quoted text keeps its spaces, escapes and literal targeter/condition characters.

@@ -1,0 +1,567 @@
+{
+  "schemaVersion": 3,
+  "fixtureDirectory": "srv-paper-despawn-crash-chunk-clock-20261120-r5",
+  "evidenceMode": "comparison-with-exception",
+  "unloadBoundary": "chunk",
+  "saveIntervalSeconds": 5,
+  "clockCheckpoints": [
+    {
+      "stage": "write",
+      "sequence": 1,
+      "value": 101,
+      "capturedAtUtc": "2026-11-20T14:23:49.461477+00:00",
+      "processAlive": true
+    },
+    {
+      "stage": "write",
+      "sequence": 2,
+      "value": 102,
+      "capturedAtUtc": "2026-11-20T14:23:54.417496+00:00",
+      "processAlive": true
+    },
+    {
+      "stage": "recover",
+      "sequence": 1,
+      "value": 201,
+      "capturedAtUtc": "2026-11-20T14:24:22.464853+00:00",
+      "processAlive": true
+    },
+    {
+      "stage": "recover",
+      "sequence": 2,
+      "value": 202,
+      "capturedAtUtc": "2026-11-20T14:24:27.421391+00:00",
+      "processAlive": true
+    },
+    {
+      "stage": "final",
+      "sequence": 1,
+      "value": 301,
+      "capturedAtUtc": "2026-11-20T14:24:55.212038+00:00",
+      "processAlive": true
+    },
+    {
+      "stage": "final",
+      "sequence": 2,
+      "value": 302,
+      "capturedAtUtc": "2026-11-20T14:25:00.267291+00:00",
+      "processAlive": true
+    }
+  ],
+  "knownExceptions": [
+    "MM-5.7.2-inactive-entity-registry"
+  ],
+  "generatedAtUtc": "2026-11-20T14:23:06.969650+00:00",
+  "pluginSha256": "d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "4e83f8f61b900b73f90ddd7538a9b6fd319f001d4f5def17f8f0f06d9eb1be03",
+  "sourceHashes": {
+    "tools/paper-integration/run-despawn-crash-fixture.py": "a025121bdf01d316899a62f8cad7316dd237a4dc49a6fad65bb130931ec571d6",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/DespawnCrashProbe.java": "19fe3cba58ea613a53b24b84b803b4f022ce0ccff6caad98adbb951bbc98dba1",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "tools/paper-integration/validate-despawn-crash.py": "126cd3c8b832547ef973cc8fc55b0a027766cfa27531c96f346d755107be4684",
+    "tools/paper-integration/validate-player-variables.py": "59f014f63b13a327490260de2915a6380eb397201bf4c47be73240b6bb4b8064",
+    "tools/paper-integration/test-despawn-crash-evidence.py": "ec2d63478dcc728750a06bf220f268fc8512b28cbffb07ecddad491899fe152f"
+  },
+  "observations": [
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_normal_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=7|runtimeSaved=7|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,4803.25,110.0,4802.75|runtimePoint=despawn-crash-active,4803.25,110.0,4802.75|tree=23|visuals=11|forced=false",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_normal_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=8|runtimeSaved=8|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,4867.25,110.0,4802.75|runtimePoint=despawn-crash-active,4867.25,110.0,4802.75|tree=24|visuals=11|forced=false",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_chunk_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=9|runtimeSaved=9|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,4931.25,110.0,4802.75|runtimePoint=despawn-crash-active,4931.25,110.0,4802.75|tree=25|visuals=11|forced=false",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_chunk_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=10|runtimeSaved=10|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,4995.25,110.0,4802.75|runtimePoint=despawn-crash-active,4995.25,110.0,4802.75|tree=26|visuals=11|forced=false",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_npc_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=11|runtimeSaved=11|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,5059.25,110.0,4802.75|runtimePoint=despawn-crash-active,5059.25,110.0,4802.75|tree=27|visuals=11|forced=false",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_npc_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=12|runtimeSaved=12|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,5123.25,110.0,4802.75|runtimePoint=despawn-crash-active,5123.25,110.0,4802.75|tree=28|visuals=11|forced=false",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_never_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=13|runtimeSaved=13|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,5187.25,110.0,4802.75|runtimePoint=despawn-crash-active,5187.25,110.0,4802.75|tree=29|visuals=11|forced=false",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=14|runtimeSaved=14|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,5251.25,110.0,4802.75|runtimePoint=despawn-crash-active,5251.25,110.0,4802.75|tree=30|visuals=11|forced=false",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_persistent_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=15|runtimeSaved=15|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,5315.25,110.0,4802.75|runtimePoint=despawn-crash-active,5315.25,110.0,4802.75|tree=31|visuals=11|forced=true",
+    "[14:23:31] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=active_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=16|runtimeSaved=16|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-active,5379.25,110.0,4802.75|runtimePoint=despawn-crash-active,5379.25,110.0,4802.75|tree=32|visuals=11|forced=true",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_normal_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=7|runtimeSaved=7|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,4803.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,4803.25,110.0,4802.75|tree=23|visuals=11|forced=false",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_normal_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=8|runtimeSaved=8|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,4867.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,4867.25,110.0,4802.75|tree=24|visuals=11|forced=false",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_chunk_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=9|runtimeSaved=9|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,4931.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,4931.25,110.0,4802.75|tree=25|visuals=11|forced=false",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_chunk_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=10|runtimeSaved=10|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,4995.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,4995.25,110.0,4802.75|tree=26|visuals=11|forced=false",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_npc_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=11|runtimeSaved=11|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5059.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5059.25,110.0,4802.75|tree=27|visuals=11|forced=false",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_npc_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=12|runtimeSaved=12|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5123.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5123.25,110.0,4802.75|tree=28|visuals=11|forced=false",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_never_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=13|runtimeSaved=13|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5187.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5187.25,110.0,4802.75|tree=29|visuals=11|forced=false",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=14|runtimeSaved=14|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5251.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5251.25,110.0,4802.75|tree=30|visuals=11|forced=false",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_persistent_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=15|runtimeSaved=15|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5315.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5315.25,110.0,4802.75|tree=31|visuals=11|forced=true",
+    "[14:23:36] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=unloaded_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=16|runtimeSaved=16|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5379.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5379.25,110.0,4802.75|tree=32|visuals=11|forced=true",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=13|nativeTransient=absent|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=despawn-crash-unloaded,5187.25,110.0,4802.75|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_never_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=14|nativeTransient=absent|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=despawn-crash-unloaded,5251.25,110.0,4802.75|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=15|nativeTransient=absent|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=despawn-crash-unloaded,5315.25,110.0,4802.75|tree=absent|visuals=0|forced=false",
+    "[14:23:38] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=unloaded_persistent_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=16|nativeTransient=absent|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=despawn-crash-unloaded,5379.25,110.0,4802.75|tree=absent|visuals=0|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_normal_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=7|runtimeSaved=7|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,4803.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,4803.25,110.0,4802.75|tree=23|visuals=11|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_normal_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=8|runtimeSaved=8|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,4867.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,4867.25,110.0,4802.75|tree=24|visuals=11|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_chunk_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=9|runtimeSaved=9|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,4931.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,4931.25,110.0,4802.75|tree=25|visuals=11|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_chunk_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=10|runtimeSaved=10|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,4995.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,4995.25,110.0,4802.75|tree=26|visuals=11|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_npc_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=11|runtimeSaved=11|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5059.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5059.25,110.0,4802.75|tree=27|visuals=11|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_npc_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=12|runtimeSaved=12|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5123.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5123.25,110.0,4802.75|tree=28|visuals=11|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_never_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=13|runtimeSaved=13|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5187.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5187.25,110.0,4802.75|tree=29|visuals=11|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=14|runtimeSaved=14|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5251.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5251.25,110.0,4802.75|tree=30|visuals=11|forced=false",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_persistent_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=15|runtimeSaved=15|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5315.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5315.25,110.0,4802.75|tree=31|visuals=11|forced=true",
+    "[14:23:42] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=seeded|key=resumed_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=16|runtimeSaved=16|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5379.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5379.25,110.0,4802.75|tree=32|visuals=11|forced=true",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=13|nativeTransient=absent|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=despawn-crash-resumed,5187.25,110.0,4802.75|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_never_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=14|nativeTransient=absent|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=despawn-crash-resumed,5251.25,110.0,4802.75|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=15|nativeTransient=absent|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=despawn-crash-resumed,5315.25,110.0,4802.75|tree=absent|visuals=0|forced=false",
+    "[14:23:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=unloaded|key=resumed_persistent_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=16|nativeTransient=absent|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=despawn-crash-resumed,5379.25,110.0,4802.75|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_never_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=13|runtimeSaved=13|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5187.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5187.25,110.0,4802.75|tree=29|visuals=11|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=14|runtimeSaved=14|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5251.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5251.25,110.0,4802.75|tree=30|visuals=11|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_persistent_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=15|runtimeSaved=15|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5315.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5315.25,110.0,4802.75|tree=31|visuals=11|forced=true",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=resumed|key=resumed_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=16|runtimeSaved=16|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5379.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5379.25,110.0,4802.75|tree=32|visuals=11|forced=true",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_never_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=113|runtimeSaved=113|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5187.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5187.25,110.0,4802.75|tree=129|visuals=11|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=114|runtimeSaved=114|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5251.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5251.25,110.0,4802.75|tree=130|visuals=11|forced=false",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_persistent_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=115|runtimeSaved=115|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5315.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5315.25,110.0,4802.75|tree=131|visuals=11|forced=true",
+    "[14:23:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=changed|key=resumed_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=116|runtimeSaved=116|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5379.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5379.25,110.0,4802.75|tree=132|visuals=11|forced=true",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_never_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=false",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=false",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_persistent_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=true",
+    "[14:24:11] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=active_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=true",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_never_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=13|runtimeSaved=13|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5187.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5187.25,110.0,4802.75|tree=29|visuals=11|forced=false",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=14|runtimeSaved=14|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5251.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5251.25,110.0,4802.75|tree=30|visuals=11|forced=false",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_persistent_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=15|runtimeSaved=15|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5315.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5315.25,110.0,4802.75|tree=31|visuals=11|forced=true",
+    "[14:24:13] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=unloaded_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=16|runtimeSaved=16|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-unloaded,5379.25,110.0,4802.75|runtimePoint=despawn-crash-unloaded,5379.25,110.0,4802.75|tree=32|visuals=11|forced=true",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_never_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=13|runtimeSaved=13|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5187.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5187.25,110.0,4802.75|tree=29|visuals=11|forced=false",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=14|runtimeSaved=14|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5251.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5251.25,110.0,4802.75|tree=30|visuals=11|forced=false",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_persistent_direct|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=15|runtimeSaved=15|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5315.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5315.25,110.0,4802.75|tree=31|visuals=11|forced=true",
+    "[14:24:15] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=recover|key=resumed_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=16|runtimeSaved=16|nativeTransient=99|runtimeTransient=99|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=despawn-crash-resumed,5379.25,110.0,4802.75|runtimePoint=despawn-crash-resumed,5379.25,110.0,4802.75|tree=32|visuals=11|forced=true",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=38|runtimeUpdated=38|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=40|runtimeUpdated=40|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=true",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=38|runtimeUpdated=38|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=40|runtimeUpdated=40|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=true",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=38|runtimeUpdated=38|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:19] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=40|runtimeUpdated=40|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=true",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=38|runtimeUpdated=38|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:44] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=active_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=40|runtimeUpdated=40|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=true",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=38|runtimeUpdated=38|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:46] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=unloaded_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=40|runtimeUpdated=40|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=true",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_never_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=38|runtimeUpdated=38|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:48] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=final|key=resumed_persistent_imported|nativeEntity=true|runtimeEntity=true|nativeRegistry=true|runtimeInstance=true|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=40|runtimeUpdated=40|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=11|forced=true",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_never_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=active_persistent_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_never_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=unloaded_persistent_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_normal_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_normal_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_chunk_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_chunk_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_npc_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_npc_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_never_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_never_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_persistent_direct|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false",
+    "[14:24:51] [Server thread/INFO]: [HelsteraDespawnCrashProbe] DCRASH_ROW|phase=cleared|key=resumed_persistent_imported|nativeEntity=false|runtimeEntity=false|nativeRegistry=false|runtimeInstance=false|nativeSaved=absent|runtimeSaved=absent|nativeTransient=absent|runtimeTransient=absent|nativeUpdated=absent|runtimeUpdated=absent|nativePoint=absent|runtimePoint=absent|tree=absent|visuals=0|forced=false"
+  ],
+  "boots": [
+    {
+      "stage": "write",
+      "startedAtUtc": "2026-11-20T14:23:06.977340+00:00",
+      "stoppedAtUtc": "2026-11-20T14:23:55.043501+00:00",
+      "exitCode": -9,
+      "termination": "SIGKILL"
+    },
+    {
+      "stage": "recover",
+      "startedAtUtc": "2026-11-20T14:23:55.044070+00:00",
+      "stoppedAtUtc": "2026-11-20T14:24:28.042846+00:00",
+      "exitCode": -9,
+      "termination": "SIGKILL"
+    },
+    {
+      "stage": "final",
+      "startedAtUtc": "2026-11-20T14:24:28.043339+00:00",
+      "stoppedAtUtc": "2026-11-20T14:25:01.935396+00:00",
+      "exitCode": 0,
+      "termination": "graceful"
+    }
+  ],
+  "files": [
+    {
+      "path": "write.server.log",
+      "sha256": "780279ae9f9e86e594989768f3e3ccb56b661f641cc6a98bfdf02543a8599173"
+    },
+    {
+      "path": "recover.server.log",
+      "sha256": "bbe376e34e0518bfcd363a95027dd524b121474c5455a65a426e7e41cc43f31f"
+    },
+    {
+      "path": "final.server.log",
+      "sha256": "cadf83d2e4d6da4e03fa619ebda89e42f68818b52f364cf659640e4fd1f2362e"
+    },
+    {
+      "path": "identities.yml",
+      "sha256": "5f968e520f5ccec6a4f3f774b1c0221f9579287e8ac02b3333afbc3781effffe"
+    },
+    {
+      "path": "native-clock.yml",
+      "sha256": "c29240870bfd3f7207ffd08bfb06199e6564730d6ab895e1376dea02f5f2999d"
+    },
+    {
+      "path": "snapshots/final-clock-1/global-data.json",
+      "sha256": "69cf76c988c9cb85f04f32a5af45ab4f0729519189a0c12d84ddfe02029ce698"
+    },
+    {
+      "path": "snapshots/final-clock-2/global-data.json",
+      "sha256": "9d876d25b81b8bb0461a5e1d855a9d879c60f00701a23596f8bc91cf3cf62a58"
+    },
+    {
+      "path": "snapshots/final-online/entities.json",
+      "sha256": "7089d124e0fe9516b3bb84e83d93f447b8eee74a8240b04e3831dd8cac78f69a"
+    },
+    {
+      "path": "snapshots/final-online/inventory.json",
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570"
+    },
+    {
+      "path": "snapshots/final-online/regions/despawn-crash-active/r.10.9.mca",
+      "sha256": "b342d4f46bdb7c47a27b69a89a3bde7f6aca7454b4a298ad97120dcb4627976f"
+    },
+    {
+      "path": "snapshots/final-online/regions/despawn-crash-resumed/r.10.9.mca",
+      "sha256": "4b63ee16765ac8a53c5073b368bcfb471cce0d434c0205d5a5643b9634f54758"
+    },
+    {
+      "path": "snapshots/final-online/regions/despawn-crash-unloaded/r.10.9.mca",
+      "sha256": "edc3cf5f57164e7e1ff17736d59a7628eb17e22973da34d514d48c491f32e5c1"
+    },
+    {
+      "path": "snapshots/final-stopped/entities.json",
+      "sha256": "80d0de5c27f88fee7afdb6db5518bb8fdf2e3c4f30a6bf53e0f2e580a905d09b"
+    },
+    {
+      "path": "snapshots/final-stopped/inventory.json",
+      "sha256": "ae5012f6fdb8aa217f5be1f4a5aaf0aa42e621a7bb485b235c4f69d707b1dd7f"
+    },
+    {
+      "path": "snapshots/final-stopped/regions/despawn-crash-active/r.10.9.mca",
+      "sha256": "eabc130f1b1e410c38af3f2585e28bf5aff1dcc471b8a2ec321346a0ccc8319b"
+    },
+    {
+      "path": "snapshots/final-stopped/regions/despawn-crash-resumed/r.10.9.mca",
+      "sha256": "42021912349a7675f347b58583806ac731f0a90085e6f19c067e8fa574ea8699"
+    },
+    {
+      "path": "snapshots/final-stopped/regions/despawn-crash-unloaded/r.10.9.mca",
+      "sha256": "5d3457498fddabd8f98d1de71e941b3bd8a4b3d17ebd400d3a3b4522f0e2769e"
+    },
+    {
+      "path": "snapshots/final-stopped/scoped-variables.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "snapshots/recover-clock-1/global-data.json",
+      "sha256": "551923a32fd03e7a354d81d5d15eefb454e668d9f17ddfdc08856c839decde40"
+    },
+    {
+      "path": "snapshots/recover-clock-2/global-data.json",
+      "sha256": "800b775a91720b5a55f85b5c09ad26fa18e7ef6bde75a47c4420f37537c660f9"
+    },
+    {
+      "path": "snapshots/recover-online/entities.json",
+      "sha256": "1ae2b2c8dfffae54522d6d490ae2e800ffe620ab9f77ed096b2251adc4e91c07"
+    },
+    {
+      "path": "snapshots/recover-online/entity-2f02bdbc-67a1-4ba2-baaa-a759f6f6a88f.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-online/entity-4fda3e19-20fa-4160-9374-591ec4adf652.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-online/entity-803cc197-f63c-4378-94e3-856309314744.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-online/entity-87441c96-6234-40db-a72c-0c6f83416786.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-online/entity-9bfa3f0e-ba1c-4883-8f2c-13ce1d491b48.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-online/entity-c5fae99a-c781-4918-acbd-072e742238bd.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-online/inventory.json",
+      "sha256": "97a44ad480e9c80b94575c0c281337c6251a9d85b80a0e4afd39e4f176ae7448"
+    },
+    {
+      "path": "snapshots/recover-online/regions/despawn-crash-active/r.10.9.mca",
+      "sha256": "a8ed099d1839c35f25d02ab14b1e3e5867fd61fdaf585d605cbc364227034ece"
+    },
+    {
+      "path": "snapshots/recover-online/regions/despawn-crash-resumed/r.10.9.mca",
+      "sha256": "3b7f8f8496ad65e31730ede7e29497e6173a38e32fdd36b2ef109218ca3bd72b"
+    },
+    {
+      "path": "snapshots/recover-online/regions/despawn-crash-unloaded/r.10.9.mca",
+      "sha256": "e5c57780cc9662b45cec927ecbb485d79b36ec569bd04fef58fe51955e7990c0"
+    },
+    {
+      "path": "snapshots/recover-stopped/entities.json",
+      "sha256": "1ae2b2c8dfffae54522d6d490ae2e800ffe620ab9f77ed096b2251adc4e91c07"
+    },
+    {
+      "path": "snapshots/recover-stopped/entity-2f02bdbc-67a1-4ba2-baaa-a759f6f6a88f.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-stopped/entity-4fda3e19-20fa-4160-9374-591ec4adf652.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-stopped/entity-803cc197-f63c-4378-94e3-856309314744.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-stopped/entity-87441c96-6234-40db-a72c-0c6f83416786.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-stopped/entity-9bfa3f0e-ba1c-4883-8f2c-13ce1d491b48.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-stopped/entity-c5fae99a-c781-4918-acbd-072e742238bd.yml",
+      "sha256": "d93da87f2717cbf7917ecae4c27f324047870bc92cb98052253ab1600e2ef6da"
+    },
+    {
+      "path": "snapshots/recover-stopped/inventory.json",
+      "sha256": "97a44ad480e9c80b94575c0c281337c6251a9d85b80a0e4afd39e4f176ae7448"
+    },
+    {
+      "path": "snapshots/recover-stopped/regions/despawn-crash-active/r.10.9.mca",
+      "sha256": "a8ed099d1839c35f25d02ab14b1e3e5867fd61fdaf585d605cbc364227034ece"
+    },
+    {
+      "path": "snapshots/recover-stopped/regions/despawn-crash-resumed/r.10.9.mca",
+      "sha256": "3b7f8f8496ad65e31730ede7e29497e6173a38e32fdd36b2ef109218ca3bd72b"
+    },
+    {
+      "path": "snapshots/recover-stopped/regions/despawn-crash-unloaded/r.10.9.mca",
+      "sha256": "e5c57780cc9662b45cec927ecbb485d79b36ec569bd04fef58fe51955e7990c0"
+    },
+    {
+      "path": "snapshots/write-clock-1/global-data.json",
+      "sha256": "0572bbe72707033bf166702387fabe45406a36cf8781be06cd6c8ec1545408aa"
+    },
+    {
+      "path": "snapshots/write-clock-2/global-data.json",
+      "sha256": "0bd700e761454a3eba2cc64da4c4840f0ae27f7c83ab3c5daa0517b49d618763"
+    },
+    {
+      "path": "snapshots/write-online/entities.json",
+      "sha256": "a2218a1f00a9e928cdfb1fca2f71b2daf9fbed809ae6ae34cf13aaf15de25953"
+    },
+    {
+      "path": "snapshots/write-online/entity-29499039-c218-449f-a1d6-c7f150bd877f.yml",
+      "sha256": "ce5eca2b08e2322457c4fe090348d3b48eb895fa7665f9a91fd4e7eb22dd1cd9"
+    },
+    {
+      "path": "snapshots/write-online/entity-2f02bdbc-67a1-4ba2-baaa-a759f6f6a88f.yml",
+      "sha256": "2ea6010d37d3f4acf832be8f6bc87b5549f38655f63c4e8036873963c3818b45"
+    },
+    {
+      "path": "snapshots/write-online/entity-4fda3e19-20fa-4160-9374-591ec4adf652.yml",
+      "sha256": "e3a8b4339b1e6a5ffcca9218d88f1938338260fe746c7667dfd163318879e5b2"
+    },
+    {
+      "path": "snapshots/write-online/entity-755dec70-bfb6-4dfb-93f3-c1efd1c64cc0.yml",
+      "sha256": "e1b388764178cb1bb8f9be5e5935c037596da1873e8dcf58f9e609a6e8acd64d"
+    },
+    {
+      "path": "snapshots/write-online/entity-8471d17a-0565-472f-b4af-d5e8bd1f017c.yml",
+      "sha256": "6dd12b0bbca1408d115c886a45c0e5573868c48b8b6f8c7d7cb14cbccf4de02d"
+    },
+    {
+      "path": "snapshots/write-online/entity-91307a7c-3505-46ea-b840-c4c4cd4902bb.yml",
+      "sha256": "f32dba339b468f31c7c946f65dd6c80134dd0b23d0f65542e8c7261251f235da"
+    },
+    {
+      "path": "snapshots/write-online/entity-9bfa3f0e-ba1c-4883-8f2c-13ce1d491b48.yml",
+      "sha256": "18e132b21c0a339a1dcf5cbf353116204bfee80422fe2ce3306956f8275d18e6"
+    },
+    {
+      "path": "snapshots/write-online/entity-c5fae99a-c781-4918-acbd-072e742238bd.yml",
+      "sha256": "83e3c7b0c5097536cbb735ecfbd9cd553ecee57bf18a8d48e0f0654ccdadee37"
+    },
+    {
+      "path": "snapshots/write-online/inventory.json",
+      "sha256": "43b109f4528d601a1c9c670d39d1d6d63d12c258d4a683f4be86a922b267ee06"
+    },
+    {
+      "path": "snapshots/write-online/regions/despawn-crash-active/r.10.9.mca",
+      "sha256": "158221133952495eb624ae68ecbf4b933d79b532d74b13fdedb05f273767f72e"
+    },
+    {
+      "path": "snapshots/write-online/regions/despawn-crash-resumed/r.10.9.mca",
+      "sha256": "212749ac9796b8a38ec7180637ed8d7dae3460e61b0193b150187ebe3c3ed7e9"
+    },
+    {
+      "path": "snapshots/write-online/regions/despawn-crash-unloaded/r.10.9.mca",
+      "sha256": "f7839617d574a2495643f76f92154e1cf57f937ed692628d1dccbf060ae38992"
+    },
+    {
+      "path": "snapshots/write-stopped/entities.json",
+      "sha256": "a2218a1f00a9e928cdfb1fca2f71b2daf9fbed809ae6ae34cf13aaf15de25953"
+    },
+    {
+      "path": "snapshots/write-stopped/entity-29499039-c218-449f-a1d6-c7f150bd877f.yml",
+      "sha256": "ce5eca2b08e2322457c4fe090348d3b48eb895fa7665f9a91fd4e7eb22dd1cd9"
+    },
+    {
+      "path": "snapshots/write-stopped/entity-2f02bdbc-67a1-4ba2-baaa-a759f6f6a88f.yml",
+      "sha256": "2ea6010d37d3f4acf832be8f6bc87b5549f38655f63c4e8036873963c3818b45"
+    },
+    {
+      "path": "snapshots/write-stopped/entity-4fda3e19-20fa-4160-9374-591ec4adf652.yml",
+      "sha256": "e3a8b4339b1e6a5ffcca9218d88f1938338260fe746c7667dfd163318879e5b2"
+    },
+    {
+      "path": "snapshots/write-stopped/entity-755dec70-bfb6-4dfb-93f3-c1efd1c64cc0.yml",
+      "sha256": "e1b388764178cb1bb8f9be5e5935c037596da1873e8dcf58f9e609a6e8acd64d"
+    },
+    {
+      "path": "snapshots/write-stopped/entity-8471d17a-0565-472f-b4af-d5e8bd1f017c.yml",
+      "sha256": "6dd12b0bbca1408d115c886a45c0e5573868c48b8b6f8c7d7cb14cbccf4de02d"
+    },
+    {
+      "path": "snapshots/write-stopped/entity-91307a7c-3505-46ea-b840-c4c4cd4902bb.yml",
+      "sha256": "f32dba339b468f31c7c946f65dd6c80134dd0b23d0f65542e8c7261251f235da"
+    },
+    {
+      "path": "snapshots/write-stopped/entity-9bfa3f0e-ba1c-4883-8f2c-13ce1d491b48.yml",
+      "sha256": "18e132b21c0a339a1dcf5cbf353116204bfee80422fe2ce3306956f8275d18e6"
+    },
+    {
+      "path": "snapshots/write-stopped/entity-c5fae99a-c781-4918-acbd-072e742238bd.yml",
+      "sha256": "83e3c7b0c5097536cbb735ecfbd9cd553ecee57bf18a8d48e0f0654ccdadee37"
+    },
+    {
+      "path": "snapshots/write-stopped/inventory.json",
+      "sha256": "43b109f4528d601a1c9c670d39d1d6d63d12c258d4a683f4be86a922b267ee06"
+    },
+    {
+      "path": "snapshots/write-stopped/regions/despawn-crash-active/r.10.9.mca",
+      "sha256": "158221133952495eb624ae68ecbf4b933d79b532d74b13fdedb05f273767f72e"
+    },
+    {
+      "path": "snapshots/write-stopped/regions/despawn-crash-resumed/r.10.9.mca",
+      "sha256": "212749ac9796b8a38ec7180637ed8d7dae3460e61b0193b150187ebe3c3ed7e9"
+    },
+    {
+      "path": "snapshots/write-stopped/regions/despawn-crash-unloaded/r.10.9.mca",
+      "sha256": "f7839617d574a2495643f76f92154e1cf57f937ed692628d1dccbf060ae38992"
+    }
+  ],
+  "logArchive": "paper-1.21.1-despawn-crash-chunk-clock-20261120-r5-logs.zip",
+  "logArchiveSha256": "0e5ddb66dc0f161148ec9b3aac90c0ecb82a1d7ccdaf13329180094d94a33ff6"
+}

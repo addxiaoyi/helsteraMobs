@@ -48,6 +48,9 @@ if ($matrix.releasePolicy.requiresCancelledDeathEvidence -ne $true) {
 if ($matrix.releasePolicy.requiresTerminalVariableEvidence -ne $true) {
     throw 'Version matrix must require the exact-artifact terminal variable comparison.'
 }
+if ($matrix.releasePolicy.requiresModelBridgeEvidence -ne $true) {
+    throw 'Version matrix must require the exact-artifact native model bridge evidence.'
+}
 if ($release.Count -ne 1) { throw "Expected exactly one release-validated combination, found $($release.Count)." }
 $entry = $release[0]
 $baselineValid = $entry.serverFamily -eq 'Paper' -and $entry.serverVersion -eq '1.21.1-133' -and $entry.minecraftVersion -eq '1.21.1' -and $entry.evidenceLevel -eq 'strict'

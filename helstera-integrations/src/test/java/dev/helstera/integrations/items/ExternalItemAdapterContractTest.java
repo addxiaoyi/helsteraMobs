@@ -52,7 +52,8 @@ class ExternalItemAdapterContractTest {
         assertTrue(adapter.contract().declares(Capability.MOB_MODEL_BINDING));
         assertTrue(adapter.contract().declares(Capability.SKILLS));
         assertTrue(adapter.contract().failClosed());
-        assertTrue(adapter.supportedVersions().contains("not CI-verified"));
+        assertTrue(adapter.supportedVersions().contains("model extensions: 5.7.2 only"));
+        assertTrue(adapter.supportedVersions().contains("lookup: 5.3.x - 5.7.x declared"));
         adapter.disable();
         assertTrue(adapter.capabilities().isEmpty());
     }
