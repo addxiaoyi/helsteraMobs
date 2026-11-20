@@ -1,3 +1,15 @@
+Terminal role reads, work in progress (2026-11-20): detached target/trigger
+placeholders now preserve their original token instead of borrowing caster
+variables; independent live peers stay readable. onDespawn now retains the
+removed entity as trigger. The current build passes 2,477 Maven tests and
+11 clean SpotBugs reports. See [observations and remaining differences](../../docs/TERMINAL_READ_OBSERVATIONS.md).
+
+Initial command-removal reads and native delayed registry removal still differ.
+Condition/location reads and the full exact-artifact strict refresh remain open.
+The release gate correctly rejects this new JAR against the previous artifact's
+evidence. No matrix status is promoted; the latest fully release-gated artifact
+remains the model-bridge build documented below.
+
 # Paper Startup Evidence
 
 Latest full-catalog fixture `srv-paper-model-bridge-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`. [Strict report](reports/paper-1.21.1-model-bridge-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-model-bridge-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-model-bridge-strict-20261120-r1.client-logs.zip) This artifact passes 2,474 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.

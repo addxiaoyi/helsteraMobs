@@ -7,6 +7,13 @@ Caster, target and trigger are roles addressing one registry per entity, so a
 write through target is visible when that entity later becomes the caster or
 trigger. Other entities retain separate values. Reads do not allocate stores.
 
+Terminal execution exception: after the live caster registry is detached, only
+caster placeholders can read its retained snapshot. Target/trigger placeholders
+addressing that same entity preserve their token, including any fallback; a
+separate live entity remains readable. Initial removal windows still differ.
+See [terminal read observations](TERMINAL_READ_OBSERVATIONS.md); this in-progress
+change has not been promoted to the strict release gate.
+
 Skill variables belong to the current skill tree. A new tree does not inherit
 legacy instance variables; numeric instance variables remain a compatibility
 fallback only when there is no tree. World variables use the caster's world,

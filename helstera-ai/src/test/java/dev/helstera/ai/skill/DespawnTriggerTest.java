@@ -33,7 +33,11 @@ class DespawnTriggerTest {
         var registry = new BehaviorRegistryImpl();
         for(String event:List.of("on-despawn","on-death","on-remove")) {
             var spec = new AiProfile.TriggerSpec(); spec.actions.add(event);
-            profile.triggers.put(event,spec); registry.registerAction(event,ctx->actions.add(event));
+            profile.triggers.put(event,spec); registry.registerAction(event,ctx->{
+                actions.add(event);
+                if(event.equals("on-despawn"))assertSame(entity,ctx.trigger().orElseThrow());
+                else assertTrue(ctx.trigger().isEmpty());
+            });
         }
         when(ai.profileOf(17)).thenReturn(profile);
         var triggers = new SkillTriggers(plugin,ai,registry,bus,Logger.getAnonymousLogger(),null);

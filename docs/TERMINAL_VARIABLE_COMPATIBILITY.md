@@ -48,10 +48,11 @@ final comparison additionally tests target unset.
 
 This establishes the listed scalar mutation and expiry slice. Unit tests also
 cover detached scalar/location replacement and retained expiry without registry
-recreation. Native terminal location mechanics and target/trigger missing-registry
-placeholder rendering need separate Paper evidence. The runtime's retained
-caster/target/trigger placeholder reads are not a full parity claim; native
-manager lookup differs for removed targets. Unsupported `trigger` action scope,
+recreation. Native terminal location mechanics need separate Paper evidence. New
+[terminal role observations](TERMINAL_READ_OBSERVATIONS.md) confirm and fix
+target/trigger placeholders borrowing the detached caster snapshot; initial
+removal windows still differ and this follow-up is not yet release-gated.
+Unsupported `trigger` action scope,
 reload during callbacks, cast queues, cross-trigger cooldowns, asynchronous
 mechanics, child inheritance and additional Paper versions remain open. Broader
 Mechanics, Skills importer, Triggers and Full SkillTree rows remain

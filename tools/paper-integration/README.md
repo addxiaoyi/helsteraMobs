@@ -1,3 +1,15 @@
+Terminal role reads, work in progress (2026-11-20): detached target/trigger
+placeholders now preserve their original token instead of borrowing caster
+variables; independent live peers stay readable. onDespawn now retains the
+removed entity as trigger. The current build passes 2,477 Maven tests and
+11 clean SpotBugs reports. See [observations and remaining differences](../../docs/TERMINAL_READ_OBSERVATIONS.md).
+
+Initial command-removal reads and native delayed registry removal still differ.
+Condition/location reads and the full exact-artifact strict refresh remain open.
+The release gate correctly rejects this new JAR against the previous artifact's
+evidence. No matrix status is promoted; the latest fully release-gated artifact
+remains the model-bridge build documented below.
+
 Native MythicMobs model bridge (2026-11-20): the MM 5.7.2 load-event API now
 registers five model mechanics and three model conditions, confirms native holder
 ownership and reports SKILLS/CONDITIONS separately. Automatic spawn binding uses

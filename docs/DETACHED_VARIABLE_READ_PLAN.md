@@ -1,8 +1,11 @@
-# Detached variable reads: next comparison target
+# Detached variable reads: comparison in progress
 
-Status: audited next-step plan, not a parity claim or a change to current read
-behavior. Follow the verified model bridge milestone with a focused native
-MM 5.7.2 / Paper 1.21.1-133 comparison.
+Status: native MM 5.7.2 / Paper 1.21.1-133 observations now confirm the detached
+target/trigger placeholder defect. The runtime now preserves those tokens, even
+with defaults, after the caster snapshot has detached. onDespawn now supplies
+the removed caster as trigger, matching native command and CHUNK callbacks.
+This is work in progress, not full parity or a release promotion. See the
+[observation contract](TERMINAL_READ_OBSERVATIONS.md) for remaining differences.
 
 ## Current evidence boundary
 
@@ -10,9 +13,12 @@ The terminal-variable contract proves caster set/add/unset, expiry, and rejectio
 of detached `target.*` writes. It deliberately did not claim detached target or
 trigger read parity. `EntityVariableContext.find` currently returns the retained
 caster snapshot when a target/trigger has the same detached entity identity;
-`SkillExtras.placeholderVariable` and `VariableLocations.get` read that snapshot.
-`TerminalSkillContextTest` explicitly preserves `73:73:73` caster/target/trigger
-reads as the pre-existing behavior, rather than native evidence for that choice.
+`SkillExtras.placeholderVariable` and `VariableLocations.get` can read that snapshot.
+The public placeholder renderer now rejects detached target/trigger lookups
+before selecting either the snapshot value or an absent-value default. Regression
+tests cover raw/default/display/numeric rendering, expiry, repeated callbacks and
+an independent live peer. Condition and location reads still require their own
+native comparison; their internal lookup contract has not yet been promoted.
 
 Read-only inspection of pinned native JAR
 `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`
@@ -28,9 +34,12 @@ found distinct paths:
   ModelEngine sub-hitbox parent fallback). It does not establish that a removed
   entity can access the retained caster object used by the first path.
 
-This suggests a possible mismatch, but only real native execution can establish
-observable placeholder fallback, exception handling and timing around removal.
-Do not change reads based on the bytecode hypothesis alone.
+The first observer confirmed target reads; the second added actual self-inflicted
+and peer-inflicted deaths and confirmed trigger reads. Their raw archives remain
+observation-only, including all failures. UUIDs in the first observer incorrectly
+used an unsupported fallback suffix; its identity claims are limited to the
+separate command argument and ID events. The expanded observer uses plain UUID
+placeholders and distinguishes a retained caster from a separate live trigger.
 
 ## Comparison design
 

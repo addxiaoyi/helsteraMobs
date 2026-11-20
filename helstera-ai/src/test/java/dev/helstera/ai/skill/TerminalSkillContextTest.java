@@ -58,7 +58,7 @@ class TerminalSkillContextTest {
         run("capture{delay=1;repeat=2;repeatinterval=5}",ctx);
         skills.finishTerminalDispatch(terminal);removeSource();
         assertEquals(1,skills.terminalExecutionCount());drain();
-        assertEquals(Collections.nCopies(3,uuid+":73:73:73"),calls);
+        assertEquals(Collections.nCopies(3,uuid+":73:<target.var.Marker>:<trigger.var.Marker>"),calls);
         assertEquals(0,skills.terminalExecutionCount());assertFalse(terminal.isValid());
         assertTrue(skills.snapshotOf(25).isEmpty());assertTrue(SkillExtras.scopedVariableSnapshot("entity:"+uuid).variables().isEmpty());
     }
@@ -147,7 +147,7 @@ class TerminalSkillContextTest {
         skills.finishTerminalDispatch(terminal);
         removeSource();
         drain();
-        assertEquals(List.of("73:73:73"), captures, "read behavior is unchanged by the mutation guard");
+        assertEquals(List.of("73:<target.var.Marker>:<trigger.var.Marker>"), captures);
         var live = SkillExtras.scopedVariableSnapshot("entity:" + uuid);
         assertTrue(live.variables().isEmpty());
         assertTrue(live.locations().isEmpty());
@@ -179,6 +179,56 @@ class TerminalSkillContextTest {
         assertTrue(SkillExtras.scopedVariableSnapshot("entity:" + uuid).variables().isEmpty());
         assertTrue(VariableLocations.snapshots().isEmpty());
         skills.finishTerminalDispatch(terminal);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"target", "trigger"})
+    void detachedRolePlaceholdersKeepTheirTextWithoutBorrowingCasterValuesOrDefaults(String role) {
+        run("setvariable{var=caster.Marker;value=73}", context(source));
+        var terminal = skills.beginTerminal(source);
+        var ctx = context(terminal);
+        assertEquals("73:absent", Placeholders.resolve("<" + role + ".var.Marker>:<" + role + ".var.Missing|absent>", ctx));
+        removeSource();
+        for (String field : List.of("var.Marker", "var.Marker|absent", "var.Missing|absent",
+                "VAR.Marker|absent", "var.Marker{r=0}")) {
+            String placeholder = "<" + role + "." + field + ">";
+            assertEquals(placeholder, Placeholders.resolve(placeholder, ctx));
+            assertEquals(placeholder, Placeholders.resolveDisplay(placeholder, ctx));
+            assertEquals(-1, Placeholders.resolveNumber(placeholder, ctx, -1));
+        }
+        run("variableadd{var=caster.Marker;amount=7}", ctx);
+        assertEquals("80:<target.var.Marker|absent>",
+                Placeholders.resolve("<caster.var.Marker>:<target.var.Marker|absent>", ctx));
+        EntityVariableContext.find(ctx, "caster").orElseThrow()
+                .setVariable("Marker", 80, System.currentTimeMillis() - 1);
+        assertEquals("absent:<target.var.Marker|absent>",
+                Placeholders.resolve("<caster.var.Marker|absent>:<target.var.Marker|absent>", ctx));
+        assertTrue(SkillExtras.scopedVariableSnapshot("entity:" + uuid).variables().isEmpty());
+        assertTrue(skills.snapshotOf(25).isEmpty());
+        skills.finishTerminalDispatch(terminal);
+        assertEquals(0, skills.terminalExecutionCount());
+    }
+
+    @Test void detachedCasterReadsAnIndependentLiveTriggerWithoutBorrowingItsOwnSnapshot() {
+        var peer = mock(LivingEntity.class);
+        when(peer.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(peer.getWorld()).thenReturn(world);
+        run("setvariable{var=caster.Marker;value=73}", context(source));
+        SkillExtras.restoreScopedVariables("entity:" + peer.getUniqueId(), new ScopedVariableSnapshotStore.Registry(
+                Map.of("Marker", 29), Map.of(), Map.of(), Map.of()));
+        var terminal = skills.beginTerminal(source);
+        var ctx = BehaviorContext.continueExecution(terminal, peer, 0, -1, 0, "on-death", null,
+                peer, List.of(peer), source.location(), new SkillTreeContext(peer, List.of(peer), source.location()));
+        try {
+            removeSource();
+            assertEquals("73:29:29", Placeholders.resolve("<caster.var.Marker>:<target.var.Marker>:<trigger.var.Marker>", ctx));
+            run("setvariable{var=caster.Marker;value=91}", ctx);
+            assertEquals("91:29:29", Placeholders.resolve("<caster.var.Marker>:<target.var.Marker>:<trigger.var.Marker>", ctx));
+            assertTrue(SkillExtras.scopedVariableSnapshot("entity:" + uuid).variables().isEmpty());
+        } finally {
+            SkillExtras.forgetEntity(peer);
+            skills.finishTerminalDispatch(terminal);
+        }
     }
 
     @ParameterizedTest

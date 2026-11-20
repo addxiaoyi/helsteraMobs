@@ -1625,6 +1625,11 @@ public final class SkillTriggers implements Listener {
             return;
         }
 
+        // Native onDespawn retains the removed entity as its trigger, including
+        // command removal in an unloaded chunk. Death keeps its actual killer.
+        if (trigger == SkillTrigger.DESPAWN && triggerEntity == null) {
+            triggerEntity = instance.baseEntity().orElse(null);
+        }
         TerminalSkillContext terminal = skills != null && java.util.Set.of(
                 SkillTrigger.DESPAWN, SkillTrigger.REMOVE, SkillTrigger.DEATH,
                 SkillTrigger.ON_DEATH_SKILL).contains(trigger) ? skills.beginTerminal(instance) : null;
