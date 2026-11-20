@@ -38,12 +38,12 @@ still removes NORMAL mobs if no eligible player is in range, including empty and
 spectator-only worlds. Zero disables that extension and leaves native Paper policy
 active; it does not disable vanilla distance removal.
 
-[Comparison report](../tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r7.json)
-and [redacted logs](../tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r7-logs.zip)
+[Comparison report](../tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r8.json)
+and [redacted logs](../tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r8-logs.zip)
 contain 448 observations across 168 native/runtime pairs: 416 native parity rows
 and 32 explicit-radius extension controls. Both direct configuration and production
 importer paths are exercised. The plugin artifact is
-`70da7fa3b94421ec79972bd77662b0b3c0ff1f890b4869cbed51248e926ad939`.
+`9797f89f37f9de80506570fded644ed16b06340dde0fd91f35cf767b1653f82b`.
 The independent validator checks every identity and phase, actual server/client
 positions, removal causes, live registries/controllers, persistence flags and all
 34 configured despawn command executions. Schema 2 also binds the real player
@@ -72,7 +72,7 @@ Run with a fresh revision, an existing pinned Paper cache and PyYAML 6.x from
 `tools/paper-integration/requirements-player-variables.txt` (port 25731 is shared):
 
 ```bash
-python3 tools/paper-integration/run-despawn-distance-fixture.py --revision r8 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/run-despawn-distance-fixture.py --revision r9 --cache-directory srv-paper-player-life-20261120-r1
 python3 tools/paper-integration/test-despawn-distance-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r8.json
 ```
 
@@ -94,6 +94,11 @@ probe used default NORMAL bindings after manually disabling vanilla distance
 removal. Binding now correctly applies the mode flags, so the distant skeletons
 despawned before conversion. The probe now explicitly uses NEVER for both controls;
 its real FROZEN event/cancellation assertions remain intact. Full strict distance r4 and
-distance r6 use the preceding artifact. Precedence strict r1 and distance r7
-verify the current artifact with the precedence import corrections. The earlier passing distance r4
+distance r6 use an earlier artifact. Precedence strict r1 and distance r7
+verify the subsequent precedence milestone; command strict r1 and distance r8
+verify the current artifact. The earlier passing distance r4
 and unload r13 retain their original artifact hashes.
+
+The current command milestone revalidated this suite against the same release
+artifact; older archives retain their original hashes. Loaded cleanup command
+behavior is covered separately by the [command contract](MOB_COMMAND_COMPATIBILITY.md).

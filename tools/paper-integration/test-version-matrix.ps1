@@ -22,6 +22,9 @@ if ($matrix.releasePolicy.requiresDespawnPrecedenceEvidence -ne $true) {
     throw 'Version matrix must require native despawn precedence evidence for the release artifact.'
 }
 
+if ($matrix.releasePolicy.requiresMobCommandEvidence -ne $true) {
+    throw 'Version matrix must require mob command evidence for the release artifact.'
+}
 $release = @($matrix.combinations | Where-Object { $_.releaseValidated -eq $true })
 if ($release.Count -ne 1) { throw "Expected exactly one release-validated combination, found $($release.Count)." }
 $entry = $release[0]

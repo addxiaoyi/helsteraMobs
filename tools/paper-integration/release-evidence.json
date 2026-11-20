@@ -1,5 +1,29 @@
 [
   {
+    "fixtureId": "srv-paper-mob-command-strict-20261120-r1",
+    "reportFixtureDirectory": "srv-paper-mob-command-strict-20261120-r1",
+    "pluginSha256": "9797f89f37f9de80506570fded644ed16b06340dde0fd91f35cf767b1653f82b",
+    "fullReleaseCatalog": true,
+    "report": "tools/paper-integration/reports/paper-1.21.1-mob-command-strict-20261120-r1.json",
+    "reportSha256": "8a0bc1c2d0886792593b2a8422c10aa4c735c4b7911fa673d6ba2236aa481d00",
+    "log": "tools/paper-integration/reports/paper-1.21.1-mob-command-strict-20261120-r1.log.gz",
+    "logSha256": "a974561bae219969695cfbf99ea9531f609739d51c2d153902e9fb6507cd7b8d",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-mob-command-strict-20261120-r1.client-logs.zip",
+    "clientLogSha256": "66baad57a1d534523cbf44f85dfdcabeee9dd3601b6916ae534360ca82656756",
+    "mobCommandEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r4.json",
+      "reportSha256": "65d09d6e02e2077d8d1da4f1e11f691236a37daa49a1f4532ea4cf94d5857ce4"
+    },
+    "despawnDistanceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r8.json",
+      "reportSha256": "046392570b31f2e77cf73aa9790bb7ffb47a089194c1247afdea48e2c1d5332e"
+    },
+    "despawnPrecedenceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r3.json",
+      "reportSha256": "19316de54245c7b864dce8b57fd9d77f9ae3b9eaf0b9920f38bf50c4acdc9083"
+    }
+  },
+  {
     "fixtureId": "srv-paper-despawn-precedence-strict-20261120-r1",
     "reportFixtureDirectory": "srv-paper-despawn-precedence-strict-20261120-r1",
     "pluginSha256": "70da7fa3b94421ec79972bd77662b0b3c0ff1f890b4869cbed51248e926ad939",
@@ -17,7 +41,9 @@
     "despawnPrecedenceEvidence": {
       "report": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r2.json",
       "reportSha256": "9250763194fd80641dea3d20002958fe45c4cf263e07469b11605f5d1778d1aa"
-    }
+    },
+    "superseded": true,
+    "supersededBy": "srv-paper-mob-command-strict-20261120-r1"
   },
   {
     "fixtureId": "srv-paper-despawn-distance-strict-20261120-r4",

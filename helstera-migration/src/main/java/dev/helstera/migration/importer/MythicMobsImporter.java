@@ -1481,6 +1481,15 @@ public final class MythicMobsImporter implements MigrationImporter {
             target.set("mob.entity-type", normalizedType);
             note(entries, srcFile, typeKeys.get(0), "mob.entity-type", normalizedType, "mapped", null);
         }
+        List<String> factionKeys = mob.getKeys(false).stream()
+                .filter(key -> key.equalsIgnoreCase("Faction")).toList();
+        if (factionKeys.size() == 1 && mob.get(factionKeys.getFirst()) instanceof String faction) {
+            target.set("mob.faction", faction.trim());
+            note(entries, srcFile, factionKeys.getFirst(), "mob.faction", faction.trim(), "mapped", null);
+        } else if (!factionKeys.isEmpty()) {
+            preserveUnsupportedMobField(mob, "Faction", mobKey, srcFile, entries, target,
+                    "Faction must be one unambiguous string; original value preserved.");
+        }
         mapScalar(mob, "health", srcFile, entries, target, "mob.health");
         mapScalar(mob, "damage", srcFile, entries, target, "mob.attack-damage");
         mapScalar(mob, "display", srcFile, entries, target, "mob.display-name");

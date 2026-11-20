@@ -30944,7 +30944,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         container.set(persistentMobVersionKey(), org.bukkit.persistence.PersistentDataType.INTEGER, 1);
     }
 
-    /** Releases a retained chunk after the last managed persistent mob dies. */
+    /** Removes a definition-owned mob, retaining its callback context until removal is dispatched. */
+    public boolean removeMobByCommand(int instanceId) {
+        var instance = instances == null ? null : instances().impl(instanceId);
+        var entity = instance == null ? null : instance.baseEntity().orElse(null);
+        if (entity instanceof org.bukkit.entity.Player
+                || !dev.helstera.api.behavior.ManagedMobIdentity.isManaged(entity)) return false;
+        releasePersistentMobChunk(entity);
+        if (!instances().despawnManagedMob(instanceId)) return false;
+        suspendedMobSkillTrees.remove(entity.getUniqueId());
+        try {
+            var store = persistentMobSkillTreeStore();
+            store.delete(entity.getUniqueId());
+            store.deleteInstance(instanceId);
+        } catch (java.io.IOException ex) {
+            getLogger().warning("[Persistent] Command removal snapshot delete failed for "
+                    + entity.getUniqueId() + ": " + ex.getMessage());
+        }
+        return true;
+    }
+
+    /** Releases a retained chunk after the last managed persistent mob dies or is removed. */
     private void releasePersistentMobChunk(org.bukkit.entity.Entity entity) {
         if (entity == null || entity.getWorld() == null) return;
         boolean managedPersistent = false;
@@ -32577,6 +32597,9 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     static void applyMobOptions(AiProfile profile,
                                         org.bukkit.configuration.ConfigurationSection mob) {
         if (profile == null || mob == null) return;
+        if (mob.get("faction") instanceof String faction) {
+            profile.faction = faction.isBlank() ? null : faction.trim();
+        }
         if (mob.contains("sight-radius")) profile.sightRadius = mob.getDouble("sight-radius", profile.sightRadius);
         if (mob.contains("follow-range")) profile.sightRadius = mob.getDouble("follow-range", profile.sightRadius);
         if (mob.contains("attack-damage")) profile.attackDamage = mob.getDouble("attack-damage", profile.attackDamage);

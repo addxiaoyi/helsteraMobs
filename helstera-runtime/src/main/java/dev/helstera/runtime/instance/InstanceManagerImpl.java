@@ -131,6 +131,16 @@ public final class InstanceManagerImpl implements InstanceManager {
         return true;
     }
 
+    /** Administrative mob removal also removes the owned Bukkit base, unlike model unbinding. */
+    public boolean despawnManagedMob(int instanceId) {
+        ModelInstanceImpl inst = instances.get(instanceId);
+        if (inst == null || inst.entity() instanceof org.bukkit.entity.Player
+                || !dev.helstera.api.behavior.ManagedMobIdentity.isManaged(inst.entity())) return false;
+        if (!instances.remove(instanceId, inst)) return false;
+        finishRemoval(inst, "manual", true);
+        return true;
+    }
+
     /** Paper is removing the base entity; dispatch once while the instance/profile still exist. */
     public boolean despawnNaturally(int instanceId) {
         ModelInstanceImpl inst = instances.remove(instanceId);

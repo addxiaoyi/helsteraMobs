@@ -71,6 +71,7 @@ public final class HelsteraCommand implements TabExecutor {
         s.sendMessage("§b/helstera reload [models|config|packs|loot|spawners|skills|all] §7- 重载");
         s.sendMessage("§b/helstera model list|info|validate|unload <id> §7- 模型管理");
         s.sendMessage("§b/helstera mob spawn|remove|info <id> [model] §7- 生物实例");
+        s.sendMessage("§b/helstera mob kill [-e] [-f] <生物ID> | killall [-p] [半径] §7- 清理生物");
         s.sendMessage("§b/helstera animation play|stop|pause|resume <实例> <动画> §7- 动画");
         s.sendMessage("§b/helstera migrate scan|preview|apply|rollback|report <来源> §7- 迁移中心");
         s.sendMessage("§b/helstera loot list|roll <表名> [luck] §7- 掉落表");
@@ -246,6 +247,10 @@ public final class HelsteraCommand implements TabExecutor {
             return;
         }
         switch (args[1]) {
+            case "kill", "killall" -> {
+                MobRemovalCommand.execute(plugin, s, args);
+                return;
+            }
             case "spawn" -> {
                 if (args.length < 3) {
                     s.sendMessage("§c用法: /helstera mob spawn <配置名|模型ID> [模型ID覆盖]");
@@ -1576,7 +1581,7 @@ var ai = plugin.ai();
             switch (args[0].toLowerCase(Locale.ROOT)) {
                 case "reload" -> out.addAll(List.of("models", "config", "packs", "loot", "spawners", "menus", "skills", "all"));
                 case "model" -> out.addAll(List.of("list", "info", "validate", "unload"));
-                case "mob" -> out.addAll(List.of("spawn", "remove", "info"));
+                case "mob" -> out.addAll(List.of("spawn", "remove", "info", "kill", "killall"));
                 case "animation" -> out.addAll(List.of("play", "stop", "pause", "resume"));
                 case "migrate" -> out.addAll(List.of("scan", "preview", "apply", "rollback", "report"));
                 case "loot" -> out.addAll(List.of("list", "roll"));
@@ -1593,6 +1598,8 @@ var ai = plugin.ai();
                 case "model info", "model validate", "model unload" ->
                         plugin.registry().all().forEach(m -> out.add(m.id()));
                 case "mob remove" -> out.add("all");
+                case "mob kill" -> { plugin.mobIds().forEach(out::add); out.addAll(List.of("-e", "-f")); }
+                case "mob killall" -> out.add("-p");
                 case "mob spawn" -> {
                     plugin.mobIds().forEach(out::add);
                     plugin.registry().all().forEach(m -> out.add(m.id()));
