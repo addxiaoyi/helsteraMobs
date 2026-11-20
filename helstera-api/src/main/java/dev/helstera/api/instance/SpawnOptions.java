@@ -138,6 +138,9 @@ public final class SpawnOptions {
     public int noDamageTicks() { return noDamageTicks; }
     public SpawnOptions noDamageTicks(int v) { noDamageTicks = Math.max(0, v); return this; }
 
+    /** Whether the base entity and its state survive chunk/world unloading. */
+    public boolean retainsOnUnload() { return "NEVER".equals(despawnMode) || "PERSISTENT".equals(despawnMode); }
+
     public String despawnMode() { return despawnMode; }
     public SpawnOptions despawnMode(String value) {
         String mode = value == null ? "NORMAL" : value.trim().toUpperCase(java.util.Locale.ROOT);

@@ -1032,6 +1032,25 @@ class ImportersTest {
         assertEquals(List.of("Thunderbolt"), target.getStringList("mob.skills"));
     }
 
+
+    @Test
+    void despawnSkillsImportAndMalformedSelectorsRemainUnsupported(@TempDir Path root) throws Exception {
+        Path f = write(root,"Mobs/despawn.yml", """
+                Example:
+                  Skills:
+                    - command{c="record despawn"} @self ~onDespawn
+                    - ~onDespawn:Cleanup
+                    - command{c="bad"} ~onDespawn:unexpected
+                    - command{c="bad"} ~onDespawn ~onDeath
+                """);
+        var target = YamlConfiguration.loadConfiguration(new java.io.StringReader(
+                String.valueOf(plan(new MythicMobsImporter().convert(f)).orElseThrow().get("content"))));
+        assertEquals(List.of("command \"record despawn\" @self", "cast-skill Cleanup"),
+                target.getStringList("mob.triggers.on-despawn.do"));
+        assertEquals(2,target.getStringList("mob.unsupported.Skills").size());
+        assertTrue(target.getStringList("mob.triggers.on-death.do").isEmpty());
+    }
+
     @Test
     void eventSkillsAreRoutedOrPreserved(@TempDir Path root) throws Exception {
         Path f = write(root, "Mobs/events.yml", """

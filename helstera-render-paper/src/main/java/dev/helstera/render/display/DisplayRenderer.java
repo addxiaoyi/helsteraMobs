@@ -91,9 +91,9 @@ public final class DisplayRenderer implements InstanceRenderer {
         Visuals v = new Visuals();
         World world = location.getWorld();
         ModelDefinitionImpl model = inst.modelImpl();
-        // Persistent base entities recreate their visuals when reattached after unloading.
-        boolean persistVisuals = options.persistent() && !(inst.baseEntity().isPresent()
-                && "PERSISTENT".equalsIgnoreCase(options.despawnMode()));
+        // Bound visuals are recreated on reattachment or removed with their base entity.
+        // Saving them separately can resurrect orphaned displays after chunk unloading.
+        boolean persistVisuals = options.persistent() && inst.baseEntity().isEmpty();
 
         // 隐形载体（位置锚点 + 可攻击碰撞载体）
         // 仅在“纯展示”模型（未绑定真实实体）时创建；绑定实体时以该实体为锚点，避免多出冗余实体。

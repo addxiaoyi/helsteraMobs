@@ -1,6 +1,44 @@
 # Isolated Paper Integration Server
 
-Persistent mob unload/reload update (2026-11-20):
+Despawn lifecycle update (2026-11-20):
+`srv-paper-despawn-lifecycle-20261120-r9` verifies NORMAL/CHUNK/NPC/NEVER/PERSISTENT
+through direct/imported real mobs on Paper 1.21.1-133 + public MM 5.7.2.
+Accepted chunk/world unload removes ordinary base entities and UUID state;
+NEVER/PERSISTENT restore the same UUID, variables and SkillTree. Bound visuals
+are unsaved and recreated without orphan duplication. `onDespawn` now imports
+and executes before teardown; death and temporary suspension do not trigger it.
+`onDeath @self` can address its dying caster. The 90 observations comprise
+80 native/runtime matches and ten explicit MM cancelled-world exceptions:
+Helstera keeps its state when the world unload is cancelled, while native 5.7.2
+cleans up anyway. Paper 1.21.1 ChunkUnloadEvent is not cancellable; the chunk
+negative control retains a force-loaded chunk. Eight disk snapshots, nine visual
+checkpoints, 46 actual callbacks and 33 evidence mutation controls pass.
+An earlier run `srv-paper-despawn-lifecycle-20261120-r7` observed native chunk
+callbacks repeating 2–4 times and was rejected; the cause remains open. Two later
+instrumented runs passed, without relaxing the once-only assertions.
+The artifact passes 2,393 Maven tests and SpotBugs. Native distance/defaults,
+kill-command immunity, NEVER restart, external removal, broader catalogs and
+other versions remain open. Matrix totals remain 117 implemented-runtime /
+33 mapped-unverified / 2 unsupported-preserved / 0 missing / 2 external-blocked.
+Full MythicMobs parity remains incomplete. See the
+[Despawn lifecycle contract](../../docs/DESPAWN_LIFECYCLE_COMPATIBILITY.md).
+
+Current-artifact regressions: `srv-paper-despawn-strict-20261120-r2` passes
+471 probes (452 passed, 19 expected rejections); native comparison
+`srv-paper-random-spawn-replace-20261120-r77` passes 31; world/chunk persistence
+`srv-paper-world-variable-life-20261120-r10` passes 256; timed SkillTree restart
+`srv-paper-despawn-skilltree-restart-20261120-r2` passes 115 across three boots.
+All use the same JAR as the final Despawn comparison. The 33 Despawn, 28 world
+and 12 timed-restart mutation controls pass. Earlier player lifecycle and autosave
+reports retain their explicitly recorded historical artifacts.
+
+The native variable-expiry fixture now preloads and tickets every helper chunk,
+including the cross-world destination, before spawning. This prevents the helper
+registry loss seen in the rejected local r76 run. The passing r77 run checks all
+eight helper UUIDs and native registries at both timed phases (16 live checks),
+in addition to its 420 expiry comparisons. This changes fixture setup only.
+
+Earlier persistent mob unload/reload update (2026-11-20):
 `srv-paper-world-variable-life-20261120-r8` passes 256 direct/imported variable
 comparisons against public MM 5.7.2 on Paper 1.21.1-133. Actual managed persistent
 mobs retain UUID scalar/location registries and SkillTree state across a real
@@ -49,7 +87,7 @@ hashes, and archives redacted logs plus six SkillTree and final scoped snapshots
 Its custom comparison schema is indexed in [Paper evidence](STARTUP_EVIDENCE.md);
 it is not a standard strict release report. Serialize Paper runs on port 25731.
 
-Current-artifact regression refresh: full strict passes 471 probes (452 passed,
+Previous-artifact regression refresh: full strict passes 471 probes (452 passed,
 19 expected rejections), native MM comparison passes 31 probes, player death/respawn
 passes 700 observations, player logout/restart 740, autosave/crash recovery 480,
 entity/world/global restart 432, and timed SkillTree restart 115. These use the same
@@ -415,7 +453,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-world-variable-strict-20261120-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`. See the [strict report](reports/paper-1.21.1-world-variable-strict-20261120-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,383 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-despawn-strict-20261120-r2` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `3e5ab03e1d3d342084f02df8db86dd08b1f943efed36a576fe265b10ed86c9dc`. See the [strict report](reports/paper-1.21.1-despawn-strict-20261120-r2.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,393 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player
@@ -3330,3 +3368,14 @@ priority over the caster, no-target caster fallback, and preservation of an
 invalid suffix. The report and compressed server/client logs are archived under
 `tools/paper-integration/reports/` and listed in `release-evidence.json`. The
 full Conditions catalog remains incomplete.
+
+Focused Despawn reproduction (serial Paper processes):
+
+```bash
+python3 tools/paper-integration/run-despawn-lifecycle-fixture.py --revision r10 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/test-despawn-lifecycle-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-lifecycle-20261120-r10.json
+```
+
+This custom report is validated separately from the standard full strict catalog.
+Its 10 cancelled-world observations document the MM 5.7.2 exception; they are not
+counted as native/runtime matches.

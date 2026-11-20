@@ -27,7 +27,16 @@ final class VariableExpiryAudit extends BukkitRunnable {
         var audit = new VariableExpiryAudit(probe);
         try {
             for (boolean imported : List.of(false, true)) {
-                var h = new VariablePlaceholderAudit.Harness(probe, runtime, mythic, center.clone().add(imported ? 40 : 0, 0, 40), imported);
+                Location helperCenter=center.clone().add(imported ? 40 : 0, 0, 40);
+                Location base=helperCenter.clone().add(110,20,0);
+                var cross=base.clone();cross.setWorld(Bukkit.getWorlds().stream().filter(w->w!=base.getWorld()).findFirst().orElseThrow());
+                // A ticket added after spawning can race asynchronous entity loading.
+                // Prepare every actual helper destination before invoking the native spawn API.
+                for(Location point:List.of(base,base.clone().add(0,0,4),base.clone().add(4,0,0),cross)) {
+                    var chunk=point.getChunk();chunk.getEntities();
+                    if(audit.tickets.add(chunk))chunk.addPluginChunkTicket(probe);
+                }
+                var h = new VariablePlaceholderAudit.Harness(probe, runtime, mythic, helperCenter, imported);
                 audit.harnesses.add(h);
                 for (var mob : h.mobs) {
                     var chunk = mob.getLocation().getChunk();
@@ -98,6 +107,13 @@ final class VariableExpiryAudit extends BukkitRunnable {
         try {
             long elapsed = System.currentTimeMillis() - started;
             if (elapsed < (phase == 0 ? 2500 : 11000)) return;
+            for(var h:harnesses)for(var mob:h.mobs) {
+                Object active=h.manager.getClass().getMethod("getActiveMob",java.util.UUID.class).invoke(h.manager,mob.getUniqueId());
+                boolean live=mob.isValid()&&!mob.isDead()&&Bukkit.getEntity(mob.getUniqueId())==mob&&((Optional<?>)active).isPresent();
+                probe.getLogger().info("VARIABLE_EXPIRY_ENTITY|phase="+phase+"|path="+(h.imported?"imported":"direct")
+                        +"|uuid="+mob.getUniqueId()+"|live="+live);
+                if(!live)throw new IllegalStateException("Expiry helper entity/registry disappeared: "+mob.getUniqueId());
+            }
             for (Sample sample : samples) observe(sample, phase == 0 ? "short-expired" : "refreshed-expired");
             observeSnapshots(phase == 0 ? "short-expired" : "refreshed-expired");
             if (++phase == 2) {

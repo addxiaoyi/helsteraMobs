@@ -25,6 +25,7 @@ public enum SkillTrigger {
     ATTACK("on-attack", true),
     ATTACKED("on-attacked", true),
     DEATH("on-death", true),
+    DESPAWN("on-despawn", true),
     REMOVE("on-remove", true),
     STATE("on-state", true),
     INTERACT("on-interact", true),

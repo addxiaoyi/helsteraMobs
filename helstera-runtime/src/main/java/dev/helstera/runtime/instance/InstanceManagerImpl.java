@@ -127,11 +127,29 @@ public final class InstanceManagerImpl implements InstanceManager {
     public boolean despawn(int instanceId) {
         ModelInstanceImpl inst = instances.remove(instanceId);
         if (inst == null) return false;
+        finishRemoval(inst, "manual", false);
+        return true;
+    }
+
+    /** Permanently remove an unloaded mob, including its base entity, before it is saved. */
+    public boolean despawnOnUnload(int instanceId, String cause) {
+        if (!"chunk_unload".equals(cause) && !"world_unload".equals(cause))
+            throw new IllegalArgumentException("Unknown unload cause: " + cause);
+        ModelInstanceImpl inst = instances.get(instanceId);
+        if (inst == null || inst.options().retainsOnUnload()) return false;
+        if (!instances.remove(instanceId, inst)) return false;
+        finishRemoval(inst, cause, true);
+        return true;
+    }
+
+    private void finishRemoval(ModelInstanceImpl inst, String cause, boolean removeBase) {
+        // Removal from the registry precedes callbacks to make recursive removal idempotent.
+        // The instance stays valid until callbacks have read its AI profile and caster state.
+        bus.post(new ModelRemoveEvent(inst, cause));
         ManagedMobOptions.clear(inst.entity());
         inst.despawn();
-        logRemoval(inst, "manual");
-        bus.post(new ModelRemoveEvent(inst, "manual"));
-        return true;
+        if (removeBase && inst.entity() != null) inst.entity().remove();
+        logRemoval(inst, cause);
     }
 
     /** Release live rendering/controllers while the persistent base entity is unloaded. */
@@ -139,7 +157,7 @@ public final class InstanceManagerImpl implements InstanceManager {
         if (!"chunk_unload".equals(cause) && !"world_unload".equals(cause))
             throw new IllegalArgumentException("Unknown unload cause: " + cause);
         ModelInstanceImpl inst = instances.get(instanceId);
-        if (inst == null || !"PERSISTENT".equalsIgnoreCase(inst.options().despawnMode())) return false;
+        if (inst == null || !inst.options().retainsOnUnload()) return false;
         if (!instances.remove(instanceId, inst)) return false;
         ManagedMobOptions.clear(inst.entity());
         inst.despawn();
@@ -155,10 +173,7 @@ public final class InstanceManagerImpl implements InstanceManager {
             ModelInstanceImpl inst = it.next().getValue();
             if (inst.model().id().equalsIgnoreCase(modelId)) {
                 it.remove();
-                ManagedMobOptions.clear(inst.entity());
-                inst.despawn();
-                logRemoval(inst, "model_unload");
-                bus.post(new ModelRemoveEvent(inst, "model_unload"));
+                finishRemoval(inst, "model_unload", false);
                 n++;
             }
         }
@@ -167,15 +182,11 @@ public final class InstanceManagerImpl implements InstanceManager {
 
     @Override
     public void despawnWorld(World world) {
-        for (Iterator<Map.Entry<Integer, ModelInstanceImpl>> it = instances.entrySet().iterator(); it.hasNext(); ) {
-            ModelInstanceImpl inst = it.next().getValue();
+        for (ModelInstanceImpl inst : allImpl()) {
             Location l = inst.location();
             if (l != null && world.equals(l.getWorld())) {
-                it.remove();
-                ManagedMobOptions.clear(inst.entity());
-                inst.despawn();
-                logRemoval(inst, "world_unload");
-                bus.post(new ModelRemoveEvent(inst, "world_unload"));
+                if (inst.options().retainsOnUnload()) unloadPersistent(inst.instanceId(), "world_unload");
+                else despawnOnUnload(inst.instanceId(), "world_unload");
             }
         }
     }

@@ -330,7 +330,11 @@ public final class Targeters {
         if (name.equals("self") || name.equals("caster")) {
             if (!context.instanceValid()) return List.of();
             var base = context.instance().baseEntity().orElse(null);
-            return base instanceof LivingEntity living && isActiveLiving(living)
+            // Native @self remains addressable during its own death/despawn callback.
+            // Other selectors and ordinary execution still reject dead entities.
+            return base instanceof LivingEntity living && (isActiveLiving(living)
+                    || "on-death".equalsIgnoreCase(context.state()) && living.isDead()
+                    || "on-despawn".equalsIgnoreCase(context.state()))
                     ? List.of(living) : List.of();
         }
         if (name.equals("target")) {

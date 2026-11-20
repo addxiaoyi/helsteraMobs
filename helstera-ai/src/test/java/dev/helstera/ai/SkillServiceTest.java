@@ -4364,6 +4364,7 @@ class SkillServiceTest {
     @DisplayName("persistent mode skips AI ticks in unloaded chunks")
     void persistentModeTickPolicy() {
         assertFalse(AiManager.tickInUnloadedChunk("PERSISTENT"));
+        assertFalse(AiManager.tickInUnloadedChunk("NEVER"));
         assertTrue(AiManager.tickInUnloadedChunk("NORMAL"));
         assertTrue(AiManager.tickInUnloadedChunk("CHUNK"));
     }

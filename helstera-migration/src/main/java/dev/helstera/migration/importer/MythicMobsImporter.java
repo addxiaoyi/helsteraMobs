@@ -2380,7 +2380,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             int bar = call.indexOf('|');
             String trigger = call.substring(0, bar);
             String skill = call.substring(bar + 1);
-            if (!standaloneSkill && (trigger.equals("on-spawn") || trigger.equals("on-death")
+            if (!standaloneSkill && (trigger.equals("on-spawn") || trigger.equals("on-death") || trigger.equals("on-despawn")
                     || trigger.equals("on-kill") || trigger.equals("on-kill-player"))
                     && skill.matches("[A-Za-z0-9_.-]+")) {
                 scan.add(trigger, "cast-skill " + skill);
@@ -2696,6 +2696,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
         String trigger = name.equalsIgnoreCase("onSpawn") ? "on-spawn"
                 : name.equalsIgnoreCase("onDeath") ? "on-death"
+                : name.equalsIgnoreCase("onDespawn") ? "on-despawn"
                 : name.equalsIgnoreCase("onAttack") ? "on-attack"
                 : name.equalsIgnoreCase("onKill") ? "on-kill"
                 : name.equalsIgnoreCase("onKillPlayer") ? "on-kill-player"

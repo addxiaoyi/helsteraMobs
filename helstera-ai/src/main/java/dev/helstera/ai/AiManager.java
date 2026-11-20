@@ -536,7 +536,7 @@ public final class AiManager implements Listener {
     }
 
     public static boolean tickInUnloadedChunk(String mode) {
-        return mode == null || !"PERSISTENT".equalsIgnoreCase(mode.trim());
+        return !dev.helstera.api.instance.SpawnOptions.defaults().despawnMode(mode).retainsOnUnload();
     }
 
     private static boolean chunkLoaded(ModelInstanceImpl inst) {
@@ -573,7 +573,7 @@ public final class AiManager implements Listener {
             if (entity != null && entity.getWorld().equals(event.getWorld())
                     && entity.getChunk().getX() == event.getChunk().getX()
                     && entity.getChunk().getZ() == event.getChunk().getZ()) {
-                instances.despawn(entry.getKey());
+                instances.despawnOnUnload(entry.getKey(), "chunk_unload");
             }
         }
     }

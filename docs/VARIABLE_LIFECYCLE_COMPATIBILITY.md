@@ -224,12 +224,14 @@ data after ChunkLoadEvent. SkillTree state is captured to the UUID snapshot befo
 suspension; an in-memory copy takes precedence on reattachment, including an empty
 tree after explicit clearing. A failed disk write leaves that copy available and
 shutdown retries it. Ordinary permanent removal still discards entity variables.
-Cancelled chunk/world unload events are ignored by the production handlers.
+Cancelled world unload events are ignored by the production handlers. Paper 1.21.1
+ChunkUnloadEvent is not cancellable; a force-loaded chunk provides the retained
+negative control.
 
-Visual entities belonging to a bound PERSISTENT mob are no longer saved with the
+Visual entities belonging to any bound mob are no longer saved with the
 chunk; reattachment recreates them. This prevents a saved set of visuals and a new
 set accumulating together. It does not clean up orphan visuals created by older
-builds, or change pure display/other despawn modes.
+builds. Standalone display models retain their configured persistence.
 
 The focused world fixture uses actual runtime managed instances and separate native
 ActiveMobs in a disposable world. Four UUIDs and the world UUID survive one actual
@@ -251,11 +253,19 @@ The separate autosave fixture proves recovery of completed periodic saves after
 process termination.
 Writes after the last completed save can be lost. Killing during a file write,
 host/power failure, large-player save performance, asynchronous save/load races,
-configured death/respawn skill dispatch, non-persistent entity cleanup,
-other despawn modes and cancelled-unload/native trigger-order comparisons,
+configured player death/respawn skill dispatch, native distance and kill-command
+immunity, external removal paths and mode-specific restart,
 nested dynamic variable names,
 SetVariable expression/default-value semantics, the full arithmetic/location
 mechanic catalog, broader save combinations and other server/MythicMobs versions
 remain open. The shutdown snapshot is not a crash-durable per-mutation journal.
 The generic arithmetic and typed-location extensions retain their documented
 boundaries. Full MythicMobs parity is still incomplete.
+
+NEVER now shares the entity/SkillTree suspension and reattachment policy with
+PERSISTENT. NORMAL/CHUNK/NPC permanently clean up during accepted chunk/world
+unload, including their base and visual entities. The separate
+[Despawn lifecycle contract](DESPAWN_LIFECYCLE_COMPATIBILITY.md) covers all five
+modes, configured death/despawn callbacks and the explicit MM 5.7.2 cancelled-world
+exception. Native distance, kill-command immunity, external removal and mode-specific
+restart remain open.

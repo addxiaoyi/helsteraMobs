@@ -1,8 +1,81 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-world-variable-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `28304fdd25b6e0916cb6f6fc8d5fc1668c022519bd207fa58373cdd02f68d490`. [Strict report](reports/paper-1.21.1-world-variable-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-world-variable-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-world-variable-strict-20261120-r1.client-logs.zip) This artifact passes 2,383 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-despawn-strict-20261120-r2` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `3e5ab03e1d3d342084f02df8db86dd08b1f943efed36a576fe265b10ed86c9dc`. [Strict report](reports/paper-1.21.1-despawn-strict-20261120-r2.json) · [Redacted server log](reports/paper-1.21.1-despawn-strict-20261120-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-despawn-strict-20261120-r2.client-logs.zip) This artifact passes 2,393 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-Persistent mob unload/reload update (2026-11-20):
+Current-artifact regressions: `srv-paper-despawn-strict-20261120-r2` passes
+471 probes (452 passed, 19 expected rejections); native comparison
+`srv-paper-random-spawn-replace-20261120-r77` passes 31; world/chunk persistence
+`srv-paper-world-variable-life-20261120-r10` passes 256; timed SkillTree restart
+`srv-paper-despawn-skilltree-restart-20261120-r2` passes 115 across three boots.
+All use the same JAR as the final Despawn comparison. The 33 Despawn, 28 world
+and 12 timed-restart mutation controls pass. Earlier player lifecycle and autosave
+reports retain their explicitly recorded historical artifacts.
+
+The native expiry regression preloads all helper destinations before spawning,
+including the cross-world chunk. All 16 timed helper entity/registry checks pass
+alongside 420 expiry comparisons. The earlier local r76 helper-loss run is not
+passing evidence; r77 records the corrected fixture source hash.
+
+Current plugin SHA-256: `3e5ab03e1d3d342084f02df8db86dd08b1f943efed36a576fe265b10ed86c9dc`.
+
+Despawn final (90 observations, including 10 explicit cancellation exceptions): [report](reports/paper-1.21.1-despawn-lifecycle-20261120-r9.json), SHA-256
+`6802a8ff8312ddd8c4a0759ec7702322e05994cbba052af466a50370aef10932`.
+[Redacted evidence](reports/paper-1.21.1-despawn-lifecycle-20261120-r9-logs.zip), SHA-256
+`3affdf9163e25dd1276e3ca534d16d661e16cdcda78da31c662ee5a292c8835f`.
+
+Despawn repeat with public-event tracing: [report](reports/paper-1.21.1-despawn-lifecycle-20261120-r8.json), SHA-256
+`5b59a81282c8cea9f0383f92e201e63c0ec9523f1da23b3d7bae7aad9f8899e1`.
+[Redacted evidence](reports/paper-1.21.1-despawn-lifecycle-20261120-r8-logs.zip), SHA-256
+`59ac905c9a11562900688203c847f7e4069a39ca2b64c43e3ad97aa233f56e91`.
+
+Pre-fix diagnostic (not passing evidence): [report](reports/paper-1.21.1-despawn-lifecycle-20261120-r3.json), SHA-256
+`a8c219ed006a310d1999d383aa8dd2660d7ea24fd795b3730c70b22ac6966725`.
+[Redacted evidence](reports/paper-1.21.1-despawn-lifecycle-20261120-r3-logs.zip), SHA-256
+`5302741b3db3b18d34a1eafda60cb3987690551ecd3a4697d4e23d6b46635301`.
+
+Rejected native replay diagnostic (not passing evidence): [report](reports/paper-1.21.1-despawn-lifecycle-20261120-r7.json), SHA-256
+`410c664cf02d631e302cac680b4edc90a4e8907cb855ca0366c71a59df591d73`.
+[Redacted evidence](reports/paper-1.21.1-despawn-lifecycle-20261120-r7-logs.zip), SHA-256
+`7ac4601eb3e39d9633825ef06655148286e3e3b42b89e5496dd4fcd5aa50ec36`.
+
+World/chunk persistence (256 observations): [report](reports/paper-1.21.1-world-variable-life-20261120-r10.json), SHA-256
+`bfd878c6fdeb68db2b976dcb3cfa29ca5258e6a0a4c9177d89e22393923318d7`.
+[Redacted evidence](reports/paper-1.21.1-world-variable-life-20261120-r10-logs.zip), SHA-256
+`c9ce3ed99558eb7c7c6e0c731800f4f036865cdc0e5547777b637dfc008be4b4`.
+
+Timed SkillTree restart (115 observations): [report](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r2.json), SHA-256
+`e089aa60273723f166156fea698ce381a0442f838375f3d5d62ab73e1213c2a9`.
+[Redacted evidence](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r2-logs.zip), SHA-256
+`b865b76ca4bc30c1f472b6881c4f3cafc41734e5e5088d4d74bc49092538c5cf`.
+
+Full strict (471 probes): [report](reports/paper-1.21.1-despawn-strict-20261120-r2.json), SHA-256
+`6d30b70feef01a06f7c799bd1c8995e0d700f3d214a72e3e25c9d1ad9eb6e28b`.
+[Redacted evidence](reports/paper-1.21.1-despawn-strict-20261120-r2.log.gz), SHA-256
+`0983de5b190137b2ab6072588010d166f14a1897e96a774b494096a6d14749b8`.
+[Redacted evidence](reports/paper-1.21.1-despawn-strict-20261120-r2.client-logs.zip), SHA-256
+`16780e2f816e3e4bea4037aeee3fd6e42e94771be102dbd92d5152eb1140c1bb`.
+
+Native regression (31 probes): [report](reports/paper-1.21.1-random-spawn-replace-20261120-r77.json), SHA-256
+`6e7c52b45d4a96ac3a73353d079629616e5cf908f351ba6138efec5a68c4ca3d`.
+[Redacted evidence](reports/paper-1.21.1-random-spawn-replace-20261120-r77.log.gz), SHA-256
+`61d1dc7b8b2c7e5521e617c8f9025380d60154a189caca8f8360607fbd000545`.
+
+The replay diagnostic recorded native chunk callbacks 2–4 times while runtime
+callbacks remained once; its 12 affected rows were rejected. The cause remains
+open. Subsequent r8/r9 passes do not establish an always-once native guarantee.
+The final fixture waits beyond delayed death-animation cleanup, verifies complete
+location coordinates, eight disk trees and 46 actual callbacks, and records 18
+native public despawn events. The cancellation scenario deliberately preserves
+runtime state despite MM 5.7.2 clearing it. See the scoped Despawn contract.
+
+Despawn milestone (2026-11-20): all five modes now have direct/imported real-mob
+unload, reload and death coverage, with explicit MM 5.7.2 cancelled-world behavior.
+The native bug is documented in [the contract](../../docs/DESPAWN_LIFECYCLE_COMPATIBILITY.md);
+Helstera preserves all state on cancelled world unload. Native distance/defaults,
+kill-command immunity, NEVER process restart, external removal and other versions
+remain open. Broad Matrix statuses are unchanged.
+
+Earlier persistent mob unload/reload update (2026-11-20):
 `srv-paper-world-variable-life-20261120-r8` passes 256 direct/imported variable
 comparisons against public MM 5.7.2 on Paper 1.21.1-133. Actual managed persistent
 mobs retain UUID scalar/location registries and SkillTree state across a real
@@ -36,7 +109,7 @@ world path. The explicit chunk path additionally requires four unload events.
 Native `@origin` is aligned with the runtime target location. Other despawn modes,
 cancelled-unload/native trigger ordering and old orphan-display migration remain open.
 
-Current-artifact release regressions: full strict
+Previous-artifact release regressions: full strict
 `srv-paper-world-variable-strict-20261120-r1` passes 471 probes (452 passed and
 19 expected rejections), and native comparison
 `srv-paper-random-spawn-replace-20261120-r74` passes all 31 existing probes.

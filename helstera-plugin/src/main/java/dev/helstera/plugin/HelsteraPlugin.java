@@ -30926,13 +30926,13 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private void markPersistentMob(org.bukkit.entity.LivingEntity entity, String mobId,
                                    dev.helstera.api.instance.SpawnOptions options) {
         if (entity == null || mobId == null || options == null
-                || !"PERSISTENT".equalsIgnoreCase(options.despawnMode())) return;
+                || !options.retainsOnUnload()) return;
         entity.setPersistent(true);
         // World#getEntities only returns loaded chunks. Keep the entity's chunk
         // loaded across restarts so restorePersistentMobs can see the PDC marker
         // before a player happens to visit the area.
         try {
-            entity.getLocation().getChunk().setForceLoaded(true);
+            if ("PERSISTENT".equals(options.despawnMode())) entity.getLocation().getChunk().setForceLoaded(true);
         } catch (RuntimeException ignored) {
             // Entity persistence still works when a platform cannot retain the chunk.
         }
@@ -31012,7 +31012,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             return false;
         }
         String mode = cfg.getString("mob.despawn", cfg.getString("despawn", "NORMAL"));
-        if (!"PERSISTENT".equalsIgnoreCase(mode.trim())) return false;
+        if (!dev.helstera.api.instance.SpawnOptions.defaults().despawnMode(mode).retainsOnUnload()) return false;
         MobSpawn result = spawnMobCore(mobId, null, living.getLocation(), false, null, living);
         if (result != null && result.instanceId() > 0
                 && skillService instanceof dev.helstera.ai.skill.SkillService skills) {
@@ -31035,7 +31035,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private void suspendPersistentMob(org.bukkit.entity.Entity entity, String cause) {
         var instance = findInstance(entity);
         if (instance == null || !(entity instanceof org.bukkit.entity.LivingEntity living)
-                || living.isDead() || !"PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) return;
+                || living.isDead() || !instance.options().retainsOnUnload()) return;
         if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
             var snapshot = skills.snapshotOf(instance.instanceId()).orElseGet(() ->
                     new dev.helstera.api.behavior.SkillTreeContext(null, java.util.List.of(), null).snapshot());
@@ -31270,7 +31270,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private void removePersistentMobSkillTreeSnapshot(org.bukkit.entity.Entity entity) {
         suspendedMobSkillTrees.remove(entity.getUniqueId());
         var instance = findInstance(entity);
-        if (instance == null || !"PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) return;
+        if (instance == null || !instance.options().retainsOnUnload()) return;
         if (skillService instanceof dev.helstera.ai.skill.SkillService skills) {
             skills.clearSkillTree(instance.instanceId());
         }
@@ -31297,7 +31297,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var entity = instance.baseEntity().orElse(null);
             if (!(entity instanceof org.bukkit.entity.LivingEntity living)
                     || !living.isValid() || living.isDead()
-                    || !"PERSISTENT".equalsIgnoreCase(instance.options().despawnMode())) continue;
+                    || !instance.options().retainsOnUnload()) continue;
             String mobId = living.getPersistentDataContainer().get(
                     persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
             if (mobId == null || mobId.isBlank()) continue;
