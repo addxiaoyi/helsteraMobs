@@ -1,5 +1,25 @@
 [
   {
+    "fixtureId": "srv-paper-despawn-precedence-strict-20261120-r1",
+    "reportFixtureDirectory": "srv-paper-despawn-precedence-strict-20261120-r1",
+    "pluginSha256": "70da7fa3b94421ec79972bd77662b0b3c0ff1f890b4869cbed51248e926ad939",
+    "fullReleaseCatalog": true,
+    "report": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-strict-20261120-r1.json",
+    "reportSha256": "309aeb4cada318093b72e5aacb5ada63fabab6707fda078ac274cba4f26e0c58",
+    "log": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-strict-20261120-r1.log.gz",
+    "logSha256": "bf0318af8d827d36c0f0b440f55f60f389f9aa6dc516960a319ff7d4d3190c2b",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-strict-20261120-r1.client-logs.zip",
+    "clientLogSha256": "7d9d26799de4a5f3b6f4f5ac634699f6079b45116ef27930fb32491f1976c697",
+    "despawnDistanceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r7.json",
+      "reportSha256": "cb10049beebb135e62b308a59c48199d4c42a6933fd55ad60ab3210dee8201a8"
+    },
+    "despawnPrecedenceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r2.json",
+      "reportSha256": "9250763194fd80641dea3d20002958fe45c4cf263e07469b11605f5d1778d1aa"
+    }
+  },
+  {
     "fixtureId": "srv-paper-despawn-distance-strict-20261120-r4",
     "reportFixtureDirectory": "srv-paper-despawn-distance-strict-20261120-r4",
     "pluginSha256": "14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af",
@@ -13,7 +33,9 @@
     "despawnDistanceEvidence": {
       "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r6.json",
       "reportSha256": "463b4bca261616c23d48328b54197a247917ff5a55720f04b075315184e9fc4d"
-    }
+    },
+    "superseded": true,
+    "supersededBy": "srv-paper-despawn-precedence-strict-20261120-r1"
   },
   {
     "fixtureId": "srv-paper-despawn-distance-strict-20261120-r3",

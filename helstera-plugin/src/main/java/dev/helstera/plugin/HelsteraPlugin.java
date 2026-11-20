@@ -10682,7 +10682,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             Files.writeString(configuredRoot.resolve("config-mobs.yml"), """
                     Configuration:
                       DefaultMobOptions:
-                        Despawn: CHUNK
+                        Despawn: false
                         PreventOtherDrops: true
                         PreventVanillaDamage: true
                         PreventItemPickup: false
@@ -10849,7 +10849,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     && globalTransformationDefaultIgnored
                     && global.options().preventTransformation()
                     && globalUnsupportedPreserved
-                    && "CHUNK".equals(global.options().despawnMode())
+                    && "NEVER".equals(global.options().despawnMode())
                     && global.options().preventOtherDrops()
                     && global.options().preventVanillaDamage();
             boolean explicitOverrides = explicitMob != null && explicitMob.getCanPickupItems()
@@ -10899,8 +10899,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     + " global-default-prevent-transformation=" + globalTransformationDefault
                     + " global-default-ignored=" + globalTransformationDefaultIgnored
                     + " global-prevent-transformation=" + (global != null && global.options().preventTransformation())
-                    + " global-despawn-chunk=" + (global != null
-                            && "CHUNK".equals(global.options().despawnMode()))
+                    + " global-despawn-never=" + (global != null
+                            && "NEVER".equals(global.options().despawnMode()))
                     + " global-prevent-other-drops=" + (global != null && global.options().preventOtherDrops())
                     + " global-prevent-vanilla-damage=" + (global != null
                             && global.options().preventVanillaDamage())

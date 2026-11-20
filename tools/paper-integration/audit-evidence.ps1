@@ -318,6 +318,26 @@ foreach ($item in $releaseEvidence) {
             & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-despawn-distance.py') $distancePath
             if ($LASTEXITCODE -ne 0) { throw 'Despawn distance evidence validation failed.' }
         }
+        if ($versionMatrix.releasePolicy.requiresDespawnPrecedenceEvidence -eq $true) {
+            $precedence = $item.despawnPrecedenceEvidence
+            if ($null -eq $precedence -or [string]$precedence.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-despawn-precedence-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                    [string]$precedence.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'Latest full release requires pinned despawn precedence evidence.'
+            }
+            $precedencePath = Join-Path $Root ([string]$precedence.report)
+            if (-not (Test-Path -LiteralPath $precedencePath -PathType Leaf) -or
+                    (Get-FileHash -LiteralPath $precedencePath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$precedence.reportSha256) {
+                throw 'Despawn precedence report is missing or changed.'
+            }
+            $precedenceReport = Get-Content -LiteralPath $precedencePath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$precedenceReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                    [string]$precedenceReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                throw 'Despawn precedence evidence does not match the release artifact/server.'
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-despawn-precedence.py') $precedencePath
+            if ($LASTEXITCODE -ne 0) { throw 'Despawn precedence evidence validation failed.' }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

@@ -424,7 +424,10 @@ public final class MythicMobsImporter implements MigrationImporter {
     private ConfigurationSection readDefaultMobOptions(Path pluginDataFolder, Path sourceFile,
                                                         List<Map<String, Object>> entries) {
         if (pluginDataFolder == null) return null;
-        Path configFile = pluginDataFolder.resolve("config-mobs.yml");
+        // Modern MythicMobs keeps global settings under config/. Retain support
+        // for older/exported packs with config-mobs.yml directly at the root.
+        Path configFile = pluginDataFolder.resolve("config/config-mobs.yml");
+        if (Files.notExists(configFile)) configFile = pluginDataFolder.resolve("config-mobs.yml");
         if (Files.notExists(configFile)) return null;
         YamlConfiguration config = new YamlConfiguration();
         try {
@@ -1553,7 +1556,6 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapBooleanOption(options, srcFile, entries, target, "Invincible", "entity.invulnerable");
             mapBooleanOption(options, srcFile, entries, target, "Glowing", "glowing");
             mapBooleanOption(options, srcFile, entries, target, "AlwaysShowName", "show-name");
-            mapBooleanOption(options, srcFile, entries, target, "Persistent", "persistent");
             mapBooleanOption(options, srcFile, entries, target, "VisibleByDefault", "entity.visible-by-default");
             mapOptionInvertedBoolean(options, srcFile, entries, target, "NoGravity", "entity.gravity");
             mapEntityScopedOption(options, srcFile, entries, target, "HasGravity",
@@ -1865,7 +1867,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     ciGet(options, "SpawningDistance"), "unsupported",
                     "MM 5.7.2 does not apply this option as a despawn radius. Preserved without enabling Helstera's explicit distance extension.", "WARN");
         }
-        mapMythicDespawnOption(options, defaultMobOptions, srcFile, entries, target);
+        mapMythicDespawnOption(mob, options, defaultMobOptions, srcFile, entries, target);
         mapDefaultedGlobalBooleanOption(options, defaultMobOptions, srcFile, entries, target,
                 "PreventOtherDrops", "entity.prevent-other-drops", false);
         mapDefaultedGlobalBooleanOption(options, defaultMobOptions, srcFile, entries, target,
@@ -5716,76 +5718,92 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "Validated and inverted the MythicMobs boolean option into the runtime field.");
     }
 
-    private void mapMythicDespawnOption(ConfigurationSection options,
+    private void mapMythicDespawnOption(ConfigurationSection mob, ConfigurationSection options,
                                         ConfigurationSection defaultMobOptions,
                                         String srcFile, List<Map<String, Object>> entries,
                                         YamlConfiguration target) {
-        String explicitKey = findKeyIgnoreCase(options, "Despawn");
-        if (explicitKey != null) {
-            Object raw = options.get(explicitKey);
-            String mode = normalizeDespawnMode(raw);
-            if (mode == null) {
-                target.set("mob.unsupported.Options.Despawn", raw == null ? "null" : raw);
-                note(entries, srcFile, "Options.Despawn", "mob.unsupported.Options.Despawn",
-                        raw == null ? "null" : raw, "unsupported",
-                        "Invalid Mythic despawn mode was preserved; the built-in NORMAL mode is used.", "WARN");
-                target.set("mob.despawn", "NORMAL");
-                note(entries, srcFile, "MythicMobs.Options.Despawn.default", "mob.despawn", "NORMAL",
-                        "defaulted", "The built-in Mythic despawn mode applies after an invalid explicit value.");
-            } else {
-                target.set("mob.despawn", mode);
-                note(entries, srcFile, "Options.Despawn", "mob.despawn", mode, "mapped",
-                        "Mythic despawn aliases were normalized to a supported runtime mode.");
-            }
-            return;
-        }
-
-        Object persistent = ciGet(options, "Persistent");
-        if (persistent != null && parseBoolean(String.valueOf(persistent))) {
-            target.set("mob.despawn", "PERSISTENT");
-            note(entries, srcFile, "Options.Persistent", "mob.despawn", "PERSISTENT", "mapped",
-                    "Persistent mobs are restored from their serialized Bukkit entity.");
-            return;
-        }
-
+        // MM 5.7.2 reads a boolean global default, then root/Options Despawn,
+        // then root/Options Persistent. The final true Persistent overrides every mode.
+        String mode = "NORMAL";
+        String source = "MythicMobs.Options.Despawn.default";
+        String status = "defaulted";
         String globalKey = findKeyIgnoreCase(defaultMobOptions, "Despawn");
         if (globalKey != null) {
             Object raw = defaultMobOptions.get(globalKey);
-            String mode = normalizeDespawnMode(raw);
-            if (mode != null) {
-                target.set("mob.despawn", mode);
-                note(entries, srcFile,
+            if (raw instanceof Boolean value) {
+                mode = value ? "NORMAL" : "NEVER";
+                source = "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey;
+            } else {
+                preserveDespawnValue(raw, "DefaultMobOptions." + globalKey,
                         "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
-                        "mob.despawn", mode, "defaulted",
-                        "Supported global Mythic Despawn default applied because no mob value overrides it.");
-                return;
+                        "Global Despawn accepts only a YAML boolean; the built-in true default applies.",
+                        srcFile, entries, target);
             }
-            target.set("mob.unsupported.DefaultMobOptions." + globalKey, raw == null ? "null" : raw);
-            note(entries, srcFile,
-                    "config-mobs.yml.Configuration.DefaultMobOptions." + globalKey,
-                    "mob.unsupported.DefaultMobOptions." + globalKey, raw == null ? "null" : raw,
-                    "unsupported", "Invalid global Despawn mode was preserved; built-in NORMAL is used.", "WARN");
         }
-        if (globalKey != null) {
-            target.set("mob.despawn", "NORMAL");
-            note(entries, srcFile, "MythicMobs.Options.Despawn.default", "mob.despawn", "NORMAL",
-                    "defaulted", "Mythic's built-in NORMAL despawn mode applies after an invalid global value.");
+        boolean persistent = false;
+        boolean persistentSpecified = false;
+        String persistentSource = null;
+        for (String prefix : List.of("", "Options.")) {
+            ConfigurationSection section = prefix.isEmpty() ? mob : options;
+            String key = findKeyIgnoreCase(section, "Despawn");
+            if (key != null) {
+                Object raw = section.get(key);
+                String normalized = normalizeDespawnMode(raw);
+                mode = normalized == null ? "NORMAL" : normalized;
+                source = prefix + "Despawn";
+                status = normalized == null ? "defaulted" : "mapped";
+                if (normalized == null) {
+                    preserveDespawnValue(raw, source, source,
+                            "Unrecognized Mythic despawn mode; native NORMAL fallback applies unless Persistent is true.",
+                            srcFile, entries, target);
+                }
+            }
+            key = findKeyIgnoreCase(section, "Persistent");
+            if (key != null) {
+                Object raw = section.get(key);
+                if (raw instanceof Boolean value) {
+                    persistent = value;
+                    persistentSpecified = true;
+                    persistentSource = prefix + "Persistent";
+                } else {
+                    preserveDespawnValue(raw, prefix + "Persistent", prefix + "Persistent",
+                            "Persistent accepts only a YAML boolean; the inherited value applies.",
+                            srcFile, entries, target);
+                }
+            }
         }
+        if (persistentSpecified) {
+            target.set("persistent", persistent);
+            note(entries, srcFile, persistentSource, "persistent", persistent, "mapped",
+                    "Options.Persistent overrides the top-level boolean; malformed values retain the inherited value.");
+        }
+        if (persistent) {
+            mode = "PERSISTENT";
+            source = persistentSource;
+            status = "mapped";
+        }
+        target.set("mob.despawn", mode);
+        note(entries, srcFile, source, "mob.despawn", mode, status,
+                "Resolved native precedence: boolean global default, root Despawn, Options.Despawn, then effective Persistent=true.");
+    }
+
+    private void preserveDespawnValue(Object raw, String preservedKey, String sourceKey, String reason,
+                                      String srcFile, List<Map<String, Object>> entries,
+                                      YamlConfiguration target) {
+        Object value = raw instanceof ConfigurationSection section ? section.getValues(true)
+                : raw == null ? "null" : raw;
+        String path = "mob.unsupported." + preservedKey;
+        target.set(path, value);
+        note(entries, srcFile, sourceKey, path, value, "unsupported", reason, "WARN");
     }
 
     private static String normalizeDespawnMode(Object raw) {
         if (raw instanceof Boolean value) return value ? "NORMAL" : "NEVER";
-        if (raw instanceof Number number) {
-            double value = number.doubleValue();
-            if (value == 1) return "NORMAL";
-            if (value == 0) return "NEVER";
-            return null;
-        }
         if (!(raw instanceof String text)) return null;
-        return switch (text.trim().toUpperCase(Locale.ROOT)) {
-            case "TRUE", "YES", "1", "NORMAL" -> "NORMAL";
-            case "FALSE", "NO", "0", "NEVER" -> "NEVER";
-            case "CHUNK", "PERSISTENT", "NPC" -> text.trim().toUpperCase(Locale.ROOT);
+        return switch (text.toUpperCase(Locale.ROOT)) {
+            case "TRUE", "YES", "NORMAL" -> "NORMAL";
+            case "FALSE", "NO", "NEVER" -> "NEVER";
+            case "CHUNK", "PERSISTENT", "NPC" -> text.toUpperCase(Locale.ROOT);
             default -> null;
         };
     }

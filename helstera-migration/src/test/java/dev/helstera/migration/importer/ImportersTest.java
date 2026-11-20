@@ -310,7 +310,7 @@ class ImportersTest {
         write(root, "config-mobs.yml", """
                 Configuration:
                   DefaultMobOptions:
-                    Despawn: CHUNK
+                    Despawn: false
                     PreventOtherDrops: true
                     PreventVanillaDamage: true
                     PreventItemPickup: false
@@ -358,7 +358,7 @@ class ImportersTest {
                 .filter(e -> "mobs/mythic_invalidleashing.yml".equals(e.get("target-file")))
                 .findFirst().orElseThrow().get("content"))));
 
-        assertEquals("CHUNK", global.getString("mob.despawn"));
+        assertEquals("NEVER", global.getString("mob.despawn"));
         assertTrue(global.getBoolean("entity.prevent-other-drops"));
         assertTrue(global.getBoolean("mob.prevent-vanilla-damage"));
         assertTrue(global.getBoolean("entity.prevent-item-pickup"));

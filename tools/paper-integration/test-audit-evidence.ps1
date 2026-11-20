@@ -390,7 +390,7 @@ try {
     }
     $fullReport.expectedProbeIds += 'importedMobDefaults'
     $fullReport.probes += [pscustomobject]@{
-        id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-despawn-normal=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-disabled=true global-no-damage-ticks=true global-prevent-leashing=true global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true global-despawn-chunk=true global-prevent-other-drops=true global-prevent-vanilla-damage=true global-unsupported-preserved=true explicit-pickup-enabled=true explicit-pickup-disabled=true pickup-wrong-type-preserved=true pickup-invalid-preserved=true explicit-jockey-prevented=true global-jockey-allowed=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true explicit-despawn-never=true explicit-prevent-other-drops-disabled=true explicit-prevent-vanilla-damage-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
+        id = 'importedMobDefaults'; status = 'passed'; observations = @('imported-mob-defaults result=true imported=true builtin-pickup-disabled=true builtin-no-damage-ticks=true builtin-despawn-normal=true builtin-prevent-leashing=true builtin-prevent-transformation=true global-pickup-disabled=true global-no-damage-ticks=true global-prevent-leashing=true global-default-prevent-transformation=false global-default-ignored=true global-prevent-transformation=true global-despawn-never=true global-prevent-other-drops=true global-prevent-vanilla-damage=true global-unsupported-preserved=true explicit-pickup-enabled=true explicit-pickup-disabled=true pickup-wrong-type-preserved=true pickup-invalid-preserved=true explicit-jockey-prevented=true global-jockey-allowed=true explicit-no-damage-ticks=true explicit-prevent-leashing=true explicit-prevent-transformation-disabled=true explicit-despawn-never=true explicit-prevent-other-drops-disabled=true explicit-prevent-vanilla-damage-disabled=true builtin-transform-cancelled=true global-transform-cancelled=true explicit-transform-allowed=true')
     }
     $fullReport.expectedProbeIds += 'playerCreatedImported'
     $fullReport.probes += [pscustomobject]@{
@@ -971,6 +971,40 @@ try {
         throw "Release gate accepted distance evidence from another artifact: $wrongDistanceArtifact"
     }
     [System.IO.File]::WriteAllText($manifestPath, $originalDistanceManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
+    $originalVersionText = Get-Content -LiteralPath $versionMatrixPath -Raw -Encoding utf8
+    $precedencePolicy = $originalVersionText | ConvertFrom-Json
+    $precedencePolicy.releasePolicy | Add-Member -NotePropertyName requiresDespawnPrecedenceEvidence -NotePropertyValue $true
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($precedencePolicy | ConvertTo-Json -Depth 20))
+    $missingPrecedence = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingPrecedence -notmatch 'requires pinned despawn precedence evidence') {
+        throw "Release gate accepted missing required precedence evidence: $missingPrecedence"
+    }
+    $originalPrecedenceManifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8
+    $precedenceManifest = @($originalPrecedenceManifest | ConvertFrom-Json)
+    $precedenceEntry = @($precedenceManifest | Where-Object { $_.fullReleaseCatalog })[0]
+    $precedenceEntry | Add-Member -NotePropertyName despawnPrecedenceEvidence -NotePropertyValue ([pscustomobject]@{
+        report = 'tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r99.json'
+        reportSha256 = ('0' * 64)
+    })
+    [System.IO.File]::WriteAllText($manifestPath, ($precedenceManifest | ConvertTo-Json -Depth 20))
+    $missingPrecedenceFile = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingPrecedenceFile -notmatch 'report is missing or changed') {
+        throw "Release gate accepted missing precedence report: $missingPrecedenceFile"
+    }
+    $precedenceTestPath = Join-Path $temporaryRoot $precedenceEntry.despawnPrecedenceEvidence.report
+    [System.IO.File]::WriteAllText($precedenceTestPath, '{"pluginSha256":"wrong","paperJarSha256":"wrong"}')
+    $changedPrecedence = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $changedPrecedence -notmatch 'report is missing or changed') {
+        throw "Release gate accepted changed precedence report: $changedPrecedence"
+    }
+    $precedenceEntry.despawnPrecedenceEvidence.reportSha256 = (Get-FileHash -LiteralPath $precedenceTestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    [System.IO.File]::WriteAllText($manifestPath, ($precedenceManifest | ConvertTo-Json -Depth 20))
+    $wrongPrecedenceArtifact = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $wrongPrecedenceArtifact -notmatch 'does not match the release artifact/server') {
+        throw "Release gate accepted precedence evidence from another artifact: $wrongPrecedenceArtifact"
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalPrecedenceManifest)
     [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
