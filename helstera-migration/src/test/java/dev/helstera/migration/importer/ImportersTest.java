@@ -5018,8 +5018,8 @@ class ImportersTest {
     }
 
     @Test
-    @DisplayName("MythicMobs Options.SpawningDistance maps to the legacy mob despawn radius")
-    void mythicMapsSpawningDistanceOption(@TempDir Path root) throws Exception {
+    @DisplayName("MythicMobs Options.SpawningDistance is preserved without inventing a despawn radius")
+    void mythicPreservesSpawningDistanceOption(@TempDir Path root) throws Exception {
         Path file = write(root, "Mobs/spawning-distance.yml", """
                 mobs:
                   Wandering:
@@ -5029,8 +5029,12 @@ class ImportersTest {
                 """);
         YamlConfiguration target = converted(file);
 
-        assertEquals(8.0, target.getDouble("mob.spawning-distance"), 1e-9);
-        assertFalse(target.contains("mob.unsupported.Options.SpawningDistance"));
+        assertFalse(target.contains("mob.spawning-distance"));
+        assertFalse(target.contains("mob.despawn-distance"));
+        assertEquals(8, target.getInt("mob.unsupported.Options.SpawningDistance"));
+        assertTrue(new MythicMobsImporter().convert(file).stream().anyMatch(entry ->
+                "Options.SpawningDistance".equals(entry.get("source-key"))
+                        && "unsupported".equals(entry.get("status"))));
     }
 
     @Test

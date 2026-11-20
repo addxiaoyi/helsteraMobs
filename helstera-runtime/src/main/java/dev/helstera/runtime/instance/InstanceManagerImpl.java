@@ -131,6 +131,14 @@ public final class InstanceManagerImpl implements InstanceManager {
         return true;
     }
 
+    /** Paper is removing the base entity; dispatch once while the instance/profile still exist. */
+    public boolean despawnNaturally(int instanceId) {
+        ModelInstanceImpl inst = instances.remove(instanceId);
+        if (inst == null) return false;
+        finishRemoval(inst, "natural_despawn", false);
+        return true;
+    }
+
     /** Permanently remove an unloaded mob, including its base entity, before it is saved. */
     public boolean despawnOnUnload(int instanceId, String cause) {
         if (!"chunk_unload".equals(cause) && !"world_unload".equals(cause))

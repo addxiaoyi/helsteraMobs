@@ -27615,11 +27615,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             fillProbePowderSnow(controlCenter, controlPowder);
             protectedSkeleton.teleport(protectedCenter);
             controlSkeleton.teleport(controlCenter);
+            // Isolate conversion from player-distance removal after binding applies mode flags.
             protectedInstance = instances().bind("example/emberling", protectedSkeleton,
-                    dev.helstera.api.instance.SpawnOptions.defaults()
+                    dev.helstera.api.instance.SpawnOptions.defaults().despawnMode("NEVER")
                             .preventTransformationReasons(List.of("FROZEN")));
             controlInstance = instances().bind("example/emberling", controlSkeleton,
-                    dev.helstera.api.instance.SpawnOptions.defaults());
+                    dev.helstera.api.instance.SpawnOptions.defaults().despawnMode("NEVER"));
 
             final org.bukkit.entity.Skeleton checkedProtected = protectedSkeleton;
             final org.bukkit.entity.Skeleton checkedControl = controlSkeleton;
@@ -32540,11 +32541,11 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     /** 用 mobs/*.yml 的 ai 节就地覆盖行为档案（不污染缓存的档案）。 */
     static double configuredDespawnDistance(org.bukkit.configuration.ConfigurationSection cfg) {
-        if (cfg == null) return 32.0;
+        if (cfg == null) return 0.0;
         double direct = cfg.getDouble("mob.despawn-distance", Double.NaN);
         if (Double.isFinite(direct) && direct >= 0) return direct;
         double legacy = cfg.getDouble("mob.spawning-distance", Double.NaN);
-        return Double.isFinite(legacy) && legacy >= 0 ? legacy : 32.0;
+        return Double.isFinite(legacy) && legacy >= 0 ? legacy : 0.0;
     }
 
     /** Reads list-valued options while accepting Mythic's delimited scalar form. */

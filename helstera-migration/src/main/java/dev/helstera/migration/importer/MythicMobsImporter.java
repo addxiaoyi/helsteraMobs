@@ -1545,7 +1545,6 @@ public final class MythicMobsImporter implements MigrationImporter {
             mapOption(options, srcFile, entries, target, "ProjectileTrackingTicks", "ai.ranged-projectile-tracking-ticks");
             mapOption(options, srcFile, entries, target, "ThreatTable", "ai.threat-enabled");
             mapOption(options, srcFile, entries, target, "UseThreatTable", "ai.threat-enabled");
-            mapOption(options, srcFile, entries, target, "SpawningDistance", "mob.spawning-distance");
             mapOption(options, srcFile, entries, target, "Scale", "scale");
             mapBooleanOption(options, srcFile, entries, target, "ShowHealth", "mob.show-health-message");
             mapBooleanOption(options, srcFile, entries, target, "Silent", "entity.silent");
@@ -1830,7 +1829,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "ProjectileDamage", "ProjectileType", "RangedHitSkill", "ProjectileGravity",
                     "ProjectileFireTicks", "ProjectileExplosion", "ProjectileMaxHits", "ProjectilePotion",
                     "ProjectilePierce", "ProjectileTracking", "ProjectileTrackingTicks", "ThreatTable",
-                    "UseThreatTable", "SpawningDistance",
+                    "UseThreatTable",
                     "Scale", "ShowHealth", "Silent", "NoAI", "Profession", "Level", "HasTrades",
                     "Invincible", "Glowing", "AlwaysShowName", "Persistent", "VisibleByDefault", "Invisible", "NoGravity", "HasGravity", "Collidable", "PreventItemPickup",
                     "PreventOtherDrops", "PreventSunburn", "PreventRandomEquipment", "NoDamageTicks", "CanPickupItems", "PreventLeashing", "PreventRenaming", "PreventTransformation", "PreventTransformationReasons", "PreventMount", "PreventJockeyMounts", "PreventTarget", "PreventTargetReasons", "PreventAttack", "PreventVanillaDamage", "PassthroughDamage", "PreventSlimeSplit", "PreventBlockInfection", "PreventSnowFormation", "PreventStingerLoss", "Age", "AgeLock", "Adult", "Baby", "Saddled", "HorseArmor", "CarryingChest", "CanJoinRaid", "PatrolLeader", "PatrolSpawnPoint", "PlayerCreated", "Tamed", "Tameable", "Angry", "IsKillerBunny", "HeldBlock", "Size", "ExplosionRadius", "FuseTicks", "SuperCharged", "HasNectar", "HasStung", "Anger", "PreventTeleport", "PreventPickup", "PreventItemUse", "Interactable", "PreventDrowning", "PreventFallDamage", "PreventFire", "PreventFireCauses", "PreventProjectiles", "PreventExplosions", "PreventBlockExplosions", "PreventEntityExplosions", "HealOnReload", "DigOutOfGround", "PreventMobKillDrops", "HorseColor", "HorseStyle", "Domestication", "MaxDomestication", "JumpStrength", "CatType", "MainGene", "HiddenGene", "Sitting", "Screaming", "CollarColor", "SheepColor", "Sheared", "ArmorStandArms", "ArmorStandBasePlate", "ArmorStandMarker", "ArmorStandSmall", "HasArms", "HasBasePlate", "Marker", "Small", "CanMove", "CanTick", "ItemBody", "ItemFeet", "ItemHand", "ItemOffhand", "ItemHead", "ItemLegs", "FallingBlockData", "BlockData", "FallingBlockDropItem", "FallingBlockHurtEntities", "FallingBlockCancelDrop", "Experience", "FlyingSpeed")) {
@@ -1861,6 +1860,11 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
         }
 
+        if (ciGet(options, "SpawningDistance") != null) {
+            note(entries, srcFile, "Options.SpawningDistance", "mob.unsupported.Options.SpawningDistance",
+                    ciGet(options, "SpawningDistance"), "unsupported",
+                    "MM 5.7.2 does not apply this option as a despawn radius. Preserved without enabling Helstera's explicit distance extension.", "WARN");
+        }
         mapMythicDespawnOption(options, defaultMobOptions, srcFile, entries, target);
         mapDefaultedGlobalBooleanOption(options, defaultMobOptions, srcFile, entries, target,
                 "PreventOtherDrops", "entity.prevent-other-drops", false);

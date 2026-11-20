@@ -680,6 +680,9 @@ try {
                         } else {
                             'minecraft:potion_contents={potion:"minecraft:swiftness"}'
                         }
+                        # Earlier combat probes leave live mobs near the returning raw client.
+                        # Keep the survival consume/expiry scenario alive independently of them.
+                        $process.StandardInput.WriteLine('effect give HelsteraTester minecraft:resistance infinite 4 true')
                         $process.StandardInput.WriteLine('gamemode survival HelsteraTester')
                         $process.StandardInput.WriteLine(
                             "item replace entity HelsteraTester hotbar.1 with minecraft:potion[$potionComponent] 1")

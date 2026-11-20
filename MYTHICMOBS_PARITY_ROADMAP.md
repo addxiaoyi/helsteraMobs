@@ -1,6 +1,33 @@
+Distance policy update (2026-11-20): default NORMAL now delegates distance
+removal to Paper's entity family/world policy. CHUNK/NPC/NEVER/PERSISTENT explicitly
+disable distance removal; save-to-disk flags follow mode. Natural despawn executes
+`onDespawn` exactly once before controller cleanup, without `onDeath`.
+`srv-paper-despawn-distance-20261120-r6` verifies 448 observations: 416 native parity rows and
+32 explicit-radius extension controls, four entity families, direct/imported
+configuration, 16/64/192-block player positions, empty/spectator worlds and
+34 real callbacks. Ten actual-player binding controls preserve both saving states. All 44 evidence mutation controls are rejected.
+
+Imported `Options.SpawningDistance` is now unsupported-preserved with a warning:
+MM 5.7.2 does not use it as a radius. Explicit Helstera radius fields remain
+extensions. Earlier native-support claims for that option are withdrawn.
+Matrix totals are 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin.
+Broader distances/families, Persistent/Despawn precedence, kill-command immunity,
+crash recovery, external integrations and other versions remain open.
+
+The current JAR passes 2,400 Maven tests and SpotBugs. Full strict fixture
+`srv-paper-despawn-distance-strict-20261120-r4` passes 471 probes (452 passed, 19 expected rejections,
+zero failed/incomplete). The release gate also requires the pinned distance report
+and archive to validate against this exact JAR/server. Current-artifact unload
+`srv-paper-despawn-lifecycle-20261120-r15` passes 90 observations and 43 mutation controls;
+three-boot restart `srv-paper-despawn-restart-20261120-r7` passes 50 observations and 36 controls.
+Native cancelled-world and shutdown-command exceptions remain explicit.
+See the [distance contract](docs/DESPAWN_DISTANCE_COMPATIBILITY.md) for limits, including the client's known
+recipe-packet parser error and the withdrawn pre-fix evidence. Full parity is incomplete.
+
 # MythicMobs Parity Roadmap
 
-Despawn shutdown/restart update (2026-11-20):
+Previous-artifact shutdown/restart update (2026-11-20):
 `srv-paper-despawn-restart-20261120-r5` verifies NORMAL/CHUNK/NPC/NEVER/PERSISTENT
 through direct/imported real mobs over three Paper 1.21.1-133 boots with public
 MM 5.7.2. Disposable mobs are removed before shutdown serialization; their base
@@ -14,7 +41,7 @@ instead throws six disabled-plugin scheduling errors and runs none: this is the
 explicit `MM-5.7.2-shutdown-command-scheduling` exception, checked by shutdown order
 and native worker stacks. Delayed/asynchronous shutdown skills remain unverified.
 
-Current-artifact unload regression `srv-paper-despawn-lifecycle-20261120-r12`
+Previous-artifact unload regression `srv-paper-despawn-lifecycle-20261120-r12`
 passes 90 observations (80 matching outcomes and ten documented native
 cancelled-world exceptions), eight tree snapshots, nine visual checkpoints,
 46 configured callbacks and 43 evidence mutation controls. Its schema 3 also
@@ -24,28 +51,33 @@ The earlier native chunk callback replay in r7 remains unresolved; instrumented
 r10/r11 recorded event object IDs, thread/stack traces and two timing offsets
 without reproducing it. Passing runs do not erase that rejected observation.
 
-The current JAR passes 2,396 Maven tests, SpotBugs and full strict fixture
+The preceding JAR passes 2,396 Maven tests, SpotBugs and full strict fixture
 `srv-paper-despawn-restart-strict-20261120-r1`: 471 probes (452 passed,
-19 expected rejections, none failed or incomplete). Native distance/defaults,
+19 expected rejections, none failed or incomplete). At that checkpoint, native distance/defaults,
 kill-command immunity, crash recovery for these modes, external removal, broader
-catalogs and other versions remain open. Matrix totals remain
+catalogs and other versions remain open. Matrix totals at that checkpoint were
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin. Full MythicMobs parity remains incomplete.
 See the [Despawn lifecycle contract](docs/DESPAWN_LIFECYCLE_COMPATIBILITY.md).
 
-Next scoped target: compare native player-distance despawning and entity-family
-defaults on the pinned Paper/MM pair. Use real near/far players and no-player
-controls for all five modes, direct/imported configurations, explicit/default
-options, repeated ticks and exact callback/state cleanup counts. Keep kill-command
-immunity and forced crash recovery separate until they have their own evidence.
+Next scoped target: compare Persistent/Despawn precedence and global defaults on
+the pinned Paper/MM pair. Native bytecode applies `Options.Persistent=true` after
+Despawn and selects PERSISTENT even when an explicit Despawn mode is present;
+the importer currently returns after explicit Despawn. This is an identified open
+interaction, not covered by the passing single-option distance cases. Build real
+native/imported combinations for all five modes with true/false Persistent,
+top-level versus Options values, supported global defaults and invalid values.
+Require matching mode, distance/save flags, callbacks and restart state before
+changing the support claim. Keep kill-command immunity and forced crash recovery
+separate until they have their own evidence.
 The unresolved native replay diagnostic remains visible; no row is promoted by
 clean restart alone. Continue the full work packages below after this lifecycle slice.
 
-Current-artifact timed SkillTree regression
+Previous-artifact timed SkillTree regression
 `srv-paper-despawn-skilltree-restart-20261120-r3` also passes 115 observations
 across three boots, four shutdown snapshots and twelve evidence mutation controls.
 Original deadlines, parent expiry, branches/collections and dead-entity snapshot
-cleanup remain verified on the same production JAR.
+cleanup were verified on that preceding production JAR.
 
 Previous-artifact regressions retain their original hashes: full strict
 `srv-paper-despawn-strict-20261120-r2` (471), native comparison
@@ -231,7 +263,7 @@ Immediate continuation after player death/respawn and reconnect validation:
    force-loaded chunk loaded. World cancellation is tested separately because
    native MM 5.7.2 cleans up despite cancellation; Helstera preserves its state.
    Next diagnose intermittent native chunk callback replay using public-event and
-   duplicate-stack traces; then compare native distance/defaults, kill-command immunity, mode-specific crash recovery and
+   duplicate-stack traces; then extend native distance boundaries/families, option precedence, kill-command immunity, mode-specific crash recovery and
    external removal paths, then configured player death/respawn skills and save/load races.
    Continue broader trigger/general placeholder families, player
    faction providers, relationship lifecycle/restart, non-living caster combinations
@@ -258,13 +290,13 @@ Audited against the matrix on 2026-11-20:
 
 | Matrix status | Rows | Meaning |
 | --- | ---: | --- |
-| `implemented-runtime` | 117 | A runtime implementation exists; the row's evidence still limits the claim. |
+| `implemented-runtime` | 116 | A runtime implementation exists; the row's evidence still limits the claim. |
 | `mapped-unverified` | 33 | Mapping or partial runtime support exists, but the full stated behavior is not verified. |
-| `unsupported-preserved` | 2 | The source is intentionally preserved with a reason; it is not applied. |
+| `unsupported-preserved` | 3 | The source is intentionally preserved with a reason; it is not applied. |
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-despawn-restart-strict-20261120-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,396 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-despawn-distance-strict-20261120-r4` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,400 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

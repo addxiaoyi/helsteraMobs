@@ -1,5 +1,35 @@
 [
   {
+    "fixtureId": "srv-paper-despawn-distance-strict-20261120-r4",
+    "reportFixtureDirectory": "srv-paper-despawn-distance-strict-20261120-r4",
+    "pluginSha256": "14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af",
+    "fullReleaseCatalog": true,
+    "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-strict-20261120-r4.json",
+    "reportSha256": "a49bef5c4b15ceb098b423ae4045a2cc4fa4cd4c27db4e0e4a4ae760d33a779e",
+    "log": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-strict-20261120-r4.log.gz",
+    "logSha256": "dc4756f5b0e8e394b7fc82cd12bd40e3e1793b8bf473a583960ae09e8299c825",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-strict-20261120-r4.client-logs.zip",
+    "clientLogSha256": "de65009cb7ee5de1340782f383602cfa2767229adad4caa3c5e516348175eed0",
+    "despawnDistanceEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r6.json",
+      "reportSha256": "463b4bca261616c23d48328b54197a247917ff5a55720f04b075315184e9fc4d"
+    }
+  },
+  {
+    "fixtureId": "srv-paper-despawn-distance-strict-20261120-r3",
+    "reportFixtureDirectory": "srv-paper-despawn-distance-strict-20261120-r3",
+    "pluginSha256": "ec43aa245c34ebd2ace5b2d37204cd8e30108e30011e97ace3e8421223156d60",
+    "fullReleaseCatalog": true,
+    "superseded": true,
+    "supersededBy": "srv-paper-despawn-distance-strict-20261120-r4",
+    "report": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-strict-20261120-r3.json",
+    "reportSha256": "4add09de29f9bcac290db046cddecc6411434103be1dc2c8ec38c7a97ea81635",
+    "log": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-strict-20261120-r3.log.gz",
+    "logSha256": "e07bd63cdcb47f37fc813c23f15b03c16d674af905ef725dce94c145933732bc",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-despawn-distance-strict-20261120-r3.client-logs.zip",
+    "clientLogSha256": "360250e5eb1bb9a25235dcdf31291c677dd8715c91fa07960787a72f21f290a4"
+  },
+  {
     "fixtureId": "srv-paper-despawn-restart-strict-20261120-r1",
     "reportFixtureDirectory": "srv-paper-despawn-restart-strict-20261120-r1",
     "pluginSha256": "8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542",

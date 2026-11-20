@@ -1,4 +1,31 @@
-Despawn shutdown/restart update (2026-11-20):
+Distance policy update (2026-11-20): default NORMAL now delegates distance
+removal to Paper's entity family/world policy. CHUNK/NPC/NEVER/PERSISTENT explicitly
+disable distance removal; save-to-disk flags follow mode. Natural despawn executes
+`onDespawn` exactly once before controller cleanup, without `onDeath`.
+`srv-paper-despawn-distance-20261120-r6` verifies 448 observations: 416 native parity rows and
+32 explicit-radius extension controls, four entity families, direct/imported
+configuration, 16/64/192-block player positions, empty/spectator worlds and
+34 real callbacks. Ten actual-player binding controls preserve both saving states. All 44 evidence mutation controls are rejected.
+
+Imported `Options.SpawningDistance` is now unsupported-preserved with a warning:
+MM 5.7.2 does not use it as a radius. Explicit Helstera radius fields remain
+extensions. Earlier native-support claims for that option are withdrawn.
+Matrix totals are 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin.
+Broader distances/families, Persistent/Despawn precedence, kill-command immunity,
+crash recovery, external integrations and other versions remain open.
+
+The current JAR passes 2,400 Maven tests and SpotBugs. Full strict fixture
+`srv-paper-despawn-distance-strict-20261120-r4` passes 471 probes (452 passed, 19 expected rejections,
+zero failed/incomplete). The release gate also requires the pinned distance report
+and archive to validate against this exact JAR/server. Current-artifact unload
+`srv-paper-despawn-lifecycle-20261120-r15` passes 90 observations and 43 mutation controls;
+three-boot restart `srv-paper-despawn-restart-20261120-r7` passes 50 observations and 36 controls.
+Native cancelled-world and shutdown-command exceptions remain explicit.
+See the [distance contract](docs/DESPAWN_DISTANCE_COMPATIBILITY.md) for limits, including the client's known
+recipe-packet parser error and the withdrawn pre-fix evidence. Full parity is incomplete.
+
+Previous-artifact shutdown/restart update (2026-11-20):
 `srv-paper-despawn-restart-20261120-r5` verifies NORMAL/CHUNK/NPC/NEVER/PERSISTENT
 through direct/imported real mobs over three Paper 1.21.1-133 boots with public
 MM 5.7.2. Disposable mobs are removed before shutdown serialization; their base
@@ -12,7 +39,7 @@ instead throws six disabled-plugin scheduling errors and runs none: this is the
 explicit `MM-5.7.2-shutdown-command-scheduling` exception, checked by shutdown order
 and native worker stacks. Delayed/asynchronous shutdown skills remain unverified.
 
-Current-artifact unload regression `srv-paper-despawn-lifecycle-20261120-r12`
+Previous-artifact unload regression `srv-paper-despawn-lifecycle-20261120-r12`
 passes 90 observations (80 matching outcomes and ten documented native
 cancelled-world exceptions), eight tree snapshots, nine visual checkpoints,
 46 configured callbacks and 43 evidence mutation controls. Its schema 3 also
@@ -22,20 +49,20 @@ The earlier native chunk callback replay in r7 remains unresolved; instrumented
 r10/r11 recorded event object IDs, thread/stack traces and two timing offsets
 without reproducing it. Passing runs do not erase that rejected observation.
 
-The current JAR passes 2,396 Maven tests, SpotBugs and full strict fixture
+The preceding JAR passes 2,396 Maven tests, SpotBugs and full strict fixture
 `srv-paper-despawn-restart-strict-20261120-r1`: 471 probes (452 passed,
-19 expected rejections, none failed or incomplete). Native distance/defaults,
+19 expected rejections, none failed or incomplete). At that checkpoint, native distance/defaults,
 kill-command immunity, crash recovery for these modes, external removal, broader
-catalogs and other versions remain open. Matrix totals remain
+catalogs and other versions remain open. Matrix totals at that checkpoint were
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin. Full MythicMobs parity remains incomplete.
 See the [Despawn lifecycle contract](docs/DESPAWN_LIFECYCLE_COMPATIBILITY.md).
 
-Current-artifact timed SkillTree regression
+Previous-artifact timed SkillTree regression
 `srv-paper-despawn-skilltree-restart-20261120-r3` also passes 115 observations
 across three boots, four shutdown snapshots and twelve evidence mutation controls.
 Original deadlines, parent expiry, branches/collections and dead-entity snapshot
-cleanup remain verified on the same production JAR.
+cleanup were verified on that preceding production JAR.
 
 Previous-artifact regressions retain their original hashes: full strict
 `srv-paper-despawn-strict-20261120-r2` (471), native comparison
@@ -142,7 +169,7 @@ Full MythicMobs parity is still incomplete. Matrix totals remain
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](./docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
 
-Latest full-catalog strict fixture `srv-paper-despawn-restart-strict-20261120-r1` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,396 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-despawn-distance-strict-20261120-r4` completed all 471 probes on Paper 1.21.1-133: 452 passed, 19 expected rejections, zero failed or incomplete. It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; the variable-condition composition probe and all three skill-trigger/damage-tag/cancellation checks pass. Plugin SHA-256: `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af`. See the [strict report](tools/paper-integration/reports/paper-1.21.1-despawn-distance-strict-20261120-r4.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [Parity Matrix](MYTHICMOBS_PARITY_MATRIX.md). Focused native MythicMobs comparisons remain scoped separately; full MythicMobs parity remains incomplete. This artifact passes 2,400 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Timed SkillTree restart update (2026-11-19): `srv-paper-skilltree-expiry-restart-20261119-r1`
 passes 115 observations across three real Paper 1.21.1-133 boots. Two persistent
@@ -1883,7 +1910,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 773 cited IDs; 648 report files; 34 directories without reports; 91 missing directories; 390 archived release reports. The
+   Current fixture inventory: 777 cited IDs; 649 report files; 37 directories without reports; 91 missing directories; 392 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.
@@ -1910,8 +1937,9 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
    and malformed entity-specific values instead of reporting silent mappings;
    interaction guards are now limited to the Bukkit entity families that
    consume them.
-   `MaxCombatDistance` and the `SpawningDistance` near/far removal lifecycle
-   now have strict evidence. Native `PreventConversion` timing is verified for
+   `MaxCombatDistance` and the explicit Helstera radius extension have strict
+   evidence. Imported `Options.SpawningDistance` is unsupported-preserved; it
+   does not configure native MM 5.7.2 distance removal. Native `PreventConversion` timing is verified for
    Zombie `DROWNED`, Zombie Villager `CURED`, Villager `INFECTION`, and
    Skeleton `FROZEN`; Slime's native split event is also covered with a control
    transform candidate check. Universal option order and the broader Mob
@@ -2129,7 +2157,7 @@ the entire MythicMobs feature catalog.
 - Strict Paper 1.21.1-133 fixture `srv-paper-strict-potion-20261101-r5` closes the player Potion-consumption evidence gap: after the menu client disconnects, a raw protocol 1.21.1 client reconnects in Survival, drinks the server-equipped Swiftness Potion, and records `playerPotionConsume=passed`; the fixture completes 252 probes (241 passed, 11 expected negative controls rejected). The standalone exploratory fixtures remain separate from this strict release evidence.
 - Strict Paper 1.21.1-133 fixture `srv-paper-potion-expiry-strict-20261101-r1` completes 255 probes and records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`; the short-effect player event is observed as `expired=true action-observed=true`.
 - Strict Paper follow-up `srv-paper-mob-max-combat-distance-20261101-r5` verifies imported per-mob `MaxCombatDistance=8`: a production-spawned Zombie allows the 7-block damage control and cancels the 9-block event. The complete 253-probe report has 241 passed, 12 expected negative controls rejected, and zero incomplete; raw player Potion consumption also passed.
-- Strict Paper fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` verifies imported legacy `SpawningDistance=8` through a real Mineflayer client moving 14.01 blocks; Paper observes 8.47 blocks of player displacement and removes both the managed instance and Bukkit entity. Its 264-probe report has 253 passed, 11 expected negative controls, and zero incomplete. Latest full strict fixture `srv-paper-spawning-timing-20261105-r3` additionally measures removal 2 server ticks after the client is first observed beyond range, against the configured 10-tick AI decision period. Earlier fixtures separately establish nearby retention and server-driven out-of-range removal.
+- Strict Paper fixture `srv-paper-spawning-distance-client-walk-strict-20261102-r3` historically verifies the Helstera legacy radius extension (the former native `SpawningDistance` claim is withdrawn) through a real Mineflayer client moving 14.01 blocks; Paper observes 8.47 blocks of player displacement and removes both the managed instance and Bukkit entity. Its 264-probe report has 253 passed, 11 expected negative controls, and zero incomplete. Latest full strict fixture `srv-paper-spawning-timing-20261105-r3` additionally measures removal 2 server ticks after the client is first observed beyond range, against the configured 10-tick AI decision period. Earlier fixtures separately establish nearby retention and server-driven out-of-range removal.
 - Strict Paper 1.21.1-133 fixture `srv-paper-biome-condition-strict-20261101-r1` verifies `Biome` exact namespaced matching, non-exact key substring matching, comma-separated alternatives, exact-mode rejection of the substring, and a negative mismatched key. Its 254-probe report has 242 passed, 12 expected negative controls, and zero incomplete.
 - Raw Potion r136/r137 re-arm hotbar slot 1 immediately before use; r136 records `playerPotionConsume=passed` with `item=POTION`, and r137 records both `playerPotionConsume=passed` and `playerPotionNaturalExpiry=passed`.
 - Exploratory Paper 1.21.11 r133 records `vehicleEvents=passed` and `ejectPassenger=passed`; the fixture now exercises a real Bukkit `VehicleDestroyEvent` dispatch in addition to enter/exit/dismount/eject coverage.
@@ -2211,7 +2239,7 @@ cd helsteraMobs
 On Windows PowerShell, use `.\mvnw.cmd` in place of `./mvnw`.
 
 The repository wrapper pins Maven 3.9.16 (`./mvnw` on Unix-like systems, `.\mvnw.cmd` on Windows), so a system Maven installation is not required. The strict `verify` gate requires Maven 3.8.9+ (Maven 3.9+ recommended), the SpotBugs Maven plugin and
-Python `jsonschema` 4.x; use the offline command only for the cached unit-test
+Python `jsonschema` 4.x and PyYAML 6.x (install `tools/paper-integration/requirements-player-variables.txt` for the pinned distance evidence validator); use the offline command only for the cached unit-test
 and package checks below.
 
 Useful Paper checks:

@@ -1,8 +1,69 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-despawn-restart-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`. [Strict report](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.client-logs.zip) This artifact passes 2,396 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-despawn-distance-strict-20261120-r4` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af`. [Strict report](reports/paper-1.21.1-despawn-distance-strict-20261120-r4.json) · [Redacted server log](reports/paper-1.21.1-despawn-distance-strict-20261120-r4.log.gz) · [Redacted client logs](reports/paper-1.21.1-despawn-distance-strict-20261120-r4.client-logs.zip) This artifact passes 2,400 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-Current-artifact lifecycle evidence is scoped to Paper 1.21.1-133 and public
+Distance policy update (2026-11-20): default NORMAL now delegates distance
+removal to Paper's entity family/world policy. CHUNK/NPC/NEVER/PERSISTENT explicitly
+disable distance removal; save-to-disk flags follow mode. Natural despawn executes
+`onDespawn` exactly once before controller cleanup, without `onDeath`.
+`srv-paper-despawn-distance-20261120-r6` verifies 448 observations: 416 native parity rows and
+32 explicit-radius extension controls, four entity families, direct/imported
+configuration, 16/64/192-block player positions, empty/spectator worlds and
+34 real callbacks. Ten actual-player binding controls preserve both saving states. All 44 evidence mutation controls are rejected.
+
+Imported `Options.SpawningDistance` is now unsupported-preserved with a warning:
+MM 5.7.2 does not use it as a radius. Explicit Helstera radius fields remain
+extensions. Earlier native-support claims for that option are withdrawn.
+Matrix totals are 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin.
+Broader distances/families, Persistent/Despawn precedence, kill-command immunity,
+crash recovery, external integrations and other versions remain open.
+
+The current JAR passes 2,400 Maven tests and SpotBugs. Full strict fixture
+`srv-paper-despawn-distance-strict-20261120-r4` passes 471 probes (452 passed, 19 expected rejections,
+zero failed/incomplete). The release gate also requires the pinned distance report
+and archive to validate against this exact JAR/server. Current-artifact unload
+`srv-paper-despawn-lifecycle-20261120-r15` passes 90 observations and 43 mutation controls;
+three-boot restart `srv-paper-despawn-restart-20261120-r7` passes 50 observations and 36 controls.
+Native cancelled-world and shutdown-command exceptions remain explicit.
+See the [distance contract](../../docs/DESPAWN_DISTANCE_COMPATIBILITY.md) for limits, including the client's known
+recipe-packet parser error and the withdrawn pre-fix evidence. Full parity is incomplete.
+
+Current distance: [paper-1.21.1-despawn-distance-20261120-r6.json](reports/paper-1.21.1-despawn-distance-20261120-r6.json), SHA-256
+`463b4bca261616c23d48328b54197a247917ff5a55720f04b075315184e9fc4d`.
+
+Current distance: [paper-1.21.1-despawn-distance-20261120-r6-logs.zip](reports/paper-1.21.1-despawn-distance-20261120-r6-logs.zip), SHA-256
+`445fc82e1d37209942fc6a486b028e40aac96dda85959876f2e8de21f6c3afce`.
+
+Current unload: [paper-1.21.1-despawn-lifecycle-20261120-r15.json](reports/paper-1.21.1-despawn-lifecycle-20261120-r15.json), SHA-256
+`579d535e1087bc37ae2c6ee4ef99153a1390d0335d0b8e624908a30b49147bc1`.
+
+Current unload: [paper-1.21.1-despawn-lifecycle-20261120-r15-logs.zip](reports/paper-1.21.1-despawn-lifecycle-20261120-r15-logs.zip), SHA-256
+`823ae5de9966872212998c4f1c6786f3543f32c91a01f172b2ad17ba81cc693a`.
+
+Current restart: [paper-1.21.1-despawn-restart-20261120-r7.json](reports/paper-1.21.1-despawn-restart-20261120-r7.json), SHA-256
+`cd0a6703ed379d21e6dfe508350f7ca41694263c87f19834f1380a7223accf8d`.
+
+Current restart: [paper-1.21.1-despawn-restart-20261120-r7-logs.zip](reports/paper-1.21.1-despawn-restart-20261120-r7-logs.zip), SHA-256
+`51ebdb1e94a2966005e3690142e44751e515451f1ad94e729f441157cbd5455b`.
+
+Current strict: [paper-1.21.1-despawn-distance-strict-20261120-r4.json](reports/paper-1.21.1-despawn-distance-strict-20261120-r4.json), SHA-256
+`a49bef5c4b15ceb098b423ae4045a2cc4fa4cd4c27db4e0e4a4ae760d33a779e`.
+
+Current strict: [paper-1.21.1-despawn-distance-strict-20261120-r4.log.gz](reports/paper-1.21.1-despawn-distance-strict-20261120-r4.log.gz), SHA-256
+`dc4756f5b0e8e394b7fc82cd12bd40e3e1793b8bf473a583960ae09e8299c825`.
+
+Current strict: [paper-1.21.1-despawn-distance-strict-20261120-r4.client-logs.zip](reports/paper-1.21.1-despawn-distance-strict-20261120-r4.client-logs.zip), SHA-256
+`de65009cb7ee5de1340782f383602cfa2767229adad4caa3c5e516348175eed0`.
+
+Rejected strict r1 has one incomplete skeleton-conversion probe; it is not release evidence.
+Its [report](reports/paper-1.21.1-despawn-distance-strict-20261120-r1.json) and
+[redacted log](reports/paper-1.21.1-despawn-distance-strict-20261120-r1.log.gz) retain that failure.
+The conversion fixture now explicitly uses NEVER; both real conversion controls pass.
+
+Rejected strict r2 has two incomplete Potion probes after the raw client was killed by a leftover combat mob. Its [report](reports/paper-1.21.1-despawn-distance-strict-20261120-r2.json) and [redacted log](reports/paper-1.21.1-despawn-distance-strict-20261120-r2.log.gz) remain diagnostic evidence. The raw stage now grants Resistance V while requiring real consumption and expiry.
+
+Previous-artifact lifecycle evidence is scoped to Paper 1.21.1-133 and public
 MM 5.7.2. The five-mode restart suite passes 50 observations over three clean
 boots, including lazy NEVER reattachment, empty SkillTree tombstones, six UUID
 snapshots and eight deaths. Six native shutdown command scheduling errors are
@@ -13,17 +74,17 @@ exceptions), 46 callbacks, eighteen native public despawn events and 43 mutation
 controls. Schema 3 verifies only retained UUID registries survive shutdown.
 See the [contract](../../docs/DESPAWN_LIFECYCLE_COMPATIBILITY.md).
 
-Current five-mode restart: [paper-1.21.1-despawn-restart-20261120-r5.json](reports/paper-1.21.1-despawn-restart-20261120-r5.json), SHA-256
+Previous five-mode restart: [paper-1.21.1-despawn-restart-20261120-r5.json](reports/paper-1.21.1-despawn-restart-20261120-r5.json), SHA-256
 `b2950aa6d7045db010e4e3d88f8b53ddba8674cdd574cda5abde213a7f7d1931`.
 Redacted evidence: [paper-1.21.1-despawn-restart-20261120-r5-logs.zip](reports/paper-1.21.1-despawn-restart-20261120-r5-logs.zip), SHA-256
 `efb3f688d73f9c3460d4557dc0a5306481dc041ee326bab3e3eb7241c39fc146`.
 
-Current unload/cancellation: [paper-1.21.1-despawn-lifecycle-20261120-r12.json](reports/paper-1.21.1-despawn-lifecycle-20261120-r12.json), SHA-256
+Previous unload/cancellation: [paper-1.21.1-despawn-lifecycle-20261120-r12.json](reports/paper-1.21.1-despawn-lifecycle-20261120-r12.json), SHA-256
 `178c2d66c740d5869df86a28600c6530ba8f8f9c10467e9543624d13e8a26be4`.
 Redacted evidence: [paper-1.21.1-despawn-lifecycle-20261120-r12-logs.zip](reports/paper-1.21.1-despawn-lifecycle-20261120-r12-logs.zip), SHA-256
 `e4c5ebeb99c96629909171cc215190cfaeb3cc94753db478965db39140ebb37d`.
 
-Current full strict (471 probes): [paper-1.21.1-despawn-restart-strict-20261120-r1.json](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json), SHA-256
+Previous full strict (471 probes): [paper-1.21.1-despawn-restart-strict-20261120-r1.json](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json), SHA-256
 `915eca165427f3bba974eff6e0b3872a0a3a154442d98d3b9bff3e1fd825660c`.
 Redacted evidence: [paper-1.21.1-despawn-restart-strict-20261120-r1.log.gz](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.log.gz), SHA-256
 `942b2933c37a1f03adba0df13d18a4d41c87b766bea7f1f5cfb78d4840875ae4`.
@@ -50,20 +111,20 @@ Rejected restart validator expectation, not passing: [paper-1.21.1-despawn-resta
 Redacted evidence: [paper-1.21.1-despawn-restart-20261120-r3-logs.zip](reports/paper-1.21.1-despawn-restart-20261120-r3-logs.zip), SHA-256
 `80d940254dc92cea5b1cb431c91cdf6557c2d374882deed3fb70965e68d86044`.
 
-Earlier passing restart with the same production JAR: [paper-1.21.1-despawn-restart-20261120-r4.json](reports/paper-1.21.1-despawn-restart-20261120-r4.json), SHA-256
+Earlier passing restart with the preceding production JAR: [paper-1.21.1-despawn-restart-20261120-r4.json](reports/paper-1.21.1-despawn-restart-20261120-r4.json), SHA-256
 `e836979672c5c964e1a4b64c1bef579099927d0db0423ee07bb6e0a581bd0a5a`.
 Redacted evidence: [paper-1.21.1-despawn-restart-20261120-r4-logs.zip](reports/paper-1.21.1-despawn-restart-20261120-r4-logs.zip), SHA-256
 `2f4fd1565310bc2dfc185bc607648b99c9e598ca9a4877ce5608f3c08189ce18`.
 
-Current-artifact timed SkillTree regression
+Previous-artifact timed SkillTree regression
 `srv-paper-despawn-skilltree-restart-20261120-r3` also passes 115 observations
 across three boots, four shutdown snapshots and twelve evidence mutation controls.
 Original deadlines, parent expiry, branches/collections and dead-entity snapshot
-cleanup remain verified on the same production JAR.
+cleanup were verified on the preceding production JAR.
 
-Current timed SkillTree: [paper-1.21.1-skilltree-expiry-restart-20261120-r3.json](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r3.json), SHA-256
+Previous timed SkillTree: [paper-1.21.1-skilltree-expiry-restart-20261120-r3.json](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r3.json), SHA-256
 `d4c4c86cde52f508ca6f882693613bc128756c8c724590a1cbdadcc19f4b7b13`.
-Current timed SkillTree: [paper-1.21.1-skilltree-expiry-restart-20261120-r3-logs.zip](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r3-logs.zip), SHA-256
+Previous timed SkillTree: [paper-1.21.1-skilltree-expiry-restart-20261120-r3-logs.zip](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r3-logs.zip), SHA-256
 `fb7697c60dca3ad3050e1cfda220a908cf90d140af0fe891b210e93563d8bcd9`.
 
 Previous-artifact regressions: `srv-paper-despawn-strict-20261120-r2` passes
@@ -80,7 +141,7 @@ including the cross-world chunk. All 16 timed helper entity/registry checks pass
 alongside 420 expiry comparisons. The earlier local r76 helper-loss run is not
 passing evidence; r77 records the corrected fixture source hash.
 
-Current plugin SHA-256: `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`.
+Current plugin SHA-256: `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af`.
 
 Historical Despawn (90 observations, including 10 explicit cancellation exceptions): [report](reports/paper-1.21.1-despawn-lifecycle-20261120-r9.json), SHA-256
 `6802a8ff8312ddd8c4a0759ec7702322e05994cbba052af466a50370aef10932`.
@@ -6703,8 +6764,10 @@ spawning-distance-options result=true mode=NORMAL distance=8.0
 ```
 
 That configuration-only checkpoint loads `mobs/spawning_distance_probe.yml`
-through the normal mob loader and confirms Mythic's legacy
-`Options.SpawningDistance` reaches `SpawnOptions.despawnDistance`.
+through the normal mob loader and confirms only the Helstera legacy radius
+extension reaches `SpawnOptions.despawnDistance`. The former claim that this
+proves native `Options.SpawningDistance` support was withdrawn on 2026-11-20;
+that imported option is now unsupported-preserved.
 
 Strict fixtures `srv-paper-spawning-distance-runtime-20261101-r4` and
 `srv-paper-spawning-distance-runtime-20261101-r5` passed Paper 1.21.1-133 with

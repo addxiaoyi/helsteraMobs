@@ -48,6 +48,54 @@ class PersistentInstanceUnloadTest {
         }
     }
 
+    @Test @SuppressWarnings("unchecked")
+    void naturalDespawnDispatchesBeforeTeardownEvenWhenPaperAlreadyMarksTheEntityDead() throws Exception {
+        var bus = new HelsteraEventBus();
+        var manager = new InstanceManagerImpl(null, bus, mock(InstanceRenderer.class), null);
+        var field = InstanceManagerImpl.class.getDeclaredField("instances"); field.setAccessible(true);
+        var instances = (Map<Integer, ModelInstanceImpl>) field.get(manager);
+        var instance = mock(ModelInstanceImpl.class);
+        var entity = mock(LivingEntity.class);
+        when(instance.instanceId()).thenReturn(7); when(instance.entity()).thenReturn(entity);
+        when(instance.baseEntity()).thenReturn(Optional.of(entity)); when(entity.isDead()).thenReturn(true);
+        when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
+        when(entity.getPersistentDataContainer()).thenReturn(mock(org.bukkit.persistence.PersistentDataContainer.class));
+        var order = new ArrayList<String>();
+        doAnswer(i -> {order.add("teardown"); return null;}).when(instance).despawn();
+        bus.register(ModelRemoveEvent.class, event -> {
+            assertTrue(event.despawning()); assertFalse(event.unloading());
+            assertNull(manager.impl(7)); assertFalse(manager.despawnNaturally(7));
+            order.add("callback");
+        });
+        instances.put(7, instance);
+        assertTrue(manager.despawnNaturally(7)); assertFalse(manager.despawnNaturally(7));
+        manager.cleanupInvalid();
+        assertEquals(List.of("callback", "teardown"), order);
+        verify(entity, never()).remove(); verify(instance).despawn();
+    }
+
+    @Test void bindingPlayerDoesNotApplyMobDistanceOrSavingFlags() {
+        var player = mock(org.bukkit.entity.Player.class);
+        when(player.getPersistentDataContainer()).thenReturn(mock(org.bukkit.persistence.PersistentDataContainer.class));
+        for (String mode : List.of("NORMAL", "CHUNK", "NPC", "NEVER", "PERSISTENT")) {
+            dev.helstera.api.instance.ManagedMobOptions.apply(player, new SpawnOptions().despawnMode(mode));
+        }
+        verify(player, never()).setPersistent(anyBoolean());
+        verify(player, never()).setRemoveWhenFarAway(anyBoolean());
+    }
+
+    @Test void distanceFlagsFollowModeAndDoNotInheritTheEntityFamilyDefault() {
+        for (String mode : List.of("NORMAL", "CHUNK", "NPC", "NEVER", "PERSISTENT")) {
+            var entity = mock(LivingEntity.class);
+            when(entity.getPersistentDataContainer()).thenReturn(mock(org.bukkit.persistence.PersistentDataContainer.class));
+            var options = new SpawnOptions().despawnMode(mode);
+            dev.helstera.api.instance.ManagedMobOptions.apply(entity, options);
+            verify(entity).setRemoveWhenFarAway(mode.equals("NORMAL"));
+            verify(entity).setPersistent(Set.of("NEVER", "PERSISTENT").contains(mode));
+            assertEquals(0, options.despawnDistance());
+        }
+    }
+
     @Test void persistentModesPreserveBase() throws Exception {
         for (String mode : List.of("NEVER", "PERSISTENT")) persistentUnloadPreservesBaseEntityAndPostsExactlyOneUnload(mode);
     }

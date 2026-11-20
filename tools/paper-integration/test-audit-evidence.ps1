@@ -938,6 +938,40 @@ try {
     if ($LASTEXITCODE -ne 0 -or $gateOutput -notmatch 'Release gate passed for the specified plugin JAR') {
         throw "Release gate rejected matching complete evidence: $gateOutput"
     }
+    $originalVersionText = Get-Content -LiteralPath $versionMatrixPath -Raw -Encoding utf8
+    $distancePolicy = $originalVersionText | ConvertFrom-Json
+    $distancePolicy.releasePolicy | Add-Member -NotePropertyName requiresDespawnDistanceEvidence -NotePropertyValue $true
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($distancePolicy | ConvertTo-Json -Depth 20))
+    $missingDistance = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingDistance -notmatch 'requires pinned despawn distance evidence') {
+        throw "Release gate accepted missing required distance evidence: $missingDistance"
+    }
+    $originalDistanceManifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8
+    $distanceManifest = @($originalDistanceManifest | ConvertFrom-Json)
+    $distanceEntry = @($distanceManifest | Where-Object { $_.fullReleaseCatalog })[0]
+    $distanceEntry | Add-Member -NotePropertyName despawnDistanceEvidence -NotePropertyValue ([pscustomobject]@{
+        report = 'tools/paper-integration/reports/paper-1.21.1-despawn-distance-20261120-r99.json'
+        reportSha256 = ('0' * 64)
+    })
+    [System.IO.File]::WriteAllText($manifestPath, ($distanceManifest | ConvertTo-Json -Depth 20))
+    $missingDistanceFile = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingDistanceFile -notmatch 'report is missing or changed') {
+        throw "Release gate accepted missing distance report: $missingDistanceFile"
+    }
+    $distanceTestPath = Join-Path $temporaryRoot $distanceEntry.despawnDistanceEvidence.report
+    [System.IO.File]::WriteAllText($distanceTestPath, '{"pluginSha256":"wrong","paperJarSha256":"wrong"}')
+    $changedDistance = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $changedDistance -notmatch 'report is missing or changed') {
+        throw "Release gate accepted changed distance report: $changedDistance"
+    }
+    $distanceEntry.despawnDistanceEvidence.reportSha256 = (Get-FileHash -LiteralPath $distanceTestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    [System.IO.File]::WriteAllText($manifestPath, ($distanceManifest | ConvertTo-Json -Depth 20))
+    $wrongDistanceArtifact = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $wrongDistanceArtifact -notmatch 'does not match the release artifact/server') {
+        throw "Release gate accepted distance evidence from another artifact: $wrongDistanceArtifact"
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalDistanceManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
     [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))

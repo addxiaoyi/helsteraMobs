@@ -298,6 +298,26 @@ foreach ($item in $releaseEvidence) {
         if ($releasePluginHash -and [string]$report.pluginSha256 -cne $releasePluginHash) {
             throw "Latest full release report plugin SHA-256 does not match release JAR: $fixtureId"
         }
+        if ($versionMatrix.releasePolicy.requiresDespawnDistanceEvidence -eq $true) {
+            $distance = $item.despawnDistanceEvidence
+            if ($null -eq $distance -or [string]$distance.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-despawn-distance-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                    [string]$distance.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'Latest full release requires pinned despawn distance evidence.'
+            }
+            $distancePath = Join-Path $Root ([string]$distance.report)
+            if (-not (Test-Path -LiteralPath $distancePath -PathType Leaf) -or
+                    (Get-FileHash -LiteralPath $distancePath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$distance.reportSha256) {
+                throw 'Despawn distance report is missing or changed.'
+            }
+            $distanceReport = Get-Content -LiteralPath $distancePath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$distanceReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                    [string]$distanceReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                throw 'Despawn distance evidence does not match the release artifact/server.'
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-despawn-distance.py') $distancePath
+            if ($LASTEXITCODE -ne 0) { throw 'Despawn distance evidence validation failed.' }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

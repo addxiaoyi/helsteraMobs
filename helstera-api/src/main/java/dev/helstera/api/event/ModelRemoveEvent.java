@@ -6,6 +6,8 @@ import dev.helstera.api.instance.ModelInstance;
 public record ModelRemoveEvent(ModelInstance instance, String cause) {
     /** Native despawn is distinct from death and temporary suspension. */
     public boolean despawning() {
+        // Paper can already report isDead during DESPAWN; its cause is authoritative.
+        if ("natural_despawn".equals(cause)) return true;
         // Death-animation cleanup can use the manual removal path after the death callback.
         if (instance != null && instance.baseEntity().map(org.bukkit.entity.Entity::isDead).orElse(false)) return false;
         return "manual".equals(cause) || "model_unload".equals(cause)

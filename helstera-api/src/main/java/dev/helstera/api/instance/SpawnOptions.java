@@ -27,7 +27,8 @@ public final class SpawnOptions {
     private boolean preventRandomEquipment = false;
     private int noDamageTicks = 0;
     private String despawnMode = "NORMAL";
-    private double despawnDistance = 32.0;
+    // Zero delegates distance removal to the entity family and Paper world policy.
+    private double despawnDistance = 0.0;
     private double knockbackResistance = 0.0;
     private boolean preventLeashing = false;
     private boolean preventRenaming = true;

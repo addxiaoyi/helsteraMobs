@@ -14,6 +14,10 @@ if ($matrix.releasePolicy.requiresMatchingPluginSha256 -ne $true) {
     throw 'Version matrix must require a matching plugin SHA-256.'
 }
 
+if ($matrix.releasePolicy.requiresDespawnDistanceEvidence -ne $true) {
+    throw 'Version matrix must require native despawn distance evidence for the release artifact.'
+}
+
 $release = @($matrix.combinations | Where-Object { $_.releaseValidated -eq $true })
 if ($release.Count -ne 1) { throw "Expected exactly one release-validated combination, found $($release.Count)." }
 $entry = $release[0]

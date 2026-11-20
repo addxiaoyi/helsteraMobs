@@ -1,6 +1,33 @@
+Distance policy update (2026-11-20): default NORMAL now delegates distance
+removal to Paper's entity family/world policy. CHUNK/NPC/NEVER/PERSISTENT explicitly
+disable distance removal; save-to-disk flags follow mode. Natural despawn executes
+`onDespawn` exactly once before controller cleanup, without `onDeath`.
+`srv-paper-despawn-distance-20261120-r6` verifies 448 observations: 416 native parity rows and
+32 explicit-radius extension controls, four entity families, direct/imported
+configuration, 16/64/192-block player positions, empty/spectator worlds and
+34 real callbacks. Ten actual-player binding controls preserve both saving states. All 44 evidence mutation controls are rejected.
+
+Imported `Options.SpawningDistance` is now unsupported-preserved with a warning:
+MM 5.7.2 does not use it as a radius. Explicit Helstera radius fields remain
+extensions. Earlier native-support claims for that option are withdrawn.
+Matrix totals are 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin.
+Broader distances/families, Persistent/Despawn precedence, kill-command immunity,
+crash recovery, external integrations and other versions remain open.
+
+The current JAR passes 2,400 Maven tests and SpotBugs. Full strict fixture
+`srv-paper-despawn-distance-strict-20261120-r4` passes 471 probes (452 passed, 19 expected rejections,
+zero failed/incomplete). The release gate also requires the pinned distance report
+and archive to validate against this exact JAR/server. Current-artifact unload
+`srv-paper-despawn-lifecycle-20261120-r15` passes 90 observations and 43 mutation controls;
+three-boot restart `srv-paper-despawn-restart-20261120-r7` passes 50 observations and 36 controls.
+Native cancelled-world and shutdown-command exceptions remain explicit.
+See the [distance contract](docs/DESPAWN_DISTANCE_COMPATIBILITY.md) for limits, including the client's known
+recipe-packet parser error and the withdrawn pre-fix evidence. Full parity is incomplete.
+
 # MythicMobs Parity Matrix
 
-Despawn shutdown/restart update (2026-11-20):
+Previous-artifact shutdown/restart update (2026-11-20):
 `srv-paper-despawn-restart-20261120-r5` verifies NORMAL/CHUNK/NPC/NEVER/PERSISTENT
 through direct/imported real mobs over three Paper 1.21.1-133 boots with public
 MM 5.7.2. Disposable mobs are removed before shutdown serialization; their base
@@ -14,7 +41,7 @@ instead throws six disabled-plugin scheduling errors and runs none: this is the
 explicit `MM-5.7.2-shutdown-command-scheduling` exception, checked by shutdown order
 and native worker stacks. Delayed/asynchronous shutdown skills remain unverified.
 
-Current-artifact unload regression `srv-paper-despawn-lifecycle-20261120-r12`
+Previous-artifact unload regression `srv-paper-despawn-lifecycle-20261120-r12`
 passes 90 observations (80 matching outcomes and ten documented native
 cancelled-world exceptions), eight tree snapshots, nine visual checkpoints,
 46 configured callbacks and 43 evidence mutation controls. Its schema 3 also
@@ -24,20 +51,20 @@ The earlier native chunk callback replay in r7 remains unresolved; instrumented
 r10/r11 recorded event object IDs, thread/stack traces and two timing offsets
 without reproducing it. Passing runs do not erase that rejected observation.
 
-The current JAR passes 2,396 Maven tests, SpotBugs and full strict fixture
+The preceding JAR passes 2,396 Maven tests, SpotBugs and full strict fixture
 `srv-paper-despawn-restart-strict-20261120-r1`: 471 probes (452 passed,
-19 expected rejections, none failed or incomplete). Native distance/defaults,
+19 expected rejections, none failed or incomplete). At that checkpoint, native distance/defaults,
 kill-command immunity, crash recovery for these modes, external removal, broader
-catalogs and other versions remain open. Matrix totals remain
+catalogs and other versions remain open. Matrix totals at that checkpoint were
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin. Full MythicMobs parity remains incomplete.
 See the [Despawn lifecycle contract](docs/DESPAWN_LIFECYCLE_COMPATIBILITY.md).
 
-Current-artifact timed SkillTree regression
+Previous-artifact timed SkillTree regression
 `srv-paper-despawn-skilltree-restart-20261120-r3` also passes 115 observations
 across three boots, four shutdown snapshots and twelve evidence mutation controls.
 Original deadlines, parent expiry, branches/collections and dead-entity snapshot
-cleanup remain verified on the same production JAR.
+cleanup were verified on that preceding production JAR.
 
 Previous-artifact regressions retain their original hashes: full strict
 `srv-paper-despawn-strict-20261120-r2` (471), native comparison
@@ -410,7 +437,7 @@ mixed player/monster/animal candidates and invalid values. Strict Paper fixture
 angle/length boundaries, and malformed, duplicate, and unknown arguments. The
 broader Context targeters row remains `mapped-unverified`.
 
-Latest strict release evidence: `srv-paper-despawn-restart-strict-20261120-r1` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,396 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest strict release evidence: `srv-paper-despawn-distance-strict-20261120-r4` completes 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete; plugin SHA-256 `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af`). It retains all 47 Potion lifecycle assertions and prior runtime/client workflows; imported variable-condition composition and the skill damage-trigger, damage-tag, and cancellation probes pass. Focused native MythicMobs 5.7.2 comparisons retain their declared scope. See the [strict report](tools/paper-integration/reports/paper-1.21.1-despawn-distance-strict-20261120-r4.json) and [synchronization contract](docs/POTION_SYNC_COMPATIBILITY.md). The complete Conditions and Context Targeters catalogs remain `mapped-unverified`; full parity remains incomplete. This artifact passes 2,400 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Sunny` aliases `sunny`/`isSunny` now map to `weather-is clear`; `Thundering` aliases `thundering`/`isThundering`/`stormy`/`isStormy` now map to `weather-is thunder`. The importer, `SkillService`, and `ConditionListParser` agree on these names, and malformed or duplicate arguments remain fail-closed. Migration, API, AI, and plugin cross-module tests cover the alias paths and clear/thunder runtime states. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
 Conditions alias update (2026-11-16): MythicMobs 5.7.2 `Crouching` aliases `sneaking`/`isCrouching`/`isSneaking`, and `Wearing` aliases `isWearing`/`wielding`/`isWielding`, now map through the importer, `SkillService`, and `ConditionListParser`. The existing `is-sneaking` and `wearing` evaluators are reused; wearing item arguments are strict and unknown, duplicate, or empty values fail closed. Migration, API, AI, and plugin cross-module tests cover Player sneaking, helmet matching, aliases, and preservation. No new Paper evidence is claimed; the `Conditions catalog` row remains `mapped-unverified`.
@@ -1017,8 +1044,10 @@ the production spawn path and Bukkit damage dispatch at 7 and 9 blocks around
 an 8-block limit; the in-range hit is allowed and the out-of-range hit is
 cancelled (`maxCombatDistance=passed`).
 
-Incremental legacy-option update: Mythic `Options.SpawningDistance` is retained
-as `mob.spawning-distance` and consumed as the normal despawn radius fallback.
+Historical legacy-option claim (withdrawn 2026-11-20): the importer previously mapped
+Mythic `Options.SpawningDistance` to a custom radius. Native comparison now shows
+that this is unsupported and preserves the source with a warning. The following
+fixtures establish only the explicit Helstera radius extension.
 Strict Paper fixture `srv-paper-mob-spawning-distance-20261101-r2` reads the
 production instance as `mode=NORMAL distance=8.0`. Follow-up strict fixtures
 `srv-paper-spawning-distance-runtime-20261101-r4` and
@@ -3406,7 +3435,7 @@ lava-tick timing and other uncovered natural-event paths remain open.
 | Area | Status | Evidence / remaining work |
 | --- | --- | --- |
 | Universal options | mapped-unverified | `SpawnOptions` and entity application cover many fields; reason/cause options accept YAML lists and Mythic-delimited scalars; strict fixtures r36/r37/r41 verify vanilla and killer-owned drop prevention, including custom victim loot suppression; r42/r43 verify Silverfish infection and Snow Golem snow guards; r44 verifies family-aware `PreventConversion`; r47 verifies Enderman `HeldBlock`; event probes cover leash/rename/target/projectile/explosion/drowning/fall/fire/pickup/item-use/teleport/mount/transformation policies; r38 verifies pickup precedence, random-equipment clearing, explicit-equipment retention, and explicit `NoDamageTicks`. The historical `srv-paper-imported-mob-defaults-strict-20261106-r4` incorrectly treated unsupported `DefaultMobOptions` keys as global defaults and is superseded for that behavior. `srv-paper-default-mob-options-strict-20261110-r1` verifies the official global-default allowlist and precedence. Other options, entity-family defaults, and broader natural event ordering remain unverified |
-| `Options.Silent`, `NoAI`, `Invincible`, `Collidable`, and `Persistent` | implemented-runtime | These options use validated boolean import; true/false values map to runtime fields and malformed values remain under `mob.unsupported.Options.*` with warnings. Strict Paper fixture `srv-paper-boolean-mob-options-strict-20261111-r1` verifies imported true/false pairs and reads back silence, AI, invulnerability, collision, and Bukkit persistence from production-spawned Zombies; `Persistent:true` also selects `PERSISTENT` despawn mode. Universal option ordering and broader entity defaults remain open. |
+| `Options.Silent`, `NoAI`, `Invincible`, `Collidable`, and `Persistent` | implemented-runtime | These options use validated boolean import; true/false values map to runtime fields and malformed values remain under `mob.unsupported.Options.*` with warnings. Strict Paper fixture `srv-paper-boolean-mob-options-strict-20261111-r1` verifies imported true/false pairs and reads back silence, AI, invulnerability, collision, and Bukkit persistence from production-spawned Zombies; `Persistent:true` also selects `PERSISTENT` despawn mode. Known open interaction: native `Persistent=true` overrides explicit Despawn, while the importer currently prioritizes Despawn. Universal option ordering and broader entity defaults remain open. |
 | `Options.PreventDrowning` and `Options.PreventFallDamage` | implemented-runtime | The importer validates Mythic boolean forms and preserves malformed values under `mob.unsupported.Options.*`; managed damage handling cancels only the matching `DROWNING` or `FALL` cause. Strict Paper fixture `srv-paper-environmental-damage-options-strict-20261111-r2` verifies imported true/false pairs, cause-specific protection, cross-cause controls, and malformed-value fallback in the 443-probe catalog. |
 | `Options.DigOutOfGround` | implemented-runtime | The importer validates boolean values and preserves malformed input under `mob.unsupported.Options.DigOutOfGround`; managed entities with the option enabled cancel `SUFFOCATION` and move up two blocks, while other damage causes are unaffected. Strict Paper fixture `srv-paper-dig-out-of-ground-strict-20261111-r1` verifies production import, the two-block movement, `FALL` control, explicit false, and malformed-value fallback in the complete 445-probe catalog. |
 | `Options.PreventMobKillDrops` | implemented-runtime | The importer validates boolean values and preserves malformed input under `mob.unsupported.Options.PreventMobKillDrops`; a managed killer with the option enabled clears its target's drops and XP, including a victim's custom loot table as verified by historical Paper fixture `srv-paper-integration-final-r41`. False and malformed values use the default false policy. Strict Paper fixture `srv-paper-prevent-mob-kill-drops-strict-20261111-r1` verifies the imported killer through production spawning, damage-source resolution, native target-drop suppression, and false/malformed controls in the complete 446-probe catalog. See the [official Mob Options documentation](https://wiki.mythiccraft.io/mythicmobs/Mobs/Options). |
@@ -3421,7 +3450,7 @@ lava-tick timing and other uncovered natural-event paths remain open.
 | `Options.PreventSunburn` | implemented-runtime | The importer maps the Mythic option to `entity.prevent-sunburn`; the managed-entity listener cancels only base sunlight `EntityCombustEvent` for opted-in instances. Strict Paper 1.21.1-133 fixture `srv-paper-prevent-sunburn-strict-20261107-r4` imports protected/control Zombies through production spawning, samples real midday sunlight events at age 40, observes 2/2 protected events cancelled and one uncancelled control event with 132 fire ticks, and restores weather, time, entities, and temporary config. Paper reports no fire as `-1`. Earlier strict fixture `srv-paper-integration-final-r35` separately verifies block- and entity-caused combustion remain uncancelled. |
 | `Options.Anger (Bee)` | implemented-runtime | Non-negative integer values map as tick durations to `entity.bee-anger` and Paper `Bee#setAnger`. Other entity types and invalid values remain under `entity.unsupported.Options.Anger` with migration warnings. Importer/runtime tests cover mapped and preserved cases; strict Paper fixture `srv-paper-bee-anger-strict-20261107-r1` verifies 1200 ticks on an imported production Bee against a zero-anger control. |
 | `Options.ReinforcementsChance` | implemented-runtime | Valid finite values from `0` through `1` map only for Bukkit Zombie-family entity types to Paper's `ZOMBIE_SPAWN_REINFORCEMENTS` attribute; other entity types and invalid values are retained under `mob.unsupported.Options.ReinforcementsChance` with migration warnings. Importer and runtime tests cover Zombie/Husk, non-Zombie, malformed/range values, boundaries, non-finite values, and runtime rejection. Strict Paper 1.21.1-133 fixture `srv-paper-reinforcements-chance-strict-20261107-r1` reads back `0.38` from a real Zombie attribute and verifies zero/one mapping plus non-Zombie, out-of-range, and runtime rejection controls. Vanilla reinforcement event frequency distribution and other Mob Options remain outside this probe |
-| `Options.SpawningDistance` | implemented-runtime | Importer maps the Mythic option to `mob.spawning-distance`; `configuredDespawnDistance` consumes it into `SpawnOptions.despawnDistance` when explicit `mob.despawn-distance` is absent, with a 32-block fallback. Importer and precedence tests cover legacy and explicit values. Strict Paper fixtures `srv-paper-spawning-distance-runtime-20261101-r4`/`r5` verify production config loading and nearby retention. The current full strict release fixture `srv-paper-mythic-spawner-group-size-strict-20261106-r5` also records a real client's 14.36-block movement and 15.00-block player/entity distance; the managed instance and Bukkit entity are removed 2 ticks after the first outside-radius sample, within the 10-tick AI decision period. The focused earlier fixture `srv-paper-spawning-timing-20261105-r3` remains historical evidence. Remaining boundary: other entity-family defaults and interactions are part of the unfinished universal Mob Options catalog. |
+| `Options.SpawningDistance` | unsupported-preserved | Native MM 5.7.2 ignores this option as a distance radius. Import preserves it under `mob.unsupported.Options.SpawningDistance` with a warning. `srv-paper-despawn-distance-20261120-r6` compares default/explicit modes and this input on COW/ZOMBIE/VILLAGER/SLIME with real 16/64/192-block player positions, no-player and spectator controls: 416 parity observations and 32 separately scoped direct-radius extension observations. Default NORMAL delegates to Paper; CHUNK/NPC/NEVER/PERSISTENT disable distance removal. Explicit Helstera `mob.despawn-distance` and legacy direct `mob.spawning-distance` remain extensions. Earlier 8-block fixtures establish extension behavior, not native option support. See [contract](docs/DESPAWN_DISTANCE_COMPATIBILITY.md). |
 | `Options.ShowHealth` | implemented-runtime | Mythic mob-level `Options.ShowHealth` imports to `mob.show-health-message`; global radius and message format are configurable under `mythic-parity.show-health`. Runtime sends formatted health messages when damage crosses a 10% health band, suppresses repeats within the band, and re-arms a threshold after healing. Importer/runtime tests cover threshold boundaries and formatting. Strict Paper fixture `srv-paper-show-health-strict-20261111-r3` verifies imported config, environmental and entity damage, two threshold crossings, quiet-band behavior, healing re-arm, configured radius, and real-client delivery/exclusion in the complete 438-probe release catalog. This verifies the ShowHealth slice only; remaining Mob Options and global-option ordering are open. |
 | `Options.PreventTeleport` | implemented-runtime | The Mythic importer accepts true/false boolean forms and retains malformed values under `mob.unsupported.Options.PreventTeleport` with a warning. The managed-entity listener cancels Paper `EntityTeleportEvent` at lowest priority. Importer tests cover enabled, disabled, and malformed values; strict Paper fixture `srv-paper-prevent-teleport-strict-20261111-r1` imports enabled/disabled/invalid mobs, spawns the configured and inverse-control Zombies through the production path, and calls `Entity#teleport` on both. The strict release catalog requires the protected entity to remain at its origin and the control entity to move. Other Mob Options and universal option ordering remain open. |
 | `Options.HealOnReload` | implemented-runtime | The importer accepts `true/false`, `yes/no`, and `1/0`, maps valid values to the managed mob runtime, and preserves invalid values under `mob.unsupported.Options.HealOnReload` with warnings. Reload and chunk-load paths heal only configured, living entities with a finite positive max health. Unit/importer tests cover parsing, timing, null/dead/invalid guards, and preservation. Strict Paper 1.21.1-133 fixture `srv-paper-heal-on-reload-strict-20261109-r1` verifies `15.0 -> 20.0` for the protected mob and `15.0 -> 15.0` for the false control in the complete 410-probe release catalog. |
@@ -3702,7 +3731,7 @@ row remains `mapped-unverified` until the declared catalog is covered.
 | Spawner importer | mapped-unverified | `GroupSize` maps to runtime `group-size`, official `MaxMobs` maps to `max-alive`, `RandomMobs` weights reach the production pool, and Mythic `Conditions` including `World{w=...}` and categorized `BiomeType` translate to runtime conditions. `MigrationRuntimeSpawnerContractTest` verifies the imported world name reaches `world-is <name>`, matching worlds spawn and missing worlds fail closed, alongside fixed/ranged groups and normalized 1:3 weights. Latest strict Paper fixture `srv-paper-mythic-spawner-biome-strict-20261107-r2` verifies natural matching-world/weather/biome generation, missing-world, thunder, and `desert` category rejection, group cap, weighted pool, and variant-specific natural DropTables. Full Mythic spawner semantics and the complete condition catalog remain incomplete |
 | Unsupported report schema | implemented-runtime | `status`, `severity`, source/target/value assertions in importer tests |
 | Rabbit Killer Bunny option | implemented-runtime | Official `Options.IsKillerBunny` and alias `Angry` map only for Rabbits; the runtime preserves explicit false and applies true after `RabbitType`. Wolf/Zombie Pigman `Angry` behavior remains mapped separately. Importer/plugin tests verify aliases, wrong types, invalid values, false values, and conflicts. Strict Paper fixture `srv-paper-rabbit-killer-bunny-strict-20261109-r1` verifies real imported Killer Bunny, regular Rabbit, and `RabbitType` controls in the complete 409-probe catalog; conflicting aliases and wrong-entity/invalid values remain preserved. |
-| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-despawn-restart-strict-20261120-r1` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-player-autosave-strict-20261120-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
+| Paper integration suite | mapped-unverified | Current release fixture `srv-paper-despawn-distance-strict-20261120-r4` completes all 471 registered probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete) with plugin SHA-256 `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af`; it retains 47 Potion lifecycle assertions and the prior runtime/client workflows, and verifies imported condition composition plus skill damage-trigger/tag/cancellation behavior. The preceding `srv-paper-player-autosave-strict-20261120-r1` is superseded. Focused native MythicMobs comparisons remain scoped separately. Complete catalogs, graphical rendering, other effects and reconnect scenarios, Premium numeric comparison, universal option ordering, and broader Paper/client versions remain open. Reports, redacted logs, and hashes are indexed in `tools/paper-integration/release-evidence.json` and `tools/paper-integration/STARTUP_EVIDENCE.md`. |
 
 An earlier archived strict fixture is `srv-paper-plugin-hash-strict-20261102-r1`:
 277 probes, 265 passed, 12 expected negative controls, and zero incomplete.
@@ -3755,7 +3784,7 @@ passed, 11 expected negative controls, and zero incomplete.
 The focused strict block-selector report
 `srv-paper-block-selector-strict-20261101-r2` has 253 probes, 242 passed, 11
 expected negative controls, and zero incomplete. It includes isolated Paper
-block-tag and wildcard condition checks plus the legacy SpawningDistance
+block-tag and wildcard condition checks plus the Helstera legacy radius-extension
 production despawn lifecycle, world-target validity, context-chain,
 nearest-selection, runtime-alias, and fail-closed parameter probes.
 

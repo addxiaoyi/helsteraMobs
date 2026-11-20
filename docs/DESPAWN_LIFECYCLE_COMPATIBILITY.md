@@ -1,5 +1,11 @@
 # Despawn lifecycle compatibility
 
+Current distance-policy artifact `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af` passes the same unload/cancellation
+contract in [r15](../tools/paper-integration/reports/paper-1.21.1-despawn-lifecycle-20261120-r15.json)
+and the three-boot restart contract in [r7](../tools/paper-integration/reports/paper-1.21.1-despawn-restart-20261120-r7.json).
+Their independent validators reject 43 and 36 mutation controls respectively.
+The earlier reports below retain their historical hashes.
+
 This contract covers actual chunk/world unload, reload, clean process restart and subsequent death on
 Paper 1.21.1-133 with public MythicMobs 5.7.2. The deterministic runtime
 policy is separated from the unresolved native replay observation below. Both directly configured Helstera mobs
@@ -46,7 +52,7 @@ checks that it remains loaded with all state intact.
 
 Evidence: [final report](../tools/paper-integration/reports/paper-1.21.1-despawn-lifecycle-20261120-r12.json)
 and its [redacted logs and snapshots](../tools/paper-integration/reports/paper-1.21.1-despawn-lifecycle-20261120-r12-logs.zip).
-The final artifact SHA-256 is
+That previous artifact SHA-256 is
 `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`.
 There are 90 observations: 80 matching native/runtime outcomes and ten explicit
 cancellation exceptions. The independent validator checks the full Cartesian
@@ -69,7 +75,7 @@ Subsequent instrumented runs r8 and r9 each passed and recorded 18 native public
 MythicMobDespawnEvents, with one event and one command per actual native despawn.
 Further historical runs r10/r11 recorded active-object identities, native
 event thread/stack traces and chunk-delay offsets of 0 and 4 ticks, without
-reproducing the replay. The current-artifact r12 passes the same event checks.
+reproducing the replay. The preceding-artifact r12 passes the same event checks.
 Those passes do not erase the failing observation. The final probe retains public
 event identity logs and duplicate-call stacks for further diagnosis. No native
 scheduler, clock or plugin bytecode is patched by the fixture.
@@ -120,8 +126,11 @@ python3 tools/paper-integration/run-despawn-restart-fixture.py --revision r6 --c
 python3 tools/paper-integration/test-despawn-restart-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-restart-20261120-r6.json
 ```
 
-Open work: intermittent native chunk callback replay, native player-distance
-behavior and entity-family defaults, kill-command immunity differences between
+The [distance contract](DESPAWN_DISTANCE_COMPATIBILITY.md) additionally verifies
+COW/ZOMBIE/VILLAGER/SLIME defaults and 16/64/192-block/no-player/spectator behavior.
+
+Open work: intermittent native chunk callback replay, broader player-distance
+boundaries and entity families, kill-command immunity differences between
 NPC/PERSISTENT and other modes, crash recovery for these five modes, external
 removal paths, late event cancellation, non-living casters, delayed/asynchronous
 shutdown skills and other Paper/MM versions. Clean restart evidence does not

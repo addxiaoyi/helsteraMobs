@@ -271,4 +271,6 @@ exception. Clean restart now additionally covers all five modes across three boo
 including lazy NEVER reattachment, disposable shutdown cleanup, saved-value updates,
 eight real deaths and empty UUID tree tombstones. MM shutdown commands have the
 separate disabled-plugin scheduling exception documented in that contract. Native
-distance, kill-command immunity, external removal and crash recovery remain open.
+broader distance boundaries/families, kill-command immunity, external removal and
+crash recovery remain open. Four-family distance behavior now has scoped evidence
+in the [distance contract](DESPAWN_DISTANCE_COMPATIBILITY.md).

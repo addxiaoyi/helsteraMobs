@@ -96,6 +96,10 @@ class HealthClampTest {
     }    @Test
     @DisplayName("despawn distance prefers explicit value then legacy spawning distance")
     void configuredDespawnDistancePrefersNewField() {
+        assertEquals(0, HelsteraPlugin.configuredDespawnDistance(null));
+        assertEquals(0, HelsteraPlugin.configuredDespawnDistance(new YamlConfiguration()));
+        var invalid = YamlConfiguration.loadConfiguration(new java.io.StringReader("mob:\n  despawn-distance: -1\n  spawning-distance: -2"));
+        assertEquals(0, HelsteraPlugin.configuredDespawnDistance(invalid));
         var legacy = YamlConfiguration.loadConfiguration(new java.io.StringReader("mob:\n  spawning-distance: 44"));
         assertEquals(44, HelsteraPlugin.configuredDespawnDistance(legacy), 1e-9);
         var explicit = YamlConfiguration.loadConfiguration(new java.io.StringReader("mob:\n  despawn-distance: 18\n  spawning-distance: 44"));

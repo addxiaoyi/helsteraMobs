@@ -837,6 +837,13 @@ public final class AiManager implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.MONITOR)
+    public void onNaturalDespawn(org.bukkit.event.entity.EntityRemoveEvent event) {
+        if (event.getCause() != org.bukkit.event.entity.EntityRemoveEvent.Cause.DESPAWN) return;
+        ModelInstanceImpl inst = findByEntity(event.getEntity());
+        if (inst != null) instances.despawnNaturally(inst.instanceId());
+    }
+
     private ModelInstanceImpl findByEntity(Entity e) {
         for (ModelInstanceImpl inst : instances.allImpl()) {
             if (e.getUniqueId().equals(inst.boundEntityId().orElse(null))) return inst;
