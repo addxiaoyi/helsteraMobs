@@ -35,7 +35,7 @@ for label,source,target in [
  ('missing checkpoint','DCRASH_CHECKPOINT|','UNKNOWN|'),
  ('flush rejected','|accepted=true','|accepted=false'),
  ('world save missing','Saved the game','Other event'),
- ('missing unload','DCRASH_WORLD_UNLOAD|','UNKNOWN|'),
+ ('missing unload','DCRASH_CHUNK_REQUEST|' if report.get('unloadBoundary') == 'chunk' else 'DCRASH_WORLD_UNLOAD|','UNKNOWN|'),
  ('missing mapping','DCRASH_MAPPING|','UNKNOWN|'),
  ('wrong mapping','|trigger=true','|trigger=false'),
  ('missing callback','DCRASH_HOOK runtime despawn','UNKNOWN runtime despawn'),
@@ -63,6 +63,43 @@ for label,change in [('wrong exit',lambda r:r['boots'][0].update(exitCode=0)),
 p=dict(payloads);name=next(n for n in p if n.endswith('.mca'));p[name]=b'bad';controls.append(('corrupt raw region',report,p))
 p=dict(payloads);name='snapshots/write-online/entities.json';d=json.loads(p[name]);d['despawn-crash-unloaded']['entities'].pop();p[name]=(json.dumps(d)+'\n').encode();controls.append(('forged entity projection',report,p))
 p=dict(payloads);p.pop(next(n for n in p if n.endswith('.mca')));controls.append(('missing raw NBT',report,p))
+if report['schemaVersion'] == 3:
+    for label,change in [
+        ('wrong unload boundary',lambda r:r.update(unloadBoundary='world' if r['unloadBoundary']=='chunk' else 'chunk')),
+        ('invalid boundary',lambda r:r.update(unloadBoundary='invalid')),
+        ('wrong save interval',lambda r:r.update(saveIntervalSeconds=300 if r['saveIntervalSeconds']==5 else 5)),
+        ('invalid save interval',lambda r:r.update(saveIntervalSeconds=0)),
+        ('downgraded schema',lambda r:r.update(schemaVersion=2))]:
+        r=copy.deepcopy(report);change(r);controls.append((label,r,payloads))
+    text('wrong native clock config','native-clock.yml',lambda t:t.replace('Saving:', 'Wrong:'))
+    if report['saveIntervalSeconds'] == 5:
+        for label,change in [
+            ('missing periodic save',lambda r:r['clockCheckpoints'].pop()),
+            ('duplicate periodic save',lambda r:r['clockCheckpoints'].append(r['clockCheckpoints'][0])),
+            ('wrong clock value',lambda r:r['clockCheckpoints'][0].update(value=0)),
+            ('clock captured after exit',lambda r:r['clockCheckpoints'][0].update(processAlive=False)),
+            ('clock captured outside boot',lambda r:r['clockCheckpoints'][0].update(capturedAtUtc=r['boots'][0]['stoppedAtUtc'])),
+            ('clock captures reversed',lambda r:r['clockCheckpoints'][0].update(capturedAtUtc=r['clockCheckpoints'][1]['capturedAtUtc']))]:
+            r=copy.deepcopy(report);change(r);controls.append((label,r,payloads))
+        for label,source,target in [
+            ('missing clock mutation','DCRASH_CLOCK_SET|','UNKNOWN|'),
+            ('wrong clock sequence','|sequence=1|','|sequence=2|'),
+            ('wrong live clock value','|value=101|','|value=102|')]:
+            text(label,'write.server.log',lambda t,s=source,d=target:t.replace(s,d,1))
+        text('stale periodic file','snapshots/write-clock-2/global-data.json',lambda t:t.replace('102','101'))
+        p=dict(payloads);p.pop('snapshots/write-clock-1/global-data.json');controls.append(('missing periodic file',report,p))
+    if report['unloadBoundary'] == 'chunk':
+        for label,source,target in [
+            ('missing chunk event','DCRASH_CHUNK_EVENT|','UNKNOWN|'),
+            ('chunk saving disabled','|save=true|','|save=false|'),
+            ('force control lost','|wasForced=true|','|wasForced=false|'),
+            ('missing chunk absence','DCRASH_CHUNKS_ABSENT|','UNKNOWN|'),
+            ('world absent','|worldPresent=true|','|worldPresent=false|'),
+            ('missing chunk count','|chunks=10|','|chunks=9|'),
+            ('missing retained unload event','|event=unload|','|event=load|')]:
+            text(label,'write.server.log',lambda t,s=source,d=target:t.replace(s,d,1))
+        text('world unload masquerades as chunk unload','write.server.log',lambda t:t.replace('DCRASH_READY|','DCRASH_WORLD_EVENT|stage=write|world=despawn-crash-unloaded|cancelled=false\nDCRASH_READY|',1))
+        text('chunk event before request','write.server.log',lambda t:t.replace('DCRASH_CHUNK_REQUEST|','DCRASH_CHUNK_EVENT|stage=write|group=unloaded|x=300|z=300|save=true|tick=0\nDCRASH_CHUNK_REQUEST|',1))
 for label,r,p in controls:
     try:v.validate(r,p)
     except (ValueError,KeyError):continue

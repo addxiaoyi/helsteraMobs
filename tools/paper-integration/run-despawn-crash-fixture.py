@@ -62,15 +62,18 @@ def main():
     parser.add_argument('--revision',required=True)
     parser.add_argument('--cache-directory',required=True)
     parser.add_argument('--observe-only',action='store_true')
+    parser.add_argument('--boundary',choices=('world','chunk'),default='world')
+    parser.add_argument('--save-interval-seconds',type=int,choices=(5,300),default=300)
     args=parser.parse_args()
     import yaml
-    if not 6<=int(yaml.__version__.split('.')[0])<7:raise RuntimeError('Install requirements-player-variables.txt')
+    if not 6<=int(yaml.__version__.split('.')[0])<7:raise RuntimeError('Install requirements-despawn-crash.txt')
     if not re.fullmatch(r'r[1-9][0-9]*',args.revision):raise ValueError('Invalid revision')
     if os.name!='posix':raise ValueError('SIGKILL evidence needs POSIX')
     import nbtlib
     validator=None if args.observe_only else module('crash_validator',TOOLS/'validate-despawn-crash.py')
     day=datetime.now(timezone.utc).strftime('%Y%m%d')
-    fixture=f'srv-paper-despawn-crash-{day}-{args.revision}';server=ROOT/fixture
+    series='despawn-crash'+('-chunk' if args.boundary=='chunk' else '')+('-clock' if args.save_interval_seconds==5 else '')
+    fixture=f'srv-paper-{series}-{day}-{args.revision}';server=ROOT/fixture
     if server.exists():raise ValueError('Refusing to reuse fixture')
     paper=ROOT/'srv-1.21.1/paper.jar';native=TOOLS/'.external-cache/MythicMobs-5.7.2-FTWvGuE5.jar'
     plugin=ROOT/'helstera-plugin/target/helsteraMobs-1.0.0-full.jar'
@@ -98,7 +101,9 @@ def main():
                     'Skills':[f'command{{c="say DCRASH_HOOK native {event} {key}"}} @self ~on{event.title()}' for event in ('despawn','death')]}
     (mobs/'restart.yml').write_text(yaml.safe_dump(native_mobs,sort_keys=False))
     config_dir=plugins/'MythicMobs/config';config_dir.mkdir()
-    (config_dir/'config-general.yml').write_text('Configuration:\n  Clock:\n    Saving: 300\n')
+    native_config=config_dir/'config-general.yml'
+    native_config.write_text(f'Configuration:\n  Clock:\n    Saving: {args.save_interval_seconds}\n')
+    shutil.copy2(native_config,server/'native-clock.yml')
     data=plugins/'helsteraMobs';data.mkdir()
     config=(TOOLS/'config.yml').read_text()
     config=re.sub(r'(?m)^  (self-test(?:-[A-Za-z0-9-]+)?):\s*true\s*$',r'  \1: false',config)
@@ -112,13 +117,14 @@ def main():
         TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/DespawnCrashProbe.java',
         TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java']
     if validator:sources.extend([TOOLS/'validate-despawn-crash.py',TOOLS/'validate-player-variables.py',TOOLS/'test-despawn-crash-evidence.py'])
-    report={'schemaVersion':2,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception',
+    report={'schemaVersion':3,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception',
+        'unloadBoundary':args.boundary,'saveIntervalSeconds':args.save_interval_seconds,'clockCheckpoints':[],
         'knownExceptions':[] if validator is None else validator.EXCEPTIONS,
         'generatedAtUtc':datetime.now(timezone.utc).isoformat(),'pluginSha256':digest(plugin),'paperJarSha256':common.PAPER_HASH,
         'mythicMobsSha256':common.NATIVE_HASH,'probeJarSha256':digest(probe_jar),
         'sourceHashes':{str(p.relative_to(ROOT)):digest(p) for p in sources},'observations':[],'boots':[],'files':[]}
     for stage in ('write','recover','final'):
-        (probe_data/'config.yml').write_text('stage: '+stage+'\n')
+        (probe_data/'config.yml').write_text('stage: '+stage+'\nboundary: '+args.boundary+'\n')
         latest=server/'logs/latest.log'
         if latest.exists():latest.rename(server/f'before-{stage}.log')
         with (server/f'{stage}.stdout.log').open('w') as output:
@@ -137,6 +143,24 @@ def main():
                 wait_for('DCRASH_READY|stage='+stage+'|')
                 if stage!='write':
                     command('clear');wait_for('DCRASH_CLEARED|stage='+stage)
+                if args.save_interval_seconds==5:
+                    # Only mutate a native global variable; never invoke a native save method.
+                    # Its file must change twice while Paper is alive to prove the ordinary clock ran.
+                    for sequence in (1,2):
+                        value={'write':100,'recover':200,'final':300}[stage]+sequence
+                        command('clock');wait_for(f'DCRASH_CLOCK_SET|stage={stage}|sequence={sequence}|value={value}|')
+                        deadline=time.monotonic()+30
+                        global_path=plugins/'MythicMobs/data/global-data.json'
+                        while time.monotonic()<deadline and process.poll() is None:
+                            try:
+                                raw=global_path.read_bytes();saved=json.loads(raw)
+                                if saved['entries']['CrashClockControl']=={'value':value,'expirationTime':0,'type':'Integer'}:break
+                            except (FileNotFoundError,KeyError,json.JSONDecodeError):pass
+                            time.sleep(.1)
+                        else:raise RuntimeError('Native periodic save did not commit the control')
+                        dest=server/'snapshots'/f'{stage}-clock-{sequence}';dest.mkdir(parents=True)
+                        (dest/'global-data.json').write_bytes(raw)
+                        report['clockCheckpoints'].append({'stage':stage,'sequence':sequence,'value':value,'capturedAtUtc':datetime.now(timezone.utc).isoformat(),'processAlive':process.poll() is None})
                 command('flush');wait_for('DCRASH_CHECKPOINT|stage='+stage+'|')
                 dest=server/'snapshots'/(stage+'-online');dest.mkdir(parents=True)
                 capture(server,dest)
@@ -162,7 +186,7 @@ def main():
     for p,expected in [(plugins/'helsteraMobs.jar',report['pluginSha256']),(plugins/'MythicMobs.jar',report['mythicMobsSha256']),
                        (server/'paper.jar',report['paperJarSha256']),(probe_jar,report['probeJarSha256'])]:
         if digest(p)!=expected:raise RuntimeError('Artifact changed during fixture')
-    for p in [server/(s+'.server.log') for s in ('write','recover','final')]+[server/'identities.yml']+sorted(p for p in (server/'snapshots').rglob('*') if p.is_file()):
+    for p in [server/(s+'.server.log') for s in ('write','recover','final')]+[server/'identities.yml',server/'native-clock.yml']+sorted(p for p in (server/'snapshots').rglob('*') if p.is_file()):
         report['files'].append({'path':str(p.relative_to(server)),'sha256':digest(p)})
     local=server/'despawn-crash-report.json';local.write_text(json.dumps(report,indent=2)+'\n')
     error=None
@@ -171,7 +195,7 @@ def main():
         except (ValueError,KeyError) as e:
             error=e;report['evidenceMode']='observation';report['validationResult']='rejected: '+str(e)
             local.write_text(json.dumps(report,indent=2)+'\n')
-    name=f'paper-1.21.1-despawn-crash-{day}-{args.revision}'
+    name=f'paper-1.21.1-{series}-{day}-{args.revision}'
     report_path=TOOLS/'reports'/(name+'.json');archive_path=TOOLS/'reports'/(name+'-logs.zip')
     if report_path.exists() or archive_path.exists():raise RuntimeError('Refusing to overwrite evidence')
     with zipfile.ZipFile(archive_path,'x',zipfile.ZIP_DEFLATED) as archive:

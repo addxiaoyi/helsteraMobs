@@ -418,6 +418,41 @@ foreach ($item in $releaseEvidence) {
             & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-despawn-crash.py') $commandPath
             if ($LASTEXITCODE -ne 0) { throw 'Despawn crash evidence validation failed.' }
         }
+        if ($versionMatrix.releasePolicy.requiresDespawnCrashBoundaryEvidence -eq $true) {
+            $boundaries = @($item.despawnCrashBoundaryEvidence)
+            if ($boundaries.Count -ne 3) {
+                throw 'Latest full release requires three pinned despawn crash boundary reports.'
+            }
+            $seenBoundaries = [System.Collections.Generic.HashSet[string]]::new()
+            $boundaryPaths = @()
+            foreach ($boundary in $boundaries) {
+                if ([string]$boundary.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-despawn-crash-(?:chunk(?:-clock)?|clock)-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                        [string]$boundary.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                    throw 'Invalid despawn crash boundary report reference.'
+                }
+                $boundaryPath = Join-Path $Root ([string]$boundary.report)
+                if (-not (Test-Path -LiteralPath $boundaryPath -PathType Leaf) -or
+                        (Get-FileHash -LiteralPath $boundaryPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$boundary.reportSha256) {
+                    throw 'Despawn crash boundary report is missing or changed.'
+                }
+                $boundaryReport = Get-Content -LiteralPath $boundaryPath -Raw -Encoding utf8 | ConvertFrom-Json
+                if ([string]$boundaryReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                        [string]$boundaryReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                    throw 'Despawn crash boundary evidence does not match the release artifact/server.'
+                }
+                $boundaryKey = '{0}/{1}' -f $boundaryReport.unloadBoundary, $boundaryReport.saveIntervalSeconds
+                if ($boundaryReport.schemaVersion -ne 3 -or $boundaryKey -cnotin @('chunk/300', 'world/5', 'chunk/5') -or
+                        -not $seenBoundaries.Add($boundaryKey)) {
+                    throw 'Crash boundary/clock coverage is wrong or duplicated.'
+                }
+                $boundaryPaths += $boundaryPath
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            foreach ($boundaryPath in $boundaryPaths) {
+                & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-despawn-crash.py') $boundaryPath
+                if ($LASTEXITCODE -ne 0) { throw 'Despawn crash boundary evidence validation failed.' }
+            }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

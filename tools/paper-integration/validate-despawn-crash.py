@@ -55,7 +55,11 @@ def read_region(raw):
     return entities
 
 def validate(report, payloads):
-    require(report['schemaVersion'] == 2 and report['evidenceMode'] == 'comparison-with-exception', 'wrong schema/mode')
+    require(report['schemaVersion'] in (2,3) and report['evidenceMode'] == 'comparison-with-exception', 'wrong schema/mode')
+    modern = report['schemaVersion'] == 3
+    boundary = report['unloadBoundary'] if modern else 'world'
+    interval = report['saveIntervalSeconds'] if modern else 300
+    require(boundary in ('world','chunk') and interval in (5,300), 'invalid save boundary/clock')
     require(report['knownExceptions'] == EXCEPTIONS, 'undocumented exceptions')
     require(report['paperJarSha256'] == '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9', 'wrong Paper')
     require(report['mythicMobsSha256'] == '9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f', 'wrong MM')
@@ -82,6 +86,21 @@ def validate(report, payloads):
             require(set(pair) == {'native', 'runtime'}, 'wrong identity backend'); all_ids.update(pair.values())
     require(len(all_ids) == 63 and all(str(uuid.UUID(v)) == v for v in all_ids), 'duplicate/invalid UUID')
     observations = []; identities = []; mappings = []
+    if modern:
+        require(doc(texts['native-clock.yml']) == {'Configuration':{'Clock':{'Saving':interval}}}, 'wrong native saving configuration')
+        clocks = report['clockCheckpoints']
+        require([(c['stage'],c['sequence']) for c in clocks] == (list(itertools.product(STAGES,(1,2))) if interval == 5 else []), 'missing/reordered periodic saves')
+        previous_capture = None
+        for c in clocks:
+            value = {'write':100,'recover':200,'final':300}[c['stage']]+c['sequence']
+            require(c['value'] == value and c['processAlive'] is True, 'invalid clock checkpoint')
+            boot = next(b for b in report['boots'] if b['stage'] == c['stage'])
+            captured = datetime.fromisoformat(c['capturedAtUtc'])
+            require(datetime.fromisoformat(boot['startedAtUtc']) < captured < datetime.fromisoformat(boot['stoppedAtUtc']), 'periodic evidence outside live boot')
+            require(previous_capture is None or previous_capture < captured, 'reordered periodic captures')
+            previous_capture = captured
+            entries = js(texts[f"snapshots/{c['stage']}-clock-{c['sequence']}/global-data.json"])['entries']
+            require(entries == {'CrashClockControl':{'value':value,'expirationTime':0,'type':'Integer'}}, 'native periodic save not observed')
     for stage in STAGES:
         text = texts[stage+'.server.log']; lines = text.splitlines()
         def marked(marker): return [(i, fields(l, marker)) for i,l in enumerate(lines) if marker in l]
@@ -130,9 +149,34 @@ def validate(report, payloads):
                 require(r['stage'] == stage and r['loaded'] == 'false', 'NEVER loaded eagerly')
                 require(at < next(j for j,row in rows if row['key'] == r['key']), 'late cold check')
         unloads = marked('DCRASH_WORLD_UNLOAD|')
-        require([r['group'] for _,r in unloads] == list(GROUPS[1:] if stage == 'write' else GROUPS), 'wrong unload coverage')
+        unload_groups = GROUPS[1:] if stage == 'write' else GROUPS
+        require([r['group'] for _,r in unloads] == (list(unload_groups) if boundary == 'world' else []), 'wrong unload coverage')
         require(all(r['stage'] == stage and r['accepted'] == 'true' for _,r in unloads), 'rejected unload')
         for at,r in unloads: require(at < checkpoint[0][0], 'unload after checkpoint')
+        if modern:
+            clock_sets = marked('DCRASH_CLOCK_SET|')
+            require(len(clock_sets) == (2 if interval == 5 else 0), 'missing clock controls')
+            for seq,(at,r) in enumerate(clock_sets,1):
+                require(r['stage'] == stage and r['sequence'] == str(seq) and r['value'] == str({'write':100,'recover':200,'final':300}[stage]+seq), 'wrong clock control')
+                require((cleared[0][0] if cleared else ready[0][0]) < at < flush[0][0], 'clock control outside checkpoint window')
+            if clock_sets: require(int(clock_sets[0][1]['tick']) < int(clock_sets[1][1]['tick']), 'clock controls not separated')
+            requests = marked('DCRASH_CHUNK_REQUEST|'); absent = marked('DCRASH_CHUNKS_ABSENT|'); chunks = marked('DCRASH_CHUNK_EVENT|')
+            world_events = marked('DCRASH_WORLD_EVENT|')
+            if boundary == 'world': require(not requests and not absent and not chunks and not world_events, 'chunk evidence in world fixture')
+            else:
+                expected_chunks = [(g,str(300+i*4),'300') for g in unload_groups for i in range(10)]
+                require([(r['group'],r['x'],r['z']) for _,r in requests] == expected_chunks, 'missing/duplicate chunk requests')
+                require(len(chunks) == len(expected_chunks) and {(r['group'],r['x'],r['z']) for _,r in chunks} == set(expected_chunks), 'missing/duplicate real chunk events')
+                require([r['group'] for _,r in absent] == list(unload_groups), 'missing chunk absence checkpoints')
+                for at,r in requests:
+                    index = (int(r['x'])-300)//4
+                    forced = stage == 'write' and index >= 8 or stage == 'recover' and index == 9
+                    require(r['stage'] == stage and r['accepted'] == 'true' and r['wasForced'] == flag(forced), 'bad chunk request/force control')
+                    ev_at,ev = next((j,v) for j,v in chunks if (v['group'],v['x'],v['z']) == (r['group'],r['x'],r['z']))
+                    done_at,done = next((j,v) for j,v in absent if v['group'] == r['group'])
+                    require(at < ev_at < done_at < checkpoint[0][0] and ev['stage'] == stage and ev['save'] == 'true', 'chunk unload ordering/save disabled')
+                    require(done['stage'] == stage and done['worldPresent'] == 'true' and done['chunks'] == '10', 'world lost or chunk still loaded')
+                require(all(at > checkpoint[0][0] for at,_ in world_events), 'world unloaded during chunk test')
         callbacks = re.findall(r'DCRASH_HOOK (native|runtime) (despawn|death) (\w+)', text)
         want = {(b,'despawn',k) for b in ('native','runtime') for k,(g,m,p,i) in KEYS.items() if g != 'active' and m not in RETAINED} if stage == 'write' else {
             (b,'death',k) for b in ('native','runtime') for k,(g,m,p,i) in KEYS.items() if m in RETAINED and p == ('direct' if stage == 'recover' else 'imported')}
@@ -141,10 +185,21 @@ def validate(report, payloads):
         for at,r in events:
             require(r['key'] in KEYS and r['backend'] in ('native','runtime') and r['stage'] == stage, 'invalid event')
             g,m,p,i = KEYS[r['key']]
-            require(r['uuid'] == ids[g]['mobs'][r['key']][r['backend']] and r['event'] in ('load','death'), 'changed event UUID')
+            require(r['uuid'] == ids[g]['mobs'][r['key']][r['backend']] and r['event'] in (('load','death','unload') if boundary == 'chunk' else ('load','death')), 'changed event UUID')
             if r['event'] == 'death':
                 deaths.append((r['backend'],'death',r['key']))
                 require(ready[0][0] < at < next(j for j,row in rows if row['key'] == r['key'] and row['phase'] == 'cleared'), 'death outside cleanup')
+        if boundary == 'chunk':
+            for key,(g,m,p,i) in KEYS.items():
+                if m not in RETAINED or g not in unload_groups: continue
+                expected = stage == 'write' or stage == 'recover' and p == 'imported'
+                for backend in ('native','runtime'):
+                    exits = [(at,r) for at,r in events if r['key'] == key and r['backend'] == backend and r['event'] == 'unload']
+                    require(len(exits) == int(expected), 'missing/duplicate retained entity unload event')
+                    if exits:
+                        req = next(at for at,r in marked('DCRASH_CHUNK_REQUEST|') if r['group'] == g and r['x'] == str(300+i*4))
+                        done = next(at for at,r in marked('DCRASH_CHUNKS_ABSENT|') if r['group'] == g)
+                        require(req < exits[0][0] < done, 'entity unload outside chunk request')
         expected_deaths = {c for c in want if c[1] == 'death'}
         require(len(deaths) == len(expected_deaths) and set(deaths) == expected_deaths, 'missing/duplicate death events')
         for at,r in cold:
@@ -166,6 +221,9 @@ def validate(report, payloads):
                       'runtime':ids[g]['mobs'][r['key']]['runtime'],'world':ids[g]['world'],'chunk':f'{300+i*4},300'}, 'identity metadata mismatch')
     require(len(mappings) == 30 and {r['key'] for r in mappings} == set(KEYS) and all(r['mode'] == KEYS[r['key']][1] and r['trigger'] == 'true' for r in mappings), 'mapping mismatch')
     expected_files = {'identities.yml'} | {s+'.server.log' for s in STAGES}
+    if modern:
+        expected_files.add('native-clock.yml')
+        expected_files |= {f"snapshots/{c['stage']}-clock-{c['sequence']}/global-data.json" for c in report['clockCheckpoints']}
     for stage, moment in itertools.product(STAGES, ('online','stopped')):
         prefix = f'snapshots/{stage}-{moment}/'
         expected_files |= {prefix+'entities.json', prefix+'inventory.json'}

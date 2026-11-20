@@ -271,8 +271,9 @@ exception. Clean restart now additionally covers all five modes across three boo
 including lazy NEVER reattachment, disposable shutdown cleanup, saved-value updates,
 eight real deaths and empty UUID tree tombstones. MM shutdown commands have the
 separate disabled-plugin scheduling exception documented in that contract. Native
-broader distance boundaries/families, kill-command immunity, external removal and
-crash recovery remain open. Four-family distance behavior now has scoped evidence
+broader distance boundaries/families, external removal and interrupted-write
+recovery remain open. Loaded, unloaded and reentrant cleanup commands have their
+own [command contract](MOB_COMMAND_COMPATIBILITY.md). Four-family distance behavior now has scoped evidence
 in the [distance contract](DESPAWN_DISTANCE_COMPATIBILITY.md).
 
-Entity checkpoint persistence now has a separate [crash contract](DESPAWN_CRASH_COMPATIBILITY.md). Retained mobs carry typed scalar/location variables and retention metadata in their entity PDC at unload and clean shutdown. Three real boots and two forced exits verify completed checkpoints, previous-checkpoint recovery, replacement values and terminal cleanup. This does not establish recovery during unfinished writes or real-time persistence after every variable change.
+Entity checkpoint persistence now has a separate [crash contract](DESPAWN_CRASH_COMPATIBILITY.md). Retained mobs carry typed scalar/location variables and retention metadata in their entity PDC at unload and clean shutdown. Three real boots and two forced exits verify completed checkpoints, previous-checkpoint recovery, replacement values and terminal cleanup. Additional chunk-only and native scheduled-save comparisons confirm the same boundary: the native global file changes twice per boot while entity checkpoints remain at their last unload values. This does not establish recovery during unfinished writes or real-time persistence after every variable change.

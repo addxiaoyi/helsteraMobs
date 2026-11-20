@@ -9,7 +9,8 @@
     "requiresMobCommandEvidence": true,
     "requiresUnloadedCommandEvidence": true,
     "requiresReentrantCommandEvidence": true,
-    "requiresDespawnCrashEvidence": true
+    "requiresDespawnCrashEvidence": true,
+    "requiresDespawnCrashBoundaryEvidence": true
   },
   "combinations": [
     {

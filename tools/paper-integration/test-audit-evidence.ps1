@@ -1139,6 +1139,60 @@ try {
     }
     [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
     [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
+    $boundaryPolicy = $originalVersionText | ConvertFrom-Json
+    $boundaryPolicy.releasePolicy | Add-Member -NotePropertyName requiresDespawnCrashBoundaryEvidence -NotePropertyValue $true
+    @($boundaryPolicy.combinations | Where-Object releaseValidated)[0] | Add-Member -NotePropertyName serverJarSha256 -NotePropertyValue '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($boundaryPolicy | ConvertTo-Json -Depth 20))
+    foreach ($case in @('missing', 'incomplete', 'unsafe', 'missing-file', 'changed-file', 'wrong-plugin', 'wrong-server', 'old-schema', 'wrong-boundary', 'duplicate-boundary', 'invalid-archive')) {
+        $boundaryManifest = @($originalCommandManifest | ConvertFrom-Json)
+        $boundaryEntry = @($boundaryManifest | Where-Object { $_.fullReleaseCatalog })[0]
+        $boundaryEvidence = @()
+        foreach ($spec in @(@('chunk', 'chunk', 300), @('clock', 'world', 5), @('chunk-clock', 'chunk', 5))) {
+            $boundaryReference = "tools/paper-integration/reports/paper-1.21.1-despawn-crash-$($spec[0])-20261120-r99.json"
+            $boundaryFile = Join-Path $temporaryRoot $boundaryReference
+            $boundaryMetadata = [pscustomobject]@{
+                schemaVersion = 3
+                pluginSha256 = $testPluginHash
+                paperJarSha256 = '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+                unloadBoundary = $spec[1]
+                saveIntervalSeconds = $spec[2]
+            }
+            if ($spec[0] -eq 'chunk') {
+                switch ($case) {
+                    'wrong-plugin' { $boundaryMetadata.pluginSha256 = ('0' * 64) }
+                    'wrong-server' { $boundaryMetadata.paperJarSha256 = ('0' * 64) }
+                    'old-schema' { $boundaryMetadata.schemaVersion = 2 }
+                    'wrong-boundary' { $boundaryMetadata.unloadBoundary = 'world' }
+                    'duplicate-boundary' { $boundaryMetadata.saveIntervalSeconds = 5 }
+                }
+            }
+            [System.IO.File]::WriteAllText($boundaryFile, ($boundaryMetadata | ConvertTo-Json))
+            $boundaryEvidence += [pscustomobject]@{
+                report = $boundaryReference
+                reportSha256 = (Get-FileHash -LiteralPath $boundaryFile -Algorithm SHA256).Hash.ToLowerInvariant()
+            }
+        }
+        $expectedBoundaryFailure = switch ($case) {
+            'missing' { $boundaryEvidence = @(); 'requires three pinned despawn crash boundary reports' }
+            'incomplete' { $boundaryEvidence = @($boundaryEvidence[0], $boundaryEvidence[1]); 'requires three pinned despawn crash boundary reports' }
+            'unsafe' { $boundaryEvidence[0].report = '../outside.json'; 'Invalid despawn crash boundary report reference' }
+            'missing-file' { Remove-Item -LiteralPath (Join-Path $temporaryRoot $boundaryEvidence[0].report); 'report is missing or changed' }
+            'changed-file' { $boundaryEvidence[0].reportSha256 = ('0' * 64); 'report is missing or changed' }
+            { $_ -in @('wrong-plugin', 'wrong-server') } { 'artifact/server' }
+            { $_ -in @('old-schema', 'wrong-boundary', 'duplicate-boundary') } { 'coverage is wrong or duplicated' }
+            'invalid-archive' { 'Despawn crash boundary evidence validation failed' }
+        }
+        if ($case -ne 'missing') {
+            $boundaryEntry | Add-Member -NotePropertyName despawnCrashBoundaryEvidence -NotePropertyValue $boundaryEvidence
+        }
+        [System.IO.File]::WriteAllText($manifestPath, ($boundaryManifest | ConvertTo-Json -Depth 20))
+        $boundaryFailure = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+        if ($LASTEXITCODE -eq 0 -or $boundaryFailure -notmatch $expectedBoundaryFailure) {
+            throw "Release gate accepted invalid crash boundary evidence ($case): $boundaryFailure"
+        }
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
     [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))

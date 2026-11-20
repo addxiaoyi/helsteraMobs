@@ -137,4 +137,4 @@ shutdown skills and other Paper/MM versions. Clean restart evidence does not
 establish crash or mid-write recovery. Existing timed PERSISTENT restart and
 variable-lifetime suites provide separate evidence.
 
-Completed-checkpoint SIGKILL recovery now has a separate [crash contract](DESPAWN_CRASH_COMPATIBILITY.md), with raw entity NBT and two forced exits. Its guarantees are limited to completed unload checkpoints; world saves do not refresh native mob variables.
+Completed-checkpoint SIGKILL recovery now has a separate [crash contract](DESPAWN_CRASH_COMPATIBILITY.md), with raw entity NBT and two forced exits. World-unload and chunk-only comparisons include observed native scheduled saves. Their guarantees are limited to completed unload checkpoints; world flushes and the tested MM 5.7.2 save clock do not refresh loaded mob variables.

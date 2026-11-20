@@ -7,8 +7,9 @@ All 43 mutation controls are rejected. The plugin artifact is
 The same artifact also passes the [471-probe strict suite](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-strict-20261120-r1.json)
 and [clean three-boot restart](../tools/paper-integration/reports/paper-1.21.1-despawn-restart-20261120-r8.json)
 with 50 observations and 36 rejected evidence mutations. The release gate requires
-this crash archive alongside matching distance, precedence, loaded-command,
-unloaded-command and reentrant-command evidence.
+the original world-unload crash archive and all three boundary/clock archives below,
+alongside matching distance, precedence, loaded-command, unloaded-command and
+reentrant-command evidence.
 
 The tested boundary is a completed entity save followed by a forced process exit
 (SIGKILL), on Paper 1.21.1-133 and public MythicMobs 5.7.2. A normal `save-all flush`
@@ -34,8 +35,38 @@ legacy migration path. Invalid types, malformed snapshots and foreign UUID scope
 are rejected before replacing live state. Graceful shutdown updates loaded
 retained entities' checkpoints before final world saving.
 
-Checkpoint creation in this fixture uses actual world unloads. The chunk-only
-crash path remains outside this focused proof.
+The original fixture uses world unloads. The same production JAR now also has
+three separately archived comparisons, each with 190 observations and two SIGKILL
+exits:
+
+| Unload boundary | Native save interval | Report | Rejected mutations |
+| --- | --- | --- | ---: |
+| Chunk only | 300 seconds | [chunk r1](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-20261120-r1.json) | 58 |
+| World | 5 seconds | [clock r1](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-clock-20261120-r1.json) | 60 |
+| Chunk only | 5 seconds | [chunk-clock r2](../tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r2.json) | 69 |
+
+Each chunk fixture observes 80 accepted unload requests and real ChunkUnloadEvent
+notifications across three boots. Every request must be followed by a saved chunk
+unload event; retained mobs also require entity unload events. Checks then confirm
+all ten tested chunks are absent while their world is still loaded. PERSISTENT force-loading tickets are
+explicitly released to permit this boundary; automatic unload of a normally
+force-loaded PERSISTENT chunk is not claimed. NEVER remains lazy after restart.
+
+For each five-second run, two different native global values are written during
+each boot. The runner observes both values appear in `global-data.json` while the
+child process is alive, before `save-all flush`. The six raw snapshots, live
+mutation markers, capture timestamps, clock configuration and process lifetimes
+are independently checked. The probe only mutates the global registry; it never
+calls a native save method. These are actual scheduled-save observations.
+
+Even after those native clock executions, never-unloaded entity variables still
+have no checkpoint, and reloaded/changed entities still restore their previous
+unload values. The raw entity NBT and post-crash reads agree. Thus running the MM
+5.7.2 save clock does not make these entity mutations durable. This result is
+scoped to the pinned public MM/Paper builds and completed writes; the configured
+five-second clock is not a measurement of the default 300-second cadence.
+Observer chunk-clock r1 remains observation-only evidence, not a passing release
+report. Its follow-up r2 pins the independent validator and negative controls.
 
 The fixture creates 30 native/runtime pairs over direct and imported configurations,
 five Despawn modes and three independent worlds. It makes two actual SIGKILL exits
@@ -65,8 +96,9 @@ Observer r1 is diagnostic evidence of Helstera losing saved entity variables whi
 MM recovered them. It is not passing evidence. A successful checkpoint comparison
 does not prove recovery during an unfinished region write, a partially written
 SkillTree file, operating-system failure, disk failure or power loss. Native
-periodic saving, uncheckpointed changes, delayed callbacks, broader catalogs and
-other server versions remain outside this test.
+default-period scheduling latency, interrupted writes, delayed callbacks, broader
+catalogs and other server versions remain outside this test. Uncheckpointed
+entity changes are explicitly observed to be lost; they are not claimed durable.
 
 Run this SIGKILL fixture on a POSIX host (Linux/macOS). Archived evidence can be
 validated on any host with the Python dependencies. Reproduction requires Java 21,
@@ -75,7 +107,10 @@ a disposable fixture cache:
 
 ```bash
 python3 tools/paper-integration/run-despawn-crash-fixture.py --revision r3 --cache-directory srv-paper-player-life-20261120-r1
-python3 tools/paper-integration/test-despawn-crash-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-crash-20261120-r3.json
+python3 tools/paper-integration/run-despawn-crash-fixture.py --boundary chunk --revision r1 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/run-despawn-crash-fixture.py --save-interval-seconds 5 --revision r1 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/run-despawn-crash-fixture.py --boundary chunk --save-interval-seconds 5 --revision r2 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/test-despawn-crash-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r2.json
 ```
 
 Only the fresh child Java process started by this runner receives SIGKILL.

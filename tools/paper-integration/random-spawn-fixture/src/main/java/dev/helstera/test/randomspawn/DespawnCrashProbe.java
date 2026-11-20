@@ -29,6 +29,8 @@ public final class DespawnCrashProbe extends JavaPlugin implements Listener {
     private static final List<String> GROUPS=List.of("active","unloaded","resumed");
     private final YamlConfiguration identities=new YamlConfiguration();
     private String stage;
+    private boolean chunkBoundary;
+    private int clockWrites;
     private boolean failed;
     private int rows;
     @FunctionalInterface private interface Step{void run() throws Exception;}
@@ -37,6 +39,7 @@ public final class DespawnCrashProbe extends JavaPlugin implements Listener {
     },ticks);}
     @Override public void onEnable(){
         stage=getConfig().getString("stage");
+        chunkBoundary=getConfig().getString("boundary","world").equals("chunk");
         runtime=Bukkit.getPluginManager().getPlugin("helsteraMobs");mythic=Bukkit.getPluginManager().getPlugin("MythicMobs");
         Bukkit.getPluginManager().registerEvents(this,this);later(100,this::begin);
     }
@@ -122,7 +125,7 @@ public final class DespawnCrashProbe extends JavaPlugin implements Listener {
             observe("seeded");
             if(group.equals("active")){nextGroup();return;}
             unloadCurrent();
-            later(40,()->{
+            awaitUnloaded(List.of(group),0,()->{
                 observe("unloaded");
                 if(group.equals("unloaded")){nextGroup();return;}
                 world=makeWorld(group);for(int i=0;i<10;i++){var c=world.getChunkAt(300+i*4,300);c.getEntities();c.addPluginChunkTicket(this);}
@@ -140,13 +143,55 @@ public final class DespawnCrashProbe extends JavaPlugin implements Listener {
         });
     }
     private void unloadCurrent(){
+        if(chunkBoundary){
+            for(int index=0;index<10;index++){
+                int x=300+index*4;
+                boolean forced=world.isChunkForceLoaded(x,300);
+                world.setChunkForceLoaded(x,300,false);
+                world.getChunkAt(x,300).removePluginChunkTicket(this);
+                boolean accepted=world.unloadChunkRequest(x,300);
+                getLogger().info("DCRASH_CHUNK_REQUEST|stage="+stage+"|group="+group+"|x="+x+"|z=300|accepted="+accepted+"|wasForced="+forced+"|tick="+Bukkit.getCurrentTick());
+                if(!accepted)throw new IllegalStateException("Chunk unload rejected");
+            }
+            return;
+        }
         world.removePluginChunkTickets(this);boolean ok=Bukkit.unloadWorld(world,true);
         getLogger().info("DCRASH_WORLD_UNLOAD|stage="+stage+"|group="+group+"|accepted="+ok+"|tick="+Bukkit.getCurrentTick());
         if(!ok)throw new IllegalStateException("World unload rejected");
     }
+    private void awaitUnloaded(List<String> groups,int waited,Step then){
+        later(1,()->{
+            if(chunkBoundary){
+                boolean unloaded=true;
+                for(String g:groups){
+                    World w=worlds.get(g);
+                    if(Bukkit.getWorld(w.getUID())!=w)throw new IllegalStateException("World unloaded during chunk test");
+                    for(int i=0;i<10;i++)unloaded&=!w.isChunkLoaded(300+i*4,300);
+                }
+                if(!unloaded){
+                    if(waited>=200)throw new IllegalStateException("Chunk unload timeout");
+                    awaitUnloaded(groups,waited+1,then);return;
+                }
+                for(String g:groups)getLogger().info("DCRASH_CHUNKS_ABSENT|stage="+stage+"|group="+g+"|worldPresent=true|chunks=10|tick="+Bukkit.getCurrentTick());
+            }
+            // Let the native deferred unregister complete before comparing registries.
+            later(40,then);
+        });
+    }
     @Override public boolean onCommand(org.bukkit.command.CommandSender sender,org.bukkit.command.Command command,String label,String[] args){
         if(!(sender instanceof org.bukkit.command.ConsoleCommandSender)||args.length!=1)return false;
         try{
+            if(args[0].equals("clock")){
+                int value=(stage.equals("write")?100:stage.equals("recover")?200:300)+ ++clockWrites;
+                Object manager=mythic.getClass().getMethod("getVariableManager").invoke(mythic);
+                Object variables=manager.getClass().getMethod("getGlobalRegistry").invoke(manager);
+                var h=harnesses.get("direct");Class<?> type=h.nativeType("io.lumine.mythic.core.skills.variables.VariableType");
+                Class<?> variable=h.nativeType("io.lumine.mythic.core.skills.variables.Variable");
+                Object integer=Arrays.stream(type.getEnumConstants()).filter(t->t.toString().equals("INTEGER")).findFirst().orElseThrow();
+                Object marker=variable.getMethod("ofType",type,Object.class,boolean.class).invoke(null,integer,value,true);
+                variables.getClass().getMethod("put",String.class,variable).invoke(variables,"CrashClockControl",marker);
+                getLogger().info("DCRASH_CLOCK_SET|stage="+stage+"|sequence="+clockWrites+"|value="+value+"|tick="+Bukkit.getCurrentTick());return true;
+            }
             if(args[0].equals("flush")){
                 boolean accepted=Bukkit.dispatchCommand(Bukkit.getConsoleSender(),"save-all flush");
                 getLogger().info("DCRASH_FLUSH|stage="+stage+"|accepted="+accepted+"|tick="+Bukkit.getCurrentTick());
@@ -166,7 +211,7 @@ public final class DespawnCrashProbe extends JavaPlugin implements Listener {
                 }
                 later(70,()->{
                     for(String g:GROUPS){group=g;world=worlds.get(g);observe("cleared");unloadCurrent();}
-                    later(40,()->getLogger().info("DCRASH_CLEARED|stage="+stage));
+                    awaitUnloaded(GROUPS,0,()->getLogger().info("DCRASH_CLEARED|stage="+stage));
                 });return true;
             }
         }catch(Throwable e){failed=true;getLogger().severe("DCRASH_FAILED|stage="+stage+"|error="+e);e.printStackTrace();}
@@ -224,6 +269,17 @@ public final class DespawnCrashProbe extends JavaPlugin implements Listener {
     }
     @EventHandler(priority=EventPriority.MONITOR) public void saved(org.bukkit.event.world.WorldSaveEvent e){if(e.getWorld().getName().startsWith("despawn-crash-"))getLogger().info("DCRASH_WORLD_SAVE|stage="+stage+"|world="+e.getWorld().getName()+"|tick="+Bukkit.getCurrentTick());}
     @EventHandler(priority=EventPriority.MONITOR) public void loaded(EntitiesLoadEvent e){for(Entity entity:e.getEntities())event(entity,"load");}
+    @EventHandler(priority=EventPriority.MONITOR) public void chunkUnloaded(org.bukkit.event.world.ChunkUnloadEvent e){
+        if(!chunkBoundary||!worlds.containsValue(e.getWorld())||e.getChunk().getZ()!=300)return;
+        int x=e.getChunk().getX();if(x<300||x>336||(x-300)%4!=0)return;
+        getLogger().info("DCRASH_CHUNK_EVENT|stage="+stage+"|group="+e.getWorld().getName().substring("despawn-crash-".length())+"|x="+x+"|z=300|save="+e.isSaveChunk()+"|tick="+Bukkit.getCurrentTick());
+    }
+    @EventHandler(priority=EventPriority.MONITOR) public void entitiesUnloaded(org.bukkit.event.world.EntitiesUnloadEvent e){
+        if(chunkBoundary)for(Entity entity:e.getEntities())event(entity,"unload");
+    }
+    @EventHandler(priority=EventPriority.MONITOR) public void worldUnloaded(org.bukkit.event.world.WorldUnloadEvent e){
+        if(chunkBoundary&&worlds.containsValue(e.getWorld()))getLogger().info("DCRASH_WORLD_EVENT|stage="+stage+"|world="+e.getWorld().getName()+"|cancelled="+e.isCancelled());
+    }
     @EventHandler(priority=EventPriority.HIGHEST) public void died(EntityDeathEvent e){
         // This fixture asserts entity absence; vanilla cow loot is outside that contract.
         if(pairs.stream().anyMatch(p->p.nativeId.equals(e.getEntity().getUniqueId())||p.runtimeId.equals(e.getEntity().getUniqueId()))){

@@ -33,7 +33,21 @@
     "despawnPrecedenceEvidence": {
       "report": "tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r6.json",
       "reportSha256": "6dff6a024d86da07e6164b7fc0aa7e0f0b34707d0ca493af16cab935140f6d8e"
-    }
+    },
+    "despawnCrashBoundaryEvidence": [
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-20261120-r1.json",
+        "reportSha256": "3e4fa39da99a2e5c7ffc65023cc2384d3c146770cc57641a51454051eceaac05"
+      },
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-clock-20261120-r1.json",
+        "reportSha256": "88037711bac295e0a991c3fa933e9ebec35751180239b4f9b76727b8ecd8de9f"
+      },
+      {
+        "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r2.json",
+        "reportSha256": "fdc71a9393d9f6cb44d1c7e4dc2d6e4b628a05f0d672848a5f7be9c84f921891"
+      }
+    ]
   },
   {
     "fixtureId": "srv-paper-reentrant-command-strict-20261120-r1",

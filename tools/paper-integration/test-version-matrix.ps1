@@ -31,6 +31,10 @@ if ($matrix.releasePolicy.requiresUnloadedCommandEvidence -ne $true) {
 if ($matrix.releasePolicy.requiresReentrantCommandEvidence -ne $true) {
     throw 'Version matrix must require reentrant command evidence for the release artifact.'
 }
+if ($matrix.releasePolicy.requiresDespawnCrashEvidence -ne $true -or
+        $matrix.releasePolicy.requiresDespawnCrashBoundaryEvidence -ne $true) {
+    throw 'Version matrix must require world/chunk crash evidence and observed native periodic saves.'
+}
 $release = @($matrix.combinations | Where-Object { $_.releaseValidated -eq $true })
 if ($release.Count -ne 1) { throw "Expected exactly one release-validated combination, found $($release.Count)." }
 $entry = $release[0]
