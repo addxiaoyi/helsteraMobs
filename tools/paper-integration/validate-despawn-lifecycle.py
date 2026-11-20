@@ -23,7 +23,7 @@ RETAINED={'NEVER','PERSISTENT'}
 def flag(v):return str(v).lower()
 
 def validate(report,texts):
-    require(report['schemaVersion']==1 and report['evidenceMode']=='comparison-with-exception','wrong schema/mode')
+    require(report['schemaVersion'] in (1,2,3) and report['evidenceMode']=='comparison-with-exception','wrong schema/mode')
     require(report['paperJarSha256']=='39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9','wrong Paper')
     require(report['mythicMobsSha256']=='9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f','wrong MM')
     require(all(re.fullmatch('[0-9a-f]{64}',report[k]) for k in ('pluginSha256','probeJarSha256')),'missing artifact')
@@ -83,6 +83,20 @@ def validate(report,texts):
         phase='cancelled' if scenario=='cancelled' else 'dead' if r['event']=='death' else 'reloaded'
         require(row_indices[r['key'],'initial']<i<row_indices[r['key'],phase],'hook outside lifecycle')
     require(seen_hooks=={k for k,n in expected_final_hooks.items() if n},'missing hook execution')
+    if report['schemaVersion']>=2:
+        delay=report['chunkDelayTicks']
+        require(type(delay) is int and 0<=delay<20,'invalid chunk timing')
+        timing=marked('DESPAWN_TIMING|')
+        require(len(timing)==1 and timing[0][1]['chunkDelayTicks']==str(delay),'timing metadata changed')
+        native_events=[(i,r) for i,r in marked('DESPAWN_NATIVE_EVENT|') if i<summary]
+        expected_native={key for (backend,event,key),count in expected_final_hooks.items() if backend=='native' and event=='despawn' and count}
+        require(len(native_events)==len(expected_native)==18 and {r['key'] for _,r in native_events}==expected_native,'missing/duplicate native public event')
+        for i,r in native_events:
+            key=r['key'];scenario=keys[key][0];phase='cancelled' if scenario=='cancelled' else 'reloaded'
+            require(r['uuid']==ids[key]['native'] and r['activeObject']==ids[key]['activeObject'],'native event identity changed')
+            require(re.fullmatch(r'-?\d+',r['activeObject']) and re.fullmatch(r'\d+',r['tick']),'invalid native event identity/timing')
+            require(r['thread']=='Server thread' and 'handleMobDespawnEvent' in r['stack'],'native event trace missing')
+            require(row_indices[key,'initial']<i<row_indices[key,phase],'native event outside lifecycle')
     visuals=marked('DESPAWN_VISUALS|');checkpoints=[(s,p) for s,phases in PHASES.items() for p in phases]
     require([(r['scenario'],r['phase']) for _,r in visuals]==checkpoints,'visual checkpoint order')
     for _,r in visuals:
@@ -121,8 +135,11 @@ def validate(report,texts):
     scoped=yaml.load(texts['shutdown-scoped.yml'],Loader=registry.UniqueYaml)
     require(scoped['registry-format']==1,'wrong registry format')
     scopes={entry['scope'] for entry in scoped['registries'].values()}
-    require(len(scoped['registries'])==10,'duplicate shutdown registry')
-    require(scopes=={'entity:'+ids[k]['runtime'] for k,(s,_,_) in keys.items() if s=='cancelled'},'dead state saved/cancelled state lost')
+    # Schema 3 includes disposable cleanup on shutdown, after the cancellation observations.
+    expected_scopes={'entity:'+ids[k]['runtime'] for k,(s,m,_) in keys.items()
+                     if s=='cancelled' and (report['schemaVersion']<3 or m in RETAINED)}
+    require(len(scoped['registries'])==len(expected_scopes),'duplicate/orphan shutdown registry')
+    require(scopes==expected_scopes,'dead state saved/cancelled retained state lost')
     return 90
 
 

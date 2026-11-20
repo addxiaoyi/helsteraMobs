@@ -13,6 +13,41 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class PersistentInstanceUnloadTest {
+    @Test @SuppressWarnings("unchecked")
+    void shutdownRemovesDisposableMobsOnceBeforeSerializationButKeepsRetainedAndStandaloneInstances() throws Exception {
+        var bus = new HelsteraEventBus();
+        var manager = new InstanceManagerImpl(null, bus, mock(InstanceRenderer.class), null);
+        var field = InstanceManagerImpl.class.getDeclaredField("instances"); field.setAccessible(true);
+        var instances = (Map<Integer, ModelInstanceImpl>) field.get(manager);
+        var removed = new ArrayList<Integer>();
+        bus.register(ModelRemoveEvent.class, event -> {
+            assertEquals("plugin_shutdown", event.cause()); assertTrue(event.despawning());
+            assertNull(manager.impl(event.instance().instanceId()));
+            removed.add(event.instance().instanceId());
+        });
+        var modes = List.of("NORMAL", "CHUNK", "NPC", "NEVER", "PERSISTENT", "NORMAL");
+        var all = new ArrayList<ModelInstanceImpl>();
+        for (int i = 0; i < modes.size(); i++) {
+            var instance = mock(ModelInstanceImpl.class); all.add(instance);
+            when(instance.instanceId()).thenReturn(i + 1);
+            when(instance.options()).thenReturn(new SpawnOptions().despawnMode(modes.get(i)));
+            if (i < 5) {
+                var entity = mock(LivingEntity.class);
+                when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
+                when(entity.getPersistentDataContainer()).thenReturn(mock(org.bukkit.persistence.PersistentDataContainer.class));
+                when(instance.entity()).thenReturn(entity); when(instance.baseEntity()).thenReturn(Optional.of(entity));
+            }
+            instances.put(i + 1, instance);
+        }
+        manager.despawnDisposableOnShutdown(); manager.despawnDisposableOnShutdown();
+        assertEquals(Set.of(1, 2, 3), new HashSet<>(removed)); assertEquals(3, removed.size());
+        assertEquals(Set.of(4, 5, 6), instances.keySet());
+        for (int i = 0; i < all.size(); i++) {
+            verify(all.get(i), times(i < 3 ? 1 : 0)).despawn();
+            if (i < 5) verify(all.get(i).entity(), times(i < 3 ? 1 : 0)).remove();
+        }
+    }
+
     @Test void persistentModesPreserveBase() throws Exception {
         for (String mode : List.of("NEVER", "PERSISTENT")) persistentUnloadPreservesBaseEntityAndPostsExactlyOneUnload(mode);
     }

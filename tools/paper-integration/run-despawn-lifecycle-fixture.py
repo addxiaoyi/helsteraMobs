@@ -29,6 +29,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--revision', required=True)
     parser.add_argument('--cache-directory', required=True)
+    parser.add_argument('--chunk-delay-ticks', type=int, default=0, choices=range(20))
     args = parser.parse_args()
     import yaml
     if not 6 <= int(yaml.__version__.split('.')[0]) < 7: raise RuntimeError('Install requirements-player-variables.txt')
@@ -47,6 +48,7 @@ def main():
     plugins = server/'plugins'; plugins.mkdir()
     shutil.copy2(plugin, plugins/'helsteraMobs.jar'); shutil.copy2(native, plugins/'MythicMobs.jar')
     probe_data = plugins/'HelsteraDespawnLifecycleProbe'; probe_data.mkdir()
+    (probe_data/'config.yml').write_text(f'chunk-delay-ticks: {args.chunk_delay_ticks}\n')
     probe_jar = plugins/'HelsteraDespawnLifecycleProbe.jar'
     with zipfile.ZipFile(TOOLS/'random-spawn-fixture/target/random-spawn-paper-fixture-1.0.0.jar') as source, zipfile.ZipFile(probe_jar, 'w', zipfile.ZIP_DEFLATED) as dest:
         for item in source.infolist():
@@ -78,7 +80,7 @@ def main():
     sources=[Path(__file__).resolve(), TOOLS/'validate-despawn-lifecycle.py', TOOLS/'test-despawn-lifecycle-evidence.py', TOOLS/'validate-player-variables.py',
              TOOLS/'run-player-variable-fixture.py', TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/DespawnLifecycleProbe.java',
              TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java']
-    report={'schemaVersion':1,'fixtureDirectory':fixture,'evidenceMode':'comparison-with-exception','knownExceptions':['MM-5.7.2-cancelled-world-unload'],'generatedAtUtc':datetime.now(timezone.utc).isoformat(),
+    report={'schemaVersion':3,'chunkDelayTicks':args.chunk_delay_ticks,'fixtureDirectory':fixture,'evidenceMode':'comparison-with-exception','knownExceptions':['MM-5.7.2-cancelled-world-unload'],'generatedAtUtc':datetime.now(timezone.utc).isoformat(),
             'pluginSha256':digest(plugin),'paperJarSha256':common.PAPER_HASH,'mythicMobsSha256':common.NATIVE_HASH,'probeJarSha256':digest(probe_jar),
             'sourceHashes':{str(p.relative_to(ROOT)):digest(p) for p in sources},'observations':[],'files':[]}
     latest = server/'logs/latest.log'
@@ -107,7 +109,13 @@ def main():
     for name,expected in report['sourceHashes'].items():
         if digest(ROOT/name)!=expected:raise RuntimeError('Source changed during fixture')
     (server/'despawn-report.json').write_text(json.dumps(report,indent=2)+'\n')
-    validator.main(server)
+    validation_error=None
+    try:validator.main(server)
+    except (ValueError,KeyError) as error:
+        validation_error=error
+        report['evidenceMode']='observation'
+        report['validationResult']='rejected: '+str(error)
+        (server/'despawn-report.json').write_text(json.dumps(report,indent=2)+'\n')
     report_name=f'paper-1.21.1-despawn-lifecycle-{datetime.now(timezone.utc):%Y%m%d}-{args.revision}'
     report_path=TOOLS/'reports'/(report_name+'.json');archive_path=TOOLS/'reports'/(report_name+'-logs.zip')
     if report_path.exists() or archive_path.exists():raise RuntimeError('Refusing to overwrite evidence')
@@ -115,6 +123,8 @@ def main():
         for entry in report['files']:archive.write(server/entry['path'],entry['path'])
     report['logArchive']=archive_path.name;report['logArchiveSha256']=digest(archive_path)
     report_path.write_text(json.dumps(report,indent=2)+'\n')
+    if validation_error is not None:
+        raise RuntimeError(f'Despawn evidence rejected and archived at {report_path}: {validation_error}') from validation_error
     validator.main(report_path)
     print('Despawn lifecycle validated:',fixture)
 

@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 2,
+  "fixtureDirectory": "srv-paper-despawn-skilltree-restart-20261120-r3",
+  "generatedAtUtc": "2026-11-20T03:19:33.0158055Z",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "pluginSha256": "8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542",
+  "firstBoot": {
+    "result": "passed",
+    "entities": 2,
+    "snapshotsAfterShutdown": 2,
+    "branchStateSaved": true,
+    "unsupportedVariableRejected": true,
+    "log": "skilltree-write.log"
+  },
+  "secondBoot": {
+    "result": "passed",
+    "uuidMarkersRestored": true,
+    "foundationRestored": true,
+    "prerequisiteRestored": true,
+    "dottedVariableNamesRestored": true,
+    "dottedLocationNamesRestored": true,
+    "reservedAndDottedBranchNamesRestored": true,
+    "listVariableRestored": true,
+    "setVariableRestored": true,
+    "nestedMapVariableRestored": true,
+    "collectionsRestored": true,
+    "advancedBranchUnlocked": true,
+    "log": "skilltree-verify.log"
+  },
+  "entityDeath": {
+    "result": "passed",
+    "deadEntitySnapshotRemoved": true,
+    "survivorSnapshotRetained": true,
+    "snapshotsAfterShutdown": 1
+  },
+  "timedVariables": {
+    "result": "passed",
+    "checks": 115,
+    "firstShutdownAt": 1795144587432,
+    "secondShutdownAt": 1795144683512,
+    "firstBoot": {
+      "checks": 46,
+      "offlineDeadline": 1795144628828,
+      "retainedDeadline": 1795144718828,
+      "entities": [
+        "52bfe7e7-325d-481f-ab85-e1ec86015bcb",
+        "554dd402-e7c7-4b24-8f58-ad7b0654101b"
+      ],
+      "observedAt": [
+        1795144538861,
+        1795144538869
+      ]
+    },
+    "secondBoot": {
+      "checks": 46,
+      "offlineDeadline": 1795144628828,
+      "retainedDeadline": 1795144718828,
+      "entities": [
+        "52bfe7e7-325d-481f-ab85-e1ec86015bcb",
+        "554dd402-e7c7-4b24-8f58-ad7b0654101b"
+      ],
+      "observedAt": [
+        1795144635306,
+        1795144635312
+      ]
+    },
+    "thirdBoot": {
+      "checks": 23,
+      "offlineDeadline": 1795144628828,
+      "retainedDeadline": 1795144718828,
+      "entities": [
+        "554dd402-e7c7-4b24-8f58-ad7b0654101b"
+      ],
+      "observedAt": [
+        1795144724739
+      ]
+    },
+    "originalDeadlinesPreserved": true,
+    "expiredDuringDowntime": true,
+    "parentStateChecked": true,
+    "expiredValuesNotResaved": true
+  },
+  "thirdBoot": {
+    "result": "passed",
+    "survivingEntityRestored": true,
+    "expiredValuesAbsent": true,
+    "permanentControlsRetained": true,
+    "deadEntitySnapshotAbsent": true,
+    "snapshotsAfterShutdown": 1,
+    "log": "skilltree-final.log"
+  },
+  "snapshots": [
+    {
+      "path": "skilltree-write-snapshots/entity-52bfe7e7-325d-481f-ab85-e1ec86015bcb.yml",
+      "sha256": "87fbfe1165049a199d08db3691bc4caf1fc65f28c64d9d0393037fe1c983b8bc"
+    },
+    {
+      "path": "skilltree-write-snapshots/entity-554dd402-e7c7-4b24-8f58-ad7b0654101b.yml",
+      "sha256": "53261696268dc692809225ff5c06b1e976b50242bfff272c458a25a12f4f6eb1"
+    },
+    {
+      "path": "skilltree-verify-snapshots/entity-554dd402-e7c7-4b24-8f58-ad7b0654101b.yml",
+      "sha256": "0ee46d131ff27a44213bdf8e23cdca1032b1e1482da1e94443a199c7ab2d4da6"
+    },
+    {
+      "path": "skilltree-final-snapshots/entity-554dd402-e7c7-4b24-8f58-ad7b0654101b.yml",
+      "sha256": "f9073fdf0dc225c7966842475a7d21b6f31068482b260bf547a706f1035d8ad5"
+    }
+  ],
+  "runnerSha256": "470349d2566cc962a1ee6f11b69e189be2b1197a0be18e4aabae4e27f19a5eba",
+  "probeSourceSha256": "fa87d06c3d492a6371c93915174ea16cc6f6a57deb3e9c3f8ff0fb24671cb297"
+}

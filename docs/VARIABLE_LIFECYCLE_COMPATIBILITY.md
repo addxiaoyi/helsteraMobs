@@ -254,7 +254,7 @@ process termination.
 Writes after the last completed save can be lost. Killing during a file write,
 host/power failure, large-player save performance, asynchronous save/load races,
 configured player death/respawn skill dispatch, native distance and kill-command
-immunity, external removal paths and mode-specific restart,
+immunity, external removal paths and mode-specific crash recovery,
 nested dynamic variable names,
 SetVariable expression/default-value semantics, the full arithmetic/location
 mechanic catalog, broader save combinations and other server/MythicMobs versions
@@ -267,5 +267,8 @@ PERSISTENT. NORMAL/CHUNK/NPC permanently clean up during accepted chunk/world
 unload, including their base and visual entities. The separate
 [Despawn lifecycle contract](DESPAWN_LIFECYCLE_COMPATIBILITY.md) covers all five
 modes, configured death/despawn callbacks and the explicit MM 5.7.2 cancelled-world
-exception. Native distance, kill-command immunity, external removal and mode-specific
-restart remain open.
+exception. Clean restart now additionally covers all five modes across three boots,
+including lazy NEVER reattachment, disposable shutdown cleanup, saved-value updates,
+eight real deaths and empty UUID tree tombstones. MM shutdown commands have the
+separate disabled-plugin scheduling exception documented in that contract. Native
+distance, kill-command immunity, external removal and crash recovery remain open.

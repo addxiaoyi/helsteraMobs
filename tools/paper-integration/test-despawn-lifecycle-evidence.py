@@ -52,6 +52,21 @@ log('duplicate YAML','snapshots/chunk_never_direct.yml',lambda t:t+'\nsnapshot-f
 log('cancelled registry lost','shutdown-scoped.yml',lambda _: 'registry-format: 1\nregistries: {}\n')
 changed=copy.deepcopy(report);changed['pluginSha256']='';controls.append(('missing artifact',changed,texts))
 changed=copy.deepcopy(report);changed['knownExceptions']=[];controls.append(('exception undocumented',changed,texts))
+if report['schemaVersion']>=2:
+    event=next(l for l in texts['server.log'].splitlines() if 'DESPAWN_NATIVE_EVENT|' in l)
+    log('missing native event','server.log',lambda t:t.replace(event,''))
+    log('duplicate native event','server.log',lambda t:t.replace(event,event+'\n'+event))
+    log('wrong native identity','server.log',lambda t:t.replace(event,event.replace('|uuid=','|uuid=0')))
+    log('wrong active object','server.log',lambda t:t.replace(event,event.replace('|activeObject=','|activeObject=0')))
+    log('missing native stack','server.log',lambda t:t.replace(event,event.split('|stack=')[0]+'|stack=[]'))
+    log('wrong native thread','server.log',lambda t:t.replace(event,event.replace('|thread=Server thread','|thread=other')))
+    log('missing timing','server.log',lambda t:t.replace('DESPAWN_TIMING|','DESPAWN_UNKNOWN|'))
+    changed=copy.deepcopy(report);changed['chunkDelayTicks']=20;controls.append(('invalid timing',changed,texts))
+if report['schemaVersion']>=3:
+    identity=next(l for l in texts['server.log'].splitlines() if 'DESPAWN_ID|key=cancelled_normal_direct|' in l)
+    disposable=validator.fields(identity,'DESPAWN_ID|')['runtime']
+    log('disposable state saved','shutdown-scoped.yml',lambda t:validator.re.sub(r'scope: entity:[0-9a-f-]+','scope: entity:'+disposable,t,count=1))
+    changed=copy.deepcopy(report);changed['schemaVersion']=2;controls.append(('shutdown policy downgraded',changed,texts))
 for label,changed,logs in controls:
     try:validator.validate(changed,logs)
     except (ValueError,KeyError):continue

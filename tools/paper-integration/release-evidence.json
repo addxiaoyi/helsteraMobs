@@ -1,5 +1,17 @@
 [
   {
+    "fixtureId": "srv-paper-despawn-restart-strict-20261120-r1",
+    "reportFixtureDirectory": "srv-paper-despawn-restart-strict-20261120-r1",
+    "pluginSha256": "8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542",
+    "fullReleaseCatalog": true,
+    "report": "tools/paper-integration/reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json",
+    "reportSha256": "915eca165427f3bba974eff6e0b3872a0a3a154442d98d3b9bff3e1fd825660c",
+    "log": "tools/paper-integration/reports/paper-1.21.1-despawn-restart-strict-20261120-r1.log.gz",
+    "logSha256": "942b2933c37a1f03adba0df13d18a4d41c87b766bea7f1f5cfb78d4840875ae4",
+    "clientLog": "tools/paper-integration/reports/paper-1.21.1-despawn-restart-strict-20261120-r1.client-logs.zip",
+    "clientLogSha256": "07cbf9fb414c7800a8e6be55f1feea10cead616e028c82187edd89dab6ab1b21"
+  },
+  {
     "fixtureId": "srv-paper-despawn-strict-20261120-r2",
     "reportFixtureDirectory": "srv-paper-despawn-strict-20261120-r2",
     "pluginSha256": "3e5ab03e1d3d342084f02df8db86dd08b1f943efed36a576fe265b10ed86c9dc",
@@ -9,7 +21,9 @@
     "log": "tools/paper-integration/reports/paper-1.21.1-despawn-strict-20261120-r2.log.gz",
     "logSha256": "0983de5b190137b2ab6072588010d166f14a1897e96a774b494096a6d14749b8",
     "clientLog": "tools/paper-integration/reports/paper-1.21.1-despawn-strict-20261120-r2.client-logs.zip",
-    "clientLogSha256": "16780e2f816e3e4bea4037aeee3fd6e42e94771be102dbd92d5152eb1140c1bb"
+    "clientLogSha256": "16780e2f816e3e4bea4037aeee3fd6e42e94771be102dbd92d5152eb1140c1bb",
+    "superseded": true,
+    "supersededBy": "srv-paper-despawn-restart-strict-20261120-r1"
   },
   {
     "fixtureId": "srv-paper-random-spawn-replace-20261120-r77",

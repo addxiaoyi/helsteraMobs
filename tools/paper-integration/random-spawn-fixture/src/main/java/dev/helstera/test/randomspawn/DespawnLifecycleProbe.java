@@ -46,10 +46,13 @@ public final class DespawnLifecycleProbe extends JavaPlugin implements Listener 
                     Entity entity=(Entity)event.getClass().getMethod("getEntity").invoke(event);
                     Object mob=event.getClass().getMethod("getMob").invoke(event);
                     for(Pair p:pairs)if(p.nativeId.equals(entity.getUniqueId()))
-                        getLogger().info("DESPAWN_NATIVE_EVENT|key="+p.key+"|uuid="+entity.getUniqueId()+"|activeObject="+System.identityHashCode(mob));
+                        getLogger().info("DESPAWN_NATIVE_EVENT|key="+p.key+"|uuid="+entity.getUniqueId()+"|activeObject="+System.identityHashCode(mob)
+                                +"|tick="+Bukkit.getCurrentTick()+"|thread="+Thread.currentThread().getName()
+                                +"|stack="+Arrays.toString(Thread.currentThread().getStackTrace()));
                 } catch(ReflectiveOperationException e){throw new org.bukkit.event.EventException(e);}
             },this);
         }catch(ReflectiveOperationException e){throw new IllegalStateException(e);}
+        getLogger().info("DESPAWN_TIMING|chunkDelayTicks="+getConfig().getInt("chunk-delay-ticks",0));
         later(100,()->begin("chunk"));
     }
     @Override public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
@@ -117,7 +120,8 @@ public final class DespawnLifecycleProbe extends JavaPlugin implements Listener 
             Object tree=h.newTree(r,r,r.getLocation());h.treeType.getMethod("setVariable",String.class,Object.class).invoke(tree,"DespawnTree",23);
             Object snapshot=h.treeType.getMethod("snapshot").invoke(tree);
             service.getClass().getMethod("restoreSkillTreeSnapshot",int.class,snapshot.getClass()).invoke(service,id,snapshot);
-            getLogger().info("DESPAWN_ID|key="+key+"|native="+n.getUniqueId()+"|runtime="+r.getUniqueId()+"|world="+worldId);
+            getLogger().info("DESPAWN_ID|key="+key+"|native="+n.getUniqueId()+"|runtime="+r.getUniqueId()+"|world="+worldId
+                    +"|activeObject="+System.identityHashCode(h.active.get(n)));
         }
         later(20,()->{
             baselineVisuals=visuals();observe("initial");
@@ -130,8 +134,10 @@ public final class DespawnLifecycleProbe extends JavaPlugin implements Listener 
                     for(var h:harnesses.values())h.close();
                     getLogger().info("DESPAWN_SUMMARY|observations="+rows+"|mismatches="+mismatches+"|passed="+(mismatches==0));return;
                 }
-                cancel=false;world.getChunkAt(CX,CZ).setForceLoaded(true);
-                phase="accepted";requestUnload();later(70,this::afterUnload);
+                later(getConfig().getInt("chunk-delay-ticks",0),()->{
+                    cancel=false;world.getChunkAt(CX,CZ).setForceLoaded(true);
+                    phase="accepted";requestUnload();later(70,this::afterUnload);
+                });
             });
         });
     }

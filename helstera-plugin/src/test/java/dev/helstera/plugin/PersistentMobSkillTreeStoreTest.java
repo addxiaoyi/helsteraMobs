@@ -12,6 +12,20 @@ import static org.junit.jupiter.api.Assertions.*;
 
 class PersistentMobSkillTreeStoreTest {
     @Test
+    void clearedCurrentTreeCannotReturnFromUuidOrLegacySnapshot(@TempDir Path directory) throws Exception {
+        var store = new PersistentMobSkillTreeStore(directory.toFile());
+        var entity = UUID.randomUUID(); var peer = UUID.randomUUID();
+        store.save(entity, snapshot("old")); store.save(peer, snapshot("peer"));
+        SkillTreeSnapshotStore.save(store.legacyMobFile("probe"), snapshot("legacy"));
+        store.saveCurrent(entity, java.util.Optional.empty());
+        var reopened = new PersistentMobSkillTreeStore(directory.toFile());
+        assertTrue(reopened.load(entity, "probe").orElseThrow().variables().isEmpty());
+        assertEquals("peer", marker(reopened.load(peer, "probe").orElseThrow()));
+        reopened.saveCurrent(entity, java.util.Optional.of(snapshot("new")));
+        assertEquals("new", marker(reopened.load(entity, "probe").orElseThrow()));
+    }
+
+    @Test
     void isolatesSnapshotsForEntitiesWithTheSameMobId(@TempDir Path directory) throws Exception {
         var store = new PersistentMobSkillTreeStore(directory.toFile());
         UUID first = UUID.randomUUID();

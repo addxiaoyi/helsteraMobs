@@ -39,6 +39,11 @@ final class PersistentMobSkillTreeStore {
         SkillTreeSnapshotStore.save(entityFile(entityId), snapshot);
     }
 
+    /** An explicitly cleared live tree must overwrite an older saved tree, including legacy fallback. */
+    void saveCurrent(UUID entityId, Optional<SkillTreeContext.Snapshot> snapshot) throws IOException {
+        save(entityId, snapshot.orElseGet(() -> new SkillTreeContext(null, java.util.List.of(), null).snapshot()));
+    }
+
     boolean delete(UUID entityId) throws IOException {
         return Files.deleteIfExists(entityFile(entityId).toPath());
     }

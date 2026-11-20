@@ -974,6 +974,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        // Dispatch terminal skills and discard disposable UUID state before serializing it.
+        if (instances instanceof InstanceManagerImpl manager) manager.despawnDisposableOnShutdown();
         if (playerVariables != null) { playerVariables.stop(); playerVariables = null; }
         if (scopedVariablesLoaded) {
             try { dev.helstera.ai.skill.SkillExtras.saveScopedVariables(new java.io.File(getDataFolder(), "scoped-variables.yml")); }
@@ -31301,14 +31303,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             String mobId = living.getPersistentDataContainer().get(
                     persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
             if (mobId == null || mobId.isBlank()) continue;
-            skills.snapshotOf(instance.instanceId()).ifPresent(snapshot -> {
-                try {
-                    store.save(living.getUniqueId(), snapshot);
-                } catch (java.io.IOException ex) {
-                    getLogger().warning("[Persistent] SkillTree snapshot save failed for "
-                            + living.getUniqueId() + ": " + ex.getMessage());
-                }
-            });
+            try {
+                store.saveCurrent(living.getUniqueId(), skills.snapshotOf(instance.instanceId()));
+            } catch (java.io.IOException ex) {
+                getLogger().warning("[Persistent] SkillTree snapshot save failed for "
+                        + living.getUniqueId() + ": " + ex.getMessage());
+            }
         }
     }
 

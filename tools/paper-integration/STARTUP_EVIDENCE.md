@@ -1,13 +1,77 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-despawn-strict-20261120-r2` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `3e5ab03e1d3d342084f02df8db86dd08b1f943efed36a576fe265b10ed86c9dc`. [Strict report](reports/paper-1.21.1-despawn-strict-20261120-r2.json) · [Redacted server log](reports/paper-1.21.1-despawn-strict-20261120-r2.log.gz) · [Redacted client logs](reports/paper-1.21.1-despawn-strict-20261120-r2.client-logs.zip) This artifact passes 2,393 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-despawn-restart-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`. [Strict report](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.client-logs.zip) This artifact passes 2,396 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-Current-artifact regressions: `srv-paper-despawn-strict-20261120-r2` passes
+Current-artifact lifecycle evidence is scoped to Paper 1.21.1-133 and public
+MM 5.7.2. The five-mode restart suite passes 50 observations over three clean
+boots, including lazy NEVER reattachment, empty SkillTree tombstones, six UUID
+snapshots and eight deaths. Six native shutdown command scheduling errors are
+explicit compatibility exceptions; all six runtime commands execute once.
+The validator checks error order/stack attribution and rejects 36 mutation controls.
+The refreshed unload suite passes 90 observations (80 matches, ten cancelled-world
+exceptions), 46 callbacks, eighteen native public despawn events and 43 mutation
+controls. Schema 3 verifies only retained UUID registries survive shutdown.
+See the [contract](../../docs/DESPAWN_LIFECYCLE_COMPATIBILITY.md).
+
+Current five-mode restart: [paper-1.21.1-despawn-restart-20261120-r5.json](reports/paper-1.21.1-despawn-restart-20261120-r5.json), SHA-256
+`b2950aa6d7045db010e4e3d88f8b53ddba8674cdd574cda5abde213a7f7d1931`.
+Redacted evidence: [paper-1.21.1-despawn-restart-20261120-r5-logs.zip](reports/paper-1.21.1-despawn-restart-20261120-r5-logs.zip), SHA-256
+`efb3f688d73f9c3460d4557dc0a5306481dc041ee326bab3e3eb7241c39fc146`.
+
+Current unload/cancellation: [paper-1.21.1-despawn-lifecycle-20261120-r12.json](reports/paper-1.21.1-despawn-lifecycle-20261120-r12.json), SHA-256
+`178c2d66c740d5869df86a28600c6530ba8f8f9c10467e9543624d13e8a26be4`.
+Redacted evidence: [paper-1.21.1-despawn-lifecycle-20261120-r12-logs.zip](reports/paper-1.21.1-despawn-lifecycle-20261120-r12-logs.zip), SHA-256
+`e4c5ebeb99c96629909171cc215190cfaeb3cc94753db478965db39140ebb37d`.
+
+Current full strict (471 probes): [paper-1.21.1-despawn-restart-strict-20261120-r1.json](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json), SHA-256
+`915eca165427f3bba974eff6e0b3872a0a3a154442d98d3b9bff3e1fd825660c`.
+Redacted evidence: [paper-1.21.1-despawn-restart-strict-20261120-r1.log.gz](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.log.gz), SHA-256
+`942b2933c37a1f03adba0df13d18a4d41c87b766bea7f1f5cfb78d4840875ae4`.
+Redacted evidence: [paper-1.21.1-despawn-restart-strict-20261120-r1.client-logs.zip](reports/paper-1.21.1-despawn-restart-strict-20261120-r1.client-logs.zip), SHA-256
+`07cbf9fb414c7800a8e6be55f1feea10cead616e028c82187edd89dab6ab1b21`.
+
+Historical event trace, 0-tick offset: [paper-1.21.1-despawn-lifecycle-20261120-r10.json](reports/paper-1.21.1-despawn-lifecycle-20261120-r10.json), SHA-256
+`e97fb792358576d95f88e478f54adf3eec81a0fcb53fc155ff979b8cf59d0d43`.
+Redacted evidence: [paper-1.21.1-despawn-lifecycle-20261120-r10-logs.zip](reports/paper-1.21.1-despawn-lifecycle-20261120-r10-logs.zip), SHA-256
+`c0e51965d26647e2a9988fef6e5d72c153cb3296efc73381d0d389725cc27046`.
+
+Historical event trace, 4-tick offset: [paper-1.21.1-despawn-lifecycle-20261120-r11.json](reports/paper-1.21.1-despawn-lifecycle-20261120-r11.json), SHA-256
+`8e34c7f799db1f8a54a8360640922df2904c7b223dee4d4c36544081636d4ae7`.
+Redacted evidence: [paper-1.21.1-despawn-lifecycle-20261120-r11-logs.zip](reports/paper-1.21.1-despawn-lifecycle-20261120-r11-logs.zip), SHA-256
+`f11bc9f1e0c0b9c12aad1f29d6fdd1e49ea560ba5c171ea9b538a0d191807747`.
+
+Pre-fix restart observation, not passing: [paper-1.21.1-despawn-restart-20261120-r2.json](reports/paper-1.21.1-despawn-restart-20261120-r2.json), SHA-256
+`83b24bbee044635f30efdf0d11e038f4377568295b92a6a8239ae0d9cfe5d6b7`.
+Redacted evidence: [paper-1.21.1-despawn-restart-20261120-r2-logs.zip](reports/paper-1.21.1-despawn-restart-20261120-r2-logs.zip), SHA-256
+`6df0cfde8a4dbf06c357be675def65a23363e0fa0b417e686eb5861e710cb98e`.
+
+Rejected restart validator expectation, not passing: [paper-1.21.1-despawn-restart-20261120-r3.json](reports/paper-1.21.1-despawn-restart-20261120-r3.json), SHA-256
+`68267e22ddd335446a55d0901c63c9ccaa2115ed441605cb7d99a4011f02ca26`.
+Redacted evidence: [paper-1.21.1-despawn-restart-20261120-r3-logs.zip](reports/paper-1.21.1-despawn-restart-20261120-r3-logs.zip), SHA-256
+`80d940254dc92cea5b1cb431c91cdf6557c2d374882deed3fb70965e68d86044`.
+
+Earlier passing restart with the same production JAR: [paper-1.21.1-despawn-restart-20261120-r4.json](reports/paper-1.21.1-despawn-restart-20261120-r4.json), SHA-256
+`e836979672c5c964e1a4b64c1bef579099927d0db0423ee07bb6e0a581bd0a5a`.
+Redacted evidence: [paper-1.21.1-despawn-restart-20261120-r4-logs.zip](reports/paper-1.21.1-despawn-restart-20261120-r4-logs.zip), SHA-256
+`2f4fd1565310bc2dfc185bc607648b99c9e598ca9a4877ce5608f3c08189ce18`.
+
+Current-artifact timed SkillTree regression
+`srv-paper-despawn-skilltree-restart-20261120-r3` also passes 115 observations
+across three boots, four shutdown snapshots and twelve evidence mutation controls.
+Original deadlines, parent expiry, branches/collections and dead-entity snapshot
+cleanup remain verified on the same production JAR.
+
+Current timed SkillTree: [paper-1.21.1-skilltree-expiry-restart-20261120-r3.json](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r3.json), SHA-256
+`d4c4c86cde52f508ca6f882693613bc128756c8c724590a1cbdadcc19f4b7b13`.
+Current timed SkillTree: [paper-1.21.1-skilltree-expiry-restart-20261120-r3-logs.zip](reports/paper-1.21.1-skilltree-expiry-restart-20261120-r3-logs.zip), SHA-256
+`fb7697c60dca3ad3050e1cfda220a908cf90d140af0fe891b210e93563d8bcd9`.
+
+Previous-artifact regressions: `srv-paper-despawn-strict-20261120-r2` passes
 471 probes (452 passed, 19 expected rejections); native comparison
 `srv-paper-random-spawn-replace-20261120-r77` passes 31; world/chunk persistence
 `srv-paper-world-variable-life-20261120-r10` passes 256; timed SkillTree restart
 `srv-paper-despawn-skilltree-restart-20261120-r2` passes 115 across three boots.
-All use the same JAR as the final Despawn comparison. The 33 Despawn, 28 world
+All use the previous JAR (SHA-256 `3e5ab03e1d3d342084f02df8db86dd08b1f943efed36a576fe265b10ed86c9dc`). The 33 Despawn, 28 world
 and 12 timed-restart mutation controls pass. Earlier player lifecycle and autosave
 reports retain their explicitly recorded historical artifacts.
 
@@ -16,9 +80,9 @@ including the cross-world chunk. All 16 timed helper entity/registry checks pass
 alongside 420 expiry comparisons. The earlier local r76 helper-loss run is not
 passing evidence; r77 records the corrected fixture source hash.
 
-Current plugin SHA-256: `3e5ab03e1d3d342084f02df8db86dd08b1f943efed36a576fe265b10ed86c9dc`.
+Current plugin SHA-256: `8912a5f9ebe520ee5cfd2b49dbd29075d9e860acbee6e3adc15365ea54a90542`.
 
-Despawn final (90 observations, including 10 explicit cancellation exceptions): [report](reports/paper-1.21.1-despawn-lifecycle-20261120-r9.json), SHA-256
+Historical Despawn (90 observations, including 10 explicit cancellation exceptions): [report](reports/paper-1.21.1-despawn-lifecycle-20261120-r9.json), SHA-256
 `6802a8ff8312ddd8c4a0759ec7702322e05994cbba052af466a50370aef10932`.
 [Redacted evidence](reports/paper-1.21.1-despawn-lifecycle-20261120-r9-logs.zip), SHA-256
 `3affdf9163e25dd1276e3ca534d16d661e16cdcda78da31c662ee5a292c8835f`.
@@ -126,7 +190,7 @@ SHA-256 `bf44d76e5ed48a6098096cedaa6c363383faaafefd2dd7ae565e3f02db924778`;
 SHA-256 `35c914fa6bc8f81d402e25711e9118b176373088f2e3ca427be23e92facb73b2`.
 These standard reports are in [release-evidence.json](release-evidence.json).
 
-Current-artifact player death/respawn regression:
+Historical player death/respawn regression (artifact recorded in report):
 `srv-paper-player-life-20261120-r3` passes 700 observations and all 41 evidence
 mutation controls. [Report](reports/paper-1.21.1-player-life-20261120-r3.json) SHA-256
 `149e3a29075ede98600a0160205ca0c68b591bd4272864fb9aaa90fea7a0128e`;
@@ -142,7 +206,7 @@ not complete asynchronous race or configured trigger-dispatch parity.
 The rejected r2 run reached 700 server observations but failed the client event-order
 requirement; it is not cited as passing evidence.
 
-Current-artifact autosave regression:
+Historical autosave regression (artifact recorded in report):
 `srv-paper-player-autosave-20261120-r4` passes 480 observations, three online
 checkpoints and two SIGKILL recoveries over three boots; all 29 evidence mutation
 controls pass. [Report](reports/paper-1.21.1-player-autosave-20261120-r4.json) SHA-256
@@ -153,7 +217,7 @@ This verifies completed periodic checkpoints, including changed generations,
 original deadlines and cleared data; it does not establish mid-write/power-loss recovery.
 The interrupted r3 run has no complete report and is not release evidence.
 
-Current-artifact player registry restart regression:
+Historical player registry restart regression (artifact recorded in report):
 `srv-paper-player-variables-comparison-20261120-r2` passes all 740 observations and 31
 evidence mutation controls across three boots. The fixture verifies logout/login,
 offline expiry, per-player isolation, explicit deletion and online shutdown writes.
@@ -162,7 +226,7 @@ offline expiry, per-player isolation, explicit deletion and online shutdown writ
 [redacted logs and snapshots](reports/paper-1.21.1-player-variables-20261120-r2-logs.zip) SHA-256
 `e525f6a1b40c226a3ea1e8cab9165ddc532ef0573811426b3342e9e6ed339fad`.
 
-Current-artifact entity/world/global restart regression:
+Historical entity/world/global restart regression (artifact recorded in report):
 `srv-paper-variable-persistence-comparison-20261120-r2` passes 432 direct/imported
 observations across three real boots, eight stable UUIDs and three shutdown snapshots;
 all 12 evidence mutation controls pass. [Report](reports/paper-1.21.1-variable-persistence-20261120-r2.json) SHA-256
@@ -175,7 +239,7 @@ publishing each passing phase. A prior r1 attempt failed when one native test co
 was absent after restart; it is not passing evidence. No replacement entities,
 patched native callbacks or relaxed identity/variable assertions are used.
 
-Current-artifact timed SkillTree restart regression:
+Historical timed SkillTree restart regression (artifact recorded in report):
 `srv-paper-skilltree-expiry-restart-20261120-r1` passes 115 observations over three
 real boots, four shutdown snapshots and all 12 evidence rejection controls. Original
 absolute deadlines, parent expiry, branch/collection restoration and removal of the

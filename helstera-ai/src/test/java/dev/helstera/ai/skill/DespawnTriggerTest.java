@@ -17,7 +17,7 @@ import static org.mockito.Mockito.*;
 
 class DespawnTriggerTest {
     @ParameterizedTest
-    @CsvSource({"manual,true,true", "chunk_unload,true,true", "world_unload,true,true",
+    @CsvSource({"manual,true,true", "plugin_shutdown,true,true", "chunk_unload,true,true", "world_unload,true,true",
             "model_unload,true,true", "persistent_chunk_unload,false,false",
             "persistent_world_unload,false,false", "base_entity_removed,false,true"})
     void despawnDispatchesOnlyForPermanentRemoval(String cause, boolean despawn, boolean remove) {

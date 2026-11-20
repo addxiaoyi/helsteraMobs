@@ -152,6 +152,14 @@ public final class InstanceManagerImpl implements InstanceManager {
         logRemoval(inst, cause);
     }
 
+    /** Remove disposable bound mobs while shutdown callbacks and state stores are still live. */
+    public void despawnDisposableOnShutdown() {
+        for (ModelInstanceImpl inst : allImpl()) {
+            if (inst.entity() == null || inst.options().retainsOnUnload()) continue;
+            if (instances.remove(inst.instanceId(), inst)) finishRemoval(inst, "plugin_shutdown", true);
+        }
+    }
+
     /** Release live rendering/controllers while the persistent base entity is unloaded. */
     public boolean unloadPersistent(int instanceId, String cause) {
         if (!"chunk_unload".equals(cause) && !"world_unload".equals(cause))

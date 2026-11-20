@@ -14,8 +14,8 @@
       "minecraftVersion": "1.21.1",
       "evidenceLevel": "strict",
       "releaseValidated": true,
-      "releaseFixtureId": "srv-paper-despawn-strict-20261120-r2",
-      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-despawn-strict-20261120-r2.json"
+      "releaseFixtureId": "srv-paper-despawn-restart-strict-20261120-r1",
+      "releaseReport": "tools/paper-integration/reports/paper-1.21.1-despawn-restart-strict-20261120-r1.json"
     },
     {
       "id": "paper-1.21.4-minecraft-1.21.4",
