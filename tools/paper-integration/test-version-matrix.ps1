@@ -39,6 +39,9 @@ $release = @($matrix.combinations | Where-Object { $_.releaseValidated -eq $true
 if ($matrix.releasePolicy.requiresRapidReloadEvidence -ne $true) {
     throw 'Version matrix must require rapid reload evidence for the release artifact.'
 }
+if ($matrix.releasePolicy.requiresTerminalCallbackEvidence -ne $true) {
+    throw 'Version matrix must retain the exact-artifact terminal callback gap diagnostic.'
+}
 if ($release.Count -ne 1) { throw "Expected exactly one release-validated combination, found $($release.Count)." }
 $entry = $release[0]
 $baselineValid = $entry.serverFamily -eq 'Paper' -and $entry.serverVersion -eq '1.21.1-133' -and $entry.minecraftVersion -eq '1.21.1' -and $entry.evidenceLevel -eq 'strict'

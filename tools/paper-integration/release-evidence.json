@@ -51,6 +51,10 @@
     "rapidReloadEvidence": {
       "report": "tools/paper-integration/reports/paper-1.21.1-rapid-reload-20261120-r3.json",
       "reportSha256": "60753d8a299506dad69dc73659a96c6859a9f4d822e403748fb186230f0ac70a"
+    },
+    "terminalCallbackEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r3.json",
+      "reportSha256": "f04e3ade51b6b5d33e19fa956c54063b3f877c0599ac10b503995c4ae0dc8513"
     }
   },
   {

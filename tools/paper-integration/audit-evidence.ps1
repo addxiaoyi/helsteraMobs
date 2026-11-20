@@ -473,6 +473,26 @@ foreach ($item in $releaseEvidence) {
             & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-rapid-reload.py') $reloadPath
             if ($LASTEXITCODE -ne 0) { throw 'Rapid reload evidence validation failed.' }
         }
+        if ($versionMatrix.releasePolicy.requiresTerminalCallbackEvidence -eq $true) {
+            $terminal = $item.terminalCallbackEvidence
+            if ($null -eq $terminal -or [string]$terminal.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-terminal-callback-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                    [string]$terminal.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'Latest full release requires pinned terminal callback diagnostic.'
+            }
+            $terminalPath = Join-Path $Root ([string]$terminal.report)
+            if (-not (Test-Path -LiteralPath $terminalPath -PathType Leaf) -or
+                    (Get-FileHash -LiteralPath $terminalPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$terminal.reportSha256) {
+                throw 'Terminal callback report is missing or changed.'
+            }
+            $terminalReport = Get-Content -LiteralPath $terminalPath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$terminalReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                    [string]$terminalReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                throw 'Terminal callback evidence does not match the release artifact/server.'
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-terminal-callback.py') $terminalPath
+            if ($LASTEXITCODE -ne 0) { throw 'Terminal callback evidence validation failed.' }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

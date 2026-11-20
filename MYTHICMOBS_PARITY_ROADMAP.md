@@ -1,3 +1,32 @@
+Terminal callback gap (2026-11-20): the current artifact cancels delayed,
+repeated and nested onDespawn/onDeath work that native MM 5.7.2 continues.
+`srv-paper-terminal-callback-20261120-r3` records a **known incompatibility**,
+not successful parity: 120 parent observations, 40 parent UUIDs, 48 child UUIDs,
+216 command callbacks and 96 child-state observations on Paper 1.21.1-133.
+COW/ZOMBIE and direct/imported parents cover loaded command removal, actual
+death, CHUNK unload, and command removal during the NEVER unload window.
+All sixteen removal cases retain only the immediate runtime command; native
+continuations also summon NEVER/PERSISTENT children. Four living controls
+execute both sequences, and ordinary pending work is cancelled after removal.
+Observer `srv-paper-terminal-callback-20261120-r1` had a child-name setup error
+and remains observation-only. `srv-paper-terminal-callback-20261120-r2` was
+rejected because its initial validator disallowed an observed one-tick native
+child onSpawn command delay; r3 independently reruns the corrected check.
+See [the terminal callback contract](docs/TERMINAL_CALLBACK_COMPATIBILITY.md).
+
+The release gate requires this exact-artifact diagnostic and rejects erased gap
+cases or a false claim of completed parity. Passing the scoped release checks
+does not certify full MythicMobs parity. All 56 diagnostic evidence mutations
+are rejected. The plugin JAR is unchanged; the
+existing 2,429 Maven tests, SpotBugs and 471-probe strict catalog retain their
+original artifact identity. This diagnostic does not upgrade any matrix row.
+Totals remain 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin. The next
+implementation target is terminal execution lifetime and caster-variable context,
+with ordinary cancellation and final entity/tree/visual cleanup preserved.
+Child restart/inheritance, visual/asynchronous callbacks, interrupted writes,
+external plugins and additional server versions remain open.
+
 Rapid chunk reload comparison (2026-11-20): the pinned Paper 1.21.1-133/MM 5.7.2
 fixture now isolates delayed native registration loss and stale entity bindings.
 `srv-paper-rapid-reload-20261120-r3` verifies 3,360 observations and 420 UUIDs:
@@ -263,20 +292,21 @@ SkillTrees, explicit clears and terminal cleanup survive two SIGKILL exits.
 See [the crash contract](docs/DESPAWN_CRASH_COMPATIBILITY.md).
 
 Next scoped targets, in order:
-1. Reproduce the historical duplicate native chunk callbacks with public-event
-   origin stacks; the delayed native registration race now has a separate
-   [rapid-reload contract](docs/RAPID_RELOAD_COMPATIBILITY.md). Extend its timing
-   coverage to callback-created children and non-COW entities without attributing
-   the unresolved replay to that race.
-2. Extend delayed/asynchronous/visual callbacks and callback-created child
-   persistence with independent native comparisons.
-3. Exercise interrupted snapshot writes and asynchronous save/load races with
-   isolated fixtures; completed-checkpoint SIGKILL results do not prove power-loss
-   or mid-write recovery.
-Delayed/asynchronous/visual callbacks, child SkillTree inheritance and PERSISTENT
-callback-created children still need their own comparison evidence. Continue the
-catalog, external-contract and version work packages below; this milestone does
-not upgrade the broad Mob Options or complete SkillTree rows.
+1. Fix the reproduced terminal scheduling gap in the
+   [terminal callback contract](docs/TERMINAL_CALLBACK_COMPATIBILITY.md): preserve
+   delayed/repeated/nested onDespawn/onDeath work and its caster context while
+   ordinary pre-removal work remains cancelled. Verify all sixteen failing cases,
+   cancelled deaths, reload/cancellation, variable expiry and final cleanup.
+2. Extend callback-created child restart/crash persistence and SkillTree
+   inheritance, then visual/asynchronous callbacks. Living NEVER/PERSISTENT
+   summon controls alone do not establish those semantics.
+3. Reproduce historical duplicate native chunk callbacks with public-event origin
+   stacks. Extend [rapid reload](docs/RAPID_RELOAD_COMPATIBILITY.md) to children
+   and more entity families; registration loss does not explain the unresolved
+   replay without separate evidence.
+4. Exercise interrupted snapshot writes and asynchronous save/load races;
+   completed-checkpoint SIGKILL results do not prove power-loss or mid-write
+   recovery. Continue the catalog, external-contract and version work below.
 
 Previous-artifact timed SkillTree regression
 `srv-paper-despawn-skilltree-restart-20261120-r3` also passes 115 observations

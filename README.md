@@ -1,3 +1,32 @@
+Terminal callback gap (2026-11-20): the current artifact cancels delayed,
+repeated and nested onDespawn/onDeath work that native MM 5.7.2 continues.
+`srv-paper-terminal-callback-20261120-r3` records a **known incompatibility**,
+not successful parity: 120 parent observations, 40 parent UUIDs, 48 child UUIDs,
+216 command callbacks and 96 child-state observations on Paper 1.21.1-133.
+COW/ZOMBIE and direct/imported parents cover loaded command removal, actual
+death, CHUNK unload, and command removal during the NEVER unload window.
+All sixteen removal cases retain only the immediate runtime command; native
+continuations also summon NEVER/PERSISTENT children. Four living controls
+execute both sequences, and ordinary pending work is cancelled after removal.
+Observer `srv-paper-terminal-callback-20261120-r1` had a child-name setup error
+and remains observation-only. `srv-paper-terminal-callback-20261120-r2` was
+rejected because its initial validator disallowed an observed one-tick native
+child onSpawn command delay; r3 independently reruns the corrected check.
+See [the terminal callback contract](docs/TERMINAL_CALLBACK_COMPATIBILITY.md).
+
+The release gate requires this exact-artifact diagnostic and rejects erased gap
+cases or a false claim of completed parity. Passing the scoped release checks
+does not certify full MythicMobs parity. All 56 diagnostic evidence mutations
+are rejected. The plugin JAR is unchanged; the
+existing 2,429 Maven tests, SpotBugs and 471-probe strict catalog retain their
+original artifact identity. This diagnostic does not upgrade any matrix row.
+Totals remain 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin. The next
+implementation target is terminal execution lifetime and caster-variable context,
+with ordinary cancellation and final entity/tree/visual cleanup preserved.
+Child restart/inheritance, visual/asynchronous callbacks, interrupted writes,
+external plugins and additional server versions remain open.
+
 Rapid chunk reload comparison (2026-11-20): the pinned Paper 1.21.1-133/MM 5.7.2
 fixture now isolates delayed native registration loss and stale entity bindings.
 `srv-paper-rapid-reload-20261120-r3` verifies 3,360 observations and 420 UUIDs:
@@ -2107,7 +2136,7 @@ Focused exploratory Paper evidence `srv-paper-targeter-context-alias-strict-2026
 1. **Matrix and evidence audit**: reconcile every row with source configuration,
    target field, runtime consumer, tests, Paper evidence, and known boundary;
    remove stale claims and keep README, matrix, and strict report consistent.
-   Current fixture inventory: 807 cited IDs; 654 report files; 62 directories without reports; 91 missing directories; 397 archived release reports. The
+   Current fixture inventory: 810 cited IDs; 654 report files; 65 directories without reports; 91 missing directories; 397 archived release reports. The
    archived release manifest is the gate's current evidence contract; older
    unavailable fixture references are inventoried as historical, not release
    proof. Restore or recreate any historical report before relying on it again.

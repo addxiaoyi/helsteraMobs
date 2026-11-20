@@ -11,7 +11,8 @@
     "requiresReentrantCommandEvidence": true,
     "requiresDespawnCrashEvidence": true,
     "requiresDespawnCrashBoundaryEvidence": true,
-    "requiresRapidReloadEvidence": true
+    "requiresRapidReloadEvidence": true,
+    "requiresTerminalCallbackEvidence": true
   },
   "combinations": [
     {

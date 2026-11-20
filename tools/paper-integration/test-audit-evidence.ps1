@@ -1230,6 +1230,43 @@ try {
     }
     [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
     [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
+    $terminalPolicy = $originalVersionText | ConvertFrom-Json
+    $terminalPolicy.releasePolicy | Add-Member -NotePropertyName requiresTerminalCallbackEvidence -NotePropertyValue $true
+    @($terminalPolicy.combinations | Where-Object releaseValidated)[0] | Add-Member -NotePropertyName serverJarSha256 -NotePropertyValue '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($terminalPolicy | ConvertTo-Json -Depth 20))
+    foreach ($case in @('missing', 'unsafe', 'missing-file', 'changed-file', 'wrong-plugin', 'wrong-server', 'invalid-archive')) {
+        $terminalManifest = @($originalCommandManifest | ConvertFrom-Json)
+        $terminalEntry = @($terminalManifest | Where-Object { $_.fullReleaseCatalog })[0]
+        $terminalReference = 'tools/paper-integration/reports/paper-1.21.1-terminal-callback-20261120-r99.json'
+        $terminalFile = Join-Path $temporaryRoot $terminalReference
+        $terminalMetadata = [pscustomobject]@{
+            pluginSha256 = $testPluginHash
+            paperJarSha256 = '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+        }
+        if ($case -eq 'wrong-plugin') { $terminalMetadata.pluginSha256 = ('0' * 64) }
+        if ($case -eq 'wrong-server') { $terminalMetadata.paperJarSha256 = ('0' * 64) }
+        [System.IO.File]::WriteAllText($terminalFile, ($terminalMetadata | ConvertTo-Json))
+        $terminalReferenceData = [pscustomobject]@{
+            report = $terminalReference
+            reportSha256 = (Get-FileHash -LiteralPath $terminalFile -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        $expectedTerminalFailure = switch ($case) {
+            'missing' { 'requires pinned terminal callback' }
+            'unsafe' { $terminalReferenceData.report = '../outside.json'; 'requires pinned terminal callback' }
+            'missing-file' { Remove-Item -LiteralPath $terminalFile; 'report is missing or changed' }
+            'changed-file' { $terminalReferenceData.reportSha256 = ('0' * 64); 'report is missing or changed' }
+            { $_ -in @('wrong-plugin', 'wrong-server') } { 'artifact/server' }
+            'invalid-archive' { 'Terminal callback evidence validation failed' }
+        }
+        if ($case -ne 'missing') { $terminalEntry | Add-Member -NotePropertyName terminalCallbackEvidence -NotePropertyValue $terminalReferenceData }
+        [System.IO.File]::WriteAllText($manifestPath, ($terminalManifest | ConvertTo-Json -Depth 20))
+        $terminalFailure = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+        if ($LASTEXITCODE -eq 0 -or $terminalFailure -notmatch $expectedTerminalFailure) {
+            throw "Release gate accepted invalid terminal callback evidence ($case): $terminalFailure"
+        }
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
     [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))
