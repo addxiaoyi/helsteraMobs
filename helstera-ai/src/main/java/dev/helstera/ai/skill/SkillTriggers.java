@@ -214,8 +214,12 @@ public final class SkillTriggers implements Listener {
         java.util.function.Consumer<ModelRemoveEvent> onRemove =
                 e -> {
                     if (!e.unloading()) {
-                        if (e.despawning()) dispatch(SkillTrigger.DESPAWN, e.instance(), null, e.instance().location());
-                        dispatch(SkillTrigger.REMOVE, e.instance(), null, e.instance().location());
+                        // The persistent unload callback runs one tick before Mythic's
+                        // native setUnloaded unregister window begins. Other terminal
+                        // removals use their independently observed immediate boundary.
+                        int grace = "chunk_unload".equals(e.cause()) ? 6 : 0;
+                        if (e.despawning()) dispatchRemoval(SkillTrigger.DESPAWN, e.instance(), grace);
+                        dispatchRemoval(SkillTrigger.REMOVE, e.instance(), grace);
                     }
                     e.instance().boundEntityId().ifPresent(id -> {
                         shearDispatchTick.remove(id);
@@ -1593,6 +1597,11 @@ public final class SkillTriggers implements Listener {
         }
     }
 
+    private void dispatchRemoval(SkillTrigger trigger, ModelInstance instance, int registryGraceTicks) {
+        dispatchWithProfile(trigger, instance, null, instance.location(), null, java.util.List.of(),
+                null, null, null, null, false, registryGraceTicks, registryGraceTicks == 0);
+    }
+
     private void dispatchWithProfile(SkillTrigger trigger, ModelInstance instance, LivingEntity target,
                                      org.bukkit.Location loc, Entity triggerEntity,
                                      java.util.List<? extends LivingEntity> inheritedTargets,
@@ -1600,6 +1609,18 @@ public final class SkillTriggers implements Listener {
                                      org.bukkit.event.entity.EntityDamageEvent.DamageCause damageCause,
                                      AiProfile.TriggerSpec selectedSpec, AiProfile suspendedProfile,
                                      boolean suspended) {
+        int grace = trigger == SkillTrigger.DEATH || trigger == SkillTrigger.ON_DEATH_SKILL ? 5 : 0;
+        dispatchWithProfile(trigger, instance, target, loc, triggerEntity, inheritedTargets,
+                cancellableEvent, damageCause, selectedSpec, suspendedProfile, suspended, grace, suspended);
+    }
+
+    private void dispatchWithProfile(SkillTrigger trigger, ModelInstance instance, LivingEntity target,
+                                     org.bukkit.Location loc, Entity triggerEntity,
+                                     java.util.List<? extends LivingEntity> inheritedTargets,
+                                     org.bukkit.event.Cancellable cancellableEvent,
+                                     org.bukkit.event.entity.EntityDamageEvent.DamageCause damageCause,
+                                     AiProfile.TriggerSpec selectedSpec, AiProfile suspendedProfile,
+                                     boolean suspended, int registryGraceTicks, boolean detachBeforeDispatch) {
         if (instance == null) {
             trace(trigger, "实例为 null");
             return;
@@ -1632,7 +1653,8 @@ public final class SkillTriggers implements Listener {
         }
         TerminalSkillContext terminal = skills != null && java.util.Set.of(
                 SkillTrigger.DESPAWN, SkillTrigger.REMOVE, SkillTrigger.DEATH,
-                SkillTrigger.ON_DEATH_SKILL).contains(trigger) ? skills.beginTerminal(instance) : null;
+                SkillTrigger.ON_DEATH_SKILL).contains(trigger) ? skills.beginTerminal(instance, registryGraceTicks) : null;
+        if (terminal != null && detachBeforeDispatch) skills.detachTerminalVariables(instance.instanceId());
         if (terminal != null) instance = terminal;
         try {
 
@@ -1688,7 +1710,7 @@ public final class SkillTriggers implements Listener {
                 // "signal:<name> ..." overlap with the short trigger syntax that
                 // parseSkillRef accepts, and must remain ordinary mechanics.
                 if (registry.hasAction(act)) {
-                    registry.runAction(act, ctx);
+                    registry.runActionForComposition(act, ctx);
                     continue;
                 }
                 String ref = SkillService.parseSkillRef(act);
@@ -1696,7 +1718,9 @@ public final class SkillTriggers implements Listener {
                     skills.castSkill(ref, ctx);
                     continue;
                 }
-                registry.runAction(act, ctx);
+                registry.runActionForComposition(act, ctx);
+            } catch (dev.helstera.ai.SkillActionAbortException abort) {
+                return;
             } catch (Throwable t) {
                 warn("触发器 " + trigger.configName() + " 动作 \"" + act + "\" 失败: " + t);
             }

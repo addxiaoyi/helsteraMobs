@@ -38,6 +38,22 @@ public final class TerminalReadProbe extends JavaPlugin implements Listener {
     private int x(String backend){return backend.equals("native")?256:512;}
     @Override public void onEnable(){
         runtime=Bukkit.getPluginManager().getPlugin("helsteraMobs");mythic=Bukkit.getPluginManager().getPlugin("MythicMobs");
+        if(getConfig().getBoolean("boundary"))try{
+            // A public read-only placeholder records evaluation time, separately
+            // from the later console callback. Never alter native scheduling.
+            Object placeholders=mythic.getClass().getMethod("getPlaceholderManager").invoke(mythic);
+            Class<?> placeholder=nt("io.lumine.mythic.core.skills.placeholders.Placeholder");
+            java.util.function.BiFunction<Object,String,String> stamp=(meta,arg)->{
+                try{
+                    Object caster=meta.getClass().getMethod("getCaster").invoke(meta);
+                    Object entity=caster.getClass().getMethod("getEntity").invoke(caster);
+                    UUID uuid=(UUID)entity.getClass().getMethod("getUniqueId").invoke(entity);
+                    return Bukkit.getCurrentTick()+","+(active(uuid)!=null);
+                }catch(Exception e){throw new IllegalStateException(e);}
+            };
+            Object value=placeholder.getMethod("meta",java.util.function.BiFunction.class).invoke(null,stamp);
+            placeholders.getClass().getMethod("register",String.class,placeholder).invoke(placeholders,"trstamp",value);
+        }catch(Exception e){fail(e);return;}
         cases=getConfig().getStringList("cases");Bukkit.getPluginManager().registerEvents(this,this);later(100,this::begin);
     }
     private void begin()throws Exception{

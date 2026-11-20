@@ -25,12 +25,14 @@ def main():
     parser.add_argument('--revision',required=True)
     parser.add_argument('--cache-directory',required=True)
     parser.add_argument('--observe-only',action='store_true')
+    parser.add_argument('--boundary',action='store_true',help='observe ticks 0-8, including target mutations and native evaluation stamps')
     args=parser.parse_args()
     if not args.observe_only:raise ValueError('Observation fixture: native results must be audited before a parity validator is added')
     import yaml
     if not re.fullmatch(r'r[1-9][0-9]*',args.revision):raise ValueError('Invalid revision')
     validator=None if args.observe_only else module('terminal_variable_validator','validate-terminal-read.py')
-    day=datetime.now(timezone.utc).strftime('%Y%m%d');fixture=f'srv-paper-terminal-read-{day}-{args.revision}';server=ROOT/fixture
+    kind='terminal-boundary' if args.boundary else 'terminal-read'
+    day=datetime.now(timezone.utc).strftime('%Y%m%d');fixture=f'srv-paper-{kind}-{day}-{args.revision}';server=ROOT/fixture
     if server.exists():raise ValueError('Refusing to reuse fixture')
     paper=ROOT/'srv-1.21.1/paper.jar';native=TOOLS/'.external-cache/MythicMobs-5.7.2-FTWvGuE5.jar';plugin=ROOT/'helstera-plugin/target/helsteraMobs-1.0.0-full.jar'
     if digest(paper)!=common.PAPER_HASH or digest(native)!=common.NATIVE_HASH:raise ValueError('Wrong pinned dependencies')
@@ -44,8 +46,8 @@ def main():
         for item in source.infolist():
             if item.filename!='plugin.yml':dest.writestr(item,source.read(item.filename))
         dest.writestr('plugin.yml',"name: HelsteraTerminalReadProbe\nversion: '1.0'\napi-version: '1.21'\nmain: dev.helstera.test.randomspawn.TerminalReadProbe\ndepend: [helsteraMobs, MythicMobs]\ncommands:\n  terminalreadprobe: {}\n")
-    contract=module('callback_cases','terminal-read-cases.py')
-    (probe_data/'config.yml').write_text(yaml.safe_dump({'cases':list(contract.CASES)}))
+    contract=module('callback_cases','terminal-boundary-cases.py' if args.boundary else 'terminal-read-cases.py')
+    (probe_data/'config.yml').write_text(yaml.safe_dump({'cases':list(contract.CASES),'boundary':args.boundary}))
     mobs=plugins/'MythicMobs/Mobs';mobs.mkdir(parents=True)
     (mobs/'terminal-read.yml').write_text(yaml.safe_dump(contract.native_mobs(),sort_keys=False))
     native_skills=plugins/'MythicMobs/Skills';native_skills.mkdir()
@@ -59,6 +61,7 @@ def main():
     for name in ('items.yml','loot.yml'):shutil.copy2(TOOLS/name,data/name)
     (data/'skills.yml').write_text('skills: {}\n');(data/'spawners.yml').write_text('spawners: {}\n');(data/'mobs').mkdir()
     sources=[Path(__file__).resolve(),TOOLS/'run-player-variable-fixture.py',TOOLS/'terminal-read-cases.py',TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/TerminalReadProbe.java']
+    if args.boundary:sources.extend(TOOLS/n for n in ('terminal-boundary-cases.py','audit-terminal-boundary.py','test-terminal-boundary-audit.py'))
     if validator:sources.extend(TOOLS/n for n in ('validate-terminal-read.py','validate-player-variables.py','test-terminal-read-evidence.py'))
     report={'schemaVersion':1,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception','knownExceptions':[] if validator is None else validator.PARITY_EXCEPTIONS,
         'parityStatus':'unassessed' if args.observe_only else 'scoped-comparison',
@@ -102,7 +105,7 @@ def main():
         try:validator.main(server)
         except (ValueError,KeyError) as exc:error=exc
     if error:report['parityStatus']='unassessed';report['evidenceMode']='observation';report['validationResult']='rejected: '+str(error);local.write_text(json.dumps(report,indent=2)+'\n')
-    name=f'paper-1.21.1-terminal-read-{day}-{args.revision}';report_path=TOOLS/'reports'/(name+'.json');archive_path=TOOLS/'reports'/(name+'-logs.zip')
+    name=f'paper-1.21.1-{kind}-{day}-{args.revision}';report_path=TOOLS/'reports'/(name+'.json');archive_path=TOOLS/'reports'/(name+'-logs.zip')
     if report_path.exists() or archive_path.exists():raise RuntimeError('Refusing to overwrite evidence')
     with zipfile.ZipFile(archive_path,'x',zipfile.ZIP_DEFLATED) as archive:
         for f in report['files']:archive.write(server/f['path'],f['path'])

@@ -17,11 +17,18 @@ final class TerminalSkillContext implements ModelInstance, EntityVariableContext
     private final Optional<Entity> entity;
     final int executionId;
     private SkillTreeContext detachedVariables;
+    private final int registryStartTick;
+    private final int registryGraceTicks;
     private boolean closed;
     boolean dispatching = true;
 
     TerminalSkillContext(ModelInstance source, int executionId) {
+        this(source, executionId, 0);
+    }
+
+    TerminalSkillContext(ModelInstance source, int executionId, int registryGraceTicks) {
         this.source=source;this.executionId=executionId;
+        this.registryGraceTicks=registryGraceTicks;registryStartTick=currentTick();
         Location location=source.location();origin=location==null?null:location.clone();
         entity=source.baseEntity();
     }
@@ -45,6 +52,16 @@ final class TerminalSkillContext implements ModelInstance, EntityVariableContext
     @Override public Optional<SkillTreeContext> variablesFor(Entity target) {
         return detachedVariables!=null && entity.filter(e->e.getUniqueId().equals(target.getUniqueId())).isPresent()
                 ? Optional.of(detachedVariables) : Optional.empty();
+    }
+    private static int currentTick() {
+        return org.bukkit.Bukkit.getServer()==null?0:org.bukkit.Bukkit.getCurrentTick();
+    }
+    @Override public boolean registryAvailableFor(Entity target) {
+        if (closed && entity.filter(e->e.getUniqueId().equals(target.getUniqueId())).isPresent()) return false;
+        if (variablesFor(target).isEmpty()) return true;
+        // Subtraction also works across Bukkit's signed tick counter wraparound.
+        return !closed && registryGraceTicks>0
+                && Integer.compareUnsigned(currentTick()-registryStartTick, registryGraceTicks)<0;
     }
     void close() { closed=true;detachedVariables=null; }
     @Override public int instanceId() { return source.instanceId(); }

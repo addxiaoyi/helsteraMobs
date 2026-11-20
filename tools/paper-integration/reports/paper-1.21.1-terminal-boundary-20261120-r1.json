@@ -1,0 +1,375 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-terminal-boundary-20261120-r1",
+  "evidenceMode": "observation",
+  "knownExceptions": [],
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-20T15:10:38.601815+00:00",
+  "pluginSha256": "dff057a8406bce021dafcd2fcdf4168988b55eeeff8a4b7160f5750debebd17c",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "cd6c8b1b990a69064d8281a4b06de32e33e4fb21408bb3116ad9c2179b9b3ad3",
+  "sourceHashes": {
+    "tools/paper-integration/run-terminal-read-fixture.py": "7851622fe29583be4792de1423e653b2ddf1f61ab53cec2fd03adccf721a7d66",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/terminal-read-cases.py": "614f74545faf31f8bc4d87feb1e125a6dd34412c2cb6806eae2a824bbcc4b221",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/TerminalReadProbe.java": "53a9f1c2f99e8b89f2f540dc9785473160d7c02236f51e079c52750ee53b0976",
+    "tools/paper-integration/terminal-boundary-cases.py": "ff5520f66ec591a005fe8932be595b04fefd3e3aecb8cf925ec9e7e580f625c9"
+  },
+  "observations": [
+    "[15:10:58] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_direct|backend=native|phase=initial|uuid=a612a574-8030-4709-8af1-caf0e642c73f|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=99|millis=1795187458600",
+    "[15:10:58] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_direct|backend=runtime|phase=initial|uuid=eea707c8-57ec-4e93-9806-d0f2a461f3ec|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=99|millis=1795187458602",
+    "[15:11:10] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_direct|backend=native|phase=settled|uuid=a612a574-8030-4709-8af1-caf0e642c73f|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=334|millis=1795187470055",
+    "[15:11:10] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_direct|backend=runtime|phase=settled|uuid=eea707c8-57ec-4e93-9806-d0f2a461f3ec|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=334|millis=1795187470055",
+    "[15:11:11] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_direct|backend=native|phase=cleaned|uuid=a612a574-8030-4709-8af1-caf0e642c73f|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=354|millis=1795187471055",
+    "[15:11:11] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_direct|backend=runtime|phase=cleaned|uuid=eea707c8-57ec-4e93-9806-d0f2a461f3ec|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=354|millis=1795187471055",
+    "[15:11:13] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_imported|backend=native|phase=initial|uuid=3960a38a-6af1-4413-b033-14ca7384e47a|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=364|millis=1795187473167",
+    "[15:11:13] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_imported|backend=runtime|phase=initial|uuid=8587d4f5-db06-4ce8-a923-ae9f36f53bed|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=364|millis=1795187473167",
+    "[15:11:24] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_imported|backend=native|phase=settled|uuid=3960a38a-6af1-4413-b033-14ca7384e47a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=599|millis=1795187484655",
+    "[15:11:24] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_imported|backend=runtime|phase=settled|uuid=8587d4f5-db06-4ce8-a923-ae9f36f53bed|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=599|millis=1795187484655",
+    "[15:11:25] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_imported|backend=native|phase=cleaned|uuid=3960a38a-6af1-4413-b033-14ca7384e47a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=619|millis=1795187485655",
+    "[15:11:25] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_cow_imported|backend=runtime|phase=cleaned|uuid=8587d4f5-db06-4ce8-a923-ae9f36f53bed|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=619|millis=1795187485655",
+    "[15:11:27] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_direct|backend=native|phase=initial|uuid=1f8f158e-1140-46a6-8492-e60751ed07cd|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=629|millis=1795187487889",
+    "[15:11:27] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_direct|backend=runtime|phase=initial|uuid=856eb10a-10ef-4a05-8327-6a7680020558|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=629|millis=1795187487889",
+    "[15:11:39] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_direct|backend=native|phase=settled|uuid=1f8f158e-1140-46a6-8492-e60751ed07cd|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=864|millis=1795187499415",
+    "[15:11:39] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_direct|backend=runtime|phase=settled|uuid=856eb10a-10ef-4a05-8327-6a7680020558|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=864|millis=1795187499415",
+    "[15:11:40] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_direct|backend=native|phase=cleaned|uuid=1f8f158e-1140-46a6-8492-e60751ed07cd|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=884|millis=1795187500415",
+    "[15:11:40] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_direct|backend=runtime|phase=cleaned|uuid=856eb10a-10ef-4a05-8327-6a7680020558|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=884|millis=1795187500415",
+    "[15:11:42] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_imported|backend=native|phase=initial|uuid=09315662-0a48-4904-8dac-1c318fb51890|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=894|millis=1795187502708",
+    "[15:11:42] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_imported|backend=runtime|phase=initial|uuid=b4e77d79-178c-42ef-ab4a-acd0ced99e29|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=894|millis=1795187502708",
+    "[15:11:54] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_imported|backend=native|phase=settled|uuid=09315662-0a48-4904-8dac-1c318fb51890|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1129|millis=1795187514198",
+    "[15:11:54] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_imported|backend=runtime|phase=settled|uuid=b4e77d79-178c-42ef-ab4a-acd0ced99e29|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1129|millis=1795187514198",
+    "[15:11:55] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_imported|backend=native|phase=cleaned|uuid=09315662-0a48-4904-8dac-1c318fb51890|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1149|millis=1795187515198",
+    "[15:11:55] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=selfdeath_zombie_imported|backend=runtime|phase=cleaned|uuid=b4e77d79-178c-42ef-ab4a-acd0ced99e29|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1149|millis=1795187515198",
+    "[15:11:57] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_direct|backend=native|phase=initial|uuid=8a0dec76-a7f2-4373-b354-654e50768492|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1159|millis=1795187517492",
+    "[15:11:57] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_direct|backend=runtime|phase=initial|uuid=47ec5b52-3f78-4a35-947d-0196fba2a752|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=1159|millis=1795187517492",
+    "[15:12:08] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_direct|backend=native|phase=settled|uuid=8a0dec76-a7f2-4373-b354-654e50768492|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1394|millis=1795187528980",
+    "[15:12:08] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_direct|backend=runtime|phase=settled|uuid=47ec5b52-3f78-4a35-947d-0196fba2a752|entity=false|registry=false|marker=absent|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1394|millis=1795187528980",
+    "[15:12:09] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_direct|backend=native|phase=cleaned|uuid=8a0dec76-a7f2-4373-b354-654e50768492|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1414|millis=1795187529980",
+    "[15:12:09] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_direct|backend=runtime|phase=cleaned|uuid=47ec5b52-3f78-4a35-947d-0196fba2a752|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1414|millis=1795187529981",
+    "[15:12:11] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_imported|backend=native|phase=initial|uuid=7f6a94df-78e8-4119-896e-e9ededfc6dd2|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1424|millis=1795187531996",
+    "[15:12:11] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_imported|backend=runtime|phase=initial|uuid=ba52c1ba-d8b1-4bc1-a1f3-0ce2ec581b97|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=1424|millis=1795187531996",
+    "[15:12:23] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_imported|backend=native|phase=settled|uuid=7f6a94df-78e8-4119-896e-e9ededfc6dd2|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1659|millis=1795187543533",
+    "[15:12:23] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_imported|backend=runtime|phase=settled|uuid=ba52c1ba-d8b1-4bc1-a1f3-0ce2ec581b97|entity=false|registry=false|marker=absent|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1659|millis=1795187543533",
+    "[15:12:24] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_imported|backend=native|phase=cleaned|uuid=7f6a94df-78e8-4119-896e-e9ededfc6dd2|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1679|millis=1795187544533",
+    "[15:12:24] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_cow_imported|backend=runtime|phase=cleaned|uuid=ba52c1ba-d8b1-4bc1-a1f3-0ce2ec581b97|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1679|millis=1795187544533",
+    "[15:12:26] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_direct|backend=native|phase=initial|uuid=3e575e3b-0856-460d-be32-ddcd5f4a74a6|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1689|millis=1795187546545",
+    "[15:12:26] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_direct|backend=runtime|phase=initial|uuid=51b427ab-c887-4e25-a032-98fe906f63ee|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=1689|millis=1795187546545",
+    "[15:12:38] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_direct|backend=native|phase=settled|uuid=3e575e3b-0856-460d-be32-ddcd5f4a74a6|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1924|millis=1795187558038",
+    "[15:12:38] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_direct|backend=runtime|phase=settled|uuid=51b427ab-c887-4e25-a032-98fe906f63ee|entity=false|registry=false|marker=absent|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1924|millis=1795187558039",
+    "[15:12:39] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_direct|backend=native|phase=cleaned|uuid=3e575e3b-0856-460d-be32-ddcd5f4a74a6|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1944|millis=1795187559038",
+    "[15:12:39] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_direct|backend=runtime|phase=cleaned|uuid=51b427ab-c887-4e25-a032-98fe906f63ee|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1944|millis=1795187559039",
+    "[15:12:41] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_imported|backend=native|phase=initial|uuid=4505d95c-155d-4d10-8bcd-b8db2ff695b1|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=1954|millis=1795187561194",
+    "[15:12:41] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_imported|backend=runtime|phase=initial|uuid=096e1437-d4c7-4b3b-b264-8eafaf834157|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=1954|millis=1795187561194",
+    "[15:12:52] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_imported|backend=native|phase=settled|uuid=4505d95c-155d-4d10-8bcd-b8db2ff695b1|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2189|millis=1795187572724",
+    "[15:12:52] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_imported|backend=runtime|phase=settled|uuid=096e1437-d4c7-4b3b-b264-8eafaf834157|entity=false|registry=false|marker=absent|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2189|millis=1795187572724",
+    "[15:12:53] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_imported|backend=native|phase=cleaned|uuid=4505d95c-155d-4d10-8bcd-b8db2ff695b1|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2209|millis=1795187573724",
+    "[15:12:53] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=peerdeath_zombie_imported|backend=runtime|phase=cleaned|uuid=096e1437-d4c7-4b3b-b264-8eafaf834157|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2209|millis=1795187573724",
+    "[15:12:55] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_direct|backend=native|phase=initial|uuid=d8320644-ee4b-4689-b06d-0dd155c16a9c|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2219|millis=1795187575887",
+    "[15:12:55] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_direct|backend=runtime|phase=initial|uuid=ba5aaa17-13ec-4199-a472-530b870706be|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=2219|millis=1795187575887",
+    "[15:13:07] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_direct|backend=native|phase=settled|uuid=d8320644-ee4b-4689-b06d-0dd155c16a9c|entity=true|registry=true|marker=82|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2454|millis=1795187587374",
+    "[15:13:07] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_direct|backend=runtime|phase=settled|uuid=ba5aaa17-13ec-4199-a472-530b870706be|entity=true|registry=true|marker=82|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=2454|millis=1795187587374",
+    "[15:13:08] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_direct|backend=native|phase=cleaned|uuid=d8320644-ee4b-4689-b06d-0dd155c16a9c|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2474|millis=1795187588374",
+    "[15:13:08] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_direct|backend=runtime|phase=cleaned|uuid=ba5aaa17-13ec-4199-a472-530b870706be|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2474|millis=1795187588374",
+    "[15:13:10] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_imported|backend=native|phase=initial|uuid=de61d8a4-ac8f-49b9-8a02-f0f3b56a1371|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2484|millis=1795187590395",
+    "[15:13:10] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_imported|backend=runtime|phase=initial|uuid=8c062418-30e2-46da-ab8e-ae13f557fbe4|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=2484|millis=1795187590395",
+    "[15:13:21] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_imported|backend=native|phase=settled|uuid=de61d8a4-ac8f-49b9-8a02-f0f3b56a1371|entity=true|registry=true|marker=82|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2719|millis=1795187601909",
+    "[15:13:21] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_imported|backend=runtime|phase=settled|uuid=8c062418-30e2-46da-ab8e-ae13f557fbe4|entity=true|registry=true|marker=82|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=2719|millis=1795187601909",
+    "[15:13:22] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_imported|backend=native|phase=cleaned|uuid=de61d8a4-ac8f-49b9-8a02-f0f3b56a1371|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2739|millis=1795187602909",
+    "[15:13:22] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_cow_imported|backend=runtime|phase=cleaned|uuid=8c062418-30e2-46da-ab8e-ae13f557fbe4|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2739|millis=1795187602909",
+    "[15:13:25] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_direct|backend=native|phase=initial|uuid=894ed323-20ad-4591-828f-581ccfe30ae3|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2749|millis=1795187605060",
+    "[15:13:25] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_direct|backend=runtime|phase=initial|uuid=21f69563-eb56-4ae1-b3cd-c137554ddba2|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=2749|millis=1795187605061",
+    "[15:13:36] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_direct|backend=native|phase=settled|uuid=894ed323-20ad-4591-828f-581ccfe30ae3|entity=true|registry=true|marker=82|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=2984|millis=1795187616560",
+    "[15:13:36] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_direct|backend=runtime|phase=settled|uuid=21f69563-eb56-4ae1-b3cd-c137554ddba2|entity=true|registry=true|marker=82|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=2984|millis=1795187616561",
+    "[15:13:37] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_direct|backend=native|phase=cleaned|uuid=894ed323-20ad-4591-828f-581ccfe30ae3|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3004|millis=1795187617560",
+    "[15:13:37] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_direct|backend=runtime|phase=cleaned|uuid=21f69563-eb56-4ae1-b3cd-c137554ddba2|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3004|millis=1795187617561",
+    "[15:13:39] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_imported|backend=native|phase=initial|uuid=de8599ad-6abd-42e6-9627-71a87b7fec50|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3014|millis=1795187619715",
+    "[15:13:39] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_imported|backend=runtime|phase=initial|uuid=e236b66e-70ed-4259-a265-9cf2d4304773|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=3014|millis=1795187619715",
+    "[15:13:51] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_imported|backend=native|phase=settled|uuid=de8599ad-6abd-42e6-9627-71a87b7fec50|entity=true|registry=true|marker=82|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3249|millis=1795187631194",
+    "[15:13:51] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_imported|backend=runtime|phase=settled|uuid=e236b66e-70ed-4259-a265-9cf2d4304773|entity=true|registry=true|marker=82|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=3249|millis=1795187631194",
+    "[15:13:52] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_imported|backend=native|phase=cleaned|uuid=de8599ad-6abd-42e6-9627-71a87b7fec50|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3269|millis=1795187632194",
+    "[15:13:52] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=control_zombie_imported|backend=runtime|phase=cleaned|uuid=e236b66e-70ed-4259-a265-9cf2d4304773|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3269|millis=1795187632194",
+    "[15:13:54] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_direct|backend=native|phase=initial|uuid=d69d860b-3ae8-4f27-a64d-bc9de470b694|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3279|millis=1795187634213",
+    "[15:13:54] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_direct|backend=runtime|phase=initial|uuid=292b8ee0-f996-477a-8a6b-2c217afd1250|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=3279|millis=1795187634214",
+    "[15:14:05] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_direct|backend=native|phase=settled|uuid=d69d860b-3ae8-4f27-a64d-bc9de470b694|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3514|millis=1795187645701",
+    "[15:14:05] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_direct|backend=runtime|phase=settled|uuid=292b8ee0-f996-477a-8a6b-2c217afd1250|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3514|millis=1795187645701",
+    "[15:14:06] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_direct|backend=native|phase=cleaned|uuid=d69d860b-3ae8-4f27-a64d-bc9de470b694|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3534|millis=1795187646701",
+    "[15:14:06] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_direct|backend=runtime|phase=cleaned|uuid=292b8ee0-f996-477a-8a6b-2c217afd1250|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3534|millis=1795187646701",
+    "[15:14:08] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_imported|backend=native|phase=initial|uuid=121e2455-6f72-48a1-8b13-6a886eda2e5f|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3544|millis=1795187648765",
+    "[15:14:08] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_imported|backend=runtime|phase=initial|uuid=eb418851-bd97-4526-88a2-bba74ea899e1|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=3544|millis=1795187648765",
+    "[15:14:20] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_imported|backend=native|phase=settled|uuid=121e2455-6f72-48a1-8b13-6a886eda2e5f|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3779|millis=1795187660258",
+    "[15:14:20] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_imported|backend=runtime|phase=settled|uuid=eb418851-bd97-4526-88a2-bba74ea899e1|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3779|millis=1795187660258",
+    "[15:14:21] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_imported|backend=native|phase=cleaned|uuid=121e2455-6f72-48a1-8b13-6a886eda2e5f|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3799|millis=1795187661258",
+    "[15:14:21] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_cow_imported|backend=runtime|phase=cleaned|uuid=eb418851-bd97-4526-88a2-bba74ea899e1|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3799|millis=1795187661258",
+    "[15:14:23] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_direct|backend=native|phase=initial|uuid=21182fa1-4f96-4445-b435-08c383945a93|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=3809|millis=1795187663525",
+    "[15:14:23] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_direct|backend=runtime|phase=initial|uuid=59b97e93-451f-4436-80d8-4da0f4347cb6|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=3809|millis=1795187663525",
+    "[15:14:35] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_direct|backend=native|phase=settled|uuid=21182fa1-4f96-4445-b435-08c383945a93|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4044|millis=1795187675015",
+    "[15:14:35] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_direct|backend=runtime|phase=settled|uuid=59b97e93-451f-4436-80d8-4da0f4347cb6|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4044|millis=1795187675016",
+    "[15:14:36] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_direct|backend=native|phase=cleaned|uuid=21182fa1-4f96-4445-b435-08c383945a93|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4064|millis=1795187676015",
+    "[15:14:36] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_direct|backend=runtime|phase=cleaned|uuid=59b97e93-451f-4436-80d8-4da0f4347cb6|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4064|millis=1795187676015",
+    "[15:14:38] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_imported|backend=native|phase=initial|uuid=4797a675-c946-45b0-a6c1-3153e3fc6e8a|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4074|millis=1795187678209",
+    "[15:14:38] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_imported|backend=runtime|phase=initial|uuid=541592b0-57e2-432b-9a1e-b50e83c7ed95|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=4074|millis=1795187678209",
+    "[15:14:49] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_imported|backend=native|phase=settled|uuid=4797a675-c946-45b0-a6c1-3153e3fc6e8a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4309|millis=1795187689773",
+    "[15:14:49] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_imported|backend=runtime|phase=settled|uuid=541592b0-57e2-432b-9a1e-b50e83c7ed95|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4309|millis=1795187689773",
+    "[15:14:50] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_imported|backend=native|phase=cleaned|uuid=4797a675-c946-45b0-a6c1-3153e3fc6e8a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4329|millis=1795187690773",
+    "[15:14:50] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=command_zombie_imported|backend=runtime|phase=cleaned|uuid=541592b0-57e2-432b-9a1e-b50e83c7ed95|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4329|millis=1795187690773",
+    "[15:14:52] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_direct|backend=native|phase=initial|uuid=09787b57-56be-4004-aacc-9f4c5d8295ab|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4339|millis=1795187692976",
+    "[15:14:52] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_direct|backend=runtime|phase=initial|uuid=f5364a53-d7bc-4073-8df9-0a276ff73400|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=4339|millis=1795187692976",
+    "[15:15:04] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_direct|backend=native|phase=settled|uuid=09787b57-56be-4004-aacc-9f4c5d8295ab|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4574|millis=1795187704505",
+    "[15:15:04] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_direct|backend=runtime|phase=settled|uuid=f5364a53-d7bc-4073-8df9-0a276ff73400|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4574|millis=1795187704505",
+    "[15:15:05] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_direct|backend=native|phase=cleaned|uuid=09787b57-56be-4004-aacc-9f4c5d8295ab|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4594|millis=1795187705505",
+    "[15:15:05] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_direct|backend=runtime|phase=cleaned|uuid=f5364a53-d7bc-4073-8df9-0a276ff73400|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4594|millis=1795187705505",
+    "[15:15:07] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_imported|backend=native|phase=initial|uuid=0565c869-3f43-4682-ae4c-5e3fff42b6bb|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4604|millis=1795187707769",
+    "[15:15:07] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_imported|backend=runtime|phase=initial|uuid=71211a71-b017-45a7-8a96-b47bbcd0c68b|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=4604|millis=1795187707769",
+    "[15:15:19] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_imported|backend=native|phase=settled|uuid=0565c869-3f43-4682-ae4c-5e3fff42b6bb|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4839|millis=1795187719292",
+    "[15:15:19] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_imported|backend=runtime|phase=settled|uuid=71211a71-b017-45a7-8a96-b47bbcd0c68b|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4839|millis=1795187719292",
+    "[15:15:20] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_imported|backend=native|phase=cleaned|uuid=0565c869-3f43-4682-ae4c-5e3fff42b6bb|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4859|millis=1795187720292",
+    "[15:15:20] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_cow_imported|backend=runtime|phase=cleaned|uuid=71211a71-b017-45a7-8a96-b47bbcd0c68b|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4859|millis=1795187720292",
+    "[15:15:22] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_direct|backend=native|phase=initial|uuid=10cb20c4-c1f4-48bd-9663-e36283b696d4|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=4869|millis=1795187722221",
+    "[15:15:22] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_direct|backend=runtime|phase=initial|uuid=4c049986-7865-493a-b779-a946ec101123|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=4869|millis=1795187722222",
+    "[15:15:33] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_direct|backend=native|phase=settled|uuid=10cb20c4-c1f4-48bd-9663-e36283b696d4|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5104|millis=1795187733765",
+    "[15:15:33] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_direct|backend=runtime|phase=settled|uuid=4c049986-7865-493a-b779-a946ec101123|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5104|millis=1795187733765",
+    "[15:15:34] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_direct|backend=native|phase=cleaned|uuid=10cb20c4-c1f4-48bd-9663-e36283b696d4|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5124|millis=1795187734765",
+    "[15:15:34] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_direct|backend=runtime|phase=cleaned|uuid=4c049986-7865-493a-b779-a946ec101123|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5124|millis=1795187734765",
+    "[15:15:37] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_imported|backend=native|phase=initial|uuid=aab9f4f5-ce2c-4af3-aa84-f4d9cf4eba5e|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5134|millis=1795187737230",
+    "[15:15:37] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_imported|backend=runtime|phase=initial|uuid=1557c16c-6eee-4ccd-99f8-1638cebc2a7f|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=5134|millis=1795187737230",
+    "[15:15:48] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_imported|backend=native|phase=settled|uuid=aab9f4f5-ce2c-4af3-aa84-f4d9cf4eba5e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5369|millis=1795187748767",
+    "[15:15:48] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_imported|backend=runtime|phase=settled|uuid=1557c16c-6eee-4ccd-99f8-1638cebc2a7f|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5369|millis=1795187748767",
+    "[15:15:49] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_imported|backend=native|phase=cleaned|uuid=aab9f4f5-ce2c-4af3-aa84-f4d9cf4eba5e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5389|millis=1795187749767",
+    "[15:15:49] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=death_zombie_imported|backend=runtime|phase=cleaned|uuid=1557c16c-6eee-4ccd-99f8-1638cebc2a7f|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5389|millis=1795187749768",
+    "[15:15:52] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_direct|backend=native|phase=initial|uuid=46f04956-23b2-44cb-92f0-d7a303acd445|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5399|millis=1795187752083",
+    "[15:15:52] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_direct|backend=runtime|phase=initial|uuid=697ebdd6-0ebd-4023-be50-72dd750b8d01|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=5399|millis=1795187752083",
+    "[15:16:03] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_direct|backend=native|phase=settled|uuid=46f04956-23b2-44cb-92f0-d7a303acd445|entity=true|registry=true|marker=82|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5634|millis=1795187763574",
+    "[15:16:03] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_direct|backend=runtime|phase=settled|uuid=697ebdd6-0ebd-4023-be50-72dd750b8d01|entity=true|registry=true|marker=82|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=5634|millis=1795187763574",
+    "[15:16:04] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_direct|backend=native|phase=cleaned|uuid=46f04956-23b2-44cb-92f0-d7a303acd445|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5654|millis=1795187764574",
+    "[15:16:04] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_direct|backend=runtime|phase=cleaned|uuid=697ebdd6-0ebd-4023-be50-72dd750b8d01|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5654|millis=1795187764574",
+    "[15:16:06] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_imported|backend=native|phase=initial|uuid=91672582-b1f9-4af7-b694-abc12f80bd3e|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5664|millis=1795187766501",
+    "[15:16:06] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_imported|backend=runtime|phase=initial|uuid=01b9a93e-bee6-4471-92d2-dab0559c21a2|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=5664|millis=1795187766501",
+    "[15:16:18] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_imported|backend=native|phase=settled|uuid=91672582-b1f9-4af7-b694-abc12f80bd3e|entity=true|registry=true|marker=82|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5899|millis=1795187778039",
+    "[15:16:18] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_imported|backend=runtime|phase=settled|uuid=01b9a93e-bee6-4471-92d2-dab0559c21a2|entity=true|registry=true|marker=82|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=5899|millis=1795187778039",
+    "[15:16:19] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_imported|backend=native|phase=cleaned|uuid=91672582-b1f9-4af7-b694-abc12f80bd3e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5919|millis=1795187779039",
+    "[15:16:19] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_cow_imported|backend=runtime|phase=cleaned|uuid=01b9a93e-bee6-4471-92d2-dab0559c21a2|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5919|millis=1795187779039",
+    "[15:16:20] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_direct|backend=native|phase=initial|uuid=a94640f7-8f65-46cf-be90-0f525df8cad3|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=5929|millis=1795187780981",
+    "[15:16:20] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_direct|backend=runtime|phase=initial|uuid=35cdba07-3274-4652-972b-a56161b6b3f5|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=5929|millis=1795187780981",
+    "[15:16:32] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_direct|backend=native|phase=settled|uuid=a94640f7-8f65-46cf-be90-0f525df8cad3|entity=true|registry=true|marker=82|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6164|millis=1795187792536",
+    "[15:16:32] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_direct|backend=runtime|phase=settled|uuid=35cdba07-3274-4652-972b-a56161b6b3f5|entity=true|registry=true|marker=82|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=6164|millis=1795187792536",
+    "[15:16:33] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_direct|backend=native|phase=cleaned|uuid=a94640f7-8f65-46cf-be90-0f525df8cad3|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6184|millis=1795187793536",
+    "[15:16:33] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_direct|backend=runtime|phase=cleaned|uuid=35cdba07-3274-4652-972b-a56161b6b3f5|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6184|millis=1795187793536",
+    "[15:16:35] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_imported|backend=native|phase=initial|uuid=0ddb3208-9882-4e3a-aac3-eb1e6a4754cb|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6194|millis=1795187795845",
+    "[15:16:35] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_imported|backend=runtime|phase=initial|uuid=0470eed1-1c6e-4791-a0d6-0867acf10a32|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=6194|millis=1795187795845",
+    "[15:16:47] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_imported|backend=native|phase=settled|uuid=0ddb3208-9882-4e3a-aac3-eb1e6a4754cb|entity=true|registry=true|marker=82|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6429|millis=1795187807337",
+    "[15:16:47] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_imported|backend=runtime|phase=settled|uuid=0470eed1-1c6e-4791-a0d6-0867acf10a32|entity=true|registry=true|marker=82|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=1|liveLocations=0|tick=6429|millis=1795187807337",
+    "[15:16:48] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_imported|backend=native|phase=cleaned|uuid=0ddb3208-9882-4e3a-aac3-eb1e6a4754cb|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6449|millis=1795187808337",
+    "[15:16:48] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=cancelled_zombie_imported|backend=runtime|phase=cleaned|uuid=0470eed1-1c6e-4791-a0d6-0867acf10a32|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6449|millis=1795187808337",
+    "[15:16:50] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_direct|backend=native|phase=initial|uuid=231187d2-b95a-43a0-b34d-47827c12ea8a|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6459|millis=1795187810570",
+    "[15:16:50] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_direct|backend=runtime|phase=initial|uuid=98ee9ad7-a674-430c-9bfb-45d26832dba9|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=6459|millis=1795187810570",
+    "[15:17:02] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_direct|backend=native|phase=settled|uuid=231187d2-b95a-43a0-b34d-47827c12ea8a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6695|millis=1795187822147",
+    "[15:17:02] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_direct|backend=runtime|phase=settled|uuid=98ee9ad7-a674-430c-9bfb-45d26832dba9|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6695|millis=1795187822148",
+    "[15:17:03] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_direct|backend=native|phase=cleaned|uuid=231187d2-b95a-43a0-b34d-47827c12ea8a|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6715|millis=1795187823147",
+    "[15:17:03] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_direct|backend=runtime|phase=cleaned|uuid=98ee9ad7-a674-430c-9bfb-45d26832dba9|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6715|millis=1795187823147",
+    "[15:17:05] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_imported|backend=native|phase=initial|uuid=05db9e5b-a505-4507-8380-fca016240590|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6725|millis=1795187825456",
+    "[15:17:05] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_imported|backend=runtime|phase=initial|uuid=bdc256ef-b837-4e12-8fd4-02cc1b33024b|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=6725|millis=1795187825456",
+    "[15:17:16] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_imported|backend=native|phase=settled|uuid=05db9e5b-a505-4507-8380-fca016240590|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6961|millis=1795187836993",
+    "[15:17:16] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_imported|backend=runtime|phase=settled|uuid=bdc256ef-b837-4e12-8fd4-02cc1b33024b|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6961|millis=1795187836993",
+    "[15:17:17] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_imported|backend=native|phase=cleaned|uuid=05db9e5b-a505-4507-8380-fca016240590|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6981|millis=1795187837993",
+    "[15:17:17] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_cow_imported|backend=runtime|phase=cleaned|uuid=bdc256ef-b837-4e12-8fd4-02cc1b33024b|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6981|millis=1795187837993",
+    "[15:17:20] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_direct|backend=native|phase=initial|uuid=82131e7e-4de5-41b6-9dbc-d699e057f66e|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=6991|millis=1795187840277",
+    "[15:17:20] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_direct|backend=runtime|phase=initial|uuid=46b7ea98-71c3-4526-9678-a2f93f6f0e44|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=6991|millis=1795187840277",
+    "[15:17:31] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_direct|backend=native|phase=settled|uuid=82131e7e-4de5-41b6-9dbc-d699e057f66e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7227|millis=1795187851861",
+    "[15:17:31] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_direct|backend=runtime|phase=settled|uuid=46b7ea98-71c3-4526-9678-a2f93f6f0e44|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7227|millis=1795187851861",
+    "[15:17:32] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_direct|backend=native|phase=cleaned|uuid=82131e7e-4de5-41b6-9dbc-d699e057f66e|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7247|millis=1795187852861",
+    "[15:17:32] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_direct|backend=runtime|phase=cleaned|uuid=46b7ea98-71c3-4526-9678-a2f93f6f0e44|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7247|millis=1795187852861",
+    "[15:17:35] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_imported|backend=native|phase=initial|uuid=de338f86-3a0f-4ddd-9a89-d3b106661a56|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7257|millis=1795187855136",
+    "[15:17:35] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_imported|backend=runtime|phase=initial|uuid=3d3dfee1-4dbd-4124-85af-503f9480665c|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=7257|millis=1795187855136",
+    "[15:17:46] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_imported|backend=native|phase=settled|uuid=de338f86-3a0f-4ddd-9a89-d3b106661a56|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7493|millis=1795187866687",
+    "[15:17:46] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_imported|backend=runtime|phase=settled|uuid=3d3dfee1-4dbd-4124-85af-503f9480665c|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7493|millis=1795187866687",
+    "[15:17:47] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_imported|backend=native|phase=cleaned|uuid=de338f86-3a0f-4ddd-9a89-d3b106661a56|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7513|millis=1795187867687",
+    "[15:17:47] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=chunk_zombie_imported|backend=runtime|phase=cleaned|uuid=3d3dfee1-4dbd-4124-85af-503f9480665c|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7513|millis=1795187867687",
+    "[15:17:49] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_direct|backend=native|phase=initial|uuid=92cfbdcc-bc7f-4951-99de-e0de9160a2c1|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7523|millis=1795187869788",
+    "[15:17:49] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_direct|backend=runtime|phase=initial|uuid=b14b13d7-6db2-4729-8258-296a33c63206|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=7523|millis=1795187869788",
+    "[15:18:01] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_direct|backend=native|phase=settled|uuid=92cfbdcc-bc7f-4951-99de-e0de9160a2c1|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7759|millis=1795187881321",
+    "[15:18:01] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_direct|backend=runtime|phase=settled|uuid=b14b13d7-6db2-4729-8258-296a33c63206|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7759|millis=1795187881321",
+    "[15:18:02] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_direct|backend=native|phase=cleaned|uuid=92cfbdcc-bc7f-4951-99de-e0de9160a2c1|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7779|millis=1795187882321",
+    "[15:18:02] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_direct|backend=runtime|phase=cleaned|uuid=b14b13d7-6db2-4729-8258-296a33c63206|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7779|millis=1795187882321",
+    "[15:18:04] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_imported|backend=native|phase=initial|uuid=769d4d0e-3395-4e06-bb69-3871451261e8|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=7789|millis=1795187884295",
+    "[15:18:04] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_imported|backend=runtime|phase=initial|uuid=bb4997d9-a5e7-4b4b-a52d-8fe9c76c1cbc|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=7789|millis=1795187884295",
+    "[15:18:15] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_imported|backend=native|phase=settled|uuid=769d4d0e-3395-4e06-bb69-3871451261e8|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8025|millis=1795187895851",
+    "[15:18:15] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_imported|backend=runtime|phase=settled|uuid=bb4997d9-a5e7-4b4b-a52d-8fe9c76c1cbc|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8025|millis=1795187895851",
+    "[15:18:16] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_imported|backend=native|phase=cleaned|uuid=769d4d0e-3395-4e06-bb69-3871451261e8|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8045|millis=1795187896851",
+    "[15:18:16] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_cow_imported|backend=runtime|phase=cleaned|uuid=bb4997d9-a5e7-4b4b-a52d-8fe9c76c1cbc|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8045|millis=1795187896851",
+    "[15:18:19] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_direct|backend=native|phase=initial|uuid=8cb33eec-4084-4500-ae38-af4e50fe9fdb|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8055|millis=1795187899016",
+    "[15:18:19] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_direct|backend=runtime|phase=initial|uuid=cae25ce6-e9c8-4945-806d-660e92baba99|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=8055|millis=1795187899016",
+    "[15:18:30] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_direct|backend=native|phase=settled|uuid=8cb33eec-4084-4500-ae38-af4e50fe9fdb|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8291|millis=1795187910558",
+    "[15:18:30] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_direct|backend=runtime|phase=settled|uuid=cae25ce6-e9c8-4945-806d-660e92baba99|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8291|millis=1795187910558",
+    "[15:18:31] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_direct|backend=native|phase=cleaned|uuid=8cb33eec-4084-4500-ae38-af4e50fe9fdb|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8311|millis=1795187911558",
+    "[15:18:31] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_direct|backend=runtime|phase=cleaned|uuid=cae25ce6-e9c8-4945-806d-660e92baba99|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8311|millis=1795187911558",
+    "[15:18:33] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_imported|backend=native|phase=initial|uuid=22d66f04-d128-4ff4-8b9a-068c06d68c89|entity=true|registry=true|marker=73|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8321|millis=1795187913323",
+    "[15:18:33] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_imported|backend=runtime|phase=initial|uuid=82738c0a-9642-4e39-a919-56819475a6cd|entity=true|registry=true|marker=73|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=2|liveLocations=0|tick=8321|millis=1795187913323",
+    "[15:18:44] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_imported|backend=native|phase=settled|uuid=22d66f04-d128-4ff4-8b9a-068c06d68c89|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8557|millis=1795187924878",
+    "[15:18:44] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_imported|backend=runtime|phase=settled|uuid=82738c0a-9642-4e39-a919-56819475a6cd|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8557|millis=1795187924878",
+    "[15:18:45] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_imported|backend=native|phase=cleaned|uuid=22d66f04-d128-4ff4-8b9a-068c06d68c89|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8577|millis=1795187925878",
+    "[15:18:45] [Server thread/INFO]: [HelsteraTerminalReadProbe] TREAD_ROW|key=suspended_zombie_imported|backend=runtime|phase=cleaned|uuid=82738c0a-9642-4e39-a919-56819475a6cd|entity=false|registry=false|marker=absent|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|liveVariables=0|liveLocations=0|tick=8577|millis=1795187925878"
+  ],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "53e40241b64900633b34d99a6a4ccb9450ffdf26faf3d37852a394ad4b8d2814"
+    },
+    {
+      "path": "source-mobs.yml",
+      "sha256": "1a2fb0867581fa90eda0add1a6a583b4cf3121023a273a039aee67703f9f562d"
+    },
+    {
+      "path": "source-skills.yml",
+      "sha256": "ee415d896b8da38d6c8abd1c76ed3d3372a0aa9084a56cafc5a30a4c4a7926ef"
+    },
+    {
+      "path": "snapshots/final-scoped.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "snapshots/scoped-variables.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "imports/skills.yml",
+      "sha256": "9e432c82299447a643f179bf5fac00421d4e7a49d80d24ee426f026b96172ad0"
+    },
+    {
+      "path": "imports/tr_cancelled_cow_direct.yml",
+      "sha256": "ec2a245072887116675cdad6726273a0e3d5c5efb4b2ae31c900204df435d7c3"
+    },
+    {
+      "path": "imports/tr_cancelled_cow_imported.yml",
+      "sha256": "5c781aebd081e44c12a8bf74ec92e97efdbc1e0b7284040c90498b1edc32b9bc"
+    },
+    {
+      "path": "imports/tr_cancelled_zombie_direct.yml",
+      "sha256": "795ee39c63ea2df4328e5a8ab440e0ea2d32d4b307999d25ff0793e8fb93b0ba"
+    },
+    {
+      "path": "imports/tr_cancelled_zombie_imported.yml",
+      "sha256": "c27595d669fd7e4c1fcf4579eff505631dcce35c8ea58670601a4edff01c4623"
+    },
+    {
+      "path": "imports/tr_chunk_cow_direct.yml",
+      "sha256": "383b9e4b80b0dae8dd35f820f204e66481fd6d97d9795d401aa57a8a654c27a6"
+    },
+    {
+      "path": "imports/tr_chunk_cow_imported.yml",
+      "sha256": "ba13bfb4e5476c36d52b68c1cfd4673bd4d178259cce3d4de1946406a5c8ef66"
+    },
+    {
+      "path": "imports/tr_chunk_zombie_direct.yml",
+      "sha256": "e8373af9a5f0e4358a860be7366ac8397f4e385512de829fc9291549de8aabbf"
+    },
+    {
+      "path": "imports/tr_chunk_zombie_imported.yml",
+      "sha256": "e83c115d88f3f611da18622646edd7ca7ff908a657c300cebf2b4ef026d9fcf9"
+    },
+    {
+      "path": "imports/tr_command_cow_direct.yml",
+      "sha256": "60768828aea4a1f7be762af5333e6d38ed8bd9646abdd8515cc55e8b9e19ffb3"
+    },
+    {
+      "path": "imports/tr_command_cow_imported.yml",
+      "sha256": "50153dbc3aff8e76bb1a555b4621b38cb9903e8e8c01132f6f3eafc5bf243e58"
+    },
+    {
+      "path": "imports/tr_command_zombie_direct.yml",
+      "sha256": "dafd539fdb2c617d6dc20b28ac425e3f22efe873404b666ef876f2738854dd42"
+    },
+    {
+      "path": "imports/tr_command_zombie_imported.yml",
+      "sha256": "84088569399ce8eb7d8574f453427741f6761d071971077f7ffd18759706f688"
+    },
+    {
+      "path": "imports/tr_control_cow_direct.yml",
+      "sha256": "c80c953b417d16689cc90f1c03fe1e4f21fae1349101d7566d9b9edb99ac0255"
+    },
+    {
+      "path": "imports/tr_control_cow_imported.yml",
+      "sha256": "9e510c9796d8645d72ff0bfe8ea18a9bfcf06ee411c382b8734a9992d0964e5a"
+    },
+    {
+      "path": "imports/tr_control_zombie_direct.yml",
+      "sha256": "8879ff2b742af22774ad0b1980433e59601d7ddf6e6596b2d0970075666f3902"
+    },
+    {
+      "path": "imports/tr_control_zombie_imported.yml",
+      "sha256": "3c8a7e3aedad2cc7dbdbbb845d9acfcb93f25a0d61b8a25765ee8fb6c5927499"
+    },
+    {
+      "path": "imports/tr_death_cow_direct.yml",
+      "sha256": "663837d1ddde082f255212f53f1983ab6d1891ac663ca9ac1a6a3e0a583ff0e0"
+    },
+    {
+      "path": "imports/tr_death_cow_imported.yml",
+      "sha256": "5e3cfe57b7930f9abd030ccc512c8cba931873750a54d04c858cc29a3a8ab5a0"
+    },
+    {
+      "path": "imports/tr_death_zombie_direct.yml",
+      "sha256": "9daa5fc8ed2c49bb5c5b04159e19b3dfb92a26f05475f0135e6b1c5f86f99130"
+    },
+    {
+      "path": "imports/tr_death_zombie_imported.yml",
+      "sha256": "5cc70b7170f71474e5a116c3bc15c43576da9c7a128ae38dd5c8bc5b7d2c42fa"
+    },
+    {
+      "path": "imports/tr_peerdeath_cow_direct.yml",
+      "sha256": "663837d1ddde082f255212f53f1983ab6d1891ac663ca9ac1a6a3e0a583ff0e0"
+    },
+    {
+      "path": "imports/tr_peerdeath_cow_imported.yml",
+      "sha256": "e71df026f9fded316b13f54cb272df01e0d111ad7238c7478bb7d27d568b79d9"
+    },
+    {
+      "path": "imports/tr_peerdeath_zombie_direct.yml",
+      "sha256": "9daa5fc8ed2c49bb5c5b04159e19b3dfb92a26f05475f0135e6b1c5f86f99130"
+    },
+    {
+      "path": "imports/tr_peerdeath_zombie_imported.yml",
+      "sha256": "3ebc9c0aefe5b5fc28abca5b5819b9a3c0c0d52d23b66d917cdf21b69cb41488"
+    },
+    {
+      "path": "imports/tr_selfdeath_cow_direct.yml",
+      "sha256": "663837d1ddde082f255212f53f1983ab6d1891ac663ca9ac1a6a3e0a583ff0e0"
+    },
+    {
+      "path": "imports/tr_selfdeath_cow_imported.yml",
+      "sha256": "125fa42ebc9f551c75b09ef7f6a7a3d548760552174cb065c306e0e306f77cdb"
+    },
+    {
+      "path": "imports/tr_selfdeath_zombie_direct.yml",
+      "sha256": "9daa5fc8ed2c49bb5c5b04159e19b3dfb92a26f05475f0135e6b1c5f86f99130"
+    },
+    {
+      "path": "imports/tr_selfdeath_zombie_imported.yml",
+      "sha256": "501043bfca688fb39c211ebf373bbd40e330fe4478b58febb5369c627307f4ba"
+    },
+    {
+      "path": "imports/tr_suspended_cow_direct.yml",
+      "sha256": "60768828aea4a1f7be762af5333e6d38ed8bd9646abdd8515cc55e8b9e19ffb3"
+    },
+    {
+      "path": "imports/tr_suspended_cow_imported.yml",
+      "sha256": "6f4f8966623f1d1f3f7f0d6cf62368a9dbc0e9f0cc0312850d96f958c84a3176"
+    },
+    {
+      "path": "imports/tr_suspended_zombie_direct.yml",
+      "sha256": "dafd539fdb2c617d6dc20b28ac425e3f22efe873404b666ef876f2738854dd42"
+    },
+    {
+      "path": "imports/tr_suspended_zombie_imported.yml",
+      "sha256": "68a175513abcdc843993548cf65ac53395aba92d26fa0164817e4a7f6990af59"
+    }
+  ],
+  "boot": {
+    "startedAtUtc": "2026-11-20T15:10:38.609308+00:00",
+    "stoppedAtUtc": "2026-11-20T15:18:47.592887+00:00",
+    "exitCode": 0
+  },
+  "gapCases": [],
+  "logArchive": "paper-1.21.1-terminal-boundary-20261120-r1-logs.zip",
+  "logArchiveSha256": "cdb1c4f928e11af9f901917e0aa63e36006cba5611fea3f1ea42d92409f3093a"
+}

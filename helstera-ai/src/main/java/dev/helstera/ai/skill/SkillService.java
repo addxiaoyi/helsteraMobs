@@ -80,8 +80,12 @@ public final class SkillService {
     }
 
     TerminalSkillContext beginTerminal(dev.helstera.api.instance.ModelInstance source) {
+        return beginTerminal(source, 0);
+    }
+
+    TerminalSkillContext beginTerminal(dev.helstera.api.instance.ModelInstance source, int registryGraceTicks) {
         if (nextTerminalExecutionId == Integer.MIN_VALUE) throw new IllegalStateException("Terminal execution IDs exhausted");
-        var terminal = new TerminalSkillContext(source, nextTerminalExecutionId--);
+        var terminal = new TerminalSkillContext(source, nextTerminalExecutionId--, registryGraceTicks);
         terminalContexts.put(terminal.executionId, terminal);
         return terminal;
     }
@@ -1692,7 +1696,7 @@ public final class SkillService {
                     };
                 } else {
                     action = factory != null ? factory.create(factoryArgs)
-                            : ctx -> registry.runAction(registeredActionName, ctx);
+                            : ctx -> registry.runActionForComposition(registeredActionName, ctx);
                 }
                 Double requiredChance = chance;
                 long requiredDelay = delayTicks;
@@ -1898,6 +1902,8 @@ public final class SkillService {
                     scheduleInvocation(action, ctx, intervalTicks, remaining - 1, intervalTicks,
                             instanceId, generation);
                 }
+            } catch (dev.helstera.ai.SkillActionAbortException abort) {
+                if (!scheduled) throw abort;
             } finally {
                 if (tracked) pendingScheduledActions.computeIfPresent(instanceId, (key, count) ->
                         count <= 1 ? null : count - 1);
@@ -2138,9 +2144,13 @@ public final class SkillService {
                 List<String> captured = List.copyOf(def.actions);
                 registry.registerAction(key, ctx -> {
                     if (def.invalidCondition) return;
-                    for (String k : captured) {
-                        if (defs.get(def.name) != def) return;
-                        registry.runAction(k, ctx);
+                    try {
+                        for (String k : captured) {
+                            if (defs.get(def.name) != def) return;
+                            registry.runActionForComposition(k, ctx);
+                        }
+                    } catch (dev.helstera.ai.SkillActionAbortException abort) {
+                        // This named skill owns the abort; its caller can continue.
                     }
                 });
             }
@@ -2537,7 +2547,9 @@ public final class SkillService {
             for (String k : def.actions) {
                 if (!valid[0]) return;
                 try {
-                    registry.runAction(k, ctx);
+                    registry.runActionForComposition(k, ctx);
+                } catch (dev.helstera.ai.SkillActionAbortException abort) {
+                    return;
                 } catch (Throwable t) {
                     warn("技能 \"" + def.name + "\" 动作 \"" + k + "\" 失败: " + t);
                 }

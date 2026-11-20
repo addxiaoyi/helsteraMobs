@@ -51,4 +51,9 @@ public interface BehaviorRegistry {
      * @return 是否实际执行了动作
      */
     boolean runAction(String name, BehaviorContext ctx);
+
+    /** Execute inside a skill chain, allowing control signals to reach its boundary. */
+    default boolean runActionForComposition(String name, BehaviorContext ctx) {
+        return runAction(name, ctx);
+    }
 }

@@ -1,11 +1,15 @@
-Terminal role reads, work in progress (2026-11-20): detached target/trigger
-placeholders now preserve their original token instead of borrowing caster
-variables; independent live peers stay readable. onDespawn now retains the
-removed entity as trigger. The current build passes 2,477 Maven tests and
-11 clean SpotBugs reports. See [observations and remaining differences](docs/TERMINAL_READ_OBSERVATIONS.md).
+Terminal variable-registry boundary, work in progress (2026-11-20): Paper
+observation now covers immediate removal, death, CHUNK unload, cancellation and
+living controls, including the exact native five-tick death and six-tick
+unload-offset windows. Runtime callbacks stop the same nested action chain when
+the target registry expires while sibling delayed/repeated skills continue.
+Detached role placeholders stay distinct from the caster snapshot; the native
+initial evaluation-order difference remains visible. The current build passes
+2,484 Maven tests and 11 clean SpotBugs reports. See
+[boundary observations and remaining differences](docs/TERMINAL_READ_OBSERVATIONS.md).
 
-Initial command-removal reads and native delayed registry removal still differ.
-Condition/location reads and the full exact-artifact strict refresh remain open.
+Condition/location reads, broader variable semantics and the full exact-artifact
+strict refresh remain open.
 The release gate correctly rejects this new JAR against the previous artifact's
 evidence. No matrix status is promoted; the latest fully release-gated artifact
 remains the model-bridge build documented below.

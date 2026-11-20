@@ -7189,7 +7189,9 @@ public final class SkillExtras {
                     String amount = raw;
                     return ctx -> {
                         if (ctx == null || ref.name().isEmpty()) return;
-                        if (EntityVariableContext.isDetachedTarget(ctx, ref.scope())) return;
+                        if (EntityVariableContext.isUnavailableEntityRole(ctx, ref.scope())) {
+                            throw new dev.helstera.ai.SkillActionAbortException();
+                        }
                         // Capture the deadline before the value: a boundary crossing cannot make it permanent.
                         long previousExpiration = variableExpiration(ctx, ref);
                         Object current = rawVariable(ctx, ref);

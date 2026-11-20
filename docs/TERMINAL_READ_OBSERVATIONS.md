@@ -1,94 +1,88 @@
-# Terminal role read observations
+# Terminal variable-registry boundary observations
 
-This work remains observation-only on Paper 1.21.1-133 / MythicMobs 5.7.2.
-It does not satisfy the strict release gate or establish complete variable,
-SkillTree, Trigger or Mechanics parity.
+This is scoped observation evidence on Paper 1.21.1-133 and MythicMobs 5.7.2.
+It is not release-gate evidence and does not establish complete variable,
+SkillTree, Trigger or Mechanics parity. The Parity Matrix is intentionally not
+promoted by these fixtures.
 
-Current [r3 observation](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r3.json)
-and [raw archive](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r3-logs.zip)
-audit 32 cases, 64 identities, 192 lifecycle rows and 592 callbacks on plugin
-SHA-256 `dff057a8406bce021dafcd2fcdf4168988b55eeeff8a4b7160f5750debebd17c`.
-All stable detached-read invariants pass, and 143 semantic/archive negative
-controls are rejected. All role UUIDs agree after per-backend identity mapping.
-There are still 232 field differences: 200 in the initial/seeded lifecycle
-windows and 32 native `UNDEFINED` versus preserved raw tokens. The audit keeps
-every difference visible; none is converted into a passing parity exception.
-The build passes 2,477 Maven tests and 11 clean SpotBugs reports. The evidence
-gate's contract tests pass, and the release gate rejects this JAR against the
-previous build's full-catalog evidence as expected.
+The original terminal role-read series is retained at [r3](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r3.json)
+with its [raw archive](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r3-logs.zip).
+It covers 32 cases, 64 identities, 192 lifecycle rows and 592 callbacks on
+plugin SHA-256 `dff057a8406bce021dafcd2fcdf4168988b55eeeff8a4b7160f5750debebd17c`.
+That artifact confirms detached target/trigger placeholders do not borrow the
+caster snapshot, and a separate live peer trigger stays readable. `onDespawn`
+also retains its removed entity as trigger. The older audit's 232 field
+differences remain historical: 200 early lifecycle reads and 32 native
+`UNDEFINED` versus preserved raw tokens.
 
-The public placeholder renderer now keeps `<target.var.Marker|absent>` and
-`<trigger.var.Marker|absent>` unresolved when those roles address the detached
-caster. The caster continues to read and mutate its execution-owned values.
-The distinction is a missing registry, not a missing variable: selecting the
-default `absent` would also disagree with native behavior. A separate live
-trigger continues to read its own value. onDespawn now retains its removed
-entity as trigger, including the command window while its chunk is unloaded.
+The audited [tick-boundary r6 report](../tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r6.json)
+and [redacted archive](../tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r6-logs.zip)
+observe native and runtime target writes before, at and after registry removal.
+They cover eight scenarios across COW/ZOMBIE and direct/imported configurations:
+living and cancelled-death controls, self- and peer-inflicted death,
+unattributed death, immediate loaded command removal, CHUNK unload and command
+removal during NEVER suspension. A caster begins at marker 73; an independent
+peer trigger has marker 29. Each run records 0–8 tick nested actions, repeated
+siblings, late siblings, role placeholders, actual native evaluation ticks,
+active registration and final cleanup.
 
-The fixture exercises eight scenarios for COW and ZOMBIE, both directly and
-through the production importer: living controls, self-inflicted death,
-peer-inflicted death, unattributed death, synchronous cancelled death, loaded
-command removal, CHUNK unload and removal during NEVER suspension. A peer has
-marker 29; the caster starts with 73. The native and runtime paths record plain
-UUID placeholders, actual attackers, active membership, live variable counts,
-absolute expiry, nested delayed mutations, pending spawn work and cleanup.
+The implementation now uses the observed lifecycle rather than entity
+validity: death and natural despawn retain the entity registry through the
+five-tick native window; CHUNK unload uses a six-tick runtime offset because
+the runtime removal callback begins one tick earlier than the native unload
+skill. Immediate command and suspension removals detach before dispatch.
+When `variableadd` addresses a target/trigger whose entity registry has expired,
+it aborts the current nested skill action chain. Independent scheduled and
+repeated siblings still run, and retained caster mutations remain isolated
+from the live entity store. The independent auditor passes all 32 cases (64
+identities, 192 lifecycle rows, 1,476 callbacks); its 128 negative controls
+also reject corrupted evidence. Twenty initial native/runtime evaluation-order
+differences remain recorded. Despite the successful scoped audit, this report
+remains observation-only and does not promote any Parity Matrix status.
 
-Historical observations are retained without relabeling:
+The first zero-delay native command can evaluate placeholders after the sibling
+write within the same tick; that ordering difference is recorded separately
+from the registry boundary and is not suppressed. Native missing-value
+`UNDEFINED` versus Helstera's preserved placeholder token also remains an
+explicit difference. Condition and location-variable lookup, other variable
+mechanics, reload/cast interactions and additional Paper versions remain open.
 
-- [r1](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r1.json)
-  and its [archive](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r1-logs.zip)
-  capture the original target snapshot leakage in 24 scenarios. The fallback
-  suffix on UUID placeholders is unsupported; use the separate ID and command
-  UUID fields for that observer, not the unresolved UUID placeholder text.
-- [r2](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r2.json)
-  and its [archive](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r2-logs.zip)
-  use plain UUID placeholders in 32 scenarios, with 64 parent identities,
-  192 lifecycle rows and 592 callbacks. They confirm the target fix and expose
-  trigger snapshot leakage and absent onDespawn trigger identity. Both reports
-  retain their original source and artifact hashes.
+Full `./mvnw -B -ntp verify` passes 2,484 tests and 11 clean SpotBugs reports.
+The release gate still requires evidence for the exact release artifact and
+all other catalog probes; this focused observation cannot satisfy it.
 
-Remaining differences are deliberately visible:
+Historical runs preserve their original status and artifact hashes:
 
-1. Initial command and suspended-removal callbacks run while Helstera still
-   has its live variable data, although its model has left the active registry.
-   Native target lookups already fail. Snapshot detachment alone does not model
-   this synchronous window.
-2. Following confirmed death and CHUNK unload, native active membership persists
-   briefly. In these observations it survives the seed callback at +3 ticks and
-   is absent by +13 ticks; runtime detachment occurs earlier. Inspection of the
-   pinned JAR's `ActiveMob.unregister(boolean)` explains the distinction:
-   `true` calls `unregisterActiveMob` immediately, while `false` schedules it
-   five ticks later; `setDead()` takes the latter path. The next fixture needs
-   observations and target writes at ticks 0–7 to confirm ordering at the exact
-   boundary, including nested/repeated callbacks. Implement that lifecycle
-   without resurrecting a model or using entity validity as a registry proxy.
-3. Missing registered values without a default render `UNDEFINED` in native MM;
-   Helstera preserves the token. This pre-existing boundary is documented in
-   [variable placeholder compatibility](VARIABLE_PLACEHOLDER_COMPATIBILITY.md).
-4. Direct condition reads and location-selector/variable reads still use the
-   retained lookup API. Separate native evidence is required before changing
-   their behavior. Unsupported action scopes, reload/cast behavior and other
-   server/plugin versions remain open.
+- [Role-read r1](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r1.json)
+  records the initial detached target snapshot leakage.
+- [Role-read r2](../tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r2.json)
+  confirms the target fix while exposing trigger snapshot leakage and missing
+  `onDespawn` trigger identity.
+- Boundary [r1](../tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r1.json)
+  and [r2](../tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r2.json)
+  are retained as observations of earlier implementation artifacts. They are
+  not substituted for the final audited boundary report.
+- Boundary [r3](../tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r3.json),
+  [r4](../tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r4.json)
+  and [r5](../tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r5.json)
+  are retained for provenance; the auditor and negative-control suite were
+  refined afterward. Use r6 for the current result.
 
-`audit-terminal-reads.py` checks archive/member hashes, parent/role identities,
-callback completeness and delays, expiry crossings, live peer reads and final
-empty stores. It emits every native/runtime field difference. Its optional
-`--require-detached-reads` checks only the stable detached-read invariant, after
-the native registry is gone; it does not suppress earlier differences, relabel
-the report or approve a release. No observer is added to `release-evidence.json`.
+Reproduce the current boundary observer serially (Paper fixtures share a port):
 
 ```sh
 ./mvnw -B -ntp verify
 python3 -B tools/paper-integration/run-terminal-read-fixture.py \
-  --revision r4 --cache-directory srv-paper-player-life-20261120-r1 --observe-only
-python3 -B tools/paper-integration/audit-terminal-reads.py \
-  tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r4.json \
-  --require-detached-reads --plugin-jar helstera-plugin/target/helsteraMobs-1.0.0-full.jar
-python3 -B tools/paper-integration/test-terminal-read-audit.py \
-  tools/paper-integration/reports/paper-1.21.1-terminal-read-20261120-r4.json
+  --revision r7 --cache-directory srv-paper-player-life-20261120-r1 \
+  --observe-only --boundary
+python3 -B tools/paper-integration/audit-terminal-boundary.py \
+  tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r7.json
+python3 -B tools/paper-integration/test-terminal-boundary-audit.py \
+  tools/paper-integration/reports/paper-1.21.1-terminal-boundary-20261120-r7.json
 ```
 
-Use an unused revision and the actual UTC date. The authorized native JAR and
-pinned Paper JAR must already be cached. The observer disables the web UI and
-redacts archived server logs. Its current observation mode intentionally cannot
-be requested as a comparison run.
+Use an unused revision and the report's actual UTC date. The runner refuses to
+reuse a fixture or overwrite evidence. It pins Paper/MM, the production JAR,
+probe and observer sources, disables the web UI and redacts archived server
+logs. Neither the observer nor its auditor is included in
+`release-evidence.json`.

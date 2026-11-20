@@ -168,6 +168,9 @@ class TriggerDispatchAuditTest {
             if (kind == SourceKind.DIRECT_DISPATCH) {
                 String marker = trigger == SkillTrigger.TIMER
                         ? "dispatchWithSpec(SkillTrigger.TIMER" : "dispatch(" + triggerToken(trigger);
+                if (trigger == SkillTrigger.DESPAWN || trigger == SkillTrigger.REMOVE) {
+                    marker = "dispatchRemoval(SkillTrigger." + trigger.name();
+                }
                 if (!source.contains(marker)) {
                     problems.add(trigger.name() + " [DIRECT_DISPATCH]: missing " + marker);
                 }

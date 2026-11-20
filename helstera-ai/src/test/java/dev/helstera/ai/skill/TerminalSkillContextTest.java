@@ -46,6 +46,80 @@ class TerminalSkillContextTest {
         skills.forget(25);when(source.isValid()).thenReturn(false);
     }
 
+    @ParameterizedTest
+    @CsvSource({"100,5", "100,6", "2147483645,5", "2147483645,6"})
+    void terminalRegistryGraceMatchesNativeTicksWithoutKeepingLiveState(int start, int graceTicks) {
+        var tick = new java.util.concurrent.atomic.AtomicInteger(start);
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
+            bukkit.when(org.bukkit.Bukkit::getCurrentTick).thenAnswer(call -> tick.get());
+            run("setvariable{var=caster.Marker;type=INTEGER;value=73}", context(source));
+            var terminal = skills.beginTerminal(source, graceTicks);
+            var ctx = context(terminal);
+            removeSource();
+            for (int elapsed = 0; elapsed < graceTicks; elapsed++) {
+                tick.set(start + elapsed);
+                run("variableadd{var=target.Marker;amount=1} @self", ctx);
+                String value = Integer.toString(74 + elapsed);
+                assertEquals(value + ":" + value + ":" + value,
+                        Placeholders.resolve("<caster.var.Marker>:<target.var.Marker>:<trigger.var.Marker>", ctx));
+                assertTrue(SkillExtras.scopedVariableSnapshot("entity:" + uuid).variables().isEmpty());
+                assertTrue(skills.snapshotOf(25).isEmpty());
+            }
+            tick.set(start + graceTicks);
+            assertFalse(skills.runAction(skills.bindAction("variableadd{var=target.Marker;amount=1} @self"), ctx));
+            int terminalValue = 73 + graceTicks;
+            assertEquals(terminalValue + ":<target.var.Marker|absent>:<trigger.var.Marker|absent>", Placeholders.resolve(
+                    "<caster.var.Marker>:<target.var.Marker|absent>:<trigger.var.Marker|absent>", ctx));
+            run("variableadd{var=caster.Marker;amount=1}", ctx);
+            assertEquals(Integer.toString(terminalValue + 1), Placeholders.resolve("<caster.var.Marker>", ctx));
+            skills.finishTerminalDispatch(terminal);
+            assertEquals(0, skills.terminalExecutionCount());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 5})
+    void unavailableTargetAddAbortsOnlyItsNestedChainAndReleasesEveryContinuation(int grace) {
+        var tick = new java.util.concurrent.atomic.AtomicInteger(100);
+        record Pending(int due, int order, Runnable task) { }
+        var pending = new PriorityQueue<Pending>(Comparator.comparingInt(Pending::due).thenComparingInt(Pending::order));
+        var order = new java.util.concurrent.atomic.AtomicInteger();
+        SkillCatalog.taskScheduler((task, delay) -> {
+            pending.add(new Pending(tick.get() + (int) delay, order.getAndIncrement(), task));
+            return true;
+        });
+        var calls = new ArrayList<String>();
+        registry.registerAction("capture", ctx -> calls.add((tick.get() - 100) + ":" + Placeholders.resolve("<caster.var.Marker>", ctx)));
+        registry.registerAction("sibling", ctx -> calls.add("sibling"));
+        skills.loadSkills(YamlConfiguration.loadConfiguration(new StringReader("""
+                skills:
+                  parent:
+                    on-decision: ['skill{s=child}', sibling, 'skill{s=child;delay=4}', 'skill{s=child;delay=5}', 'sibling{delay=6;repeat=1;repeatinterval=1}']
+                  child:
+                    on-decision: ['variableadd{var=target.Marker;amount=1} @self', capture]
+                """)).getConfigurationSection("skills"));
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
+            bukkit.when(org.bukkit.Bukkit::getCurrentTick).thenAnswer(call -> tick.get());
+            run("setvariable{var=caster.Marker;type=INTEGER;value=73}", context(source));
+            var terminal = skills.beginTerminal(source, grace);
+            removeSource();
+            assertTrue(skills.castSkill("parent", context(terminal)));
+            skills.finishTerminalDispatch(terminal);
+            while (!pending.isEmpty()) {
+                var next = pending.remove();
+                tick.set(next.due());
+                next.task().run();
+            }
+            assertEquals(grace == 0 ? List.of("sibling", "sibling", "sibling")
+                    : List.of("0:74", "sibling", "4:75", "sibling", "sibling"), calls);
+            assertEquals(0, skills.terminalExecutionCount());
+            assertTrue(skills.snapshotOf(25).isEmpty());
+            assertTrue(SkillExtras.scopedVariableSnapshot("entity:" + uuid).variables().isEmpty());
+        }
+    }
+
     @Test void delayedAndRepeatedTerminalWorkOutlivesOrdinaryWorkAndReleasesState() {
         var calls=new ArrayList<String>();registry.registerAction("ordinary",ctx->calls.add("ordinary"));
         registry.registerAction("capture",ctx->{
@@ -178,6 +252,36 @@ class TerminalSkillContextTest {
         assertTrue(variables.location("point").isEmpty());
         assertTrue(SkillExtras.scopedVariableSnapshot("entity:" + uuid).variables().isEmpty());
         assertTrue(VariableLocations.snapshots().isEmpty());
+        skills.finishTerminalDispatch(terminal);
+    }
+
+    @Test void targetAndTriggerWritesStopAtTheRegistryBoundaryButLivePeerStillWorks() {
+        run("setvariable{var=caster.Marker;type=INTEGER;value=73}", context(source));
+        var terminal = skills.beginTerminal(source);
+        var self = context(terminal);
+        var peer = mock(LivingEntity.class);
+        UUID peerId = UUID.randomUUID();
+        when(peer.getUniqueId()).thenReturn(peerId);
+        when(peer.getWorld()).thenReturn(world);
+        var selfTriggerContext = BehaviorContext.continueExecution(terminal, entity, 1, -1, 0, "on-death", null,
+                entity, List.of(entity), source.location(), new SkillTreeContext(entity, List.of(entity), source.location()));
+        var peerTriggerContext = BehaviorContext.continueExecution(terminal, peer, 1, -1, 0, "on-death", null,
+                peer, List.of(peer), source.location(), new SkillTreeContext(peer, List.of(peer), source.location()));
+        removeSource();
+        assertTrue(EntityVariableContext.find(selfTriggerContext, "trigger").isPresent());
+        assertTrue(EntityVariableContext.isUnavailableEntityRole(selfTriggerContext, "trigger"));
+        skills.runAction(skills.bindAction("variableadd{var=trigger.Marker;amount=1}"), selfTriggerContext);
+        skills.runAction(skills.bindAction("variableadd{var=target.Marker;amount=1}"), self);
+        assertEquals(73, EntityVariableContext.find(selfTriggerContext, "trigger").orElseThrow()
+                .variable("Marker").orElseThrow());
+        assertEquals(73, EntityVariableContext.find(self, "caster").orElseThrow()
+                .variable("Marker").orElseThrow());
+        assertEquals("73:<target.var.Marker|absent>:<trigger.var.Marker|absent>",
+                Placeholders.resolve("<caster.var.Marker>:<target.var.Marker|absent>:<trigger.var.Marker|absent>", self));
+        SkillExtras.restoreScopedVariables("entity:" + peerId, new ScopedVariableSnapshotStore.Registry(
+                Map.of("Marker", 29), Map.of(), Map.of(), Map.of()));
+        assertEquals("29", Placeholders.resolve("<trigger.var.Marker>", peerTriggerContext));
+        SkillExtras.forgetEntity(peer);
         skills.finishTerminalDispatch(terminal);
     }
 

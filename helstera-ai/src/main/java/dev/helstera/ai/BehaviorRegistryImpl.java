@@ -91,11 +91,22 @@ public final class BehaviorRegistryImpl implements BehaviorRegistry {
 
     @Override
     public boolean runAction(String name, BehaviorContext ctx) {
+        try {
+            return runActionForComposition(name, ctx);
+        } catch (SkillActionAbortException abort) {
+            return false;
+        }
+    }
+
+    @Override
+    public boolean runActionForComposition(String name, BehaviorContext ctx) {
         Consumer<BehaviorContext> a = actions.get(key(name));
         if (a == null) return false;
         try {
             a.accept(ctx);
             return true;
+        } catch (SkillActionAbortException abort) {
+            throw abort;
         } catch (Throwable t) {
             var l = log;
             if (l != null) l.warning("自定义动作 \"" + name + "\" 抛异常，已忽略: " + t);

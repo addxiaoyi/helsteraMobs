@@ -140,8 +140,7 @@ public final class Placeholders {
         // MM's target/trigger placeholders query the active entity registry, not the
         // retained caster. A missing registry leaves even a fallback unresolved;
         // it is distinct from a missing variable in an attached registry.
-        if ((scope.equals("target") || scope.equals("trigger"))
-                && dev.helstera.api.behavior.EntityVariableContext.find(ctx, scope).isPresent()) return null;
+        if (dev.helstera.api.behavior.EntityVariableContext.isUnavailableEntityRole(ctx, scope)) return null;
         if (scope.equals("caster") && (!ctx.instanceValid() || ctx.instance().baseEntity().isEmpty())
                 || scope.equals("target") && ctx.targetEntity().isEmpty()
                 || scope.equals("trigger") && ctx.trigger().isEmpty()
