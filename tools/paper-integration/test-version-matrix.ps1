@@ -28,6 +28,9 @@ if ($matrix.releasePolicy.requiresMobCommandEvidence -ne $true) {
 if ($matrix.releasePolicy.requiresUnloadedCommandEvidence -ne $true) {
     throw 'Version matrix must require unloaded command evidence for the release artifact.'
 }
+if ($matrix.releasePolicy.requiresReentrantCommandEvidence -ne $true) {
+    throw 'Version matrix must require reentrant command evidence for the release artifact.'
+}
 $release = @($matrix.combinations | Where-Object { $_.releaseValidated -eq $true })
 if ($release.Count -ne 1) { throw "Expected exactly one release-validated combination, found $($release.Count)." }
 $entry = $release[0]

@@ -1073,6 +1073,39 @@ try {
     }
     [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
     [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
+    $commandPolicy = $originalVersionText | ConvertFrom-Json
+    $commandPolicy.releasePolicy | Add-Member -NotePropertyName requiresReentrantCommandEvidence -NotePropertyValue $true
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($commandPolicy | ConvertTo-Json -Depth 20))
+    $missingCommand = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingCommand -notmatch 'requires pinned reentrant command evidence') {
+        throw "Release gate accepted missing required command evidence: $missingCommand"
+    }
+    $originalCommandManifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding utf8
+    $commandManifest = @($originalCommandManifest | ConvertFrom-Json)
+    $commandEntry = @($commandManifest | Where-Object { $_.fullReleaseCatalog })[0]
+    $commandEntry | Add-Member -NotePropertyName reentrantCommandEvidence -NotePropertyValue ([pscustomobject]@{
+        report = 'tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r99.json'
+        reportSha256 = ('0' * 64)
+    })
+    [System.IO.File]::WriteAllText($manifestPath, ($commandManifest | ConvertTo-Json -Depth 20))
+    $missingCommandFile = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $missingCommandFile -notmatch 'report is missing or changed') {
+        throw "Release gate accepted missing command report: $missingCommandFile"
+    }
+    $commandTestPath = Join-Path $temporaryRoot $commandEntry.reentrantCommandEvidence.report
+    [System.IO.File]::WriteAllText($commandTestPath, '{"pluginSha256":"wrong","paperJarSha256":"wrong"}')
+    $changedCommand = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $changedCommand -notmatch 'report is missing or changed') {
+        throw "Release gate accepted changed command report: $changedCommand"
+    }
+    $commandEntry.reentrantCommandEvidence.reportSha256 = (Get-FileHash -LiteralPath $commandTestPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    [System.IO.File]::WriteAllText($manifestPath, ($commandManifest | ConvertTo-Json -Depth 20))
+    $wrongCommandArtifact = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+    if ($LASTEXITCODE -eq 0 -or $wrongCommandArtifact -notmatch 'does not match the release artifact/server') {
+        throw "Release gate accepted command evidence from another artifact: $wrongCommandArtifact"
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
     [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))

@@ -67,10 +67,13 @@ final class MobRemovalCommand {
         int count = 0;
         for (var instance : List.copyOf(plugin.instances().allImpl())) {
             var entity = instance.baseEntity().orElse(null);
-            if (entity == null || entity instanceof Player || !entity.isValid()) continue;
+            if (entity == null || entity instanceof Player || entity.isDead()
+                    || !entity.isValid() && !dev.helstera.runtime.instance.InstanceManagerImpl.awaitingRetainedChunk(instance)) continue;
             if (selection.matches(ManagedMobIdentity.mobId(entity), Factions.factionOf(entity),
-                    instance.options().despawnMode(), entity.getLocation(), origin)
-                    && plugin.removeMobByCommand(instance.instanceId())) count++;
+                    instance.options().despawnMode(), entity.getLocation(), origin)) {
+                if (selection.radius() != null && !entity.isValid()) entity.getLocation().getChunk().getEntities();
+                if (plugin.removeMobByCommand(instance.instanceId())) count++;
+            }
         }
         for (var entry : unloading) {
             var entity = entry.instance().entity();

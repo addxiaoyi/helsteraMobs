@@ -96,8 +96,8 @@ unload/command/reload, restart/cleanup, and a final restart. Real unload events,
 command ticks, independent load events, callbacks, visuals and snapshot files are
 recorded. A second cleanup verifies that survivors are removable and cannot return.
 
-Unknown native flag combinations, legacy aliases, callback-driven spawning/removal
-recursion, external chunk-ticket ownership, snapshot I/O failures, crash recovery,
+Unknown native flag combinations, legacy aliases, delayed/visual callbacks,
+external chunk-ticket ownership, snapshot I/O failures, crash recovery,
 the broader catalogs and other Paper/MythicMobs versions remain incomplete.
 
 Previous-artifact loaded-command [report](../tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r4.json)
@@ -108,11 +108,11 @@ controls actually have ten each and the pure model eleven (31 total), which r4
 reads from the renderer as well as counting real world entities.
 
 ```bash
-python3 tools/paper-integration/run-mob-command-fixture.py --revision r6 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/run-mob-command-fixture.py --revision r7 --cache-directory srv-paper-player-life-20261120-r1
 python3 tools/paper-integration/test-mob-command-evidence.py tools/paper-integration/reports/paper-1.21.1-mob-command-20261120-r5.json
 ```
 
-Current artifact SHA-256: `0f68cdb23aa16ad8d8af6661488482838dee2b641879b45baa4251ce1bee203e`. Unloaded comparison
+Previous-artifact SHA-256: `0f68cdb23aa16ad8d8af6661488482838dee2b641879b45baa4251ce1bee203e`. Unloaded comparison
 [report](../tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r6.json) and
 [archive](../tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r6-logs.zip) pass 3,910
 observations and 42 mutations. Loaded command regression
@@ -126,5 +126,47 @@ reports satisfies the gate.
 
 ```bash
 python3 tools/paper-integration/test-unloaded-command-evidence.py tools/paper-integration/reports/paper-1.21.1-unloaded-command-20261120-r6.json
-python3 tools/paper-integration/run-unloaded-command-fixture.py --revision r7 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/run-unloaded-command-fixture.py --revision r8 --cache-directory srv-paper-player-life-20261120-r1
+```
+
+Current artifact SHA-256: `59dc5e9b21762a5306768f13f5ba6a1b1561e6e1c3f03d2a58b7f3421fe04675`. The reentrant command
+[report](../tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r3.json)
+and [archive](../tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r3-logs.zip)
+cover 60 cases and 1,920 observations over three boots. The 15 callback actions
+combine named self/peer removal, forced global/radius cleanup, child spawning,
+and explicit chunk loads, across loaded/unloading and direct/imported paths.
+The original command uses a selection snapshot. A new NEVER child survives
+unless a subsequent nested command selects it. The caster cannot be restored
+while its terminal callback is still running. An original peer restored by a
+callback chunk load remains selected by the outer command.
+
+Paper can create a retained child in a cached unloaded chunk without activating
+it. Invalid cleanup now saves its SkillTree and preserves entity variables as
+an unload; it does not treat this living entity as permanently removed. Named
+and global commands can select this pending child. A matching radius command
+loads its chunk before removal. Live callbacks read marker 73 from the actual
+caster UUID; child state 73/91 survives reload and restart when retained. Final
+cleanup removes all recorded UUIDs, scoped variables, tree files and visuals.
+All 46 mutations are rejected. The full strict report and all four prior focused
+suites were rerun on this same JAR; the release gate requires all five comparisons.
+
+Observer r2 is an incomplete 916-row run: the old five-minute client deadline
+expired before the first boot completed. Its redacted logs and failure metadata
+are archived but cannot satisfy the gate. The client now accepts a validated
+timeout argument, with fifteen minutes supplied by this runner.
+
+Observer r1 retains the pre-fix failures. It also reloaded the native radius-spawn
+child one tick after a second unload: native's pending unregister removed the
+active entry after reload, while the entity and saved marker survived restart.
+The accepted fixture samples stable state after 40 ticks, then explicitly loads
+and waits 30 ticks. Rapid native registry behavior remains unverified; no broad
+claim of identical timing is made. Helstera's synchronous callback and native's
+deferred callback are an explicit exception, checked through command depth.
+Delayed/asynchronous/visual callbacks, child SkillTree inheritance, PERSISTENT
+children created by callbacks, pending-child command expiry boundaries, failure
+during snapshot I/O and crash recovery are outside this verified scope.
+
+```bash
+python3 tools/paper-integration/run-reentrant-command-fixture.py --revision r4 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/test-reentrant-command-evidence.py tools/paper-integration/reports/paper-1.21.1-reentrant-command-20261120-r3.json
 ```

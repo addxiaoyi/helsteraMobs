@@ -224,6 +224,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             InstanceManagerImpl inst = new InstanceManagerImpl(registry, bus, r,
                     getConfig().getConfigurationSection("animation-mapping"));
             this.instances = inst;
+            inst.setBeforePersistentUnload(this::saveBeforePersistentUnload);
             int viewDistance = getConfig().getInt("render.view-distance", 48);
             PlayerVisibilityServiceImpl vis = new PlayerVisibilityServiceImpl(viewDistance,
                     getConfig().getBoolean("render.check-permission", false));
@@ -30951,18 +30952,23 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var entity = instance == null ? null : instance.baseEntity().orElse(null);
         if (entity instanceof org.bukkit.entity.Player
                 || !dev.helstera.api.behavior.ManagedMobIdentity.isManaged(entity)) return false;
-        releasePersistentMobChunk(entity);
-        if (!instances().despawnManagedMob(instanceId)) return false;
-        suspendedMobSkillTrees.remove(entity.getUniqueId());
+        if (!commandRemovingMobs.add(entity.getUniqueId())) return false;
         try {
-            var store = persistentMobSkillTreeStore();
-            store.delete(entity.getUniqueId());
-            store.deleteInstance(instanceId);
-        } catch (java.io.IOException ex) {
-            getLogger().warning("[Persistent] Command removal snapshot delete failed for "
-                    + entity.getUniqueId() + ": " + ex.getMessage());
+            releasePersistentMobChunk(entity);
+            if (!instances().despawnManagedMob(instanceId)) return false;
+            suspendedMobSkillTrees.remove(entity.getUniqueId());
+            try {
+                var store = persistentMobSkillTreeStore();
+                store.delete(entity.getUniqueId());
+                store.deleteInstance(instanceId);
+            } catch (java.io.IOException ex) {
+                getLogger().warning("[Persistent] Command removal snapshot delete failed for "
+                        + entity.getUniqueId() + ": " + ex.getMessage());
+            }
+            return true;
+        } finally {
+            commandRemovingMobs.remove(entity.getUniqueId());
         }
-        return true;
     }
 
     /** Releases a retained chunk after the last managed persistent mob dies or is removed. */
@@ -31026,7 +31032,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
     private boolean restorePersistentMob(org.bukkit.entity.Entity entity) {
         if (!(entity instanceof org.bukkit.entity.LivingEntity living)
-                || !living.isValid() || living.isDead() || findInstance(entity) != null) return false;
+                || !living.isValid() || living.isDead() || commandRemovingMobs.contains(entity.getUniqueId())
+                || findInstance(entity) != null) return false;
         String mobId = living.getPersistentDataContainer().get(
                 persistentMobIdKey(), org.bukkit.persistence.PersistentDataType.STRING);
         if (mobId == null || mobId.isBlank()) return false;
@@ -31058,6 +31065,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             new java.util.HashMap<>();
 
     private final UnloadingMobCommands unloadingMobCommands = new UnloadingMobCommands();
+    private final java.util.Set<java.util.UUID> commandRemovingMobs = new java.util.HashSet<>();
 
     java.util.List<UnloadingMobCommands.Entry> unloadingCommandMobs() {
         return unloadingMobCommands.snapshot();
@@ -31069,7 +31077,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         if (!unloadingMobCommands.take(entry)) {
             // Loading a previous candidate's chunk can restore every remaining candidate
             // in that chunk. They still belong to this command's original selection.
-            var restored = radius ? findInstance(entity) : null;
+            var restored = findInstance(entity);
             return restored != null && removeMobByCommand(restored.instanceId());
         }
         if (radius) {
@@ -31079,22 +31087,27 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             var restored = findInstance(entity);
             if (restored != null) return removeMobByCommand(restored.instanceId());
         }
+        if (!commandRemovingMobs.add(entity.getUniqueId())) return false;
         try {
             if (skillTriggers instanceof SkillTriggers triggers) {
                 triggers.fireSuspendedRemoval(entry.instance(), entry.profile());
             }
         } finally {
-            dev.helstera.api.behavior.VariableLocations.clearEntity(entity);
-            dev.helstera.ai.skill.SkillExtras.forgetEntity(entity);
-            suspendedMobSkillTrees.remove(entity.getUniqueId());
-            entity.remove();
             try {
-                var store = persistentMobSkillTreeStore();
-                store.delete(entity.getUniqueId());
-                store.deleteInstance(entry.instance().instanceId());
-            } catch (java.io.IOException ex) {
-                getLogger().warning("[Persistent] Unloaded command snapshot delete failed for "
-                        + entity.getUniqueId() + ": " + ex.getMessage());
+                dev.helstera.api.behavior.VariableLocations.clearEntity(entity);
+                dev.helstera.ai.skill.SkillExtras.forgetEntity(entity);
+                suspendedMobSkillTrees.remove(entity.getUniqueId());
+                entity.remove();
+                try {
+                    var store = persistentMobSkillTreeStore();
+                    store.delete(entity.getUniqueId());
+                    store.deleteInstance(entry.instance().instanceId());
+                } catch (java.io.IOException ex) {
+                    getLogger().warning("[Persistent] Unloaded command snapshot delete failed for "
+                            + entity.getUniqueId() + ": " + ex.getMessage());
+                }
+            } finally {
+                commandRemovingMobs.remove(entity.getUniqueId());
             }
         }
         return true;
@@ -31104,6 +31117,12 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var instance = findInstance(entity);
         if (instance == null || !(entity instanceof org.bukkit.entity.LivingEntity living)
                 || living.isDead() || !instance.options().retainsOnUnload()) return;
+        instances().unloadPersistent(instance.instanceId(), cause);
+    }
+
+    private void saveBeforePersistentUnload(dev.helstera.runtime.instance.ModelInstanceImpl instance, String cause) {
+        var entity = instance.entity();
+        if (entity == null) return;
         if ("chunk_unload".equals(cause)) {
             var entry = unloadingMobCommands.remember(instance,
                     ai() == null ? null : ai().profileOf(instance.instanceId()),
@@ -31123,7 +31142,6 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("[Persistent] SkillTree unload save failed for " + entity.getUniqueId() + ": " + ex.getMessage());
             }
         }
-        instances().unloadPersistent(instance.instanceId(), cause);
     }
 
     private void runPersistentSkillTreeSelfTest() {

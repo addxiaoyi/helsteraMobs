@@ -378,6 +378,26 @@ foreach ($item in $releaseEvidence) {
             & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-unloaded-command.py') $commandPath
             if ($LASTEXITCODE -ne 0) { throw 'Unloaded command evidence validation failed.' }
         }
+        if ($versionMatrix.releasePolicy.requiresReentrantCommandEvidence -eq $true) {
+            $command = $item.reentrantCommandEvidence
+            if ($null -eq $command -or [string]$command.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-reentrant-command-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                    [string]$command.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'Latest full release requires pinned reentrant command evidence.'
+            }
+            $commandPath = Join-Path $Root ([string]$command.report)
+            if (-not (Test-Path -LiteralPath $commandPath -PathType Leaf) -or
+                    (Get-FileHash -LiteralPath $commandPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$command.reportSha256) {
+                throw 'Reentrant command report is missing or changed.'
+            }
+            $commandReport = Get-Content -LiteralPath $commandPath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$commandReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                    [string]$commandReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                throw 'Reentrant command evidence does not match the release artifact/server.'
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-reentrant-command.py') $commandPath
+            if ($LASTEXITCODE -ne 0) { throw 'Reentrant command evidence validation failed.' }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

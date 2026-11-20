@@ -38,6 +38,12 @@ public final class InstanceManagerImpl implements InstanceManager {
     private static final Logger LOGGER = Logger.getLogger(InstanceManagerImpl.class.getName());
     private final AtomicInteger idGen = new AtomicInteger(1);
     private final ConfigurationSection animMappingCfg;
+    private java.util.function.BiConsumer<ModelInstanceImpl, String> beforePersistentUnload = (instance, cause) -> {};
+
+    /** Save owned state after selection is closed but before controllers and visuals are released. */
+    public void setBeforePersistentUnload(java.util.function.BiConsumer<ModelInstanceImpl, String> listener) {
+        beforePersistentUnload = java.util.Objects.requireNonNull(listener);
+    }
 
     public InstanceManagerImpl(ModelRegistry registry, HelsteraEventBus bus,
                                InstanceRenderer renderer, ConfigurationSection animMappingCfg) {
@@ -185,6 +191,7 @@ public final class InstanceManagerImpl implements InstanceManager {
         ModelInstanceImpl inst = instances.get(instanceId);
         if (inst == null || !inst.options().retainsOnUnload()) return false;
         if (!instances.remove(instanceId, inst)) return false;
+        beforePersistentUnload.accept(inst, cause);
         ManagedMobOptions.clear(inst.entity());
         inst.despawn();
         logRemoval(inst, cause);
@@ -230,6 +237,12 @@ public final class InstanceManagerImpl implements InstanceManager {
         for (Iterator<Map.Entry<Integer, ModelInstanceImpl>> it = instances.entrySet().iterator(); it.hasNext(); ) {
             ModelInstanceImpl inst = it.next().getValue();
             boolean baseGone = inst.entity() != null && !inst.entity().isValid();
+            // Paper can accept a spawn into a cached, unloaded chunk. The living
+            // entity is temporarily invalid but remains saved and must not lose state.
+            if (inst.isValid() && baseGone && awaitingRetainedChunk(inst)) {
+                unloadPersistent(inst.instanceId(), "chunk_unload");
+                continue;
+            }
             if (!inst.isValid() || baseGone) {
                 it.remove();
                 if (!(inst.entity() instanceof org.bukkit.entity.Slime slime && slime.isDead())) {
@@ -240,6 +253,16 @@ public final class InstanceManagerImpl implements InstanceManager {
                 bus.post(new ModelRemoveEvent(inst, baseGone ? "base_entity_removed" : "invalid"));
             }
         }
+    }
+
+    public static boolean awaitingRetainedChunk(ModelInstanceImpl inst) {
+        Entity entity = inst.entity();
+        if (!(entity instanceof org.bukkit.entity.LivingEntity) || entity instanceof org.bukkit.entity.Player
+                || entity.isDead() || !inst.options().retainsOnUnload()
+                || !dev.helstera.api.behavior.ManagedMobIdentity.isManaged(entity)) return false;
+        Location at = entity.getLocation();
+        return at != null && at.getWorld() != null
+                && !at.getWorld().isChunkLoaded(at.getBlockX() >> 4, at.getBlockZ() >> 4);
     }
 
     private static void logRemoval(ModelInstanceImpl inst, String reason) {

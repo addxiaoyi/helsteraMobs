@@ -57,8 +57,8 @@ or every native unload ordering. Distance behavior has its own
 are not promoted by this interaction alone.
 
 Current precedence evidence:
-[report](../tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r4.json)
-and [redacted archive](../tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r4-logs.zip).
+[report](../tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r5.json)
+and [redacted archive](../tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r5-logs.zip).
 There are 1,296 observations over twelve boots, 864 distinct tested entity UUIDs,
 436 real deaths with 436 configured death callbacks, and 214 runtime shutdown
 callbacks alongside 214 documented native scheduling exceptions. The modern
@@ -67,8 +67,8 @@ controls are rejected. Earlier r1 used a root-level migration export; r2
 verified the modern path on the preceding artifact. Neither certifies the current JAR.
 
 ```bash
-python3 tools/paper-integration/run-despawn-precedence-fixture.py --revision r5 --cache-directory srv-paper-player-life-20261120-r1
-python3 tools/paper-integration/test-despawn-precedence-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r4.json
+python3 tools/paper-integration/run-despawn-precedence-fixture.py --revision r6 --cache-directory srv-paper-player-life-20261120-r1
+python3 tools/paper-integration/test-despawn-precedence-evidence.py tools/paper-integration/reports/paper-1.21.1-despawn-precedence-20261120-r5.json
 ```
 
 The current command milestone revalidated this suite against the same release
@@ -76,3 +76,5 @@ artifact; older archives retain their original hashes. Loaded cleanup command
 behavior is covered separately by the [command contract](MOB_COMMAND_COMPATIBILITY.md).
 
 The unloaded-command milestone revalidated this suite against the current release artifact.
+
+The reentrant-command milestone revalidated this suite against the current release artifact.

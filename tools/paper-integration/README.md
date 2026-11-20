@@ -1,4 +1,42 @@
-Unloaded mob commands (2026-11-20): cleanup now preserves native selection
+Reentrant mob commands (2026-11-20): synchronous onDespawn command callbacks
+can remove their own caster or peers, run nested named/global/radius cleanup,
+load the affected chunk and create a new mob. Each selected original UUID fires
+one terminal callback; a child survives the original command snapshot unless a
+later nested command selects it. Loading a chunk during removal cannot reattach
+the caster. New retained entities in an unloaded chunk save their variables and
+SkillTree before releasing their temporary runtime instance.
+
+`srv-paper-reentrant-command-20261120-r3` verifies 1,920 observations across
+60 direct/imported, loaded/unloading scenarios and three real Paper boots,
+with 432 distinct spawned UUIDs and 432 terminal callbacks.
+UUIDs, live callback variables, callback depth, explicit callback chunk loads,
+visual counts, saved state, restart restoration and final cleanup are checked.
+All 46 evidence mutations are rejected. Observer r1 remains diagnostic evidence
+of lost child state, missed nested child selection and caster reattachment.
+Observer r2 stopped at the client’s five-minute deadline and remains incomplete;
+the runner now grants this longer suite a fifteen-minute client budget.
+Observer r1 also exposes a native pending-unregister race; the accepted
+fixture waits 40 ticks before checking stable state and explicitly reloading.
+Native callbacks remain deferred; Helstera callbacks remain synchronous. See the
+[command contract](../../docs/MOB_COMMAND_COMPATIBILITY.md) for this verified scope and remaining limits.
+
+The current artifact passes 2,423 Maven tests and SpotBugs. Full strict
+`srv-paper-reentrant-command-strict-20261120-r1` passes 471 probes (452 passed,
+19 expected rejections, zero failed/incomplete). The exact same JAR passes
+unloaded commands `srv-paper-unloaded-command-20261120-r7` (3,910 observations,
+42 mutations), loaded commands `srv-paper-mob-command-20261120-r6` (2,600,
+29 mutations), distance `srv-paper-despawn-distance-20261120-r10` (448,
+44 mutations) and precedence `srv-paper-despawn-precedence-20261120-r5`
+(1,296, twelve boots, 30 mutations). Release now requires all five focused
+reports plus the full strict catalog, pinned to this plugin and Paper build.
+
+Matrix totals remain 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin. Delayed or
+visual callback mechanics, child SkillTree inheritance, native rapid-reload
+registry races, crash recovery, broader catalogs, integrations and other Paper
+versions remain open. Full MythicMobs parity is incomplete.
+
+Previous-artifact unloaded mob commands (2026-11-20): cleanup now preserves native selection
 through the brief unload transition. Named kill and forced killall remove saved
 NEVER/PERSISTENT targets; default killall exempts PERSISTENT. Matching radius
 commands load the selected chunk. Stable unloaded targets remain saved and
@@ -18,7 +56,7 @@ original gap; r4 exposed missing callback context and premature tick-5 expiry;
 rejected r5 exposed transient orphan visuals after rapid radius-triggered reload.
 See the [command contract](../../docs/MOB_COMMAND_COMPATIBILITY.md).
 
-The current artifact passes 2,421 Maven tests and SpotBugs. Full strict
+That artifact passes 2,421 Maven tests and SpotBugs. Full strict
 `srv-paper-unloaded-command-strict-20261120-r1` passes 471 probes (452 passed,
 19 expected rejections, none failed/incomplete). The same JAR passes loaded
 commands `srv-paper-mob-command-20261120-r5` (2,600 observations, 29 mutations),
@@ -582,7 +620,7 @@ no-ops, and cleanup. Its report and redacted log are linked with hashes in
 [STARTUP_EVIDENCE.md](STARTUP_EVIDENCE.md). This is focused exploratory evidence,
 separate from the full release gate.
 
-Latest full-catalog strict fixture `srv-paper-unloaded-command-strict-20261120-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `0f68cdb23aa16ad8d8af6661488482838dee2b641879b45baa4251ce1bee203e`. See the [strict report](reports/paper-1.21.1-unloaded-command-strict-20261120-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,421 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog strict fixture `srv-paper-reentrant-command-strict-20261120-r1` passes all 471 probes on Paper 1.21.1-133 (452 passed, 19 expected rejections, zero failed or incomplete). It retains all 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and skill-trigger/tagged-damage/cancellation probes pass. Plugin SHA-256: `59dc5e9b21762a5306768f13f5ba6a1b1561e6e1c3f03d2a58b7f3421fe04675`. See the [strict report](reports/paper-1.21.1-reentrant-command-strict-20261120-r1.json), [synchronization contract](../../docs/POTION_SYNC_COMPATIBILITY.md), and [artifact hashes](STARTUP_EVIDENCE.md). Complete catalogs, client rendering, Premium numeric comparison, and other versions remain open. This artifact passes 2,423 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Focused MythicMobs 5.7.2 targeter fixture `srv-paper-context-eligibility-exploratory-20261118-r8`
 passes 23 native/imported comparisons on Paper 1.21.1-133. It covers player

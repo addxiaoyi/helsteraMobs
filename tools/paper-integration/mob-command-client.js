@@ -17,7 +17,9 @@ bot._client.on('state', state => {
     }
   };
 });
-const timer = setTimeout(() => process.exit(1), 300000);
+const timeoutMillis = Number(process.argv[2] || 300000);
+if (!Number.isSafeInteger(timeoutMillis) || timeoutMillis <= 0) throw new Error('Invalid client timeout');
+const timer = setTimeout(() => process.exit(1), timeoutMillis);
 const event = data => console.log(`DCMD_CLIENT ${JSON.stringify(data)}`);
 bot.once('spawn', () => {event({event: 'join', uuid: bot.player.uuid});});
 bot.on('error', error => {event({event: 'error', message: error.message}); process.exitCode = 1;});

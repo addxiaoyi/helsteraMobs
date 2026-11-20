@@ -14,6 +14,58 @@ import static org.mockito.Mockito.*;
 
 class PersistentInstanceUnloadTest {
     @Test @SuppressWarnings("unchecked")
+    void pendingRetainedSpawnsSaveBeforeTeardownWithoutLoadingTheChunkOrFiringDespawn() throws Exception {
+        for (String mode : List.of("NEVER", "PERSISTENT")) {
+            var bus = new HelsteraEventBus();
+            var manager = new InstanceManagerImpl(null, bus, mock(InstanceRenderer.class), null);
+            var field = InstanceManagerImpl.class.getDeclaredField("instances"); field.setAccessible(true);
+            var instances = (Map<Integer, ModelInstanceImpl>) field.get(manager);
+            var instance = mock(ModelInstanceImpl.class); var entity = mock(LivingEntity.class);
+            var world = mock(org.bukkit.World.class);
+            var data = mock(org.bukkit.persistence.PersistentDataContainer.class);
+            when(entity.getPersistentDataContainer()).thenReturn(data);
+            when(data.get(any(org.bukkit.NamespacedKey.class), eq(org.bukkit.persistence.PersistentDataType.STRING))).thenReturn("child");
+            when(entity.getUniqueId()).thenReturn(UUID.randomUUID());
+            when(entity.getLocation()).thenReturn(new org.bukkit.Location(world, -17, 100, 33));
+            when(instance.entity()).thenReturn(entity); when(instance.instanceId()).thenReturn(7);
+            when(instance.isValid()).thenReturn(true); when(instance.options()).thenReturn(new SpawnOptions().despawnMode(mode));
+            instances.put(7, instance);
+            var order = new ArrayList<String>();
+            manager.setBeforePersistentUnload((selected, cause) -> {
+                assertSame(instance, selected); assertEquals("chunk_unload", cause);
+                assertNull(manager.impl(7)); assertFalse(manager.unloadPersistent(7, cause));
+                verify(instance, never()).despawn(); order.add("save");
+            });
+            doAnswer(i -> {order.add("teardown"); return null;}).when(instance).despawn();
+            bus.register(ModelRemoveEvent.class, event -> {
+                assertTrue(event.unloading()); assertFalse(event.despawning()); order.add("detach");
+            });
+            manager.cleanupInvalid(); manager.cleanupInvalid();
+            assertEquals(List.of("save", "teardown", "detach"), order);
+            verify(world).isChunkLoaded(-2, 2); verify(world, never()).getChunkAt(anyInt(), anyInt());
+            verify(entity, never()).remove(); verify(instance).despawn();
+        }
+    }
+
+    @Test void retainedChunkDetectionRejectsDeadLoadedUnmanagedDisposableAndPlayerEntities() {
+        for (String reason : List.of("dead", "loaded", "unmanaged", "disposable", "player")) {
+            var instance = mock(ModelInstanceImpl.class);
+            LivingEntity entity = reason.equals("player") ? mock(org.bukkit.entity.Player.class) : mock(LivingEntity.class);
+            var world = mock(org.bukkit.World.class);
+            var data = mock(org.bukkit.persistence.PersistentDataContainer.class);
+            when(instance.entity()).thenReturn(entity);
+            when(instance.options()).thenReturn(new SpawnOptions().despawnMode(reason.equals("disposable") ? "NORMAL" : "NEVER"));
+            when(entity.isDead()).thenReturn(reason.equals("dead"));
+            when(entity.getPersistentDataContainer()).thenReturn(data);
+            if (!reason.equals("unmanaged")) when(data.get(any(org.bukkit.NamespacedKey.class), eq(org.bukkit.persistence.PersistentDataType.STRING))).thenReturn("child");
+            when(entity.getLocation()).thenReturn(new org.bukkit.Location(world, 16, 100, 16));
+            when(world.isChunkLoaded(1, 1)).thenReturn(reason.equals("loaded"));
+            assertFalse(InstanceManagerImpl.awaitingRetainedChunk(instance), reason);
+            verify(world, never()).getChunkAt(anyInt(), anyInt());
+        }
+    }
+
+    @Test @SuppressWarnings("unchecked")
     void shutdownRemovesDisposableMobsOnceBeforeSerializationButKeepsRetainedAndStandaloneInstances() throws Exception {
         var bus = new HelsteraEventBus();
         var manager = new InstanceManagerImpl(null, bus, mock(InstanceRenderer.class), null);
