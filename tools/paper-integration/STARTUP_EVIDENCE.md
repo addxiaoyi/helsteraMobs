@@ -1,8 +1,45 @@
 # Paper Startup Evidence
 
-Latest full-catalog fixture `srv-paper-reentrant-command-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `59dc5e9b21762a5306768f13f5ba6a1b1561e6e1c3f03d2a58b7f3421fe04675`. [Strict report](reports/paper-1.21.1-reentrant-command-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-reentrant-command-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-reentrant-command-strict-20261120-r1.client-logs.zip) This artifact passes 2,423 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-despawn-crash-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `b7aab2b68eeb55b923a72470780fff62b14a5e353ed55b7f8bc6bc66b4acf898`. [Strict report](reports/paper-1.21.1-despawn-crash-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-despawn-crash-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-despawn-crash-strict-20261120-r1.client-logs.zip) This artifact passes 2,429 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
-Reentrant mob commands (2026-11-20): synchronous onDespawn command callbacks
+Completed-checkpoint crash recovery (2026-11-20): retained mob variables now
+travel in the entity's PDC at unload and clean shutdown. A first post-crash load
+uses that checkpoint, including explicit empty state, instead of stale shared
+shutdown data. Same-process reload keeps live variables. Corrupt or foreign UUID
+checkpoints are rejected before replacing runtime state.
+
+`srv-paper-despawn-crash-20261120-r3` passes 190 observations across three boots,
+two actual SIGKILL exits and 60 native/runtime UUIDs, with direct/imported versions
+of all five Despawn modes. Archived raw entity regions, scalar/location retention,
+lazy NEVER loading, 48 terminal commands, old-tree clearing and final absence are
+checked. All 43 mutation controls are rejected. Observer r1 exposed variable loss;
+r2 remains rejected fixture evidence (tree-origin and vanilla-loot assumptions).
+
+The native save boundary is explicit: never-unloaded variables have no checkpoint;
+a saved and reloaded mob recovers its last unload values, losing later changes.
+Checkpoint creation here uses world unloads. Chunk-only crashes, unfinished writes,
+power loss and native periodic-save timing remain outside this proof. See the
+[crash contract](../../docs/DESPAWN_CRASH_COMPATIBILITY.md) for the observed boundary and inactive-registry exception.
+
+This artifact passes 2,429 Maven tests and SpotBugs. Full strict
+`srv-paper-despawn-crash-strict-20261120-r1` passes 471 probes (452 passed,
+19 expected rejections, zero failed/incomplete). The same JAR passes clean restart
+`srv-paper-despawn-restart-20261120-r8` (50 observations), reentrant commands
+`srv-paper-reentrant-command-20261120-r4` (1,920), unloaded commands
+`srv-paper-unloaded-command-20261120-r8` (3,910), loaded commands
+`srv-paper-mob-command-20261120-r7` (2,600), distance
+`srv-paper-despawn-distance-20261120-r11` (448) and precedence
+`srv-paper-despawn-precedence-20261120-r6` (1,296 across twelve boots).
+Release requires the crash report and the five focused regression archives,
+plus the full strict catalog, pinned to the exact plugin/Paper artifacts.
+
+Matrix totals remain 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin. Full MythicMobs
+parity remains incomplete; broader catalogs, callback semantics, external plugins
+and additional Paper versions stay on the roadmap.
+
+
+Previous-artifact reentrant mob commands (2026-11-20): synchronous onDespawn command callbacks
 can remove their own caster or peers, run nested named/global/radius cleanup,
 load the affected chunk and create a new mob. Each selected original UUID fires
 one terminal callback; a child survives the original command snapshot unless a
@@ -24,7 +61,7 @@ fixture waits 40 ticks before checking stable state and explicitly reloading.
 Native callbacks remain deferred; Helstera callbacks remain synchronous. See the
 [command contract](../../docs/MOB_COMMAND_COMPATIBILITY.md) for this verified scope and remaining limits.
 
-The current artifact passes 2,423 Maven tests and SpotBugs. Full strict
+That artifact passes 2,423 Maven tests and SpotBugs. Full strict
 `srv-paper-reentrant-command-strict-20261120-r1` passes 471 probes (452 passed,
 19 expected rejections, zero failed/incomplete). The exact same JAR passes
 unloaded commands `srv-paper-unloaded-command-20261120-r7` (3,910 observations,

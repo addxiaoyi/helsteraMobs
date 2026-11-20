@@ -38,6 +38,25 @@ public final class ScopedVariableSnapshotStore {
     }
 
     public static void save(File file, Map<String, Registry> registries) throws IOException {
+        YamlConfiguration yaml = encode(registries);
+        Path target = file.toPath().toAbsolutePath(), parent = target.getParent();
+        if (parent == null || target.getFileName() == null) throw new IOException("registry path must name a file");
+        Files.createDirectories(parent);
+        Path temporary = Files.createTempFile(parent, "scoped-variables-", ".tmp");
+        try {
+            yaml.save(temporary.toFile());
+            try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) { channel.force(true); }
+            try { Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
+            catch (AtomicMoveNotSupportedException ignored) { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING); }
+        } finally { Files.deleteIfExists(temporary); }
+    }
+
+    /** The same validated format can travel with an entity's own saved data. */
+    public static String serialize(Map<String, Registry> registries) throws IOException {
+        return encode(registries).saveToString();
+    }
+
+    private static YamlConfiguration encode(Map<String, Registry> registries) throws IOException {
         // Validate every scope before pruning or touching the previous file.
         YamlConfiguration yaml = new YamlConfiguration(); yaml.set("registry-format", 1);
         ConfigurationSection entries = yaml.createSection("registries");
@@ -54,22 +73,24 @@ public final class ScopedVariableSnapshotStore {
             writeRetention(section.createSection("variable-retention"), registry.variableRetention());
             writeRetention(section.createSection("location-retention"), registry.locationRetention());
         }
-        Path target = file.toPath().toAbsolutePath(), parent = target.getParent();
-        if (parent == null || target.getFileName() == null) throw new IOException("registry path must name a file");
-        Files.createDirectories(parent);
-        Path temporary = Files.createTempFile(parent, "scoped-variables-", ".tmp");
-        try {
-            yaml.save(temporary.toFile());
-            try (FileChannel channel = FileChannel.open(temporary, StandardOpenOption.WRITE)) { channel.force(true); }
-            try { Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
-            catch (AtomicMoveNotSupportedException ignored) { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING); }
-        } finally { Files.deleteIfExists(temporary); }
+        return yaml;
     }
 
     public static Map<String, Registry> load(File file) throws IOException {
         YamlConfiguration yaml = new YamlConfiguration();
         try { yaml.load(file); }
         catch (org.bukkit.configuration.InvalidConfigurationException e) { throw new IOException("invalid scoped variables", e); }
+        return decode(yaml);
+    }
+
+    public static Map<String, Registry> deserialize(String text) throws IOException {
+        YamlConfiguration yaml = new YamlConfiguration();
+        try { yaml.loadFromString(text); }
+        catch (org.bukkit.configuration.InvalidConfigurationException e) { throw new IOException("invalid scoped variables", e); }
+        return decode(yaml);
+    }
+
+    private static Map<String, Registry> decode(YamlConfiguration yaml) throws IOException {
         if (!Integer.valueOf(1).equals(yaml.get("registry-format"))) throw new IOException("unsupported scoped-variable format");
         ConfigurationSection entries = required(yaml, "registries");
         Map<String, Registry> result = new LinkedHashMap<>();

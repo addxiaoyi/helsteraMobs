@@ -1,0 +1,2 @@
+-r requirements-player-variables.txt
+nbtlib==2.0.4

@@ -1,6 +1,6 @@
 # Despawn lifecycle compatibility
 
-Current distance-policy artifact `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af` passes the same unload/cancellation
+Historical distance-policy artifact `14e7ccc9e0dec50430a6fc32316feef064c81fd0fcd80b2f0f3c22c4c9e664af` passes the same unload/cancellation
 contract in [r15](../tools/paper-integration/reports/paper-1.21.1-despawn-lifecycle-20261120-r15.json)
 and the three-boot restart contract in [r7](../tools/paper-integration/reports/paper-1.21.1-despawn-restart-20261120-r7.json).
 Their independent validators reject 43 and 36 mutation controls respectively.
@@ -131,8 +131,10 @@ COW/ZOMBIE/VILLAGER/SLIME defaults and 16/64/192-block/no-player/spectator behav
 
 Open work: intermittent native chunk callback replay, broader player-distance
 boundaries and entity families, kill-command immunity differences between
-NPC/PERSISTENT and other modes, crash recovery for these five modes, external
+NPC/PERSISTENT and other modes, recovery during unfinished writes for these five modes, external
 removal paths, late event cancellation, non-living casters, delayed/asynchronous
 shutdown skills and other Paper/MM versions. Clean restart evidence does not
 establish crash or mid-write recovery. Existing timed PERSISTENT restart and
 variable-lifetime suites provide separate evidence.
+
+Completed-checkpoint SIGKILL recovery now has a separate [crash contract](DESPAWN_CRASH_COMPATIBILITY.md), with raw entity NBT and two forced exits. Its guarantees are limited to completed unload checkpoints; world saves do not refresh native mob variables.

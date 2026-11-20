@@ -977,6 +977,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     public void onDisable() {
         // Dispatch terminal skills and discard disposable UUID state before serializing it.
         if (instances instanceof InstanceManagerImpl manager) manager.despawnDisposableOnShutdown();
+        if (instances != null) {
+            for (var instance : instances().allImpl()) {
+                var entity = instance.baseEntity().orElse(null);
+                if (entity != null && entity.isValid() && !entity.isDead() && instance.options().retainsOnUnload()) {
+                    savePersistentMobVariables(entity);
+                }
+            }
+        }
         if (playerVariables != null) { playerVariables.stop(); playerVariables = null; }
         if (scopedVariablesLoaded) {
             try { dev.helstera.ai.skill.SkillExtras.saveScopedVariables(new java.io.File(getDataFolder(), "scoped-variables.yml")); }
@@ -31044,6 +31052,16 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         }
         String mode = cfg.getString("mob.despawn", cfg.getString("despawn", "NORMAL"));
         if (!dev.helstera.api.instance.SpawnOptions.defaults().despawnMode(mode).retainsOnUnload()) return false;
+        // Same-process suspension keeps the live registry, including callback changes.
+        // First load after a process restart prefers the entity's own checkpoint.
+        if (!suspendedMobSkillTrees.containsKey(entity.getUniqueId())) {
+            try { PersistentMobVariables.restore(entity); }
+            catch (java.io.IOException ex) {
+                getLogger().warning("[Persistent] Variable checkpoint load failed for "
+                        + entity.getUniqueId() + ": " + ex.getMessage());
+                return false;
+            }
+        }
         MobSpawn result = spawnMobCore(mobId, null, living.getLocation(), false, null, living);
         if (result != null && result.instanceId() > 0) unloadingMobCommands.restored(entity.getUniqueId());
         if (result != null && result.instanceId() > 0
@@ -31123,6 +31141,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     private void saveBeforePersistentUnload(dev.helstera.runtime.instance.ModelInstanceImpl instance, String cause) {
         var entity = instance.entity();
         if (entity == null) return;
+        savePersistentMobVariables(entity);
         if ("chunk_unload".equals(cause)) {
             var entry = unloadingMobCommands.remember(instance,
                     ai() == null ? null : ai().profileOf(instance.instanceId()),
@@ -31141,6 +31160,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
             catch (java.io.IOException ex) {
                 getLogger().warning("[Persistent] SkillTree unload save failed for " + entity.getUniqueId() + ": " + ex.getMessage());
             }
+        }
+    }
+
+    private void savePersistentMobVariables(org.bukkit.entity.Entity entity) {
+        try { PersistentMobVariables.save(entity); }
+        catch (java.io.IOException ex) {
+            getLogger().warning("[Persistent] Variable checkpoint save failed for "
+                    + entity.getUniqueId() + ": " + ex.getMessage());
         }
     }
 

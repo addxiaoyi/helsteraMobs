@@ -274,3 +274,5 @@ separate disabled-plugin scheduling exception documented in that contract. Nativ
 broader distance boundaries/families, kill-command immunity, external removal and
 crash recovery remain open. Four-family distance behavior now has scoped evidence
 in the [distance contract](DESPAWN_DISTANCE_COMPATIBILITY.md).
+
+Entity checkpoint persistence now has a separate [crash contract](DESPAWN_CRASH_COMPATIBILITY.md). Retained mobs carry typed scalar/location variables and retention metadata in their entity PDC at unload and clean shutdown. Three real boots and two forced exits verify completed checkpoints, previous-checkpoint recovery, replacement values and terminal cleanup. This does not establish recovery during unfinished writes or real-time persistence after every variable change.
