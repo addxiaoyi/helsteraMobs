@@ -632,6 +632,14 @@ and [lifecycle contract](docs/POTION_LIFECYCLE_COMPATIBILITY.md). This narrow
 Paper 1.21.1-133 / MythicMobs 5.7.2 slice does not promote the complete
 Mechanics or Skills importer rows from `mapped-unverified`.
 
+The same three-boot lifecycle was rerun on November 20 against plugin artifact
+`d34bb161a2aa66e3ccb775e8671067185de4f09393b10184e72013a97daa178a` in
+`srv-paper-potion-restart-strict-20261120-r7`: prepare,
+verify-and-clear, and clean boots pass; saved player/Cow effects tick across a
+restart, removal persists, and the two clients see no stale observer effects.
+This refresh is scoped to that artifact and leaves the complete Mechanics and
+Skills importer rows `mapped-unverified`; see the [r7 report](tools/paper-integration/reports/paper-1.21.1-potion-restart-strict-20261120-r7.json).
+
 Mythic KeyId condition update (2026-11-18): focused Paper fixture
 `srv-paper-mythic-pack-strict-20261118-r18` runs the production importer on a
 Mythic `setvariable` skill, executes its generated Helstera action, and verifies
@@ -2645,8 +2653,14 @@ Incremental trigger-condition update: official `BowTension` now reads the
 actual `EntityShootBowEvent#getForce()` retained in the `on-entity-shoot`
 context, fails closed outside that event, and preserves the 0..1 migration
 range. Runtime, migration, and trigger self-test coverage are included.
-Exploratory Paper 1.21.4 fixture r3 records `bowTensionCondition=passed`; strict
-Paper 1.21.1 evidence remains pending.
+Exploratory Paper 1.21.4 fixture r3 records `bowTensionCondition=passed`. The
+focused strict Paper 1.21.1 fixture `srv-paper-bow-tension-20261120-r10`
+compares six real player shots against both the Helstera evaluator and the
+pinned MythicMobs 5.7.2 `BowTensionCondition`; all values and fail-closed
+controls match. The native `BukkitTriggerMetadata` adapter supplies the event
+force for the condition comparison. This does not claim MythicMobs native player
+trigger dispatch or promote the broader Conditions catalog; see the
+[BowTension compatibility contract](docs/BOW_TENSION_COMPATIBILITY.md).
 
 Incremental spatial-condition update: official `LineOfSightFromOrigin` now
 ray-traces from the metaskill origin to the target eye location, rejects world
@@ -4091,6 +4105,15 @@ verified `>=`/`<=` support remains a Helstera extension rejected by native 5.7.2
 Eleven natural attempts are denied after waiting for the dark pad's light update.
 See the [r27 report](tools/paper-integration/reports/paper-1.21.1-random-spawn-replace-20261119-r27.json)
 and [syntax contract](docs/PLAYER_RADIUS_CONDITION_COMPATIBILITY.md).
+Artifact-specific regression `srv-paper-random-spawn-replace-20261120-r78`
+passes all 31 registered probes on Paper 1.21.1-133 / public MythicMobs 5.7.2
+with plugin SHA-256 `d34bb161a2aa66e3ccb775e8671067185de4f09393b10184e72013a97daa178a`.
+It refreshes the native/imported player-radius, trigger/condition dispatch,
+variable-expiry, and mob-radius alias/lifecycle checks on the November 20 JAR;
+six naturally generated Paper attempts are observed and denied by the configured
+rule. This is a feature-scoped regression, not complete RandomSpawns or strict
+catalog parity; the row remains `mapped-unverified`. See the [r78 report](tools/paper-integration/reports/paper-1.21.1-random-spawn-replace-20261120-r78.json)
+and [redacted log](tools/paper-integration/reports/paper-1.21.1-random-spawn-replace-20261120-r78.log.gz).
 This feature-scoped evidence is not Mythic's exact CLUSTER algorithm, full
 RandomSpawns parity, or the global strict probe catalog. Entity-dependent ADD
 conditions, complete native spawn-reason/chunk-generation behavior,

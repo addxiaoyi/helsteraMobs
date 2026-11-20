@@ -14,6 +14,41 @@ remains the model-bridge build documented below.
 
 Latest full-catalog fixture `srv-paper-model-bridge-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`. [Strict report](reports/paper-1.21.1-model-bridge-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-model-bridge-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-model-bridge-strict-20261120-r1.client-logs.zip) This artifact passes 2,474 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
+Focused BowTension comparison `srv-paper-bow-tension-20261120-r10` passes six
+real Mineflayer player shots on Paper 1.21.1-133. For each observed force,
+Helstera and MythicMobs 5.7.2 agree on `>0.5`, `<0.5`, and `=0.5`; both
+missing-event controls fail closed. The native comparator receives force through
+`BukkitTriggerMetadata.apply`. This does not establish MythicMobs player-trigger
+dispatch. [Evidence report](reports/paper-1.21.1-bow-tension-strict-20261120-r10.json)
+· [Redacted server/client logs](reports/paper-1.21.1-bow-tension-strict-20261120-r10-logs.zip)
+· [Compatibility contract](../../docs/BOW_TENSION_COMPATIBILITY.md)
+
+Artifact-specific RandomSpawns/native regression
+`srv-paper-random-spawn-replace-20261120-r78` passes all 31 probes on Paper
+1.21.1-133 with public MythicMobs 5.7.2 (plugin SHA-256
+`d34bb161a2aa66e3ccb775e8671067185de4f09393b10184e72013a97daa178a`). The
+run includes six observed/cancelled natural spawn attempts and refreshed
+player-radius, dispatch, expiry, and mob-radius lifecycle controls. It is
+feature-scoped evidence; the complete RandomSpawns catalog remains
+`mapped-unverified`. [Report](reports/paper-1.21.1-random-spawn-replace-20261120-r78.json),
+SHA-256 `6982772f869a9ffb93229c621d6649ea83e83855dfdaaaa4c433a8214cc8ffd7` ·
+[Redacted log](reports/paper-1.21.1-random-spawn-replace-20261120-r78.log.gz),
+SHA-256 `83cf9b450ebccc9fb442a1b69994f04f755d7bbdc564846f42a4c2ea828a8e48`.
+
+Potion restart regression on the same plugin artifact
+`srv-paper-potion-restart-strict-20261120-r7` passes prepare, verify-clear, and
+clean boots on Paper 1.21.1-133 with MythicMobs 5.7.2 (plugin SHA-256
+`d34bb161a2aa66e3ccb775e8671067185de4f09393b10184e72013a97daa178a`). Player and imported Cow
+effects persist with ticking duration, clear across the next restart, and do
+not leak stale observer packets. All six restart-contract tests pass. This
+refresh does not replace the 471-probe catalog report or promote complete
+Mechanics/Skills parity. [Report](reports/paper-1.21.1-potion-restart-strict-20261120-r7.json),
+SHA-256 `82394729f8bdc5562659b272187b510d8473b8d23658d8a2be48afbfeb39b247` ·
+[Redacted server log](reports/paper-1.21.1-potion-restart-strict-20261120-r7.log.gz),
+SHA-256 `783e1edb0a911e5827c4fe9035764849ab668440abeacd6409ec2d1c504a878e` ·
+[Redacted client log](reports/paper-1.21.1-potion-restart-strict-20261120-r7.client.log.gz),
+SHA-256 `abd977b9880ad80a83876c4235b707b71b1d8c9ee213d73ae670776e73f36aa3`.
+
 Native MythicMobs model bridge (2026-11-20): the MM 5.7.2 load-event API now
 registers five model mechanics and three model conditions, confirms native holder
 ownership and reports SKILLS/CONDITIONS separately. Automatic spawn binding uses

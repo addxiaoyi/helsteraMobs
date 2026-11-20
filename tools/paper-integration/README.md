@@ -3395,10 +3395,14 @@ The condition catalog also ray-traces from the execution origin to the real
 target eye location and records `line-of-sight-from-origin-condition=true`.
 A fresh Paper fixture run is still pending.
 
-The trigger self-test now constructs an `EntityShootBowEvent` with force 0.75
-and evaluates `bow-tension >0.5` through the event-aware context. Exploratory
-fixture r3 records the independent `bowTensionCondition` probe passed; strict
-Paper 1.21.1 evidence remains pending.
+The trigger self-test constructs an `EntityShootBowEvent` with force 0.75 and
+evaluates `bow-tension >0.5` through the event-aware context. Focused strict
+fixture `srv-paper-bow-tension-20261120-r10` additionally compares six real
+Paper player shots with the pinned MythicMobs 5.7.2 condition after its Bukkit
+event-metadata adapter runs. Helstera and native comparisons agree for strict
+greater-than, strict less-than, and equality checks; missing-event controls fail
+closed. This is a condition-library comparison, not MythicMobs native player
+trigger dispatch. See the [contract](../../docs/BOW_TENSION_COMPATIBILITY.md).
 
 The condition catalog also checks literal `string-equals yes yes` and rejects
 `string-equals yes no`; the structured log records

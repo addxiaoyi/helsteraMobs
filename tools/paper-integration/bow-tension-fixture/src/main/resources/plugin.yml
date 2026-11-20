@@ -1,0 +1,6 @@
+name: HelsteraBowTensionProbe
+version: '1.0'
+api-version: '1.21'
+main: dev.helstera.test.bowtension.BowTensionProbe
+depend: [helsteraMobs]
+softdepend: [MythicMobs]

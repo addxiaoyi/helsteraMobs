@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-bow-tension-20261120-r10",
+  "evidenceMode": "strict-condition-comparison",
+  "generatedAtUtc": "2026-11-20T19:21:05.801411+00:00",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "pluginSha256": "402d2aaf2f621ced2c133e7a2d3b416fef9628f51c2374cf2b5c30f510eb750a",
+  "probeJarSha256": "0f97eb1d3068b47dbbab193829760ff2b6eacad452df6c30e772258448774c10",
+  "comparisonScope": "Real player EntityShootBowEvent; compare Helstera runtime condition and MythicMobs 5.7.2 BowTensionCondition after BukkitTriggerMetadata.apply. This does not claim MythicMobs native player trigger dispatch.",
+  "sourceHashes": {
+    "tools/paper-integration/run-bow-tension-fixture.py": "4c9b1616ae789d62d4c67507714a129003168b47de528c3c01d29a476c710ea8",
+    "tools/paper-integration/bow-tension-client.js": "3f977ccdb855f0b446aa5467861451aa9f45209cfbb6922faab567846dfdba77",
+    "tools/paper-integration/validate-bow-tension-evidence.py": "09a51932fbecb19b2ccf5484967389793410704347046002b33833bc646af7b8",
+    "tools/paper-integration/test-bow-tension-evidence.py": "b6585f1a99c518347762d656b33c6b1814c10da2a74a980e9e9adb58b3918918",
+    "tools/paper-integration/bow-tension-fixture/pom.xml": "dc09308a4413a8879aa561bc2506008db104eeb4f86084db28646dd01fec4620",
+    "tools/paper-integration/bow-tension-fixture/src/main/resources/plugin.yml": "e96cd9d708e8545e0b0618e04b5a6d242a0ba5388a14c23e30de5eef4e9c0aa9",
+    "tools/paper-integration/bow-tension-fixture/src/main/java/dev/helstera/test/bowtension/BowTensionProbe.java": "c5d3b19d1b6cf216a28f25abecf13c46d297f5d622d64f5231ee94095ddf362a"
+  },
+  "observations": [
+    "[19:21:03] [Server thread/INFO]: [HelsteraBowTensionProbe] BOW_TENSION_ROW|index=1|force=0.322500|hel=010|mythic=010|helNoEvent=true|mythicNoForce=true",
+    "[19:21:03] [Server thread/INFO]: [HelsteraBowTensionProbe] BOW_TENSION_ROW|index=2|force=0.440000|hel=010|mythic=010|helNoEvent=true|mythicNoForce=true",
+    "[19:21:03] [Server thread/INFO]: [HelsteraBowTensionProbe] BOW_TENSION_ROW|index=3|force=0.562500|hel=100|mythic=100|helNoEvent=true|mythicNoForce=true",
+    "[19:21:03] [Server thread/INFO]: [HelsteraBowTensionProbe] BOW_TENSION_ROW|index=4|force=0.690000|hel=100|mythic=100|helNoEvent=true|mythicNoForce=true",
+    "[19:21:04] [Server thread/INFO]: [HelsteraBowTensionProbe] BOW_TENSION_ROW|index=5|force=0.822500|hel=100|mythic=100|helNoEvent=true|mythicNoForce=true",
+    "[19:21:04] [Server thread/INFO]: [HelsteraBowTensionProbe] BOW_TENSION_ROW|index=6|force=0.960000|hel=100|mythic=100|helNoEvent=true|mythicNoForce=true"
+  ],
+  "clientSummary": [
+    "BOW_TENSION_CLIENT|name=BowTensionProbe|shots=6|charges=3,4,5,6,7,8|passed=true"
+  ],
+  "bootExitCode": 0,
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "10c4ce041e3ce33110817925d4e7b20acda999d9463d6aee7522539c0c5673b8"
+    },
+    {
+      "path": "client.log",
+      "sha256": "4f59c90237727995dc4309a2b08f193fc94a85877408e053efbb6e09b30bed70"
+    }
+  ],
+  "logArchive": "paper-1.21.1-bow-tension-strict-20261120-r10-logs.zip",
+  "logArchiveSha256": "0e6d36d863fd670f35e039542955cc7b72df98bc5f3ba030e17ff87c916179c5"
+}

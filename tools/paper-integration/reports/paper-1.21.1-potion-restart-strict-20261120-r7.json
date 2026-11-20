@@ -1,0 +1,83 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-11-20T18:26:59.8550941Z",
+  "fixtureDirectory": "srv-paper-potion-restart-strict-20261120-r7",
+  "evidenceMode": "strict-focused",
+  "paperVersion": "1.21.1-133-ver/1.21.1@3cb8529 (2025-03-28T16:14:36Z)",
+  "paperApiVersion": "1.21.1-R0.1-SNAPSHOT",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "pluginSha256": "d34bb161a2aa66e3ccb775e8671067185de4f09393b10184e72013a97daa178a",
+  "externalPlugin": "MythicMobs 5.7.2 (Modrinth FTWvGuE5)",
+  "externalPluginSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "identities": {
+    "owner": "d618c52e-12cc-36df-9d15-acf59ee4efbc",
+    "watcher": "c0d79bef-3bba-34fa-88a3-ad59604c07ba",
+    "cow": "9f4d1249-15e8-46a7-8f69-0a61e327a073"
+  },
+  "boots": [
+    {
+      "stage": "prepare",
+      "result": "passed",
+      "nativePlayerEffects": 2,
+      "importedCowEffects": 2,
+      "log": "potion-restart-prepare.log"
+    },
+    {
+      "stage": "verify-clear",
+      "result": "passed",
+      "persistedUUIDs": true,
+      "loginEffectPacketsMatchedSavedNBT": true,
+      "effectDurationTicked": true,
+      "effectsRemoved": true,
+      "log": "potion-restart-verify-clear.log"
+    },
+    {
+      "stage": "clean",
+      "result": "passed",
+      "effectsResurrected": false,
+      "observerPacketsClean": true,
+      "log": "potion-restart-clean.log"
+    }
+  ],
+  "activeEffectsBeforeRestart": {
+    "owner": [
+      {
+        "id": "minecraft:haste",
+        "amplifier": 2,
+        "duration": 1188
+      },
+      {
+        "id": "minecraft:invisibility",
+        "amplifier": 0,
+        "duration": 1188
+      }
+    ],
+    "cow": [
+      {
+        "id": "minecraft:haste",
+        "amplifier": 2,
+        "duration": 1181
+      },
+      {
+        "id": "minecraft:invisibility",
+        "amplifier": 0,
+        "duration": 1181
+      }
+    ]
+  },
+  "cleanEffectsAfterClear": {
+    "owner": [],
+    "cow": []
+  },
+  "packetAssertions": {
+    "prepare": 2,
+    "verifyClear": 2,
+    "clean": 2,
+    "observerEffectLeaks": 0
+  },
+  "serverLog": "paper-1.21.1-potion-restart-strict-20261120-r7.log.gz",
+  "clientLog": "paper-1.21.1-potion-restart-strict-20261120-r7.client.log.gz",
+  "contractSha256": "f1dae3ac74cc9746a15b79d398c9789183d1cc5cbdd9b9c47aa64812a2fda9b7",
+  "clientSha256": "825e493ed5d7e77106400a246ef4a737d122854966774f06489e8fed14d8359c",
+  "runnerSha256": "11124263282207b934897d4a59a826a941309f24927c545f3a159bf7db3afae2"
+}
