@@ -12,7 +12,8 @@
     "requiresDespawnCrashEvidence": true,
     "requiresDespawnCrashBoundaryEvidence": true,
     "requiresRapidReloadEvidence": true,
-    "requiresTerminalCallbackEvidence": true
+    "requiresTerminalCallbackEvidence": true,
+    "requiresCancelledDeathEvidence": true
   },
   "combinations": [
     {

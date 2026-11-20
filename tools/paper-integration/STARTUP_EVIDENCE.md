@@ -2,6 +2,27 @@
 
 Latest full-catalog fixture `srv-paper-terminal-callback-strict-20261120-r3` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8`. [Strict report](reports/paper-1.21.1-terminal-callback-strict-20261120-r3.json) · [Redacted server log](reports/paper-1.21.1-terminal-callback-strict-20261120-r3.log.gz) · [Redacted client logs](reports/paper-1.21.1-terminal-callback-strict-20261120-r3.client-logs.zip) This artifact passes 2,442 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
+Cancelled-death comparison (2026-11-20):
+`srv-paper-cancelled-death-20261120-r3` validates 96 parent observations,
+32 parents, 64 children, 276 command callbacks and 128 child-state observations
+on the current production JAR. Sixteen COW/ZOMBIE direct/imported cases cover
+living controls, synchronous skill cancellation, late external cancellation and
+confirmed deaths. Cancelled Helstera parents retain their UUID, marker, controller
+and ordinary pending work; terminal delays/repeats/nested summons and final
+cleanup pass. All 73 semantic evidence mutations are rejected.
+
+Four native MM 5.7.2 late-cancellation cases revive the entity but lose its active
+registry, cancel pending work and leave an orphan after native command cleanup.
+This is an enumerated compatibility difference, never a parity match. Separate
+fixture teardown removes the observed orphans afterward. The gate requires this
+scoped comparison for the exact release artifact and Paper build. Historical
+`srv-paper-cancelled-death-20261120-r1` and
+`srv-paper-cancelled-death-20261120-r2` remain observation-only: their native skill
+cancellation lacked explicit synchronous trigger dispatch and did not cancel
+death. See [the cancellation contract](../../docs/CANCELLED_DEATH_COMPATIBILITY.md) for stimuli, raw evidence and limits.
+Matrix totals remain 116 implemented-runtime / 33 mapped-unverified /
+3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin.
+
 Terminal callback continuation fix (2026-11-20): delayed, repeated and nested
 onDespawn/onDeath work now retains its own execution lifetime and caster variables.
 `srv-paper-terminal-callback-20261120-r7` verifies a scoped match against native
@@ -29,10 +50,11 @@ zero-delay first repetition immediately, with cancellation tracking intact.
 
 Matrix totals remain 116 implemented-runtime / 33 mapped-unverified /
 3 unsupported-preserved / 0 missing / 2 blocked-by-external-plugin. Full parity
-remains incomplete. Cancelled-death/reload/expiry behavior has focused unit
-coverage; native Paper comparisons for those cases, cast queues, cross-trigger
-cooldowns, visual/asynchronous callbacks and child inheritance/restart remain
-open. Historical entries below retain their original artifact scope.
+remains incomplete. Cancelled death now has the scoped native comparison above;
+other cancellation priorities/orderings, reload during callbacks, variable
+mutation/expiry, cast queues, cross-trigger cooldowns, visual/asynchronous work
+and child inheritance/restart remain open. Historical entries below retain
+their original artifact scope.
 
 Intermediate terminal candidate: `srv-paper-terminal-callback-strict-20261120-r2`
 passed the 471-probe catalog on plugin

@@ -1,0 +1,258 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-cancelled-death-20261120-r3",
+  "evidenceMode": "comparison-with-exception",
+  "knownExceptions": [
+    "MM-5.7.2-deferred-terminal-command-dispatch",
+    "MM-5.7.2-late-cancelled-death-orphan"
+  ],
+  "parityStatus": "scoped-comparison",
+  "generatedAtUtc": "2026-11-20T11:13:38.497756+00:00",
+  "pluginSha256": "d16e14c17d07e5de7413e25cd882a46627b24d1c1269ed34c92473cf71b4ccd8",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "00621f29d08fa9cf1bd88d8bc80e45ced24dd4f7ed87160d4ac2b012a698c809",
+  "sourceHashes": {
+    "tools/paper-integration/run-cancelled-death-fixture.py": "3402a9b46eaf738d3772159c00007f2b301a19a01a868c2b7dfd6ace0cc636f7",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/cancelled-death-cases.py": "6a5767d4935db2e667f1824c14c55f2ad9175d58abdc79f05bc09ecc52d5c719",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/CancelledDeathProbe.java": "6ea4a8804c5e42dc05276d839653a9ef881a1430cd4567a3ee02db18203bc948",
+    "tools/paper-integration/validate-cancelled-death.py": "ef8d37e0cc4c600c66bf5a6372cd2f9bc7caddd1127d4b2f79e57a37d08f7cf1",
+    "tools/paper-integration/validate-player-variables.py": "59f014f63b13a327490260de2915a6380eb397201bf4c47be73240b6bb4b8064",
+    "tools/paper-integration/test-cancelled-death-evidence.py": "956e14a869076be73c60fd009328aad8f3b3f55666557a1bd42845cddc91485c"
+  },
+  "observations": [
+    "[11:13:58] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_direct|backend=native|phase=initial|uuid=4a3d8aa6-cdb0-4563-bdab-b808aa40bfc4|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=99",
+    "[11:13:58] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_direct|backend=runtime|phase=initial|uuid=96d38fcc-f6c9-4bb2-abb5-b7c9cf3baafa|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=99",
+    "[11:14:05] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_direct|backend=native|phase=settled|uuid=4a3d8aa6-cdb0-4563-bdab-b808aa40bfc4|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=254",
+    "[11:14:05] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_direct|backend=runtime|phase=settled|uuid=96d38fcc-f6c9-4bb2-abb5-b7c9cf3baafa|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=254",
+    "[11:14:10] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_direct|backend=native|phase=cleaned|uuid=4a3d8aa6-cdb0-4563-bdab-b808aa40bfc4|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=354",
+    "[11:14:10] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_direct|backend=runtime|phase=cleaned|uuid=96d38fcc-f6c9-4bb2-abb5-b7c9cf3baafa|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=354",
+    "[11:14:12] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_imported|backend=native|phase=initial|uuid=8850eeda-0f8a-4df5-ad3a-b61b81538d22|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=364",
+    "[11:14:12] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_imported|backend=runtime|phase=initial|uuid=ff007a7e-85d7-447a-89f4-d212620e4e70|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=364",
+    "[11:14:20] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_imported|backend=native|phase=settled|uuid=8850eeda-0f8a-4df5-ad3a-b61b81538d22|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=519",
+    "[11:14:20] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_imported|backend=runtime|phase=settled|uuid=ff007a7e-85d7-447a-89f4-d212620e4e70|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=519",
+    "[11:14:25] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_imported|backend=native|phase=cleaned|uuid=8850eeda-0f8a-4df5-ad3a-b61b81538d22|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=619",
+    "[11:14:25] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_cow_imported|backend=runtime|phase=cleaned|uuid=ff007a7e-85d7-447a-89f4-d212620e4e70|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=619",
+    "[11:14:27] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_direct|backend=native|phase=initial|uuid=f334e8a0-d41f-4dab-b3f5-5865f9bdd41a|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=629",
+    "[11:14:27] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_direct|backend=runtime|phase=initial|uuid=deab7bbd-2cf2-4929-a2af-8d06135fc4c9|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=629",
+    "[11:14:34] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_direct|backend=native|phase=settled|uuid=f334e8a0-d41f-4dab-b3f5-5865f9bdd41a|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=784",
+    "[11:14:34] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_direct|backend=runtime|phase=settled|uuid=deab7bbd-2cf2-4929-a2af-8d06135fc4c9|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=784",
+    "[11:14:39] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_direct|backend=native|phase=cleaned|uuid=f334e8a0-d41f-4dab-b3f5-5865f9bdd41a|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=884",
+    "[11:14:39] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_direct|backend=runtime|phase=cleaned|uuid=deab7bbd-2cf2-4929-a2af-8d06135fc4c9|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=884",
+    "[11:14:42] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_imported|backend=native|phase=initial|uuid=bb72cac1-e47b-4480-ad63-5c342504ac09|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=894",
+    "[11:14:42] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_imported|backend=runtime|phase=initial|uuid=e8d5a9ab-6aaa-4605-a5ae-7fc7d7f98c50|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=894",
+    "[11:14:49] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_imported|backend=native|phase=settled|uuid=bb72cac1-e47b-4480-ad63-5c342504ac09|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1049",
+    "[11:14:49] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_imported|backend=runtime|phase=settled|uuid=e8d5a9ab-6aaa-4605-a5ae-7fc7d7f98c50|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1049",
+    "[11:14:54] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_imported|backend=native|phase=cleaned|uuid=bb72cac1-e47b-4480-ad63-5c342504ac09|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1149",
+    "[11:14:54] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=control_zombie_imported|backend=runtime|phase=cleaned|uuid=e8d5a9ab-6aaa-4605-a5ae-7fc7d7f98c50|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1149",
+    "[11:14:56] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_direct|backend=native|phase=initial|uuid=329f139a-cc8b-44ea-8055-6a81cef9e78b|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1159",
+    "[11:14:56] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_direct|backend=runtime|phase=initial|uuid=24b22c9e-b8df-45ff-a2e9-b0b71da67e09|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1159",
+    "[11:15:04] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_direct|backend=native|phase=settled|uuid=329f139a-cc8b-44ea-8055-6a81cef9e78b|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1314",
+    "[11:15:04] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_direct|backend=runtime|phase=settled|uuid=24b22c9e-b8df-45ff-a2e9-b0b71da67e09|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1314",
+    "[11:15:09] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_direct|backend=native|phase=cleaned|uuid=329f139a-cc8b-44ea-8055-6a81cef9e78b|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1414",
+    "[11:15:09] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_direct|backend=runtime|phase=cleaned|uuid=24b22c9e-b8df-45ff-a2e9-b0b71da67e09|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1414",
+    "[11:15:11] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_imported|backend=native|phase=initial|uuid=6d90a44f-f558-4b42-9edf-bd88894b54c1|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1424",
+    "[11:15:11] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_imported|backend=runtime|phase=initial|uuid=299320d0-acb8-4085-b7d1-c95683a3959e|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1424",
+    "[11:15:18] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_imported|backend=native|phase=settled|uuid=6d90a44f-f558-4b42-9edf-bd88894b54c1|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1579",
+    "[11:15:18] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_imported|backend=runtime|phase=settled|uuid=299320d0-acb8-4085-b7d1-c95683a3959e|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1579",
+    "[11:15:23] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_imported|backend=native|phase=cleaned|uuid=6d90a44f-f558-4b42-9edf-bd88894b54c1|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1679",
+    "[11:15:23] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_cow_imported|backend=runtime|phase=cleaned|uuid=299320d0-acb8-4085-b7d1-c95683a3959e|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1679",
+    "[11:15:26] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_direct|backend=native|phase=initial|uuid=4b748fb3-9113-473b-bfbc-6cb05cb2af4c|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1689",
+    "[11:15:26] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_direct|backend=runtime|phase=initial|uuid=830b824e-729a-4809-9301-2bb54698546e|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1689",
+    "[11:15:33] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_direct|backend=native|phase=settled|uuid=4b748fb3-9113-473b-bfbc-6cb05cb2af4c|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1844",
+    "[11:15:33] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_direct|backend=runtime|phase=settled|uuid=830b824e-729a-4809-9301-2bb54698546e|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=1844",
+    "[11:15:38] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_direct|backend=native|phase=cleaned|uuid=4b748fb3-9113-473b-bfbc-6cb05cb2af4c|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1944",
+    "[11:15:38] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_direct|backend=runtime|phase=cleaned|uuid=830b824e-729a-4809-9301-2bb54698546e|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1944",
+    "[11:15:41] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_imported|backend=native|phase=initial|uuid=ad27ec9a-035b-4aad-b20e-dd5e923f2c8b|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1954",
+    "[11:15:41] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_imported|backend=runtime|phase=initial|uuid=2ee1df57-3b4e-4d6d-95f9-b928cb5f3e71|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=1954",
+    "[11:15:48] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_imported|backend=native|phase=settled|uuid=ad27ec9a-035b-4aad-b20e-dd5e923f2c8b|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2109",
+    "[11:15:48] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_imported|backend=runtime|phase=settled|uuid=2ee1df57-3b4e-4d6d-95f9-b928cb5f3e71|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2109",
+    "[11:15:53] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_imported|backend=native|phase=cleaned|uuid=ad27ec9a-035b-4aad-b20e-dd5e923f2c8b|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2209",
+    "[11:15:53] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=skillcancelled_zombie_imported|backend=runtime|phase=cleaned|uuid=2ee1df57-3b4e-4d6d-95f9-b928cb5f3e71|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2209",
+    "[11:15:55] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_direct|backend=native|phase=initial|uuid=3472f61c-0b45-4fc9-9714-c0268333554a|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2219",
+    "[11:15:55] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_direct|backend=runtime|phase=initial|uuid=99d5f5dc-b0fb-4d1c-891a-aa0e910224dd|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2219",
+    "[11:16:02] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_direct|backend=native|phase=settled|uuid=3472f61c-0b45-4fc9-9714-c0268333554a|entity=true|registry=false|health=20.0|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2374",
+    "[11:16:02] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_direct|backend=runtime|phase=settled|uuid=99d5f5dc-b0fb-4d1c-891a-aa0e910224dd|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2374",
+    "[11:16:07] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_direct|backend=native|phase=cleaned|uuid=3472f61c-0b45-4fc9-9714-c0268333554a|entity=true|registry=false|health=20.0|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2474",
+    "[11:16:07] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_direct|backend=runtime|phase=cleaned|uuid=99d5f5dc-b0fb-4d1c-891a-aa0e910224dd|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2474",
+    "[11:16:10] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_imported|backend=native|phase=initial|uuid=a6aa09d6-35a0-4679-8253-72cabe73d750|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2484",
+    "[11:16:10] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_imported|backend=runtime|phase=initial|uuid=d872a5db-e7b4-495a-9aae-d5623e71884a|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2484",
+    "[11:16:17] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_imported|backend=native|phase=settled|uuid=a6aa09d6-35a0-4679-8253-72cabe73d750|entity=true|registry=false|health=20.0|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2639",
+    "[11:16:17] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_imported|backend=runtime|phase=settled|uuid=d872a5db-e7b4-495a-9aae-d5623e71884a|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2639",
+    "[11:16:22] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_imported|backend=native|phase=cleaned|uuid=a6aa09d6-35a0-4679-8253-72cabe73d750|entity=true|registry=false|health=20.0|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2739",
+    "[11:16:22] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_cow_imported|backend=runtime|phase=cleaned|uuid=d872a5db-e7b4-495a-9aae-d5623e71884a|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2739",
+    "[11:16:24] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_direct|backend=native|phase=initial|uuid=cc774030-8d3c-49a5-9778-eb23984a83a3|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2749",
+    "[11:16:24] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_direct|backend=runtime|phase=initial|uuid=145fdec4-78b4-4c25-bde7-f5b98a439794|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=2749",
+    "[11:16:32] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_direct|backend=native|phase=settled|uuid=cc774030-8d3c-49a5-9778-eb23984a83a3|entity=true|registry=false|health=20.0|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2904",
+    "[11:16:32] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_direct|backend=runtime|phase=settled|uuid=145fdec4-78b4-4c25-bde7-f5b98a439794|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=2904",
+    "[11:16:37] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_direct|backend=native|phase=cleaned|uuid=cc774030-8d3c-49a5-9778-eb23984a83a3|entity=true|registry=false|health=20.0|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3004",
+    "[11:16:37] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_direct|backend=runtime|phase=cleaned|uuid=145fdec4-78b4-4c25-bde7-f5b98a439794|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3004",
+    "[11:16:39] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_imported|backend=native|phase=initial|uuid=cf430310-879e-4c89-aaa4-993254a6f3b7|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3014",
+    "[11:16:39] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_imported|backend=runtime|phase=initial|uuid=48fae0b2-b622-4c48-ba9e-45c11dfac4a5|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3014",
+    "[11:16:47] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_imported|backend=native|phase=settled|uuid=cf430310-879e-4c89-aaa4-993254a6f3b7|entity=true|registry=false|health=20.0|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3169",
+    "[11:16:47] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_imported|backend=runtime|phase=settled|uuid=48fae0b2-b622-4c48-ba9e-45c11dfac4a5|entity=true|registry=true|health=20.0|marker=73|children=2|visuals=33|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3169",
+    "[11:16:52] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_imported|backend=native|phase=cleaned|uuid=cf430310-879e-4c89-aaa4-993254a6f3b7|entity=true|registry=false|health=20.0|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3269",
+    "[11:16:52] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=cancelled_zombie_imported|backend=runtime|phase=cleaned|uuid=48fae0b2-b622-4c48-ba9e-45c11dfac4a5|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3269",
+    "[11:16:54] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_direct|backend=native|phase=initial|uuid=d5b63dd7-9296-4ed3-a16f-8a2a7f7515c8|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3279",
+    "[11:16:54] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_direct|backend=runtime|phase=initial|uuid=cb7538fc-b00a-4c45-80dd-4f408c84ef4e|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3279",
+    "[11:17:01] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_direct|backend=native|phase=settled|uuid=d5b63dd7-9296-4ed3-a16f-8a2a7f7515c8|entity=false|registry=false|health=absent|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3434",
+    "[11:17:01] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_direct|backend=runtime|phase=settled|uuid=cb7538fc-b00a-4c45-80dd-4f408c84ef4e|entity=false|registry=false|health=absent|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3434",
+    "[11:17:06] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_direct|backend=native|phase=cleaned|uuid=d5b63dd7-9296-4ed3-a16f-8a2a7f7515c8|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3534",
+    "[11:17:06] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_direct|backend=runtime|phase=cleaned|uuid=cb7538fc-b00a-4c45-80dd-4f408c84ef4e|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3534",
+    "[11:17:09] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_imported|backend=native|phase=initial|uuid=3bc98cb3-65a4-4a00-8a21-8b22867782df|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3544",
+    "[11:17:09] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_imported|backend=runtime|phase=initial|uuid=c7cde6c0-e10b-4b23-aba2-9bcb798a4077|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3544",
+    "[11:17:16] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_imported|backend=native|phase=settled|uuid=3bc98cb3-65a4-4a00-8a21-8b22867782df|entity=false|registry=false|health=absent|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3699",
+    "[11:17:16] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_imported|backend=runtime|phase=settled|uuid=c7cde6c0-e10b-4b23-aba2-9bcb798a4077|entity=false|registry=false|health=absent|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3699",
+    "[11:17:21] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_imported|backend=native|phase=cleaned|uuid=3bc98cb3-65a4-4a00-8a21-8b22867782df|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3799",
+    "[11:17:21] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_cow_imported|backend=runtime|phase=cleaned|uuid=c7cde6c0-e10b-4b23-aba2-9bcb798a4077|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3799",
+    "[11:17:23] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_direct|backend=native|phase=initial|uuid=2b3a7627-fcd3-4602-96c9-ad96e36d6cc2|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3809",
+    "[11:17:23] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_direct|backend=runtime|phase=initial|uuid=41a30b0b-15e5-4353-a4cf-d5f14a9c0079|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=3809",
+    "[11:17:30] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_direct|backend=native|phase=settled|uuid=2b3a7627-fcd3-4602-96c9-ad96e36d6cc2|entity=false|registry=false|health=absent|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3964",
+    "[11:17:30] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_direct|backend=runtime|phase=settled|uuid=41a30b0b-15e5-4353-a4cf-d5f14a9c0079|entity=false|registry=false|health=absent|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=3964",
+    "[11:17:35] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_direct|backend=native|phase=cleaned|uuid=2b3a7627-fcd3-4602-96c9-ad96e36d6cc2|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4064",
+    "[11:17:35] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_direct|backend=runtime|phase=cleaned|uuid=41a30b0b-15e5-4353-a4cf-d5f14a9c0079|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4064",
+    "[11:17:38] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_imported|backend=native|phase=initial|uuid=13beebe8-87b6-40bc-821c-10a3a7aca816|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4074",
+    "[11:17:38] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_imported|backend=runtime|phase=initial|uuid=77e0199e-d39b-4a40-bf0f-88491d66c61c|entity=true|registry=true|health=20.0|marker=73|children=0|visuals=11|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4074",
+    "[11:17:45] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_imported|backend=native|phase=settled|uuid=13beebe8-87b6-40bc-821c-10a3a7aca816|entity=false|registry=false|health=absent|marker=absent|children=2|visuals=0|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=4229",
+    "[11:17:45] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_imported|backend=runtime|phase=settled|uuid=77e0199e-d39b-4a40-bf0f-88491d66c61c|entity=false|registry=false|health=absent|marker=absent|children=2|visuals=22|terminalExecutions=0|ownerRecords=1|minionRecords=2|tick=4229",
+    "[11:17:50] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_imported|backend=native|phase=cleaned|uuid=13beebe8-87b6-40bc-821c-10a3a7aca816|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4329",
+    "[11:17:50] [Server thread/INFO]: [HelsteraCancelledDeathProbe] CDEATH_ROW|key=death_zombie_imported|backend=runtime|phase=cleaned|uuid=77e0199e-d39b-4a40-bf0f-88491d66c61c|entity=false|registry=false|health=absent|marker=absent|children=0|visuals=0|terminalExecutions=0|ownerRecords=0|minionRecords=0|tick=4329"
+  ],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "3a3ae5d716ffd15051bf35c68bc729d0e636c36955e4169b883f6a810f438911"
+    },
+    {
+      "path": "source-mobs.yml",
+      "sha256": "b0dd5875884df3f617c1699022eeaa1bd52b900b1a173133543d123bb3d48fe9"
+    },
+    {
+      "path": "source-skills.yml",
+      "sha256": "127cca3fcbcc618e5ad5d898a5f170632acd76876d757e12b3bc1abe98aafbeb"
+    },
+    {
+      "path": "snapshots/final-scoped.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "snapshots/scoped-variables.yml",
+      "sha256": "ebdb81bd5a14a3e8876dc6ebf7f1cd3a5290986aed4f81498f1a2a996bd44260"
+    },
+    {
+      "path": "imports/cd_cancelled_cow_direct.yml",
+      "sha256": "04127b2e7426657374507cd94ad0d452788705c68315241f44aebd68d35fd731"
+    },
+    {
+      "path": "imports/cd_cancelled_cow_imported.yml",
+      "sha256": "4dbbf85ada3f231bd7b08f139163fef99c1c451ae92a6efef35d01c00e255052"
+    },
+    {
+      "path": "imports/cd_cancelled_zombie_direct.yml",
+      "sha256": "8f2c304ac53e21782f0ec878a4cac80f59f335af3e169d58aa31e456aa04c6b9"
+    },
+    {
+      "path": "imports/cd_cancelled_zombie_imported.yml",
+      "sha256": "bc8895971ce58999ab300085fdb834e369c542f8865fc737082ed2f486e6eef4"
+    },
+    {
+      "path": "imports/cd_control_cow_direct.yml",
+      "sha256": "bb3f33c45fb93bf7aedbf6f1d034101bfd648b0ebab265e5b49e03e511829144"
+    },
+    {
+      "path": "imports/cd_control_cow_imported.yml",
+      "sha256": "2a0770691b759115961bf4ccef410a7a252cb64b8581eab0e5cc1a6f9b14fc4b"
+    },
+    {
+      "path": "imports/cd_control_zombie_direct.yml",
+      "sha256": "a41e3f8791a5337b8ec56cff11cbbb03773a75aa24bb4d964be7c1d2250aef14"
+    },
+    {
+      "path": "imports/cd_control_zombie_imported.yml",
+      "sha256": "8e93e0e0dc219b79fbb310eeb27b05fd9e91c3680b4f54e17d00ce41dd95c2a5"
+    },
+    {
+      "path": "imports/cd_death_cow_direct.yml",
+      "sha256": "04127b2e7426657374507cd94ad0d452788705c68315241f44aebd68d35fd731"
+    },
+    {
+      "path": "imports/cd_death_cow_imported.yml",
+      "sha256": "bd1b9ebfc56c44b95ba3a70cf4d859a119b8f305373ac7ba55505e47f5f42d05"
+    },
+    {
+      "path": "imports/cd_death_zombie_direct.yml",
+      "sha256": "8f2c304ac53e21782f0ec878a4cac80f59f335af3e169d58aa31e456aa04c6b9"
+    },
+    {
+      "path": "imports/cd_death_zombie_imported.yml",
+      "sha256": "bcae091b9c2482d1f45e044ae58ba72fbb8c94dc3e41a0fe28ece8f271e35775"
+    },
+    {
+      "path": "imports/cd_skillcancelled_cow_direct.yml",
+      "sha256": "ef4707293d13859de44da61b164249d263936690fec52c9f6725602364b1672c"
+    },
+    {
+      "path": "imports/cd_skillcancelled_cow_imported.yml",
+      "sha256": "49c9e9edbb72e9ab858c7b35aa1ad285117c002d127198b0c3dade8f55cd77d7"
+    },
+    {
+      "path": "imports/cd_skillcancelled_zombie_direct.yml",
+      "sha256": "633d1cd5bc9245aac65feccb72bc9ccf867299bbcd54a3fde3d1bc019c073f9f"
+    },
+    {
+      "path": "imports/cd_skillcancelled_zombie_imported.yml",
+      "sha256": "b718ff36401173c8cffa11903d68964177754d0ca9375b6d7fd6913e9ee911ec"
+    },
+    {
+      "path": "imports/mythic_cd_child_never.yml",
+      "sha256": "577e7c8d8b4b1e428ecccaa75c2cde7b580cb1faf8b9d1f327f7c5ac4942c1a5"
+    },
+    {
+      "path": "imports/mythic_cd_child_persistent.yml",
+      "sha256": "5c4b9d2b65ad1f83e366e475712878b089ad8df516318238291798dc94dbbafc"
+    },
+    {
+      "path": "imports/skills.yml",
+      "sha256": "7a709aa74c79190abeac49fa1ab85c968ff4aca9adad94e8547ba41443335742"
+    }
+  ],
+  "boot": {
+    "startedAtUtc": "2026-11-20T11:13:38.505291+00:00",
+    "stoppedAtUtc": "2026-11-20T11:17:51.935674+00:00",
+    "exitCode": 0
+  },
+  "gapCases": [],
+  "nativeCancellationExceptions": [
+    {
+      "key": "cancelled_cow_direct",
+      "uuid": "3472f61c-0b45-4fc9-9714-c0268333554a",
+      "registryLost": true,
+      "pendingCancelled": true,
+      "commandCleanupOrphan": true
+    },
+    {
+      "key": "cancelled_cow_imported",
+      "uuid": "a6aa09d6-35a0-4679-8253-72cabe73d750",
+      "registryLost": true,
+      "pendingCancelled": true,
+      "commandCleanupOrphan": true
+    },
+    {
+      "key": "cancelled_zombie_direct",
+      "uuid": "cc774030-8d3c-49a5-9778-eb23984a83a3",
+      "registryLost": true,
+      "pendingCancelled": true,
+      "commandCleanupOrphan": true
+    },
+    {
+      "key": "cancelled_zombie_imported",
+      "uuid": "cf430310-879e-4c89-aaa4-993254a6f3b7",
+      "registryLost": true,
+      "pendingCancelled": true,
+      "commandCleanupOrphan": true
+    }
+  ],
+  "logArchive": "paper-1.21.1-cancelled-death-20261120-r3-logs.zip",
+  "logArchiveSha256": "7c68dd61f748f6a31e46ae79ab7d0a91c0a7b9d4df171ca457697e30391059e5"
+}

@@ -55,7 +55,11 @@
         "report": "tools/paper-integration/reports/paper-1.21.1-despawn-crash-chunk-clock-20261120-r3.json",
         "reportSha256": "e032593b02d736a6179f76ddf07a75f8edf784112e40b1616cec98a82cf2c19c"
       }
-    ]
+    ],
+    "cancelledDeathEvidence": {
+      "report": "tools/paper-integration/reports/paper-1.21.1-cancelled-death-20261120-r3.json",
+      "reportSha256": "7256b756bd360bfad32b113480b5941133630045e78eda2f0e4485101e11f216"
+    }
   },
   {
     "fixtureId": "srv-paper-terminal-callback-strict-20261120-r2",

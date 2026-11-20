@@ -65,11 +65,15 @@ reload during dispatch, explicit cancellation, surviving/cancelled-death caster
 state, overlapping contexts, model mutation guards, absent schedulers/action
 errors, terminal aliases and cast-duration cleanup. The artifact passes all
 2,442 Maven tests and SpotBugs. These unit controls do not substitute for native
-Paper comparisons of cancelled deaths, reload during callbacks, variable
-mutation/expiry, cast queues, cross-trigger cooldowns, summon depth/onSummon
-dispatch, visual mechanics or child SkillTree inheritance and restart/crash
-persistence. Those scopes remain open,
-as does historical duplicate native callback investigation.
+Paper comparisons of other cancellation priorities/orderings, reload during
+callbacks, variable mutation/expiry, cast queues, cross-trigger cooldowns,
+summon depth/onSummon dispatch, visual mechanics or child SkillTree inheritance
+and restart/crash persistence. The [cancelled-death contract](CANCELLED_DEATH_COMPATIBILITY.md)
+now verifies synchronous skill cancellation and late external cancellation with
+96 parent observations on this artifact; four native orphan outcomes are explicit
+differences. Rapid reload now has bounded evidence for paired native duplicate
+callbacks; their exact competing invocation remains unverified. The other scopes
+remain open.
 
 Historical evidence is preserved without relabeling:
 

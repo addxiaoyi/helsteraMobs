@@ -498,6 +498,31 @@ foreach ($item in $releaseEvidence) {
             & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-terminal-callback.py') $terminalPath
             if ($LASTEXITCODE -ne 0) { throw 'Terminal callback evidence validation failed.' }
         }
+        if ($versionMatrix.releasePolicy.requiresCancelledDeathEvidence -eq $true) {
+            $cancelledDeath = $item.cancelledDeathEvidence
+            if ($null -eq $cancelledDeath -or [string]$cancelledDeath.report -cnotmatch '^tools/paper-integration/reports/paper-1\.21\.1-cancelled-death-[0-9]{8}-r[1-9][0-9]*\.json$' -or
+                    [string]$cancelledDeath.reportSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw 'Latest full release requires pinned cancelled death comparison.'
+            }
+            $cancelledDeathPath = Join-Path $Root ([string]$cancelledDeath.report)
+            if (-not (Test-Path -LiteralPath $cancelledDeathPath -PathType Leaf) -or
+                    (Get-FileHash -LiteralPath $cancelledDeathPath -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$cancelledDeath.reportSha256) {
+                throw 'Cancelled death report is missing or changed.'
+            }
+            $cancelledDeathReport = Get-Content -LiteralPath $cancelledDeathPath -Raw -Encoding utf8 | ConvertFrom-Json
+            if ([string]$cancelledDeathReport.pluginSha256 -cne [string]$report.pluginSha256 -or
+                    [string]$cancelledDeathReport.paperJarSha256 -cne [string]$releaseCombination.serverJarSha256) {
+                throw 'Cancelled death evidence does not match the release artifact/server.'
+            }
+            if ($cancelledDeathReport.schemaVersion -ne 1 -or
+                    [string]$cancelledDeathReport.evidenceMode -cne 'comparison-with-exception' -or
+                    [string]$cancelledDeathReport.parityStatus -cne 'scoped-comparison') {
+                throw 'Cancelled death release evidence must prove the scoped cancellation comparison; an observation or gap diagnostic is insufficient.'
+            }
+            $python = & (Join-Path $PSScriptRoot 'resolve-python.ps1')
+            & $python.Source @($python.Prefix) (Join-Path $PSScriptRoot 'validate-cancelled-death.py') $cancelledDeathPath
+            if ($LASTEXITCODE -ne 0) { throw 'Cancelled death evidence validation failed.' }
+        }
         $latestFullReportChecked = $true
     }
     $observedIds = @($probes | ForEach-Object { [string]$_.id })

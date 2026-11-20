@@ -1275,6 +1275,52 @@ try {
     }
     [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
     [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
+    $cancelledDeathPolicy = $originalVersionText | ConvertFrom-Json
+    $cancelledDeathPolicy.releasePolicy | Add-Member -NotePropertyName requiresCancelledDeathEvidence -NotePropertyValue $true
+    @($cancelledDeathPolicy.combinations | Where-Object releaseValidated)[0] | Add-Member -NotePropertyName serverJarSha256 -NotePropertyValue '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+    [System.IO.File]::WriteAllText($versionMatrixPath, ($cancelledDeathPolicy | ConvertTo-Json -Depth 20))
+    foreach ($case in @('missing', 'unsafe', 'missing-file', 'changed-file', 'wrong-plugin', 'wrong-server', 'invalid-archive', 'old-schema', 'known-gap', 'observation', 'false-match', 'incomplete')) {
+        $cancelledDeathManifest = @($originalCommandManifest | ConvertFrom-Json)
+        $cancelledDeathEntry = @($cancelledDeathManifest | Where-Object { $_.fullReleaseCatalog })[0]
+        $cancelledDeathReference = 'tools/paper-integration/reports/paper-1.21.1-cancelled-death-20261120-r99.json'
+        $cancelledDeathFile = Join-Path $temporaryRoot $cancelledDeathReference
+        $cancelledDeathMetadata = [pscustomobject]@{
+            schemaVersion = 1
+            evidenceMode = 'comparison-with-exception'
+            parityStatus = 'scoped-comparison'
+            pluginSha256 = $testPluginHash
+            paperJarSha256 = '39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9'
+        }
+        if ($case -eq 'wrong-plugin') { $cancelledDeathMetadata.pluginSha256 = ('0' * 64) }
+        if ($case -eq 'wrong-server') { $cancelledDeathMetadata.paperJarSha256 = ('0' * 64) }
+        if ($case -eq 'old-schema') { $cancelledDeathMetadata.schemaVersion = 0 }
+        if ($case -eq 'known-gap') { $cancelledDeathMetadata.evidenceMode = 'diagnostic-known-gap' }
+        if ($case -eq 'observation') { $cancelledDeathMetadata.evidenceMode = 'observation' }
+        if ($case -eq 'false-match') { $cancelledDeathMetadata.parityStatus = 'scoped-match' }
+        if ($case -eq 'incomplete') { $cancelledDeathMetadata.parityStatus = 'incomplete' }
+        [System.IO.File]::WriteAllText($cancelledDeathFile, ($cancelledDeathMetadata | ConvertTo-Json))
+        $cancelledDeathReferenceData = [pscustomobject]@{
+            report = $cancelledDeathReference
+            reportSha256 = (Get-FileHash -LiteralPath $cancelledDeathFile -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+        $expectedCancelledDeathFailure = switch ($case) {
+            'missing' { 'requires pinned cancelled death' }
+            'unsafe' { $cancelledDeathReferenceData.report = '../outside.json'; 'requires pinned cancelled death' }
+            'missing-file' { Remove-Item -LiteralPath $cancelledDeathFile; 'report is missing or changed' }
+            'changed-file' { $cancelledDeathReferenceData.reportSha256 = ('0' * 64); 'report is missing or changed' }
+            { $_ -in @('wrong-plugin', 'wrong-server') } { 'artifact/server' }
+            'invalid-archive' { 'Cancelled death evidence validation failed' }
+            { $_ -in @('old-schema', 'known-gap', 'observation', 'false-match', 'incomplete') } { 'must prove the scoped' }
+        }
+        if ($case -ne 'missing') { $cancelledDeathEntry | Add-Member -NotePropertyName cancelledDeathEvidence -NotePropertyValue $cancelledDeathReferenceData }
+        [System.IO.File]::WriteAllText($manifestPath, ($cancelledDeathManifest | ConvertTo-Json -Depth 20))
+        $cancelledDeathFailure = @(& pwsh -NoProfile -File $auditScript -Root $temporaryRoot -ReleaseGate -ReleasePluginJar $testJarPath 2>&1 | Out-String)
+        if ($LASTEXITCODE -eq 0 -or $cancelledDeathFailure -notmatch $expectedCancelledDeathFailure) {
+            throw "Release gate accepted invalid cancelled death evidence ($case): $cancelledDeathFailure"
+        }
+    }
+    [System.IO.File]::WriteAllText($manifestPath, $originalCommandManifest)
+    [System.IO.File]::WriteAllText($versionMatrixPath, $originalVersionText)
     $wrongBuildEvidence = Get-Content -LiteralPath $archivePath -Raw -Encoding utf8 | ConvertFrom-Json
     $wrongBuildEvidence.paperVersion = '1.21.1-134-test'
     [System.IO.File]::WriteAllText($archivePath, ($wrongBuildEvidence | ConvertTo-Json -Depth 20))
