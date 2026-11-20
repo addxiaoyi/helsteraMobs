@@ -1,6 +1,30 @@
 # MythicMobs Parity Roadmap
 
-Player-variable lifecycle update (2026-11-19): focused fixture
+Player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
+passes 480 direct/imported observations across three actual Paper 1.21.1-133
+boots with public MM 5.7.2. Two clients stay online while the ordinary configured
+saving clocks write successive values. Three online checkpoints and two SIGKILL
+recoveries verify typed values, locations, unchanged deadlines, offline expiry,
+updated generations and deleted data staying absent. The probe never calls native
+save methods or patches clock behavior. All 29 altered-evidence controls are rejected.
+Existing player lifecycle regression `srv-paper-player-variables-comparison-20261120-r1`
+passes all 740 observations and 31 evidence mutation controls on this artifact.
+Focused native regression `srv-paper-random-spawn-replace-20261120-r73` also
+passes all 31 existing probes on the current artifact.
+Player saving now defaults to 300 seconds and retries failed logout writes;
+invalid intervals fall back safely, and one failed player does not prevent peers
+from saving. Zero disables periodic saves while logout/shutdown saves remain.
+The current artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
+`srv-paper-player-autosave-strict-20261120-r1` passes all 471 checks
+(452 passed, 19 expected rejections, zero failed or incomplete). Recovery is proven
+for completed checkpoints; mid-write interruption, power loss, performance under
+large player counts, immediate reconnect, death/respawn and world/chunk lifecycle
+remain open. Full MythicMobs parity remains incomplete; matrix totals stay
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin.
+See the [variable lifecycle contract](./docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
+
+Earlier player-variable lifecycle update (2026-11-19): focused fixture
 `srv-paper-player-variables-comparison-20261119-r2` passes 740 observations across
 three real Paper 1.21.1-133 boots against public MM 5.7.2. Two real clients verify
 logout/login, offline expiry, typed values and locations, unchanged deadlines,
@@ -18,8 +42,9 @@ Full strict regression `srv-paper-player-variables-strict-20261119-r1` passes
 Focused native regression `srv-paper-random-spawn-replace-20261119-r72` passes
 all 31 probes on the same plugin artifact; both are separate from the custom
 740-observation player lifecycle report.
-Periodic online autosave, crash recovery, immediate reconnect races, player
-death/respawn, chunk/world lifecycle, broader catalogs and other versions remain open.
+Autosave and recovery from completed checkpoints now have the evidence above.
+Immediate reconnect races, player death/respawn, chunk/world lifecycle, broader
+catalogs and other versions remain open.
 Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
@@ -69,7 +94,7 @@ requires another plugin.
 
 ## Baseline
 
-Immediate continuation after player-variable lifecycle validation:
+Immediate continuation after periodic player autosave validation:
 
 1. Extend native condition dispatch beyond the verified entity/location
    predicate slices for caster, target and living/non-living triggers. Location-targeter radius
@@ -89,7 +114,8 @@ Immediate continuation after player-variable lifecycle validation:
    Three actual Paper boots now verify 115 timed SkillTree observations and four shutdown snapshots.
    Native entity/world/global graceful restart now has a dedicated 432-observation comparison.
    Connected-player logout/login and online shutdown now have 740 observations across three boots.
-   Next compare periodic online autosave, immediate reconnect races, player death/respawn,
+   Periodic online saving and completed-checkpoint crash recovery now add 480 observations,
+   three online checkpoints and two process kills. Next compare immediate reconnect races, player death/respawn,
    world/chunk unload/reload and broader trigger/general placeholder families, player
    faction providers, relationship lifecycle/restart, non-living caster combinations
    and remaining generic entity
@@ -121,7 +147,7 @@ Audited against the matrix on 2026-11-19:
 | `missing` | 0 | No meaningful implementation exists. |
 | `blocked-by-external-plugin` | 2 | A capability depends on an external integration that is not active. |
 
-The latest full release fixture is `srv-paper-player-variables-strict-20261119-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `3ebde259eacc8dbc991fc9403dad12d3b8f598ac107d6e19bf9d044a991f465b`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,373 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+The latest full release fixture is `srv-paper-player-autosave-strict-20261120-r1` on Paper 1.21.1-133, with 471 probes: 452 passed, 19 expected rejections, and zero failed or incomplete. It retains the 47 Potion lifecycle assertions and previous runtime/client workflows; imported variable-condition composition and the skill damage-trigger, tag, and cancellation probes pass on plugin SHA-256 `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`. Focused native/imported MM 5.7.2 evidence has its own scope and does not replace the full release catalog. See the [release evidence index](tools/paper-integration/release-evidence.json), [Paper evidence](tools/paper-integration/STARTUP_EVIDENCE.md), and [version matrix](tools/paper-integration/version-matrix.json). This artifact passes 2,377 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Condition-expression hardening: `SkillService` recognizes operators only at
 the expression level, leaving quoted strings and nested arguments intact.

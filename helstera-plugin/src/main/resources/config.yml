@@ -30,6 +30,11 @@ cache:
   enabled: true
   directory: "plugins/helsteraMobs/cache"
 
+variables:
+  # 在线玩家变量定期保存间隔（秒，每秒 20 Tick）；默认与 MM 5.7.2 一致。
+  # 0 关闭定期保存；退出与关服仍保存。修改后重启生效。
+  player-autosave-seconds: 300
+
 resourcepack:
   # 留空时使用网页开发器内建下载（http://127.0.0.1:<web.port>/pack.zip）
   # 注意：0.0.0.0 不可作为下载地址，本插件会回落为 127.0.0.1。

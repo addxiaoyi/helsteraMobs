@@ -1,6 +1,56 @@
 # Paper Startup Evidence
 
-Player logout/login and online-shutdown evidence (740 observations, 31 rejected mutation controls):
+Player autosave update (2026-11-20): `srv-paper-player-autosave-20261120-r2`
+passes 480 direct/imported observations across three actual Paper 1.21.1-133
+boots with public MM 5.7.2. Two clients stay online while the ordinary configured
+saving clocks write successive values. Three online checkpoints and two SIGKILL
+recoveries verify typed values, locations, unchanged deadlines, offline expiry,
+updated generations and deleted data staying absent. The probe never calls native
+save methods or patches clock behavior. All 29 altered-evidence controls are rejected.
+Existing player lifecycle regression `srv-paper-player-variables-comparison-20261120-r1`
+passes all 740 observations and 31 evidence mutation controls on this artifact.
+Focused native regression `srv-paper-random-spawn-replace-20261120-r73` also
+passes all 31 existing probes on the current artifact.
+Player saving now defaults to 300 seconds and retries failed logout writes;
+invalid intervals fall back safely, and one failed player does not prevent peers
+from saving. Zero disables periodic saves while logout/shutdown saves remain.
+The current artifact passes 2,377 Maven tests and SpotBugs. Full strict fixture
+`srv-paper-player-autosave-strict-20261120-r1` passes all 471 checks
+(452 passed, 19 expected rejections, zero failed or incomplete). Recovery is proven
+for completed checkpoints; mid-write interruption, power loss, performance under
+large player counts, immediate reconnect, death/respawn and world/chunk lifecycle
+remain open. Full MythicMobs parity remains incomplete; matrix totals stay
+117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
+0 missing / 2 blocked-by-external-plugin.
+See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
+
+Current native regression: [report](reports/paper-1.21.1-random-spawn-replace-20261120-r73.json),
+SHA-256 `fda89fadf12d23f39263daeffd017b8624f2bab061d82522818b2d04fc859503`; [redacted log](reports/paper-1.21.1-random-spawn-replace-20261120-r73.log.gz),
+SHA-256 `b578b70d0c482119ce9b5529edb28c095058bd23df878406da5e8cf7ad275998`. All 31 probes pass with the autosave artifact,
+including 420 variable lifecycle comparisons and six snapshot observations.
+
+Periodic autosave and abrupt process recovery: [report](reports/paper-1.21.1-player-autosave-20261120-r2.json),
+SHA-256 `c0b30242b186e09963ccf961a87ccae69d2435dc6ac738d41fc2ef6bf939c345`;
+[redacted server/client logs and before/after-kill snapshots](reports/paper-1.21.1-player-autosave-20261120-r2-logs.zip),
+SHA-256 `434fea7022374e536d5504cdfcdcda622e6bee8c37b374008264834c42a544ac`.
+Plugin SHA-256 `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`.
+The report pins native MM/Paper/probe artifacts and runner/client/validator sources.
+Both saving clocks use their ordinary five-second configuration; two exact process
+handles exit with SIGKILL, without player quit, plugin disable or graceful shutdown.
+All 480 observations, three online checkpoints and two unchanged post-kill file
+sets pass independent validation; 29 mutation controls are rejected. This custom
+report is separate from the full strict release schema. Native bytecode identifies
+`MythicClock.executeSave -> ConfigExecutor.doClockSave -> PlayerManager.saveAll`;
+the 300-second native default comes from `Configuration.Clock.Saving`.
+
+Player logout/login and online-shutdown regression on the autosave artifact:
+[report](reports/paper-1.21.1-player-variables-20261120-r1.json), SHA-256 `841d94e30f1184d95cd58dc4c3b9cab5d4e734ea053559fd997639f1de418ad4`;
+[redacted logs and snapshots](reports/paper-1.21.1-player-variables-20261120-r1-logs.zip),
+SHA-256 `9cb9397556c601dcbf8d1f07bba06c2728231d9bf80ca7e2bb5fef7b5ce955a7`.
+All 740 observations and 31 mutation controls pass with plugin SHA-256
+`208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`.
+
+Earlier player logout/login and online-shutdown evidence (740 observations, 31 rejected mutation controls):
 [report](reports/paper-1.21.1-player-variables-20261119-r2.json), SHA-256 `7bcce2f7fba2d393cd80850a6340af66a84a244ec5456c38e5242ddbf4c1f0e8`.
 [redacted logs and snapshots](reports/paper-1.21.1-player-variables-20261119-r2-logs.zip), SHA-256 `27bc7343ca66d66d90ff32dc0a2830e27d0c3f63597a17bbaf5c7409673b4125`.
 
@@ -35,7 +85,7 @@ Earlier focused native regression [report](reports/paper-1.21.1-random-spawn-rep
 `44f902e8221b575910cb7b71b42667d7da74ba602f5f5dba3b9a3439bab15a45`. All 31 focused probes pass on the same plugin artifact,
 including the existing 420 variable-expiry comparisons and six snapshot observations.
 
-Player-variable lifecycle update (2026-11-19): focused fixture
+Earlier player-variable lifecycle update (2026-11-19): focused fixture
 `srv-paper-player-variables-comparison-20261119-r2` passes 740 observations across
 three real Paper 1.21.1-133 boots against public MM 5.7.2. Two real clients verify
 logout/login, offline expiry, typed values and locations, unchanged deadlines,
@@ -53,14 +103,15 @@ Full strict regression `srv-paper-player-variables-strict-20261119-r1` passes
 Focused native regression `srv-paper-random-spawn-replace-20261119-r72` passes
 all 31 probes on the same plugin artifact; both are separate from the custom
 740-observation player lifecycle report.
-Periodic online autosave, crash recovery, immediate reconnect races, player
-death/respawn, chunk/world lifecycle, broader catalogs and other versions remain open.
+Autosave and recovery from completed checkpoints now have the evidence above.
+Immediate reconnect races, player death/respawn, chunk/world lifecycle, broader
+catalogs and other versions remain open.
 Full MythicMobs parity is still incomplete. Matrix totals remain
 117 implemented-runtime / 33 mapped-unverified / 2 unsupported-preserved /
 0 missing / 2 blocked-by-external-plugin.
 See the [variable lifecycle contract](../../docs/VARIABLE_LIFECYCLE_COMPATIBILITY.md).
 
-Latest full-catalog fixture `srv-paper-player-variables-strict-20261119-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `3ebde259eacc8dbc991fc9403dad12d3b8f598ac107d6e19bf9d044a991f465b`. [Strict report](reports/paper-1.21.1-player-variables-strict-20261119-r1.json) · [Redacted server log](reports/paper-1.21.1-player-variables-strict-20261119-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-player-variables-strict-20261119-r1.client-logs.zip) This artifact passes 2,373 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+Latest full-catalog fixture `srv-paper-player-autosave-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `208e4bddaa88e34a2da02e2d8a9ff29d78ceb11e1a053de15b84a1b6c05caed3`. [Strict report](reports/paper-1.21.1-player-autosave-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-player-autosave-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-player-autosave-strict-20261120-r1.client-logs.zip) This artifact passes 2,377 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
 
 Credential handling: archived logs are redacted, and current plugin startup and
 network diagnostics omit web tokens. A game administrator with
@@ -69,10 +120,11 @@ previous links with `/helstera web rotate`. New generated tokens contain 256
 bits of randomness. If an older log may have exposed a live token, rotate it
 after deploying the updated plugin.
 
-Current full-report SHA-256: `41782b9bf2480cbda03597208e69bd3aaed3ea1187123a62f59b8e4c06cb2c9c`;
-redacted server log SHA-256: `deacfd9c1bc713b71f72309c63e63d9b02f640061e66fb00183893a544f98453`;
-redacted client logs SHA-256: `70ab6cf6042ebe714b9d85215eb7705c2f13497b3013a664a36f36c90ce769e4`.
-The preceding `srv-paper-variable-persistence-strict-20261119-r1`,
+Current full-report SHA-256: `e86438fe63682e8d9ce69c0acbad39b585c9f0eae6181de17e96310c432331fc`;
+redacted server log SHA-256: `aa54622bb8fc040255613725998a469bce5063da1fb4e9d1883c982343d3f95c`;
+redacted client logs SHA-256: `0993cfb34b49be8f9b455e9f7a5b798bd2f748e37a620a10d950d6ed5ab20f58`.
+The preceding `srv-paper-player-variables-strict-20261119-r1`,
+`srv-paper-variable-persistence-strict-20261119-r1`,
 `srv-paper-variable-expiry-strict-20261119-r2`,
 `srv-paper-variable-placeholders-strict-20261119-r1`,
 `srv-paper-trigger-placeholders-strict-20261119-r1`,

@@ -121,11 +121,23 @@ Player registries use `player:<uuid>` and independent atomic
 `player-variables/<uuid>.yml` files. Login restores values before join skills;
 logout saves after Helstera quit skills, then releases scalar and location memory.
 Shutdown saves players who remain online and retries previously failed logout
-writes. The shared scoped snapshot excludes player registries. A failed write
+writes. Periodic saving also writes online registries and retries failed logout
+writes, releasing the offline registry only after a successful retry. The shared
+scoped snapshot excludes player registries. A failed write
 preserves both the previous file and live state; reconnect cannot replace that
 live state with stale disk data. A malformed or foreign-player file is rejected
 and is never overwritten by the failed session. These file operations currently
 run synchronously on the server thread.
+
+`variables.player-autosave-seconds` defaults to 300, matching public MM 5.7.2's
+`Configuration.Clock.Saving` default. Helstera schedules a save every configured
+seconds multiplied by 20 server ticks; the first save waits one full interval.
+The native saving clock uses its asynchronous scheduler and begins without an
+initial delay. Timing under server lag and the native startup scheduling phase
+are not claimed identical. Zero disables only Helstera periodic saving; logout
+and shutdown still save. Malformed, negative, fractional or overflowing intervals
+fall back to 300 with a warning. Interval changes require a plugin restart.
+One player's failed write is logged without preventing other players from saving.
 
 On first login after upgrading, a missing player file migrates the matching
 legacy `entity:<uuid>` registry from the shared snapshot. The player file is
@@ -155,7 +167,25 @@ The independent validator also accepts the archived report/log ZIP and rejects
 archive members. See the indexed report and hashes in
 [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
 
-Periodic online autosave, crash recovery, immediate reconnect races, player
+The autosave comparison uses the ordinary native saving clock and Helstera's
+production scheduler, each configured to five seconds. It never invokes a save
+API or modifies the native clock. Two real clients stay online across two
+observed checkpoints; the second contains changed generation values and deleted
+variables. Only after both native/runtime files match those values does the
+runner send SIGKILL to its own disposable Paper process. After saved short
+deadlines elapse while the process is stopped, a second boot verifies restored
+types, locations, retained long deadlines and offline expiry. It then clears
+the values, waits for another periodic save and kills the process again. A third
+boot verifies cleared data stays absent and the latest generation survives.
+The 480 direct/imported observations, three online disk checkpoints and two
+post-kill file copies are independently validated. Twenty-nine evidence mutation
+controls reject missing observations, graceful-save contamination, stale files,
+wrong identities/types/deadlines and resurrected data. Reports and source/artifact
+hashes are indexed in [Paper evidence](../tools/paper-integration/STARTUP_EVIDENCE.md).
+
+This proves recovery of completed periodic saves after process termination.
+Writes after the last completed save can be lost. Killing during a file write,
+host/power failure, large-player save performance, immediate reconnect races, player
 death/respawn, chunk/world unload/reload parity, non-persistent entity cleanup,
 nested dynamic variable names,
 SetVariable expression/default-value semantics, the full arithmetic/location
