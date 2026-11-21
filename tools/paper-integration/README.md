@@ -723,6 +723,24 @@ and the token-bearing link is available only to an authorized in-game player
 through `/helstera web link`. Rotate any previously logged or shared credential
 with `/helstera web rotate`; new generated tokens are 256-bit values.
 
+Audit the current committed evidence and every historical evidence version with:
+
+```sh
+python3 -B tools/paper-integration/test-redact-archived-logs.py
+python3 -B tools/paper-integration/redact-archived-logs.py --current --check
+python3 -B tools/paper-integration/redact-archived-logs.py --check
+```
+
+The auditor distinguishes `[REDACTED]` placeholders from actual credentials,
+opens gzip/ZIP/tar archives without extracting files, and propagates changed
+archive/member/report SHA-256 references into historical evidence documents.
+`--write-plan /absolute/path/to/new-plan.json` emits sanitized blob replacements;
+it never changes Git refs or pushes. Historical cleanup must use an isolated
+clone, retain all commit metadata/topology, verify the latest code is identical,
+and publish only with an explicit expected-head force-with-lease. Source code
+and fixture inputs are excluded from redaction. A clean history scan covers
+reachable commits of the selected ref, not forks or GitHub's cached objects.
+
 The focused Potion restart runner validates saved player/entity NBT plus real
 client packets across three Paper boots. Fixture
 `srv-paper-potion-restart-strict-20261118-r6` verifies native MythicMobs player
