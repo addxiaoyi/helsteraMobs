@@ -10,6 +10,15 @@ The project implements these native MythicMobs 5.7.2 mechanics on Paper 1.21.1:
 
 All three actions require an entity recipient. An explicit location recipient never falls back to a retained target or the caster. Invalid entity types are skipped. Adapter failures are counted under `EntityInteractionActions#<action>` in `SkillFaults` and appear in debug logging when enabled. The adapter checks the server implementation, Minecraft version and primary thread before mutation.
 
+The action factories, native/canonical aliases and production importer are now
+connected to `SkillService`. A 2026-11-26 review found that the earlier adapter
+and direct-action tests had not covered this registration step. Binding tests
+now invoke the registered operations, including a nonliving rotation recipient,
+nested source coordinates, explicit location rejection and separate goat
+caster/target identities. Import tests retain execution options and reject
+unsupported source/recipient selectors. These tests establish the connection;
+the real-server/client acceptance listed below remains outstanding.
+
 ## Releasing active items
 
 `stop-using-item` has no mechanic-specific arguments. Its Paper adapter invokes NMS `LivingEntity.releaseUsingItem()` exactly once. For an active player item, that routine emits `PlayerStopUsingItemEvent`, runs the item's release callback and then clears the use state. This allows normal bow/crossbow/shield behavior to remain in the server implementation.

@@ -6052,7 +6052,7 @@ public final class SkillExtras {
     }
 
     public static Map<String, SkillCatalog.ActionFactory> actions() {
-        return GeneratedLootActions.wrap(JsonMessageActions.wrap(ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
+        return EntityInteractionActions.wrap(GeneratedLootActions.wrap(JsonMessageActions.wrap(ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
                 Map.entry("set-speed", (SkillCatalog.ActionFactory) a -> {
                     var spec = dev.helstera.api.util.SetSpeedSpec.parse(a);
                     return ctx -> SetSpeedAction.apply(spec, ctx, itemTargets(ctx));
@@ -7800,7 +7800,7 @@ public final class SkillExtras {
                         }
                     };
                 })
-        )), raw -> resolveItem(raw, 1))))));
+        )), raw -> resolveItem(raw, 1)))))));
     }
 
     /**

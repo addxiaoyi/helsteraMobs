@@ -99,7 +99,8 @@ covers aliases, actor direction, nonliving and explicit-location origins,
 nonplayer delivery, fractional item/experience values, named and nested tables,
 weighted experience, outer count limits, caster conditions, command context,
 private animations, overflow and custom model data 4321. Both clients complete
-all phases. The independent auditor passes with current source/JAR checks.
+all phases. The independent auditor passed with the run's source/JAR checks
+before subsequent entity-interaction registration changes.
 The artifact also passes 2,896 Maven tests and all 11 SpotBugs checks.
 All 765 rehashed semantic mutations are rejected by the independent auditor.
 

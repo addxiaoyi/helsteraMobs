@@ -42,7 +42,9 @@ These need validation and release evidence, not another implementation:
   the detailed live evidence and remaining
   acceptance are in [GENERATED_LOOT_CONTRACT.md](GENERATED_LOOT_CONTRACT.md).
 - `stopusingitem/releaseitem`, `matchrotation/matchrot` and `GoatRam` have
-  implementation and offline tests. Their complete Paper/client acceptance
+  implementation and offline tests. Their previously missing production
+  registration and importer wiring are now connected and covered by binding
+  tests. Their complete Paper/client acceptance
   remains pending; see [ENTITY_INTERACTION_CONTRACT.md](ENTITY_INTERACTION_CONTRACT.md).
 - The 2026-11-26 focused reports pass 212 scoreboard, 66 context-targeter and
   300 variable-subtraction observations. The native dynamic placeholder
@@ -83,7 +85,7 @@ contract extensions, not duplicate implementations.
 | M15 | `setRaiderPatrolBlock/setRaiderBlock` | Implemented with bounded nested-location selection and scoped setter r3 evidence. Plural/conditional nested selectors and release validation remain. |
 | M16 | `setRaiderPatrolLeader/setRaiderLeader` | Implemented with scoped setter r3 evidence; broader equipment side effects and release validation remain. |
 | M17 | `stopusingitem/releaseitem` | Release behavior is implemented through the pinned native adapter; complete bow/item-use/event acceptance remains. Paper `clearActiveItem` alone is not equivalent. |
-| M18 | `shieldbreak/disableshield` | Compare active shield cancellation, cooldown duration and player item-hand semantics. Existing generic material cooldown does not prove shield equivalence. |
+| M18 | `shieldbreak/disableshield` | Native contract inspected; implementation remains. Requires blocking, cooldown, main-hand-first selection and one-tick shield removal/restoration, including occupied-slot/lifecycle handling. See [SHIELD_BREAK_CONTRACT.md](SHIELD_BREAK_CONTRACT.md). |
 | M19 | `setpitch`, `matchrotation/matchrot` | Pinned native SetPitch is a no-op. MatchRotation is implemented with nested selection, non-player recipients and body/head yaw plus pitch; Paper/client acceptance remains. |
 | M20 | `GoatRam` | Implemented through Paper `Goat.ram(LivingEntity)`; natural damage/event acceptance remains. |
 | M21 | `summonAreaEffectCloud/summonCloud`, `summonFallingBlock`, `summonPassenger` | Add typed entity spawning with native argument and lifecycle rules; generic managed-model summon is a separate operation. |

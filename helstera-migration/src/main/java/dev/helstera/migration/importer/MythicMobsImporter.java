@@ -2310,7 +2310,8 @@ public final class MythicMobsImporter implements MigrationImporter {
                 return;
             }
         }
-        if (dev.helstera.api.util.EntitySetterSpec.supports(mechanic)) {
+        if (dev.helstera.api.util.EntitySetterSpec.supports(mechanic)
+                || dev.helstera.api.util.EntityInteractionSpec.supports(mechanic)) {
             try { entitySetterMechanic(raw, mechanic); }
             catch (IllegalArgumentException invalid) {
                 scan.unsupported.add(raw);
@@ -2909,6 +2910,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         int brace = name.indexOf('{');
         if (brace >= 0) name = name.substring(0, brace);
         if (dev.helstera.api.util.EntitySetterSpec.supports(name)) return true;
+        if (dev.helstera.api.util.EntityInteractionSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(name)) return true;
@@ -2975,7 +2977,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
         head = head.toLowerCase(Locale.ROOT);
         if (head.contains(":")) head = head.substring(0, head.indexOf(':'));
-        if (dev.helstera.api.util.EntitySetterSpec.supports(head)) return entitySetterMechanic(trimmed, head);
+        if (dev.helstera.api.util.EntitySetterSpec.supports(head)
+                || dev.helstera.api.util.EntityInteractionSpec.supports(head)) return entitySetterMechanic(trimmed, head);
         if (dev.helstera.api.util.NumericMechanicSpec.supports(head)
                 || dev.helstera.api.util.PercentHealthSpec.supports(head)
                 || dev.helstera.api.util.SetSpeedSpec.supports(head)) {
@@ -3560,7 +3563,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         };
     }
 
-    /** Validates public setter arguments before preserving named fields and execution metadata. */
+    /** Validates public entity mutations before preserving named fields and execution metadata. */
     private static String entitySetterMechanic(String raw, String name) {
         List<String> args = new ArrayList<>();
         List<String> execution = new ArrayList<>();
@@ -3594,11 +3597,19 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (token.startsWith("@")) dev.helstera.api.util.EntitySetterSpec
                     .requireKnownTargeter(normalizeTargeterSuffix(token).trim());
         }
-        var spec = dev.helstera.api.util.EntitySetterSpec.parse(name, args);
         List<String> normalized = new ArrayList<>();
-        spec.values().forEach((key, value) -> normalized.add(key + "=\"" + escape(value) + "\""));
+        String mechanic;
+        if (dev.helstera.api.util.EntityInteractionSpec.supports(name)) {
+            var spec = dev.helstera.api.util.EntityInteractionSpec.parse(name, args);
+            mechanic = spec.mechanic();
+            if (spec.source() != null) normalized.add("target=\"" + escape(spec.source()) + "\"");
+        } else {
+            var spec = dev.helstera.api.util.EntitySetterSpec.parse(name, args);
+            mechanic = spec.mechanic();
+            spec.values().forEach((key, value) -> normalized.add(key + "=\"" + escape(value) + "\""));
+        }
         normalized.addAll(execution);
-        return spec.mechanic() + (normalized.isEmpty() ? "" : "{" + String.join(";", normalized) + "}")
+        return mechanic + (normalized.isEmpty() ? "" : "{" + String.join(";", normalized) + "}")
                 + (suffix.isEmpty() ? "" : normalizeTargeterSuffix(String.join(" ", suffix)));
     }
 

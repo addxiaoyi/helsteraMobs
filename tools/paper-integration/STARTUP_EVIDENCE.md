@@ -8016,7 +8016,8 @@ by both clients. The final r9 run records the corrected test source hash.
 [Generated loot r3](reports/paper-1.21.1-generated-loot-20261126-r3.json)
 passes 90 observations (30 cases × native/direct/imported) with two real
 clients on pinned Paper 1.21.1 / MythicMobs 5.7.2. The independent archive audit
-passes with current source and JAR checks. The observed artifact SHA-256 is
+passed with the run's source and JAR checks before subsequent entity-interaction
+registration changes. The observed artifact SHA-256 is
 `7a4a6ac58a8ebe4673763001042dc5f6c62e08dd3b38aad68fee21a9ebf5d241`;
 the same build passes 2,896 Maven tests and all 11 SpotBugs checks through
 `./mvnw -o -B -pl helstera-plugin -am verify`.
@@ -8052,3 +8053,15 @@ remain declared, preventing accidental fallback to a same-named vanilla item.
 
 These are scoped implementation observations. Earlier reports retain their
 own artifacts; this batch does not complete the full strict release gate.
+
+The subsequent entity-interaction registration fix connects the existing
+`stopusingitem/releaseitem`, `matchrotation/matchrot` and `GoatRam` operations to
+the production skill registry, native aliases, generic recipient dispatch and
+importer. Four binding tests exercise the registered adapter calls and two
+import tests cover source/recipient validation and execution metadata. The full
+verification passes 2,902 tests with zero failures/errors/skips and 11 clean
+SpotBugs checks. Plugin SHA-256:
+`81e7aaf348a36bd541f5e47b2c4982f347954dd01779737dc7d3ae5dc31953b5`.
+These are offline routing tests. They do not replace charged-item release,
+rotation packet or natural goat-damage acceptance. The generated-loot r3 report
+retains its preceding artifact; omit `--check-current` for that historical run.
