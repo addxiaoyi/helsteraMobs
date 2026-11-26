@@ -78,6 +78,12 @@ These need validation and release evidence, not another implementation:
   falling-block placement/drop and passenger level/ownership/event order.
   Client rendering/packets, fractional levels and broader lifecycle acceptance
   remain; see [SPECIAL_SUMMON_CONTRACT.md](SPECIAL_SUMMON_CONTRACT.md).
+- `runaitargetselector/aitarget` (M22) now has static syntax mapping, runtime
+  and importer bindings, real Paper target Goal scheduling and per-caster
+  rebind/cleanup ownership. The 2026-11-26 r4 report passes 144 scoped
+  native/direct/imported observations. This does not complete native movement
+  Goals or threat switching.
+  See [AI_TARGET_SELECTOR_CONTRACT.md](AI_TARGET_SELECTOR_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
@@ -112,7 +118,7 @@ contract extensions, not duplicate implementations.
 | M19 | `setpitch`, `matchrotation/matchrot` | Pinned native SetPitch is a no-op. MatchRotation is implemented with nested selection, non-player recipients and body/head yaw plus pitch; Paper/client acceptance remains. |
 | M20 | `GoatRam` | Implemented through Paper `Goat.ram(LivingEntity)`; natural damage/event acceptance remains. |
 | M21 | `summonAreaEffectCloud/summonCloud`, `summonFallingBlock`, `summonPassenger` | Runtime/importer implemented; 2026-11-26 r5 passes 129 scoped observations. Real cloud effects/expiry, block placement/drop and passenger levels 1/4, owner timing and stack behavior are covered. Fractional levels, broader lifecycle/client acceptance and the final release gate remain. See [SPECIAL_SUMMON_CONTRACT.md](SPECIAL_SUMMON_CONTRACT.md). |
-| M22 | `runaitargetselector/aitarget` | Add native syntax mapping and selected-controller mutation, then test priority, clear/reset and rebind behavior. Do not claim native Goal equivalence from current controller mutation. |
+| M22 | `runaitargetselector/aitarget` | Runtime/importer and real native target Goal scheduling implemented; 2026-11-26 r4 passes 144 scoped observations. Caster-only mutation, priority, interruption, clear/reset, rebind and ownership are detailed in [AI_TARGET_SELECTOR_CONTRACT.md](AI_TARGET_SELECTOR_CONTRACT.md). Broader conditional, dispatcher and lifecycle acceptance remain. |
 
 ## Concrete target selectors still absent at audit time
 
@@ -137,7 +143,7 @@ Names come from native `@MythicTargeter` declarations and were checked against
 
 | ID | Explicit gap | Finite acceptance slice |
 | --- | --- | --- |
-| S01 | Native Goal composition | Add/remove goals with Paper `MobGoals`; compare priorities, shared GoalType conflicts, interrupt/preemption, clear/reset, rebind, disable and native target side effects. Public API exists; this is not an API-availability block. |
+| S01 | Native Goal composition | Target Goals now use Paper's native scheduler with owned add/remove, priorities and clear/reset; M22 r4 passes 144 scoped observations. Native movement Goal composition, mixed movement/target conflicts and broader lifecycle/disable acceptance remain. Public API exists; this is not an API-availability block. |
 | S02 | Aura charges | Base tracker charge state and explicit consumption API implemented. Plain native Aura does not consume once per tick; event-subclass consumption remains in S04. Validate zero-charge termination, merge/overwrite and callback counts. |
 | S03 | Aura attachments and visual components | Inspect native public contracts, then either implement each component with entity cleanup or preserve it explicitly. Existing start/tick/end callbacks do not implement attachment ownership. |
 | S04 | Aura event-bound callbacks/cancellation | Distinguish cancelling an aura from cancelling its triggering Bukkit event; implement only observed callback and cancellation semantics. |
@@ -192,8 +198,8 @@ Names come from native `@MythicTargeter` declarations and were checked against
 1. Complete the remaining M04/M05/M13/M17–M20 Paper/client acceptance and the
    setter contract's selector/nonliving-condition boundaries. Refresh the full
    strict release gate only against the final artifact.
-2. Finish M06/M07/M21 acceptance and implement M22 with an independent native
-   contract and selected-controller/priority/reset checks.
+2. Finish M06/M07/M21 acceptance and M22's broader dispatcher/lifecycle checks;
+   preserve the boundary between target scheduling and native movement Goals.
 3. Implement T02 and T05–T11 with bounded location/block enumeration and
    separate entity-valued versus location-valued dispatch.
 4. Complete S01/S03–S10 as distinct runtime/state-machine and conversion slices;

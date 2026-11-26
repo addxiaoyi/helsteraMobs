@@ -60,6 +60,8 @@ public final class AiProfile {
     /** Preserved goal/target selector strings from MythicMobs migration. */
     public final List<String> goals = new ArrayList<>();
     public final List<String> targets = new ArrayList<>();
+    /** Imported Mythic target lists use the pinned native Goal scheduler. */
+    public boolean nativeTargets;
 
     /**
      * 本档案所属阵营名；null 表示不归队（与所有阵营敌对）。
@@ -251,6 +253,7 @@ public final class AiProfile {
         this.onDecision.addAll(base.onDecision);
         this.goals.addAll(base.goals);
         this.targets.addAll(base.targets);
+        this.nativeTargets = base.nativeTargets;
         this.phases.addAll(base.phases);
         for (var e : base.triggers.entrySet()) {
             TriggerSpec src = e.getValue();
@@ -657,6 +660,7 @@ public final class AiProfile {
         p.goals.addAll(stringOrList(s, "goals"));
         p.targets.clear();
         p.targets.addAll(stringOrList(s, "targets"));
+        p.nativeTargets = s.getBoolean("native-targets", false);
         p.faction = trimToNull(s.getString("faction"));
         p.immunity = dev.helstera.ai.immunity.ImmunityService.rowsFromSection(s);
         p.bossBar = dev.helstera.ai.bossbar.BossBarConfig.parse(
@@ -892,6 +896,7 @@ public final class AiProfile {
         }
         if (s.contains("goals")) { goals.clear(); goals.addAll(stringOrList(s, "goals")); }
         if (s.contains("targets")) { targets.clear(); targets.addAll(stringOrList(s, "targets")); }
+        if (s.contains("native-targets")) nativeTargets = s.getBoolean("native-targets");
         if (s.isConfigurationSection("triggers")) {
             triggers.clear();
             applyTriggersFrom(s);

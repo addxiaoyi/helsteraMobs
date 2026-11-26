@@ -137,6 +137,18 @@ class AiThreatTargetSelectionTest {
         assertNull(deathSelections.getFirst());
     }
 
+    @Test
+    void nativeTargetModeRecordsDamageWithoutOverridingTheObservedCombatTarget() {
+        var fixture = new Fixture(null);
+        fixture.controller.threatTable().addThreat(fixture.firstId, 1);
+        fixture.controller.setCombatTarget(fixture.first);
+        fixture.profile.nativeTargets = true;
+        fixture.controller.onDamaged(fixture.second, 12);
+        assertSame(fixture.first, fixture.controller.targetEntity());
+        assertEquals(fixture.firstId, fixture.controller.threatTable().currentTarget());
+        assertTrue(fixture.controller.threatTable().contains(fixture.secondId));
+    }
+
     private static final class Fixture {
         private final World world = mock(World.class);
         private final Location origin = new Location(world, 0, 70, 0);

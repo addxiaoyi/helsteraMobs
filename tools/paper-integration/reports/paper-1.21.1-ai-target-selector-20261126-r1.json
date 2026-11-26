@@ -1,0 +1,249 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-ai-target-selector-20261126-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-26T06:04:35.455283+00:00",
+  "pluginSha256": "2ac99e5a84b48fef527d0a24529cdd9d5aaf7cfefddd4aff72100b24ccc572f1",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "f7a60561c2ea746ba55f422a89ab63d57c894220c72a51b689728b8ddae74a2e",
+  "sourceHashes": {
+    "tools/paper-integration/run-ai-target-selector-fixture.py": "3a5b526efc8559577257b7fab2e236afc03e95a55e8c7fc2a90867dedaf0eff0",
+    "tools/paper-integration/ai-target-selector-cases.py": "9a43d64eff035c85f7996d119d0c3c4d1bdeb32e4d81a3b93a1da25133213320",
+    "tools/paper-integration/ai-target-selector-client.js": "11fedb411f8b975cbdd90e6ba380d4e0f5759e3aa0ed5e1a3057710834dbcba1",
+    "tools/paper-integration/paper-1.21.1-client-protocol.js": "835e9031ccd7b85cca0d9f678e6c7a746899d33f93c6f913ea1873ab004d5c21",
+    "tools/paper-integration/audit-ai-target-selector.py": "60471dda317b7c4be423ec92753b46cbd8d4bdd3117fcc5e8f6cb0c1925322fb",
+    "tools/paper-integration/test-ai-target-selector-audit.py": "2169016953e19aa868567ee287a64af3011ca2e1bc30a2b72a11d7f0b096bb62",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/native-ai-goal/PinnedTestGoal.java": "b4c10126cfc1f9a270238fa4fb201b925918577305f4dcfea7f6e4b23548287d",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/AiTargetSelectorProbe.java": "e0b93b3f4457ccac73dfb901cd017ea5b2bb0c9fd6f4dadb7dabd4376b9d11c0",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-ai/src/main/java/dev/helstera/ai/AiController.java": "a344143bf7125747d4da1532f66b0704f9650a74dbf1b274d5ac11376790e526",
+    "helstera-ai/src/main/java/dev/helstera/ai/AiProfile.java": "2e3cc080a98f3ad0297568c4559a707432657439a4dbb24910fb6c38345ef23f",
+    "helstera-ai/src/main/java/dev/helstera/ai/AiManager.java": "30219f7a018c727c63e2dce121a3e7e0d6a98c5a35599d861a09412539eece33",
+    "helstera-ai/src/main/java/dev/helstera/ai/NativeTargetSelectors.java": "6e93bf541e231ea9bcf4239a84edce9520b04f5dbfbf89c51539757bd5829604",
+    "helstera-ai/src/main/java/dev/helstera/ai/SelectorPlan.java": "6e66158fc771cfd19dcd49e80ec544ce547229bf993336356ab1ee9de62def33",
+    "helstera-ai/src/main/java/dev/helstera/ai/FactionService.java": "47b3c523fef49d1fb0b409f3dc7dd4d2f7c53df98b31f114123f2e319947d769",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/AiTargetActions.java": "9b6311324a46ebe252528f6245558d18d348e0f6b1f893f9349f3226e0c111d4",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "759038b5789f6c66aa0b41096d8ba5a2ef1218d21bd4bbbb1d3701e73437c536",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "4cf999504aa04010ca2a7d07db4027c20de6dfeed962d77d85f788f93d7c6163",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "0781b45c0c4924404ba2e965f499ca97fa7325557c1c2f847b5fe28cb7490068",
+    "helstera-api/src/main/java/dev/helstera/api/util/AiTargetSelectorSpec.java": "5481e6b982f87fe702f06d2eb3298f2ecbff4794fa165d519e9330d94603287f",
+    "helstera-runtime/src/main/java/dev/helstera/runtime/instance/PaperTargetGoals.java": "1f5fd8c31d99f6b1045003d0b93846bde52a8efe05bbe47ef1f3a1fa7a813028",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "16c2eb0272aac76ff118faf6cb3ce50bd04008242543b703996ba1bf170fd6fc"
+  },
+  "limitations": [
+    "Paper 1.21.1 target-selector scheduler only; movement Goal composition and threat switching require separate acceptance.",
+    "One observer keeps chunks ticking; native constructors/direct casts do not cover the full event dispatcher.",
+    "Controller rebind and cleanup are Helstera extensions; persistence across server restart remains outside this fixture."
+  ],
+  "exitCode": 0,
+  "clientExitCode": -15,
+  "observationCount": 45,
+  "validationResult": "rejected: Client exited early",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "c6ec69b22eb0e5ee1c5dc01f00d8aaa894a337dd29410f5c600e74bcf749ccf5"
+    },
+    {
+      "path": "client.log",
+      "sha256": "71f947730f654a36b0395037e97411bfda59c5998db5fe0a6f093fdd1819ec0d"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/survey.yml",
+      "sha256": "b312a0645e9a468d6e683af37b0dae38105854c02d59bc963d254379a9f9d8ae"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/ai-target-selector.yml",
+      "sha256": "25e22e132610bf8847893d9b2549fca049d1e2aefa8eb1fb0077e599228e6427"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/cases.yml",
+      "sha256": "d291547ef406c505f37039663ba161f261758ea78a3d187b61fafdd09ecc8b6b"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/000.yml",
+      "sha256": "4307f62ebb712702ad0b65c9fb5ade5cc89a9a7c12ead1bbb9db7c19ecbdb814"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/001.yml",
+      "sha256": "02d7ff88f0c651f5a73185748fd2ef38136d95614d04fc3da1076c00f31d1da0"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/002.yml",
+      "sha256": "37f1a519d8d1bc6ed43eaf14d259fe9ec8ce5a0fc78a0eee23b35ae545389f17"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/003.yml",
+      "sha256": "9d72d96c190f1bbe299c391aceda887e79652dea08e25a4e2b5e2447ec903b81"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/004.yml",
+      "sha256": "f101e80cd2a2a560e6e1153db705fbd175fba67fcaf6e2b2902655c32667fe6f"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/005.yml",
+      "sha256": "ba28dd7065277f1ccbc15820e0a9adba908e6e3b99285d72ec24ee73f2d9a8ef"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/006.yml",
+      "sha256": "91876e4c790402ac3a492af6c7268bcef2d0424069e6c09b3c7863087193dcef"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/007.yml",
+      "sha256": "44b09737bb9a48e69b24081473f7d3e9da3abf7bbe1e787e29a60f12852aef65"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/008.yml",
+      "sha256": "2095b52bfe1f636b524aed37dc482ea7d4f77bab8833aa823ba2049c56ed4339"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/009.yml",
+      "sha256": "0026dbf00c444b73056a11bde46b6b49c0c21f701982086eb4d4a517474c5be7"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/010.yml",
+      "sha256": "c184ce738546c756a9339bc32dbf7c8ea0dcccf366edbe4914a97106637a85f7"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/011.yml",
+      "sha256": "de0b2f69d977a69084be6af051599a84e04f6583809a1dbb75d3e0a28dfd62c7"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/012.yml",
+      "sha256": "239b29b26735be1e44acc9ded174f7c8bb2ebcee328eaa53b4e55380947d726d"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/013.yml",
+      "sha256": "f2d7ac9859ce61c4cb6b8b657e3af36b56b66474cd7929df9874c6fdf44b89a8"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/014.yml",
+      "sha256": "0587312683a00815c0b1c791424d98efcde5bd0a8c3628af613a2e643a187eb7"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/015.yml",
+      "sha256": "1d07698700373ae4aa66f6246ba50e390b51ff98d0dce1b0d932e0abe55e08ee"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/016.yml",
+      "sha256": "0650263e25ef2bf359f68f2d2816c54ad335116fa364428a8689e831e76b5758"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/017.yml",
+      "sha256": "3462b6b1185279ef38d32db5660c0ee4275618e855eef483b5757239c1081188"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/018.yml",
+      "sha256": "f62267dff3b9f1dcede8bcf701e122b0afd928a7b81e873e9e89c02eb35b08e7"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/019.yml",
+      "sha256": "f87ad952aae4cb44214febbebc4292ed2edf23a95c2012e63f8bef4089267602"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/020.yml",
+      "sha256": "daa9a1b9b1b25b374227ee15dfd17f6e2cf6ef0121c11addb1420329c07b9334"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/021.yml",
+      "sha256": "3a24cfed3fd70d845ec709412bdeac956936bf7548160f4864767afbb880e5b4"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/022.yml",
+      "sha256": "5f90e72238079338ef7c4af396c1a69b1df115bc0ead60e9532e3ef71b0bddd2"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/023.yml",
+      "sha256": "013d18a20fc8d7ba35b96d581496b7b4f88594b7023dbd019b61d2e774971dbe"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/024.yml",
+      "sha256": "c855d75f4ec3b05ec99d940cd73dc6e8fafadac7608b86213dd7ba71e7ff5bc5"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/025.yml",
+      "sha256": "88845d8766e7bdf116fdee0e59b7927e1f03a2bc1e4ae57038f5041e72d1b150"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/026.yml",
+      "sha256": "5d6765f2e34a76b07e9657025f75272e53c98f3ec2f3540b539c00b7edbae1da"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/027.yml",
+      "sha256": "e151f7db8c7f38738e71be95bd80ca8898d9721a5463a2057132521864dedacf"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/028.yml",
+      "sha256": "e37c09557bd1af1f467da01cce537d78a287f7b0b10c0f5e65ce9effb3063ff8"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/029.yml",
+      "sha256": "e9c57da561c495e6afbc0b135280615cd7861830ed576f5dde5800933847112f"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/030.yml",
+      "sha256": "55650c69bcdff9d06a8996c4f834eebc929e7a70057ed99b7c1425e52722f3d8"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/031.yml",
+      "sha256": "2562e4fc3b3bd4100b1725fd0bc3d2f7b28e94c29dc9af0c028f1395a4f10329"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/032.yml",
+      "sha256": "dd4ad3504b96a649606cd4bbfd6402b83592982d5f3f39194b662be3129acb87"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/033.yml",
+      "sha256": "0318e6895e433686fc7c6acd3991c09fbef9de162ffe50ae8b63d43d70be61ba"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/034.yml",
+      "sha256": "d7c8cf0a687e9b4c653f88abd35a97f4d2b11d3f7200087dab55a1f2d7bbaf8e"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/035.yml",
+      "sha256": "790b18b02720b25198e32375765fc92635c4b471fd377d8d3c624d313bf117eb"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/036.yml",
+      "sha256": "662b238f8e8ae340cde21589aa0f62a62971f8f6ce6755465bb55990d0c02bbd"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/037.yml",
+      "sha256": "f08ef96032e804349cd1add23f902f7052998b8d62315ee5007b26e6344d110d"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/038.yml",
+      "sha256": "67e3db1d476b31d57644b20c59691bd89a711f119e8a3e06d9fea4fbccf53815"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/039.yml",
+      "sha256": "a200f9cf4ea5effdeab9871d6794e6a4e10c3951f7f4a247e8a000dfdbc04d6f"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/040.yml",
+      "sha256": "2f63a4531142f9b50aa2521ae628e35bf0eecc44d928b533cc41a78ded44180e"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/041.yml",
+      "sha256": "8e991d0929071f1e7139b43ef7bbf4c9e5c889f5eac7d1b92a06a312a806513f"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/042.yml",
+      "sha256": "c78f770791cc5bac54a83d60df1c836a4393cb5d36d45fafc026cd789238687a"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/043.yml",
+      "sha256": "8ce7c8a62be1525ae8c30d483bcb0e0fb2f760b42fef9423ece137af5361481d"
+    },
+    {
+      "path": "plugins/HelsteraAiTargetSelectorProbe/observations/044.yml",
+      "sha256": "2e9f86cc4e2c6cee177a0aba0038227abe2afa322eea21c3c9675eb8c409c38a"
+    }
+  ],
+  "logArchive": "paper-1.21.1-ai-target-selector-20261126-r1-logs.zip",
+  "logArchiveSha256": "736d263c2892642428896c3514e33aea10896912e3ef6a0aaab655fd9ab449f0"
+}

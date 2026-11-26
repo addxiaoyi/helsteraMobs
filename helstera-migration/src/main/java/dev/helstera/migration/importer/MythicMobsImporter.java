@@ -2945,6 +2945,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (dev.helstera.api.util.DisplayTransformationSpec.supports(name)) return true;
         if (dev.helstera.api.util.MerchantTradeSpec.supports(name)) return true;
         if (dev.helstera.api.util.SpecialSummonSpec.supports(name)) return true;
+        if (dev.helstera.api.util.AiTargetSelectorSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(name)) return true;
@@ -3021,6 +3022,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "runaitargetselector", "aitarget", "run-ai-target-selector" ->
+                    preserveNamedMechanic("run-ai-target-selector", trimmed, brace);
             case "summonareaeffectcloud", "summoncloud", "summon-cloud", "summonfallingblock", "summon-falling-block" ->
                     preserveNamedMechanic(dev.helstera.api.util.SpecialSummonSpec.canonical(head), trimmed, brace);
             case "summonpassenger", "summon-passenger" -> passengerMechanic(trimmed);
@@ -3371,6 +3374,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         };
         if (mapped == null) return null;
         if (Set.of("determinecondition", "detcond").contains(head)
+                || dev.helstera.api.util.AiTargetSelectorSpec.supports(head)
                 || dev.helstera.api.util.MythicScoreboardSpec.supports(head)
                 || dev.helstera.api.util.ShieldBreakSpec.supports(head)
                 || dev.helstera.api.util.DisplayTransformationSpec.supports(head)
@@ -5758,10 +5762,11 @@ public final class MythicMobsImporter implements MigrationImporter {
                                 String mobKey, String sourceKey, String targetPath) {
         List<String> selectors = stringOrList(mob, sourceKey);
         if (selectors.isEmpty()) return;
-        List<String> normalized = selectors.stream().filter(v -> v != null && !v.isBlank())
-                .map(String::trim).toList();
+        List<String> normalized = targetPath.equals("ai.targets") ? List.copyOf(selectors)
+                : selectors.stream().filter(v -> v != null && !v.isBlank()).map(String::trim).toList();
         if (normalized.isEmpty()) return;
         target.set(targetPath, normalized);
+        if (targetPath.equals("ai.targets")) target.set("ai.native-targets", true);
         note(entries, srcFile, mobKey + "." + sourceKey, targetPath, normalized,
                 "mapped", "Preserved AI selector definitions for the Helstera AI adapter.");
     }

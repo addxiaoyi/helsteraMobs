@@ -266,6 +266,8 @@ public final class SkillService {
         conds.putAll(SkillExtras.conditions());
         Map<String, SkillCatalog.ActionFactory> acts = new LinkedHashMap<>(actionFactories);
         acts.putAll(SkillExtras.actions());
+        acts.put("run-ai-target-selector", AiTargetActions.factory(registry, this::bindCondition,
+                entity -> instanceLookup.apply(entity)));
         acts.put("determine-condition", args -> determineConditionAction(args));
         acts.put("branch-unlock", args -> SkillExtras.branchUnlockAction(args, (context, specs) -> {
             for (String spec : specs) {
@@ -1635,6 +1637,7 @@ public final class SkillService {
             }
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
             if (isVariableMechanic(name) || dev.helstera.api.util.EntitySetterSpec.supports(name)
+                    || dev.helstera.api.util.AiTargetSelectorSpec.supports(name)
                     || dev.helstera.api.util.EntityInteractionSpec.supports(name)
                     || dev.helstera.api.util.DisplayTransformationSpec.supports(name)
                     || dev.helstera.api.util.SpecialSummonSpec.supports(name)
@@ -1873,7 +1876,8 @@ public final class SkillService {
                         if (dev.helstera.api.util.MythicScoreboardSpec.supports(registeredActionName)
                                 && !targetedScoreboardAction(registeredActionName)) {
                             action.accept(mechanic);
-                        } else if (registeredActionName.equals("summon-passenger")) {
+                        } else if (registeredActionName.equals("summon-passenger")
+                                || registeredActionName.equals("run-ai-target-selector")) {
                             action.accept(mechanic);
                         } else if (targeterSpec != null) {
                             withConditionActions(mechanic, true, () -> {
@@ -3679,6 +3683,8 @@ public final class SkillService {
     }
 
     private static String canonicalActionName(String name) {
+        if (dev.helstera.api.util.AiTargetSelectorSpec.supports(name))
+            return dev.helstera.api.util.AiTargetSelectorSpec.canonical(name);
         if (dev.helstera.api.util.SpecialSummonSpec.supports(name))
             return dev.helstera.api.util.SpecialSummonSpec.canonical(name);
         if (dev.helstera.api.util.MerchantTradeSpec.supports(name))

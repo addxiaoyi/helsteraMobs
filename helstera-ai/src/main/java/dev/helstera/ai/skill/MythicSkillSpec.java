@@ -65,6 +65,7 @@ public record MythicSkillSpec(
                         "subtractvariable", "subvar", "reducevariable").contains(mechanic.toLowerCase(Locale.ROOT)),
                 dev.helstera.api.util.MythicVariableLocation.supports(mechanic),
                 dev.helstera.api.util.MythicScoreboardSpec.supports(mechanic)
+                        || dev.helstera.api.util.AiTargetSelectorSpec.supports(mechanic)
                         || dev.helstera.api.util.ShieldBreakSpec.supports(mechanic)
                         || dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic)
                         || dev.helstera.api.util.SpecialSummonSpec.supports(mechanic)

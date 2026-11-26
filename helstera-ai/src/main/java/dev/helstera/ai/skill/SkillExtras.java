@@ -549,6 +549,7 @@ public final class SkillExtras {
 
     public static void host(Plugin plugin) {
         host = plugin;
+        AiTargetActions.host(plugin);
         ItemCopyActions.host(plugin);
         ShieldBreakActions.host(plugin);
     }
@@ -565,6 +566,7 @@ public final class SkillExtras {
      * classloader and can route a later action into stale services.</p>
      */
     public static void resetRuntimeHooks() {
+        AiTargetActions.host(null);
         ItemCopyActions.host(null);
         ShieldBreakActions.host(null);
         GeneratedLootActions.loot(null);
@@ -731,6 +733,7 @@ public final class SkillExtras {
     /** Clears persistent scoped values associated with an entity identity. */
     public static void forgetEntity(org.bukkit.entity.Entity entity) {
         if (entity == null) return;
+        AiTargetActions.forget(entity);
         UUID uuid = null;
         try { uuid = entity.getUniqueId(); }
         catch (RuntimeException ignored) { /* Lightweight entity doubles may have no UUID. */ }

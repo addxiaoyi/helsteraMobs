@@ -8219,3 +8219,51 @@ natural damage/all drops, reload/disconnect/world unload/shutdown, client
 packets/rendering and external custom blocks remain. The strict release gate
 must run on the final artifact; preceding reports retain their own JAR hashes.
 See [the typed summon contract](../../docs/SPECIAL_SUMMON_CONTRACT.md).
+
+## 2026-11-26 native AI target scheduling (bounded M22 and S01 evidence)
+
+[AI target selector r4](reports/paper-1.21.1-ai-target-selector-20261126-r4.json)
+passes 144 observations: 48 cases through native/direct/imported paths on
+Paper 1.21.1. Actual native target Goals are ticked by Paper, while one observer
+client keeps the scene active. The independent auditor passes with
+`--check-current` against JAR SHA-256
+`d1ad6c0b1ff48dc851c68f6857697173b808591d5a666dffccb85c89857176f3`.
+Full `./mvnw -B -o verify` passes 2,969 tests with no failures/errors/skips and
+11 clean SpotBugs checks. The semantic mutation test rejects all 10,108
+rehashed scalar corruptions of the checked observations. The server and
+observer exit cleanly.
+
+The fixture covers native Goal classes, constructor fields, loaded aliases,
+static quoting and nested syntax, wrong caster types, duplicate rules,
+conditional and faction predicates, hurt/owner records, priority preemption,
+equal-priority retention, interruptibility, and clear/reset without stop
+callbacks. It checks source-order/implicit-priority profiles, malformed list
+abort behavior, per-caster dynamic rule replay after rebind and original Goal
+restoration on controller close. Target events, reasons, order, callback counts
+and cleanup states are independently checked. Tick timing and asynchronous
+controller caches are distinguished from native scheduler parity; explicit
+controller observation and close states are asserted.
+
+[Redacted archive](reports/paper-1.21.1-ai-target-selector-20261126-r4-logs.zip)
+SHA-256: `a3909016485962d3861d27aad4eeb2a565d661c86c30707d4f914e965993d8b0`.
+Each case uses a separate fixture entity RandomSource because Paper's shared
+source ignores setSeed. This does not change the production random source.
+
+Earlier failed reports remain available:
+[r1](reports/paper-1.21.1-ai-target-selector-20261126-r1.json) retained partial
+observations after the observer fell out of the unsupported scene;
+[r2](reports/paper-1.21.1-ai-target-selector-20261126-r2.json) exposed the probe
+Goal's missing Mob constructor, Paper's wrapper type inference, and restoration
+of UNKNOWN_BEHAVIOR Goals to the wrong selector;
+[r3](reports/paper-1.21.1-ai-target-selector-20261126-r3.json) captured an ignored
+seed, an unresolved-condition mismatch and a generic-caster setup that native
+reloaded from persisted Mythic identity. r4 fixes the implementation and
+fixture issues; it also preserves profile whitespace through migration.
+
+This slice does not complete native movement Goal composition or full threat
+switching. Arbitrary custom/composite conditions, mixed movement/target Goal
+conflicts, full native event dispatch, restart persistence, actual reload,
+disable/removal event paths, external faction providers, broader worlds and
+additional Paper versions require separate acceptance. The strict release gate
+must run on the final artifact; old fixture reports retain their own JAR hashes.
+See [the AI target selector contract](../../docs/AI_TARGET_SELECTOR_CONTRACT.md).

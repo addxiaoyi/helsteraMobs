@@ -69,6 +69,8 @@ public final class AiController {
     private final Random random = new Random();
     private final ZombieDoorPolicy doorPolicy = new ZombieDoorPolicy();
     private boolean closed;
+    private NativeTargetSelectors nativeTargets;
+    private boolean dynamicNativeTargets;
     /** Last Paper goal-selector check observed for each conditional target rule. */
     private final Map<String, Integer> lastConditionalTargetCheckTicks = new HashMap<>();
     /** 寻路服务；未注入时全部走直线，保证旧配置行为不变。 */
@@ -102,6 +104,11 @@ public final class AiController {
         closed = true;
         try { doorPolicy.close(); }
         catch (RuntimeException error) { warnSelector("breakdoors-restore", error.getClass().getSimpleName()); }
+        if (nativeTargets != null) {
+            try { nativeTargets.close(); }
+            catch (RuntimeException error) { warnSelector("target-goals-restore", error.getMessage()); }
+            nativeTargets = null;
+        }
     }
 
     public AiController(ModelInstanceImpl inst, AiProfile profile,
@@ -137,6 +144,39 @@ public final class AiController {
         return state;
     }
 
+    private boolean usesNativeTargets() { return profile.nativeTargets || dynamicNativeTargets; }
+
+    private boolean openNativeTargets() {
+        if (nativeTargets != null) return true;
+        var opened = dev.helstera.runtime.instance.PaperTargetGoals.open(inst.entity());
+        if (opened.session() == null) { warnSelector("native-targets", opened.detail()); return false; }
+        nativeTargets = new NativeTargetSelectors(opened.session(), NativeTargetSelectors.predicates(
+                () -> dev.helstera.api.behavior.BehaviorContext.of(inst, null, 1, -1, decisions, state.name()),
+                behaviors, conditionBinder, entity -> inst.isValid() && inst.entity() == entity));
+        return true;
+    }
+
+    public dev.helstera.runtime.instance.PaperTargetGoals.Result runTargetSelectors(
+            List<dev.helstera.api.util.AiTargetSelectorSpec.Rule> rules) {
+        if (closed || !openNativeTargets())
+            return new dev.helstera.runtime.instance.PaperTargetGoals.Result(false, 0, "No active native target controller.");
+        var result = nativeTargets.mutate(rules);
+        if (result.applied() > 0) dynamicNativeTargets = true;
+        if (usesNativeTargets()) observeNativeTarget();
+        return result;
+    }
+
+    private LivingEntity observeNativeTarget() {
+        LivingEntity selected = inst.entity() instanceof org.bukkit.entity.Mob mob ? mob.getTarget() : null;
+        if (selected != null && (!selected.isValid() || selected.isDead())) selected = null;
+        LivingEntity previous = targetEntity();
+        combatTarget = selected;
+        target = selected instanceof Player player ? player : null;
+        commitThreatTarget(selected);
+        if (previous != selected) bus.post(new ModelTargetChangedEvent(inst, previous, selected));
+        return selected;
+    }
+
     public LivingEntity targetEntity() {
         return combatTarget != null ? combatTarget : target;
     }
@@ -154,7 +194,7 @@ public final class AiController {
         target = entity instanceof Player player ? player : null;
         if (entity instanceof Player player && threat != null) threat.focus(player.getUniqueId());
         commitThreatTarget(entity);
-        syncNativeTarget(entity);
+        writeNativeTarget(entity);
         if (previous != entity) bus.post(new ModelTargetChangedEvent(inst, previous, entity));
     }
 
@@ -163,7 +203,7 @@ public final class AiController {
         combatTarget = null;
         target = null;
         commitThreatTarget(null);
-        syncNativeTarget(null);
+        writeNativeTarget(null);
         if (previous != null) bus.post(new ModelTargetChangedEvent(inst, previous, null));
     }
 
@@ -218,9 +258,11 @@ public final class AiController {
                 threat.addThreat(living.getUniqueId(), damage,
                         loc == null ? 0 : safeDistance(loc, living.getLocation()));
             }
-            if (living instanceof Player p) target = p;
-            combatTarget = living;
-            commitThreatTarget(living);
+            if (!usesNativeTargets()) {
+                if (living instanceof Player p) target = p;
+                combatTarget = living;
+                commitThreatTarget(living);
+            }
         }
         if (anim != null) anim.intent(EntityAnimationStateMachine.AnimState.HURT);
     }
@@ -351,6 +393,14 @@ public final class AiController {
     }
 
     private void applySelectorProfile(Entity base, Location loc) {
+        if (profile.nativeTargets || dynamicNativeTargets) {
+            if (openNativeTargets()) {
+                var result = nativeTargets.configure(profile.nativeTargets ? profile.targets : List.of());
+                if (!result.success()) warnSelector("native-targets", result.detail());
+            }
+        } else if (nativeTargets != null) {
+            nativeTargets.close(); nativeTargets = null;
+        }
         AiProfile.SelectorPolicy policy = profile.selectorPolicy();
         selectorPlan = SelectorPlan.compile(profile);
         Set<String> activeConditionalRules = new HashSet<>();
@@ -427,8 +477,8 @@ public final class AiController {
             warnSelector(separator < 0 ? "selector" : unsupported.substring(0, separator),
                     separator < 0 ? unsupported : unsupported.substring(separator + 1));
         }
-        if (selectorTargetMode != AiProfile.TargetMode.PLAYERS) target = null;
-        if (combatTarget != null && !selectorTargetMatches(combatTarget)) {
+        if (!usesNativeTargets() && selectorTargetMode != AiProfile.TargetMode.PLAYERS) target = null;
+        if (!usesNativeTargets() && combatTarget != null && !selectorTargetMatches(combatTarget)) {
             combatTarget = null;
             commitThreatTarget(null);
         }
@@ -624,6 +674,11 @@ public final class AiController {
 
     /** Mirrors the custom selector result into Bukkit's native Mob target slot. */
     private void syncNativeTarget(LivingEntity entity) {
+        if (usesNativeTargets()) return;
+        writeNativeTarget(entity);
+    }
+
+    private void writeNativeTarget(LivingEntity entity) {
         Entity base = inst.entity();
         if (!(base instanceof org.bukkit.entity.Mob mob)) return;
         try {
@@ -662,6 +717,7 @@ public final class AiController {
     }
 
     private LivingEntity preferredCombatTarget(Location loc, LivingEntity sensed) {
+        if (usesNativeTargets()) return sensed;
         if ((selectorAttackerFirst || selectorHurtByFirst) && lastAttackerEntity != null
                 && lastAttackerEntity.isValid() && !lastAttackerEntity.isDead()) return lastAttackerEntity;
         if (selectorTargetMatches(combatTarget)) return combatTarget;
@@ -1033,6 +1089,7 @@ public final class AiController {
         return nearest;
     }
     private LivingEntity sense(Location loc) {
+        if (usesNativeTargets()) return observeNativeTarget();
         if (selectorHasExplicitTargets) return selectConfiguredTarget(loc);
         if (selectorTargetMode == AiProfile.TargetMode.OWNER) return ownerTarget(loc);
         if (selectorTargetMode == AiProfile.TargetMode.OWNER_ATTACKER) {
