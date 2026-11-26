@@ -1637,6 +1637,7 @@ public final class SkillService {
             if (isVariableMechanic(name) || dev.helstera.api.util.EntitySetterSpec.supports(name)
                     || dev.helstera.api.util.EntityInteractionSpec.supports(name)
                     || dev.helstera.api.util.DisplayTransformationSpec.supports(name)
+                    || dev.helstera.api.util.MerchantTradeSpec.supports(name)
                     || dev.helstera.api.util.ShieldBreakSpec.supports(name)
                     || dev.helstera.api.util.MythicScoreboardSpec.supports(name)
                     || dev.helstera.api.util.MythicItemCopySpec.supports(name)
@@ -1716,7 +1717,8 @@ public final class SkillService {
         if (dev.helstera.api.util.EntitySetterSpec.supports(name)
                 || dev.helstera.api.util.EntityInteractionSpec.supports(name)
                 || dev.helstera.api.util.DisplayTransformationSpec.supports(name)
-                    || dev.helstera.api.util.ShieldBreakSpec.supports(name)) {
+                || dev.helstera.api.util.MerchantTradeSpec.supports(name)
+                || dev.helstera.api.util.ShieldBreakSpec.supports(name)) {
             try { dev.helstera.api.util.EntitySetterSpec.requireKnownTargeter(targeterSpec); }
             catch (IllegalArgumentException invalid) {
                 warn("invalid entity setter targeter in \"" + spec + "\": " + invalid.getMessage());
@@ -1874,6 +1876,7 @@ public final class SkillService {
                                 if (!(dev.helstera.api.util.EntitySetterSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.EntityInteractionSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.DisplayTransformationSpec.supports(registeredActionName)
+                                        || dev.helstera.api.util.MerchantTradeSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.ShieldBreakSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicItemCopySpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicGeneratedLootSpec.supports(registeredActionName)
@@ -1887,6 +1890,7 @@ public final class SkillService {
                                 if (!(dev.helstera.api.util.EntitySetterSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.EntityInteractionSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.DisplayTransformationSpec.supports(registeredActionName)
+                                        || dev.helstera.api.util.MerchantTradeSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.ShieldBreakSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicItemCopySpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicGeneratedLootSpec.supports(registeredActionName)
@@ -3669,6 +3673,8 @@ public final class SkillService {
     }
 
     private static String canonicalActionName(String name) {
+        if (dev.helstera.api.util.MerchantTradeSpec.supports(name))
+            return dev.helstera.api.util.MerchantTradeSpec.canonical(name);
         if (dev.helstera.api.util.DisplayTransformationSpec.supports(name))
             return dev.helstera.api.util.DisplayTransformationSpec.canonical(name);
         if (dev.helstera.api.util.ShieldBreakSpec.supports(name))

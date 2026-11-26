@@ -2289,9 +2289,14 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
         }
         if (dev.helstera.api.util.ShieldBreakSpec.supports(mechanic)
-                || dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic)) {
+                || dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic)
+                || dev.helstera.api.util.MerchantTradeSpec.supports(mechanic)) {
             try {
-                if (dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic))
+                if (dev.helstera.api.util.MerchantTradeSpec.supports(mechanic)) {
+                    if (dev.helstera.api.util.MerchantTradeSpec.canonical(mechanic).equals("open-trades"))
+                        dev.helstera.api.util.MerchantTradeSpec.realTrade(MythicSpec.rawKeyedArguments(raw));
+                    else dev.helstera.api.util.MerchantTradeSpec.parse(MythicSpec.rawKeyedArguments(raw));
+                } else if (dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic))
                     dev.helstera.api.util.DisplayTransformationSpec.parse(MythicSpec.rawKeyedArguments(raw));
                 else dev.helstera.api.util.ShieldBreakSpec.parse(MythicSpec.rawKeyedArguments(raw));
                 List<String> tokens = MythicSpec.executionTokens(raw);
@@ -2935,6 +2940,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (dev.helstera.api.util.EntityInteractionSpec.supports(name)) return true;
         if (dev.helstera.api.util.ShieldBreakSpec.supports(name)) return true;
         if (dev.helstera.api.util.DisplayTransformationSpec.supports(name)) return true;
+        if (dev.helstera.api.util.MerchantTradeSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(name)) return true;
@@ -3011,6 +3017,9 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "addtrade", "settrade", "removetrade", "replacetrade", "merchant-trade" ->
+                    preserveNamedMechanic("merchant-trade", trimmed, brace);
+            case "opentrades", "opentrade", "trade", "open-trades" -> preserveNamedMechanic("open-trades", trimmed, brace);
             case "displaytransformation", "settransformation", "transformation", "display-transformation" ->
                     preserveNamedMechanic("display-transformation", trimmed, brace);
             case "shieldbreak", "disableshield", "disable-shield" -> preserveNamedMechanic("disable-shield", trimmed, brace);
@@ -3357,6 +3366,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                 || dev.helstera.api.util.MythicScoreboardSpec.supports(head)
                 || dev.helstera.api.util.ShieldBreakSpec.supports(head)
                 || dev.helstera.api.util.DisplayTransformationSpec.supports(head)
+                || dev.helstera.api.util.MerchantTradeSpec.supports(head)
                 || dev.helstera.api.util.MythicItemCopySpec.supports(head)
                 || dev.helstera.api.util.MythicGeneratedLootSpec.supports(head)
                 || dev.helstera.api.util.MythicJsonMessageSpec.supports(head)) {

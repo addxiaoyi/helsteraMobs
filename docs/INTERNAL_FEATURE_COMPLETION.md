@@ -66,6 +66,13 @@ These need validation and release evidence, not another implementation:
   Rendering and broader acceptance remain; see
   [DISPLAY_TRANSFORMATION_CONTRACT.md](DISPLAY_TRANSFORMATION_CONTRACT.md).
 
+- Merchant recipe mutation and trade windows (M06/M07) now have runtime/importer
+  implementations and offline tests. The native alias/mode, selected merchant
+  item-generation and caster/player UI direction are recorded in
+  [MERCHANT_TRADE_CONTRACT.md](MERCHANT_TRADE_CONTRACT.md). The 2026-11-26 r3
+  report passes 129 scoped observations, including two-client window/close
+  evidence. Completed exchanges and broader acceptance remain.
+
 ## Concrete public-build mechanics inventory
 
 Native names and aliases below come from `@MythicMechanic` in the pinned
@@ -83,8 +90,8 @@ contract extensions, not duplicate implementations.
 | M03 | `setGlobalScore/sgs`, `setMobScore/sms`, `setTargetScore/sts`, `modifyGlobalScore/mgs`, `modifyMobScore/mms`, `modifyTargetScore/mts`, `modifyScore` | Implemented; 2026-11-26 r2 passes 212 scoped observations. Full native dispatcher scheduling and release validation remain. |
 | M04 | `equipCopy`, `giveitemfromslot/givefromslot`, `giveitemfromtarget/givefromtarget/giveitemsfromtarget/itemgivefromtarget` | Equipment copy and slot grants pass 165 scoped two-client observations. Generated rewards pass 90 in 2026-11-26 r3; see the generated-loot contract. Randomized/native edge cases, multi-recipient/reload/disconnect acceptance and the final release gate remain. |
 | M05 | `messagejson/jsonmessage/jmsg/jm` | Runtime/importer and offline tests implemented. Real Paper/client component, placeholder and audience acceptance remains. |
-| M06 | `addTrade/setTrade/removeTrade/replaceTrade` | Villager recipe mutation with native mode/index/material/metadata handling and wrong-entity rejection. |
-| M07 | `opentrades/opentrade/trade` | Open the selected villager's trade UI for the appropriate player; verify actor/recipient direction and UI closure. |
+| M06 | `addTrade/setTrade/removeTrade/replaceTrade` | Runtime/importer implemented; 2026-11-26 r3 passes 129 combined M06/M07 observations. Recipe fields, item generation, profession side effects and remaining scope are in [MERCHANT_TRADE_CONTRACT.md](MERCHANT_TRADE_CONTRACT.md). |
+| M07 | `opentrades/opentrade/trade` | Runtime/importer implemented; the combined M06/M07 r3 fixture passes 129 observations, including two-client real/copied windows, forced takeover and client closure. Completed exchanges, events and broader acceptance remain. |
 | M08 | `setleashholder/setleasher` | Implemented; the caster's holder becomes the selected entity. Setter r3 covers the scoped direction/unbinding cases; broader world/rejection cases and release validation remain. |
 | M09 | `setchunkforceloaded` | Implemented; setter r3 covers selected-location force-load changes and cleanup. Full release validation remains. |
 | M10 | `setTextDisplay/setText` | Implemented with generic entity dispatch and scoped setter r3 evidence. Broader selectors, nonliving conditions and client rendering acceptance remain. |
@@ -179,8 +186,8 @@ Names come from native `@MythicTargeter` declarations and were checked against
 1. Complete the remaining M04/M05/M13/M17–M20 Paper/client acceptance and the
    setter contract's selector/nonliving-condition boundaries. Refresh the full
    strict release gate only against the final artifact.
-2. Implement M06/M07/M21/M22 with independent native contracts and
-   recipient/ownership/UI checks.
+2. Finish M06/M07 acceptance and implement M21/M22 with independent native
+   contracts and recipient/ownership/UI checks.
 3. Implement T02 and T05–T11 with bounded location/block enumeration and
    separate entity-valued versus location-valued dispatch.
 4. Complete S01/S03–S10 as distinct runtime/state-machine and conversion slices;

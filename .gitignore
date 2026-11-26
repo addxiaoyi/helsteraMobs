@@ -81,6 +81,7 @@ tools/**/*.zip
 !tools/paper-integration/reports/paper-1.21.1-generated-loot-*-logs.zip
 !tools/paper-integration/reports/paper-1.21.1-shield-break-*-logs.zip
 !tools/paper-integration/reports/paper-1.21.1-display-transform-*-logs.zip
+!tools/paper-integration/reports/paper-1.21.1-merchant-trade-*-logs.zip
 tools/**/*.jar
 tools/paper-integration/node_modules/
 tools/paper-integration/.external-cache/

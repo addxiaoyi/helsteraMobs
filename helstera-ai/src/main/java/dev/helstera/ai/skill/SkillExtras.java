@@ -535,6 +535,7 @@ public final class SkillExtras {
 
     public static void lootService(dev.helstera.ai.loot.LootService service) {
         GeneratedLootActions.loot(service);
+        MerchantTradeActions.loot(service);
     }
 
     public static void host(Plugin plugin) {
@@ -558,6 +559,7 @@ public final class SkillExtras {
         ItemCopyActions.host(null);
         ShieldBreakActions.host(null);
         GeneratedLootActions.loot(null);
+        MerchantTradeActions.loot(null);
         host = null;
         despawner = null;
         threatLookup = null;
@@ -6054,7 +6056,7 @@ public final class SkillExtras {
     }
 
     public static Map<String, SkillCatalog.ActionFactory> actions() {
-        return ShieldBreakActions.wrap(EntityInteractionActions.wrap(GeneratedLootActions.wrap(JsonMessageActions.wrap(ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
+        return MerchantTradeActions.wrap(ShieldBreakActions.wrap(EntityInteractionActions.wrap(GeneratedLootActions.wrap(JsonMessageActions.wrap(ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
                 Map.entry("set-speed", (SkillCatalog.ActionFactory) a -> {
                     var spec = dev.helstera.api.util.SetSpeedSpec.parse(a);
                     return ctx -> SetSpeedAction.apply(spec, ctx, itemTargets(ctx));
@@ -7802,7 +7804,7 @@ public final class SkillExtras {
                         }
                     };
                 })
-        )), raw -> resolveItem(raw, 1))))))));
+        )), raw -> resolveItem(raw, 1)))))))));
     }
 
     /**

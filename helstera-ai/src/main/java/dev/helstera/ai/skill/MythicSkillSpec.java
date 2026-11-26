@@ -67,6 +67,7 @@ public record MythicSkillSpec(
                 dev.helstera.api.util.MythicScoreboardSpec.supports(mechanic)
                         || dev.helstera.api.util.ShieldBreakSpec.supports(mechanic)
                         || dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic)
+                        || dev.helstera.api.util.MerchantTradeSpec.supports(mechanic)
                         || dev.helstera.api.util.MythicItemCopySpec.supports(mechanic)
                         || dev.helstera.api.util.MythicGeneratedLootSpec.supports(mechanic)
                         || dev.helstera.api.util.MythicJsonMessageSpec.supports(mechanic));

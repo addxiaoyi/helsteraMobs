@@ -133,6 +133,14 @@ class GeneratedLootTest {
         assertThrows(IllegalArgumentException.class, () -> generate(service, "huge"));
     }
 
+    @Test void nativeItemFilteringSkipsZeroAndFractionalCandidatesBeforeMerchantSelection() throws Exception {
+        var generator = new GeneratedLoot(service(""));
+        var spec = new MythicGeneratedLootSpec("DIAMOND 0 1,EMERALD 0.5 1,BREAD 1", false);
+        var ordinary = generator.generate(spec, caster, 1, 0, new Random(1));
+        assertEquals(List.of("BREAD"), ordinary.rewards().stream().map(r -> r.entry().reward().item()).toList());
+        assertEquals(1, ordinary.rewards().getFirst().amount());
+    }
+
     @Test void ordinaryLootConfigurationRetainsInclusiveAmountsAndItemMetadata() throws Exception {
         var service = service("""
                 tables:

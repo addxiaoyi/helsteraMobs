@@ -8123,3 +8123,49 @@ records finite-result rejection and public parser differences. Actual rendered
 interpolation/orientation, randomized ranges, broader nonliving selectors and
 conditions, native scheduling, lifecycle and strict release gates remain.
 Earlier reports retain their own artifacts and do not certify this new JAR.
+
+
+## Merchant recipe and window observations — 2026-11-26
+
+[Merchant trade r3](reports/paper-1.21.1-merchant-trade-20261126-r3.json) passes
+129 observations, with 43 scenarios each run through the public native cast,
+direct runtime binding and production importer. Plugin SHA-256:
+`424911672851df593ec79fe1ee93f4bc6f126e5335128009fba4ae3766f13a6d`.
+Paper 1.21.1 and MythicMobs 5.7.2 use the same pinned artifact hashes as the
+preceding fixtures. This is scoped observation evidence, not a parity promotion
+or a strict release gate for this JAR.
+
+The recipe scenarios cover all aliases defaulting to ADD, insertion/replacement/
+removal, alias priority, metadata fields and two ingredients, malformed static
+fallbacks, invalid indices/modes, existing professions, NONE-to-NITWIT recipe
+clearing, WanderingTrader and wrong entity controls. Named/custom items retain
+model data; dropper and trigger table conditions use the selected merchant.
+XP/commands do not execute, and native generated item amounts below one are
+filtered before the first eligible item is selected. Public quoted/dynamic
+amount fallback to one is recorded separately from Helstera's supported values
+of three and the incoming trigger's Y=175.
+
+Two connected protocol clients observe all 129 phases and sixteen ordered tick
+markers per phase. Window scenarios cover real/copied merchants, forced takeover,
+wrong caster/recipient direction, WanderingTrader rejection, boolean aliases,
+full trade-list fields and actual client close requests. The independent auditor
+reconstructs the window lifecycle from packets and compares it with server
+merchant ownership and inventory-close counts. All packets decode completely.
+Both server and client processes exit successfully; the fixture port is released.
+The auditor rejects 3,376 rehashed semantic mutations of recipe/ownership state,
+actor identities, client trade fields and required window/lifecycle events.
+[Redacted archive](reports/paper-1.21.1-merchant-trade-20261126-r3-logs.zip).
+
+The rejected [r1](reports/paper-1.21.1-merchant-trade-20261126-r1.json) retained
+incorrect fixture assumptions about profession changes and `@target` combat
+selection. [r2](reports/paper-1.21.1-merchant-trade-20261126-r2.json) exposed the
+incorrect retention of generated items below one when a later item existed.
+The final implementation reuses the existing native-compatible reward filtering;
+all three report archives have zero matches in the independent redaction scan.
+
+Offline `./mvnw -o -B -pl helstera-plugin -am verify` passes 2,938 tests with
+zero failures/errors/skips and all eleven SpotBugs module checks. Native full
+dispatcher scheduling, transactions, trade-event cancellation, copy mutation
+isolation, restocking/gossip, human rendering, randomized/external custom drop
+behavior, reload/disconnect and final release validation remain separate.
+See [the merchant contract](../../docs/MERCHANT_TRADE_CONTRACT.md).
