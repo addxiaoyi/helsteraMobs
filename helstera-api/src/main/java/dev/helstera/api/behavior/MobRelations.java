@@ -49,10 +49,7 @@ public final class MobRelations {
     public static boolean setOwner(Entity mob, Entity owner) {
         if (mob == null || owner == null || mob.equals(owner)) return false;
         UUID ownerId = owner.getUniqueId();
-        if (ownerId == null) return false;
-        var data = mob.getPersistentDataContainer();
-        if (data == null) return false;
-        data.set(OWNER_KEY, PersistentDataType.STRING, ownerId.toString());
+        if (!setOwnerMetadata(mob, ownerId)) return false;
         if (mob instanceof org.bukkit.entity.Tameable tameable
                 && owner instanceof org.bukkit.entity.Player player
                 && (mob instanceof org.bukkit.entity.Wolf
@@ -60,6 +57,16 @@ public final class MobRelations {
                 || mob instanceof org.bukkit.entity.Parrot)) {
             tameable.setOwner(player);
         }
+        return true;
+    }
+
+    /** Store ownership without applying a mechanic-specific vanilla taming policy. */
+    public static boolean setOwnerMetadata(Entity mob, UUID ownerId) {
+        if (mob == null) return false;
+        if (ownerId == null) return false;
+        var data = mob.getPersistentDataContainer();
+        if (data == null) return false;
+        data.set(OWNER_KEY, PersistentDataType.STRING, ownerId.toString());
         return true;
     }
 

@@ -2290,9 +2290,12 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
         if (dev.helstera.api.util.ShieldBreakSpec.supports(mechanic)
                 || dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic)
-                || dev.helstera.api.util.MerchantTradeSpec.supports(mechanic)) {
+                || dev.helstera.api.util.MerchantTradeSpec.supports(mechanic)
+                || dev.helstera.api.util.SpecialSummonSpec.supports(mechanic)) {
             try {
-                if (dev.helstera.api.util.MerchantTradeSpec.supports(mechanic)) {
+                if (dev.helstera.api.util.SpecialSummonSpec.supports(mechanic)) {
+                    dev.helstera.api.util.SpecialSummonSpec.parse(mechanic, MythicSpec.rawKeyedArguments(raw));
+                } else if (dev.helstera.api.util.MerchantTradeSpec.supports(mechanic)) {
                     if (dev.helstera.api.util.MerchantTradeSpec.canonical(mechanic).equals("open-trades"))
                         dev.helstera.api.util.MerchantTradeSpec.realTrade(MythicSpec.rawKeyedArguments(raw));
                     else dev.helstera.api.util.MerchantTradeSpec.parse(MythicSpec.rawKeyedArguments(raw));
@@ -2941,6 +2944,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (dev.helstera.api.util.ShieldBreakSpec.supports(name)) return true;
         if (dev.helstera.api.util.DisplayTransformationSpec.supports(name)) return true;
         if (dev.helstera.api.util.MerchantTradeSpec.supports(name)) return true;
+        if (dev.helstera.api.util.SpecialSummonSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(name)) return true;
@@ -3017,6 +3021,10 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "summonareaeffectcloud", "summoncloud", "summon-cloud", "summonfallingblock", "summon-falling-block" ->
+                    preserveNamedMechanic(dev.helstera.api.util.SpecialSummonSpec.canonical(head), trimmed, brace);
+            case "summonpassenger", "summon-passenger" -> passengerMechanic(trimmed);
+
             case "addtrade", "settrade", "removetrade", "replacetrade", "merchant-trade" ->
                     preserveNamedMechanic("merchant-trade", trimmed, brace);
             case "opentrades", "opentrade", "trade", "open-trades" -> preserveNamedMechanic("open-trades", trimmed, brace);
@@ -3366,6 +3374,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                 || dev.helstera.api.util.MythicScoreboardSpec.supports(head)
                 || dev.helstera.api.util.ShieldBreakSpec.supports(head)
                 || dev.helstera.api.util.DisplayTransformationSpec.supports(head)
+                || dev.helstera.api.util.SpecialSummonSpec.supports(head)
                 || dev.helstera.api.util.MerchantTradeSpec.supports(head)
                 || dev.helstera.api.util.MythicItemCopySpec.supports(head)
                 || dev.helstera.api.util.MythicGeneratedLootSpec.supports(head)
@@ -3930,6 +3939,14 @@ public final class MythicMobsImporter implements MigrationImporter {
         } catch (NumberFormatException ignored) {
             return false;
         }
+    }
+
+    private static String passengerMechanic(String raw) {
+        var args = new java.util.LinkedHashMap<>(dev.helstera.api.util.MythicGeneratedLootSpec.named(MythicSpec.rawKeyedArguments(raw)));
+        var spec = dev.helstera.api.util.SpecialSummonSpec.parse("summon-passenger", MythicSpec.rawKeyedArguments(raw));
+        if (!spec.passenger().isBlank()) args.put("passenger", summonTargetId(spec.passenger()));
+        return args.isEmpty() ? "summon-passenger" : "summon-passenger{" + args.entrySet().stream()
+                .map(entry -> entry.getKey() + "=" + entry.getValue()).collect(java.util.stream.Collectors.joining(";")) + "}";
     }
 
     private static String preserveNamedMechanic(String name, String raw, int open) {

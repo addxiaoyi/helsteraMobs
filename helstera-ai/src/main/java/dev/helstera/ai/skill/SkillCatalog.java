@@ -149,6 +149,18 @@ public final class SkillCatalog {
         summonGate = g;
     }
 
+    static boolean summonPermitted(int ownerInstanceId) {
+        SummonGate gate = summonGate;
+        return gate == null || gate.whyBlocked(ownerInstanceId) == null;
+    }
+
+    static void summoned(BehaviorContext context, int instanceId) {
+        SummonedAudienceUpdater audience = summonedAudienceUpdater;
+        if (audience != null) audience.setAudience(instanceId, context.executionAudience().orElse(null));
+        SummonGate gate = summonGate;
+        if (gate != null) gate.onSummoned(context.instance().instanceId(), instanceId);
+    }
+
     /**
      * 变身目标：由运行期注入，供 transform 动作更换实例的载体实体。
      *

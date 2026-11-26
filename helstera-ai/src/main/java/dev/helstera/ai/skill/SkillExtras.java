@@ -533,6 +533,15 @@ public final class SkillExtras {
         return t.streakOfInstance(id(ctx), System.nanoTime());
     }
 
+    @FunctionalInterface
+    public interface PassengerSummoner {
+        dev.helstera.api.instance.ModelInstance spawn(String mobId, BehaviorContext context);
+    }
+
+    public static void passengerSummoner(PassengerSummoner hook) {
+        SpecialSummonActions.passengers = hook;
+    }
+
     public static void lootService(dev.helstera.ai.loot.LootService service) {
         GeneratedLootActions.loot(service);
         MerchantTradeActions.loot(service);
@@ -560,6 +569,7 @@ public final class SkillExtras {
         ShieldBreakActions.host(null);
         GeneratedLootActions.loot(null);
         MerchantTradeActions.loot(null);
+        SpecialSummonActions.passengers = null;
         host = null;
         despawner = null;
         threatLookup = null;
@@ -6056,7 +6066,7 @@ public final class SkillExtras {
     }
 
     public static Map<String, SkillCatalog.ActionFactory> actions() {
-        return MerchantTradeActions.wrap(ShieldBreakActions.wrap(EntityInteractionActions.wrap(GeneratedLootActions.wrap(JsonMessageActions.wrap(ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
+        return SpecialSummonActions.wrap(MerchantTradeActions.wrap(ShieldBreakActions.wrap(EntityInteractionActions.wrap(GeneratedLootActions.wrap(JsonMessageActions.wrap(ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
                 Map.entry("set-speed", (SkillCatalog.ActionFactory) a -> {
                     var spec = dev.helstera.api.util.SetSpeedSpec.parse(a);
                     return ctx -> SetSpeedAction.apply(spec, ctx, itemTargets(ctx));
@@ -7804,7 +7814,7 @@ public final class SkillExtras {
                         }
                     };
                 })
-        )), raw -> resolveItem(raw, 1)))))))));
+        )), raw -> resolveItem(raw, 1))))))))));
     }
 
     /**

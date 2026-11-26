@@ -91,3 +91,4 @@ tools/paper-integration/.external-cache/
 
 # Local isolated worktrees
 .worktrees/
+!tools/paper-integration/reports/paper-1.21.1-special-summon-*-logs.zip

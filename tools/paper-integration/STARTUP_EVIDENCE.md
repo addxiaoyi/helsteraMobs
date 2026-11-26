@@ -8169,3 +8169,53 @@ dispatcher scheduling, transactions, trade-event cancellation, copy mutation
 isolation, restocking/gossip, human rendering, randomized/external custom drop
 behavior, reload/disconnect and final release validation remain separate.
 See [the merchant contract](../../docs/MERCHANT_TRADE_CONTRACT.md).
+
+## Typed summon observations — 2026-11-26
+
+[Special summon r5](reports/paper-1.21.1-special-summon-20261126-r5.json) passes
+129 observations: 43 scenarios across public native casts, direct runtime
+binding and production imports. The full Maven verification passes 2,953 tests
+with zero failures/errors/skips and eleven clean SpotBugs module checks.
+Plugin SHA-256:
+`7ab88527145c36ae5fd1a85829951a9f3d7952ece186a885374b11dacf3bfc3d`.
+The independent audit passes with `--check-current`.
+Its mutation suite rejects 8,292 rehashed changes to observation fields,
+entity ages/events, report mode, required evidence and completion markers.
+
+Cloud scenarios cover argument priority (including the native misspelled key),
+particle aliases and data, partial entities after invalid potion/data, dynamic
+integer extensions, real expiry and potion application with use reductions.
+The retained native survey establishes all 106 particle enum conversions on
+pinned Paper. Falling-block scenarios include block states, malformed/dynamic
+input, AIR disappearing on its first tick, real placement and torch-obstructed
+item drops. Passenger scenarios cover caster direction, missing IDs, levels
+1/4, replacement and first-passenger stacking, mount cancellation, owner/parent
+metadata and spawn/mount ordering, with Wolf/Cat ownership controls.
+
+One protocol observer keeps the entity chunks ticking. This is server-state
+and event evidence, without a client rendering or packet parity assertion.
+Native constructors finish second-pass and post-reload initialization before
+casts; full native dispatcher scheduling is outside this slice. Both processes
+exit successfully and the fixture port is released.
+[Redacted archive](reports/paper-1.21.1-special-summon-20261126-r5-logs.zip)
+SHA-256: `b2c93224e2d6f5c087d6955b590f7fe6aa37dcd7c5ac2dc5abb16ca1a2cf19e2`.
+All five report archives have zero matches in the independent redaction scan.
+
+Earlier observations remain archived. [r1](reports/paper-1.21.1-special-summon-20261126-r1.json)
+is rejected because unloaded entity sections and absent ticking invalidated
+spawn/lifecycle observations. [r2](reports/paper-1.21.1-special-summon-20261126-r2.json)
+is incomplete because the probe did not decode the remapped BLOCK particle;
+it also exposed native particle mappings, default fields and float grammar that
+were corrected before r3. [r3](reports/paper-1.21.1-special-summon-20261126-r3.json)
+is rejected for an incorrect AIR oracle and a drop leaving the single-block
+support. r4 supplies a real floor and passes observations, but its mutation
+test exposed a missing settled-duration check on the explicit numeric
+extension. r5 fixes that audit gap and verifies entity ages, event timing,
+required archive members and particle conversions independently.
+
+Fractional levels, broader selectors/conditions, randomized ranges, additional
+particle data cases, player-caster taming, cancelled spawns/reentrant cleanup,
+natural damage/all drops, reload/disconnect/world unload/shutdown, client
+packets/rendering and external custom blocks remain. The strict release gate
+must run on the final artifact; preceding reports retain their own JAR hashes.
+See [the typed summon contract](../../docs/SPECIAL_SUMMON_CONTRACT.md).

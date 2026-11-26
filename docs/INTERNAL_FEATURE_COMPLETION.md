@@ -72,6 +72,12 @@ These need validation and release evidence, not another implementation:
   [MERCHANT_TRADE_CONTRACT.md](MERCHANT_TRADE_CONTRACT.md). The 2026-11-26 r3
   report passes 129 scoped observations, including two-client window/close
   evidence. Completed exchanges and broader acceptance remain.
+- Typed cloud, falling-block and passenger summons (M21) now have runtime,
+  direct binding and importer implementations. The 2026-11-26 r5 report passes
+  129 native/direct/imported observations, including cloud expiry/application,
+  falling-block placement/drop and passenger level/ownership/event order.
+  Client rendering/packets, fractional levels and broader lifecycle acceptance
+  remain; see [SPECIAL_SUMMON_CONTRACT.md](SPECIAL_SUMMON_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
@@ -105,7 +111,7 @@ contract extensions, not duplicate implementations.
 | M18 | `shieldbreak/disableshield` | Runtime/importer and one-tick restoration ownership implemented; 2026-11-26 r2 passes 57 scoped two-client observations. Real lifecycle, warmup, randomized ranges and full release acceptance remain. Occupied-slot conservation is an explicit extension. See [SHIELD_BREAK_CONTRACT.md](SHIELD_BREAK_CONTRACT.md). |
 | M19 | `setpitch`, `matchrotation/matchrot` | Pinned native SetPitch is a no-op. MatchRotation is implemented with nested selection, non-player recipients and body/head yaw plus pitch; Paper/client acceptance remains. |
 | M20 | `GoatRam` | Implemented through Paper `Goat.ram(LivingEntity)`; natural damage/event acceptance remains. |
-| M21 | `summonAreaEffectCloud/summonCloud`, `summonFallingBlock`, `summonPassenger` | Add typed entity spawning with native argument and lifecycle rules; generic managed-model summon is a separate operation. |
+| M21 | `summonAreaEffectCloud/summonCloud`, `summonFallingBlock`, `summonPassenger` | Runtime/importer implemented; 2026-11-26 r5 passes 129 scoped observations. Real cloud effects/expiry, block placement/drop and passenger levels 1/4, owner timing and stack behavior are covered. Fractional levels, broader lifecycle/client acceptance and the final release gate remain. See [SPECIAL_SUMMON_CONTRACT.md](SPECIAL_SUMMON_CONTRACT.md). |
 | M22 | `runaitargetselector/aitarget` | Add native syntax mapping and selected-controller mutation, then test priority, clear/reset and rebind behavior. Do not claim native Goal equivalence from current controller mutation. |
 
 ## Concrete target selectors still absent at audit time
@@ -186,8 +192,8 @@ Names come from native `@MythicTargeter` declarations and were checked against
 1. Complete the remaining M04/M05/M13/M17–M20 Paper/client acceptance and the
    setter contract's selector/nonliving-condition boundaries. Refresh the full
    strict release gate only against the final artifact.
-2. Finish M06/M07 acceptance and implement M21/M22 with independent native
-   contracts and recipient/ownership/UI checks.
+2. Finish M06/M07/M21 acceptance and implement M22 with an independent native
+   contract and selected-controller/priority/reset checks.
 3. Implement T02 and T05–T11 with bounded location/block enumeration and
    separate entity-valued versus location-valued dispatch.
 4. Complete S01/S03–S10 as distinct runtime/state-machine and conversion slices;

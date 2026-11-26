@@ -1637,6 +1637,7 @@ public final class SkillService {
             if (isVariableMechanic(name) || dev.helstera.api.util.EntitySetterSpec.supports(name)
                     || dev.helstera.api.util.EntityInteractionSpec.supports(name)
                     || dev.helstera.api.util.DisplayTransformationSpec.supports(name)
+                    || dev.helstera.api.util.SpecialSummonSpec.supports(name)
                     || dev.helstera.api.util.MerchantTradeSpec.supports(name)
                     || dev.helstera.api.util.ShieldBreakSpec.supports(name)
                     || dev.helstera.api.util.MythicScoreboardSpec.supports(name)
@@ -1717,7 +1718,8 @@ public final class SkillService {
         if (dev.helstera.api.util.EntitySetterSpec.supports(name)
                 || dev.helstera.api.util.EntityInteractionSpec.supports(name)
                 || dev.helstera.api.util.DisplayTransformationSpec.supports(name)
-                || dev.helstera.api.util.MerchantTradeSpec.supports(name)
+                || dev.helstera.api.util.SpecialSummonSpec.supports(name)
+                    || dev.helstera.api.util.MerchantTradeSpec.supports(name)
                 || dev.helstera.api.util.ShieldBreakSpec.supports(name)) {
             try { dev.helstera.api.util.EntitySetterSpec.requireKnownTargeter(targeterSpec); }
             catch (IllegalArgumentException invalid) {
@@ -1871,11 +1873,14 @@ public final class SkillService {
                         if (dev.helstera.api.util.MythicScoreboardSpec.supports(registeredActionName)
                                 && !targetedScoreboardAction(registeredActionName)) {
                             action.accept(mechanic);
+                        } else if (registeredActionName.equals("summon-passenger")) {
+                            action.accept(mechanic);
                         } else if (targeterSpec != null) {
                             withConditionActions(mechanic, true, () -> {
                                 if (!(dev.helstera.api.util.EntitySetterSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.EntityInteractionSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.DisplayTransformationSpec.supports(registeredActionName)
+                                        || dev.helstera.api.util.SpecialSummonSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MerchantTradeSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.ShieldBreakSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicItemCopySpec.supports(registeredActionName)
@@ -1890,6 +1895,7 @@ public final class SkillService {
                                 if (!(dev.helstera.api.util.EntitySetterSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.EntityInteractionSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.DisplayTransformationSpec.supports(registeredActionName)
+                                        || dev.helstera.api.util.SpecialSummonSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MerchantTradeSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.ShieldBreakSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicItemCopySpec.supports(registeredActionName)
@@ -3673,6 +3679,8 @@ public final class SkillService {
     }
 
     private static String canonicalActionName(String name) {
+        if (dev.helstera.api.util.SpecialSummonSpec.supports(name))
+            return dev.helstera.api.util.SpecialSummonSpec.canonical(name);
         if (dev.helstera.api.util.MerchantTradeSpec.supports(name))
             return dev.helstera.api.util.MerchantTradeSpec.canonical(name);
         if (dev.helstera.api.util.DisplayTransformationSpec.supports(name))

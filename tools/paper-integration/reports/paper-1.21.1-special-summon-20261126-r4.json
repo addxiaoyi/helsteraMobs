@@ -1,0 +1,602 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-special-summon-20261126-r4",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-26T05:20:10.355107+00:00",
+  "pluginSha256": "7ab88527145c36ae5fd1a85829951a9f3d7952ece186a885374b11dacf3bfc3d",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "7ee1c1a653072fa62dbbe39ec86460a04a2537879cf5cf213ef4919be164a2af",
+  "sourceHashes": {
+    "tools/paper-integration/run-special-summon-fixture.py": "c7270c871a6691efd5cba1e9bbae61741e72729f83142eea8bd9441105a1111f",
+    "tools/paper-integration/special-summon-cases.py": "6ce6ea0d48e89397943ebcc4b652264b3310f231b1c08e1f27637062cad4a24a",
+    "tools/paper-integration/special-summon-client.js": "132078dacc6e8414ff44ffc536c74d90dfda1cf90c3b3e1c509eb09bfc73d70e",
+    "tools/paper-integration/paper-1.21.1-client-protocol.js": "835e9031ccd7b85cca0d9f678e6c7a746899d33f93c6f913ea1873ab004d5c21",
+    "tools/paper-integration/audit-special-summon.py": "ed7d5ac91fb735395a7d2132de206f2489f7bacf29645da162999a569e09c031",
+    "tools/paper-integration/test-special-summon-audit.py": "7b96201c965ee5d47946cd50e32f991abbcd18f244fad9b89d5a2b94335a4b2b",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/SpecialSummonProbe.java": "ee8d80f5fe1ed83daabb27512e1be9f752d3bbf96d81e846eae2cc20aba86a2d",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SpecialSummonActions.java": "f43a22114b30bfb945292d124b7712b1eafcdfb21e5cfa1c6b7161cfd4aa17f3",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "111fcfeae56b5e693418afdf51be057ba7a71a932df7196ee91832714690853e",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "faeacc3c2b4fb53aef4d5d4e666424e3fe9a222633b725374ba9154983043f21",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillCatalog.java": "f1627486dc602ec1275c223dd9ef03514f9bfeb231c014072aede6cf75f14c5e",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "50dfbf26087b70498a9918a866048e37caa9005a9454436fb3a3d7582a0333ca",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/Placeholders.java": "f33ce6fbc655aff02c4821bbd5664b2fb2a6c72cc85585839ee0bcf5d64137ed",
+    "helstera-api/src/main/java/dev/helstera/api/util/SpecialSummonSpec.java": "8d2d755f8cdbe1532365f383663308591842d257cbd9979308ef4f65425a2f7c",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicParticleSpec.java": "956044db212fddbe642d896286169824e7284554dc7be418a2403fe4ee0ff934",
+    "helstera-api/src/main/java/dev/helstera/api/util/ShieldBreakSpec.java": "8f0379ef345b580e3c684392fa2f924a30e2de1a1c583e0091f8ca23768c0bba",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicMessageText.java": "39ece7ac8cda8084c5af9a945b5bb24516b6e37b0d80948e66829bd967282016",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicGeneratedLootSpec.java": "265da4262ff8e71668765fe400497b8b7dce9f97531d2d3e2a64027c87b01db6",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/MobRelations.java": "7aa0ba9f33f392b7a04f139ecb4b3f675e49577261bd783604573751f2c892c7",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "bb41a8c3c0a1309fbba719831256de23411069e51a48f2b0b28dbe69f148f7fc",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "f017f061eb906f553ec60dee028b09d17b87f8cd41c655951ef78509b0d30b9b",
+    "helstera-plugin/src/main/java/dev/helstera/plugin/HelsteraPlugin.java": "817721ebef07af38a0168130cb3b7e8515e160867292f2f21c714327382c3496"
+  },
+  "limitations": [
+    "One protocol observer keeps entity chunks ticking; no rendering/packet-parity, reload/disconnect, fractional caster levels or final release assertion.",
+    "Native constructors finish second-pass and post-reload initialization before direct casts; full native dispatcher is outside this slice.",
+    "Dynamic integers are explicit extensions over the native public parser; dynamic falling blocks remain inert."
+  ],
+  "exitCode": 0,
+  "clientExitCode": 0,
+  "observationCount": 129,
+  "validationResult": "passed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "e523f8923796456691eddbb45cce044149440bf92795927ccc8c6731f4d233e0"
+    },
+    {
+      "path": "client.log",
+      "sha256": "f263d64a01a38620b5436830f18d099837fc2abfeb79f2190b4f48548a086787"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/particles.yml",
+      "sha256": "2300a55205c2b9abf94c760621b66435e5cce88cab4d4dd01ce18f0bca035784"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/special-summon.yml",
+      "sha256": "648d829694c5cd54b6dd4609213b3b8ff41aef7ef3cb36d45506c01c3bdd3f34"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/cases.yml",
+      "sha256": "c49fe652fc15748ae50604626a54084cc91a2ce60ebd0ee7ab6451764b66fa5a"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/000.yml",
+      "sha256": "e102e3c8f5211dcba04e0532ac9507d145c4e8c93df75598a780bfdfe43dd39f"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/001.yml",
+      "sha256": "4fa0da986f72605271eb170fe5a861213b9bba2a06010d86797e5952e9200ec0"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/002.yml",
+      "sha256": "894302b139ff26709b1f6763fa3e222710765cc4fc569dfae7aa0dddc2cc3418"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/003.yml",
+      "sha256": "348af705dc32f7a12aba91f0f417e1d15f908a989fe7033d7a6ad05368f3c2d5"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/004.yml",
+      "sha256": "95df1b10d53031f71d2f51887663de63984b9ea439f5df35c33a36878269f489"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/005.yml",
+      "sha256": "dc05e0b32a83abbc2c4b55c555d1f49a0a0a730cc99d9654071005c4351f49c6"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/006.yml",
+      "sha256": "543a316d140bb5a712ccba4d546cbf4c088d73054392cbca8732033582644d60"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/007.yml",
+      "sha256": "11db9b372fccd71191c62b834c244887c7a56dc6654da9effd6dbeb52229716d"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/008.yml",
+      "sha256": "53a7cd307772bb134821629889ae8d27a7bff056275044e1540a34498c27457f"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/009.yml",
+      "sha256": "2c025b15f53644f37ef8b334dd6204bf16ad5154a7466e5d311f65fb527a5c13"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/010.yml",
+      "sha256": "c725a4c49b010e30a8bbeb04e7870ce2b462761dcff5e5567d1abdd6c3451f22"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/011.yml",
+      "sha256": "e3136679a8e148dc5d5526844425fb9d828487c512adca90a94761d3a2179ac0"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/012.yml",
+      "sha256": "6d09e0a7e51abb7d46e1efb80248e20130f6cb8d9fff83d7b8501140ba8434b6"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/013.yml",
+      "sha256": "68aeb6a3cc1fc80126157b20e9b03ec5121bd50cc3f12e48f9efa501ef7b6d1a"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/014.yml",
+      "sha256": "6aeac4441b7a108c4949436a663e46790c62f72dec5cef09f6c0f6c22d5e1a3e"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/015.yml",
+      "sha256": "ac44f4f813461d6618ed0984e5f8f6943609af35a73d34268c89c399c952c6cb"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/016.yml",
+      "sha256": "091ce8716884b76cf737f5008b5c6451ecc49f69b98d59916ab2f057d5fce036"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/017.yml",
+      "sha256": "38a9cc8ceea7da1154c400cb29aed1bfddce9b7fa7575edb8e76cf406ca53b07"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/018.yml",
+      "sha256": "a7e69efbfc9e24cad857db98ec74122cfc9392d8fd87446c0a591b76ed8471cb"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/019.yml",
+      "sha256": "92bacdf9e28ce79cc3980597c2cdae98176375f3e4fe99f0640a9a67283c4786"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/020.yml",
+      "sha256": "899da1140370d6e9b0e5ff81f628823aad3d03f8d761b8088b727ea8e67df172"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/021.yml",
+      "sha256": "9e322f86294ab2f010ff750df555815d145504d16de91311870645019b1de17c"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/022.yml",
+      "sha256": "3cdac8087a50922faf8b4a7fe7d59dba1755ae32dcc42b61e7f68a89f1bef176"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/023.yml",
+      "sha256": "7e20d9b85d757eaf158deb9e6a81ade96df9933f9c975f9a6e28150980a6ddce"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/024.yml",
+      "sha256": "549918dd0d4c490552954599d3db5991d5111e1608dd667451a7104f3e53a886"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/025.yml",
+      "sha256": "365bfc3037e17b0546cb16c8cd63beb567393fe1aed0432bd372c8f063008fa5"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/026.yml",
+      "sha256": "d7ede598ed5712e925680a0f5606b226daede34c6e08131670958e3eda29d677"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/027.yml",
+      "sha256": "9b8b6600119467504cf869884555222d08edf85063a8d24a69fe2007bc378047"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/028.yml",
+      "sha256": "cee3033b1ac1dbc9491c2b02b1aaf43c36e26b1c4a22d55fe6d762ac6f56f4a5"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/029.yml",
+      "sha256": "4078d9e71baf5fba8724b9d28321e33328abb2f663ee5178174b3f924d92c2ef"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/030.yml",
+      "sha256": "8a547fb3639156ccdbea9e8dc39789f7f5c4aed597bd6dbdabe2c3044bceca68"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/031.yml",
+      "sha256": "73ed4420c1df3d284d0850f281a360b7a05ebee5acbeb3957b8fd9c998bba3f1"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/032.yml",
+      "sha256": "c021606e367db35149bd60cbaafda8443316968f26b790f5c22ad9dce307d74f"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/033.yml",
+      "sha256": "5936ced7656fe32e03e35d995b4b292cac453e978822da6b5606c33e0562b1bd"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/034.yml",
+      "sha256": "a60e7ed77a95db2ca93a5337400d0282afe5f730880bd1a6c1a7c63b1923c024"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/035.yml",
+      "sha256": "a85d872bd730261ab4446260e7589207aa2ca3a8940a92c7f71d8775b87f1eb1"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/036.yml",
+      "sha256": "522e3822f5cd26e932179275e4ebe612c9d7b33fc87c0a993450b8147b665186"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/037.yml",
+      "sha256": "b2003a9c8bf1eded660593de8ddc6b2435e699140e470771b6bd601baf69b59f"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/038.yml",
+      "sha256": "e5ad0665b3c414acb4178b3d9fefaf3cf21b183f65441378e090018a420d10fd"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/039.yml",
+      "sha256": "40b57ee3186ee48bbda1dda21ca8c0e0d9fe7feeaa11925d95838fe09f556604"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/040.yml",
+      "sha256": "e50a16eceeb43b450d4b5f269c65e11ede0751743b4a5010d0207a6898d46756"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/041.yml",
+      "sha256": "5a208265de43508572352773cb5d93de7c002c49bc414c34bded8925c6f7dbb0"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/042.yml",
+      "sha256": "178fc61a8ade6f2fed04a9bd0f36330e7d190fc276c05f0fba663a04fdea68e4"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/043.yml",
+      "sha256": "6611dc4e4af8f5511a150a21900e1d97ea39cbcd64872bf9aee805afa1a45d02"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/044.yml",
+      "sha256": "14b6095a2b60880b43e86626526449c6b5234ba41f1d27424cf958e59189711d"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/045.yml",
+      "sha256": "123e23ee269b1548f5c7b0d1da1fedbe4c26813366809d365e8fcae7f59b57d8"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/046.yml",
+      "sha256": "7e48b9711eaae4fd1779b7634682e1842c059bd40df3b6d0b5be438ee8663f41"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/047.yml",
+      "sha256": "0bafc13b2cf7cdce183092d9276ab749a52e61354a386d41ab3144e59762cfa1"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/048.yml",
+      "sha256": "b56a96a7a7314b02dacd3a45a3a75ff4a3274983075b62f535991ddde9409d17"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/049.yml",
+      "sha256": "68d51aaf5d073fb1c4bdfca6522d41b64ea5a8696e875f7424c2eef1d06f776b"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/050.yml",
+      "sha256": "2bccdc5d7c0147455abd8bd2c460ca6a5a7df2b5272883269fee91b4c0937cf0"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/051.yml",
+      "sha256": "da6d0af2a79d9f84b56acd1f4d21e5b9a879db976c138330eef5255ce1f9b46b"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/052.yml",
+      "sha256": "db93ee7f60db09cc480f1bc88ff9a811ef2f64a5d18e265c1f85103751d4a68a"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/053.yml",
+      "sha256": "40be5f43ee1ad8d509929847389d7668e2373c369e160bd0119079bbb14c626d"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/054.yml",
+      "sha256": "3bc2bf448375a3e1fb6df2d58911ac159393fbf4ab1e882dd00792cb39f9b607"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/055.yml",
+      "sha256": "358a9ffa91498eec36cc2f577f390f09f9a1effb27599214db9beadc93f1b3db"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/056.yml",
+      "sha256": "4e3512562ba3b2fb7849d9a30ed03823dd0893c17dd17f4741069fdf2cd27b43"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/057.yml",
+      "sha256": "2b5122261eb5e07672027065f20f92bf9e365d07e2deb67e4367802f877d7df7"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/058.yml",
+      "sha256": "c53bae0760dca48703a6b4d5ab8049c5c74afb82b41d86a86c981603ddc7cee8"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/059.yml",
+      "sha256": "0fd0309817c2870b688d3647117e39f230fde9026628c9736f2a6cbc0f0bc8d9"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/060.yml",
+      "sha256": "52326f1d73507444279c4a6da18ec0ee56e9fbe809a285dd70884ab144a280ef"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/061.yml",
+      "sha256": "b504e0f0b2a4b3ee7e0909c03b1c8493a68ddbf2a698e9123e221c2f2c3bacc1"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/062.yml",
+      "sha256": "93b82b254530b27c1965072fc6c895e6cef7fbd0dc4eb278d2bd9bc27d3bfd6c"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/063.yml",
+      "sha256": "b94a2d945a7a55071e27c4fa189216ce99c8035cc6fbcfd1e1ec34c7eeeae075"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/064.yml",
+      "sha256": "696cb3038032de3afba3d3e96cf53f98dda6b0fbcfd14a2d7c5b2f5b1505829f"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/065.yml",
+      "sha256": "8cd0ab4c4d0e7b6acb3e8008b6a249e51b8f7d9f63834e1b4e780e7f4a9c4f77"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/066.yml",
+      "sha256": "9383fadacc0de69d3a4a7674c22b1601ccab5776cff3a97b94f7e0d4a7a926d7"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/067.yml",
+      "sha256": "e6c4da1f9b6df2136e8b9047e4e50a2519b0c56c17835c267d3fbaf0a5f70cbf"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/068.yml",
+      "sha256": "8fdf4db0babeb37137b0af8eb94bd36596a3f89abbf23da1997de751a0bda66b"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/069.yml",
+      "sha256": "2f8efe81912e4ab12ed65e940760b516e24d72f6088893dcc4810632d9c60fbf"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/070.yml",
+      "sha256": "9af9b25084ff549b6edbb42b541a3439aac2bbfa5a81d782aa0a26d8ea0cfcb0"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/071.yml",
+      "sha256": "f88216cc5c115f7261c289288e8693c164e2c2069f16cadab07dbd6f776df5ae"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/072.yml",
+      "sha256": "ef56bc4cd14cd9267cb059bad37169eb2db6b3577bcc8bd6c1355477febaa2d6"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/073.yml",
+      "sha256": "6cbf54c2ecbb54a82e2d1e19206bb2d113736756d0abbae9097034fb273bed99"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/074.yml",
+      "sha256": "50419b9c32268bbf529435d7c65fda4fe665a514b64a12baadb1677863e59c39"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/075.yml",
+      "sha256": "036692bf12eba38a272767b985deed5458c63212ba20221e81aeacfb55f22fb9"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/076.yml",
+      "sha256": "47318962f0d7067b14ae2748ad819576128c0a34d86ad9fa9e1d0fa01e36de4f"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/077.yml",
+      "sha256": "a90020663cb326c3c1550218769f3df2af69d2da3da23b36b2a8987a079b8b65"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/078.yml",
+      "sha256": "493a5929695fa8d32abd5f84cc253199396afcba254e19025fa907365d79c4de"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/079.yml",
+      "sha256": "945bd1d4616d81bbf4b9ff998be10b28c03e449246882f223ec1918cc29d2760"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/080.yml",
+      "sha256": "0d5a9ba4965e3744d0f3939df706ad76a327f497dd72c013b0f5b2acf2914b8e"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/081.yml",
+      "sha256": "754e78b5b5dde9549c954c89c5ea885bce65235bfe2f0db9bc701c277c8cd61d"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/082.yml",
+      "sha256": "0e07ccfd844524d056d03250250973bd4f01a4ce5e8f57c9ff4d826c8c1cb51e"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/083.yml",
+      "sha256": "caec798cd825d16e37f17d9d5e31fe73a732d0bb4fbf1a6816c61ca5bf20ef65"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/084.yml",
+      "sha256": "b48b1e17c63eb4567e0504fade3e6a9d24b0443422464c0329b91ce2bbf2bdad"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/085.yml",
+      "sha256": "e1c25b4bf43a931131310a66f5e4b3a0c53830e5171385eb36e41c4418b55587"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/086.yml",
+      "sha256": "f593e2bc4a7f38a142bdcd81dc8d97f665e7a88a7d1bd73e531f56552334c78b"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/087.yml",
+      "sha256": "3acbf10407e3283efb3819baee3694671a41acd5adf02100745da20052e1464d"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/088.yml",
+      "sha256": "a67fc81bfbf72d811d4edc737e5409f4ffec59c0a911598027643a1cb759423a"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/089.yml",
+      "sha256": "eca13009dff3c38f001458a5447f626642dd85e3148a2949bd8e106d748aee90"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/090.yml",
+      "sha256": "a90bb2aeea9355f757f8b7871160731ef6edf3ddffe045306a0bbedea74d88d6"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/091.yml",
+      "sha256": "bd494e382604108a47c8e460da40c3ea20a474621795f2b5afb1e46ef9c7e90c"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/092.yml",
+      "sha256": "4e8fb2465aed4d79fbaa26ad6cb5bb455bc08584de2138192a69e19945ad61ab"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/093.yml",
+      "sha256": "2bea00f8dc8386a241fb1cb9bb0b131fe43df10ffcacdab93df53b91e1f5f95b"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/094.yml",
+      "sha256": "6fffa4165fcffad5ef9bce691c37b9afbd6b1aefecb8d19f1fa0917c7c093313"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/095.yml",
+      "sha256": "60288954cb07af0c8ff96e1d5be42a5cbea7824c7adf3f9488145d9a0ae98b14"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/096.yml",
+      "sha256": "223aa6417093cd7bd1ef33d14cfeff4184b2003c5dc6a29b0d7ee81426edaab9"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/097.yml",
+      "sha256": "ca66d088aca11f96ca86bd364a4659ba2905fdad5f7829ea15c8ca121be0a9a8"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/098.yml",
+      "sha256": "450a0ddebc7a2b02944c4c87f979a982952a2b8118e605c856b609919c095e35"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/099.yml",
+      "sha256": "f2d076631f24b390ebfa853577b443130e4e6060cbee3205d9e8ce3b2e8a28c9"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/100.yml",
+      "sha256": "91b3449f7bf8feb6a909470123db9219dfa17e3663f41ea460c9228413b513e2"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/101.yml",
+      "sha256": "9610ba0d9789463a80ed9cd618a4458ae824c56252f8dce02fa53cc7f31d1c05"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/102.yml",
+      "sha256": "849658c36f822f3ce69c9b2e9a5fbd3a3860a9e417693404f1f656409f121758"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/103.yml",
+      "sha256": "263925facd01b18e6c01571e8d3d4d2d950e629b275d9bf55d9566d14a1de95a"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/104.yml",
+      "sha256": "3fb1074c8f3a84e7467df561f024f33f6b1746f0732950ca6b010dd6ba803430"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/105.yml",
+      "sha256": "532c5de39f8783be61a1ac54ac09494642f3f4787af539b28a98be909b664648"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/106.yml",
+      "sha256": "fe30ee12fa39b3bed1b728b33083d3804ecbc6bae22958a01ecf8c05a57da16b"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/107.yml",
+      "sha256": "09be9bcc6c0a20fe003e9d34b308d02dffccb1d488980553888d9d61736fae56"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/108.yml",
+      "sha256": "99305c55014e85a7ce89267747167cc0a73aa610b1c748698ca27a64176af93a"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/109.yml",
+      "sha256": "4c70513f7d66271a4572520735115faffbad2f3eb39e4e0629cbb51a6d5d657a"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/110.yml",
+      "sha256": "d1207e849349bd6abf806cc2dad304b6bf9144c1325baa012c38874485b25229"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/111.yml",
+      "sha256": "ff3f804fe3c235ff95d526b0e606e021cdd942191ffc31dbc7fed141d4833856"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/112.yml",
+      "sha256": "bf62edafb5294a46cf936f25fa625fefc43e07c26b4d880637d206624e86b058"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/113.yml",
+      "sha256": "52d6a5d03d2e40a3e865e4bff55b52ee070d3006d6c949735c5b67cb147405b4"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/114.yml",
+      "sha256": "3da239ae79432cb60331311869b119b7049a3ce006854fc286ccef6d4c2a8552"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/115.yml",
+      "sha256": "d2f3e05b3a86d4640ff090c7da8e8c03fbf1dcec4a81744955d676aa298c623d"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/116.yml",
+      "sha256": "c8908a33d1e72e859e49ede24d7455abb067263ce9bd93a7c2553373eaf9a3b7"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/117.yml",
+      "sha256": "62c25ed00f8d94f3fdc6ab81b460fda32ede994c472e1df89e26cf933981ebda"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/118.yml",
+      "sha256": "77076dcf75b049c927f0abe8fa736968ebbee1e6588323c27d4ce8df5f95e8f9"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/119.yml",
+      "sha256": "76bf0daad5b5a68dd886eae7dc0cd66e37ca6ad214e53148d941fd7df7c28b2c"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/120.yml",
+      "sha256": "81187ef7d01e327b0ca9c4c206c6ee614d273e22080526a76904dd20771d7780"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/121.yml",
+      "sha256": "69c26c54174ca2a589bd365a18ba2c6ddc5ea41dddf36fb3fed6513d44de70fd"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/122.yml",
+      "sha256": "e7eceb3c98f525dca970722bda7c43b601fa7f1d74d3d140a6f8129b70937497"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/123.yml",
+      "sha256": "df2d317abbf1bedf8fa7d213444d39e04938c020172cf69a1995d451ef46a181"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/124.yml",
+      "sha256": "cddc1ae7869b06327d73eb3bcaba0f458b13c2b9605af0a7c24547a9df7f6906"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/125.yml",
+      "sha256": "648913c83eab662e6db74cad8805e0808a902634daca4ac007e71ed3c1baa7fb"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/126.yml",
+      "sha256": "4e5dc8f7689b0df1e1499cc9dd14144b77688cb55c6db54c416732ffadc97760"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/127.yml",
+      "sha256": "f4c104cf638d8a5e8eb5700bf6897a57fef58533d3472a3a2b9822794efc9df1"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/observations/128.yml",
+      "sha256": "1a9154b2b35cce4dd0be32b4e4c4778779f659ae88952f4f65fe622cb5d01cbb"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/imports/mythic_auditcat.yml",
+      "sha256": "88a363686cc0e83e10ea6e3df54a039f86e023e1d152a3758fe6d9280f30f16b"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/imports/mythic_auditrider.yml",
+      "sha256": "40fd0901018b7821345a9b19fb5ffdbc78d6978e0f754f1b3978768c216a5253"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/imports/mythic_auditwolf.yml",
+      "sha256": "ca5f20b8b8a843d06246611017e6976c7ba2e106b76e3a7d6e51cbc488a8c197"
+    },
+    {
+      "path": "plugins/HelsteraSpecialSummonProbe/imports/mythic_helsteraradiusauditmob.yml",
+      "sha256": "6004fe5da0dfe92b813512f8b872491ef152babf65c969e5330bbf1b615eb5f5"
+    }
+  ],
+  "logArchive": "paper-1.21.1-special-summon-20261126-r4-logs.zip",
+  "logArchiveSha256": "3f612d1be8a9f45e96eaf9f578355e3c5d9d612e23795e61fc5778f990fc66ef"
+}

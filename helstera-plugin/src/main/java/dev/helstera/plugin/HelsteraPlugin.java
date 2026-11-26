@@ -309,6 +309,28 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 // SkillExtras 里的 dot / despawn 等动作需要调度器与实例管理器，
                 // 同样走注入钩子而非直接依赖，保证目录类可被单元测试加载。
                 dev.helstera.ai.skill.SkillExtras.host(this);
+                dev.helstera.ai.skill.SkillExtras.passengerSummoner((requestedId, context) -> {
+                    String targetId = requestedId;
+                    if (mobConfig(targetId) == null) {
+                        targetId = requestedId.trim().toLowerCase(java.util.Locale.ROOT);
+                        int dot = targetId.indexOf('.');
+                        if (dot > 0) targetId = targetId.substring(dot + 1);
+                        targetId = targetId.replaceAll("[^a-z0-9_]", "_").replaceAll("_+", "_")
+                                .replaceAll("^_", "").replaceAll("_$", "");
+                        if (!targetId.startsWith("mythic_")) targetId = "mythic_" + targetId;
+                    }
+                    var config = mobConfig(targetId);
+                    if (config == null || !config.isConfigurationSection("entity")
+                            && !config.contains("mob.entity-type")) return null;
+                    var caster = context.instance().baseEntity().orElse(null);
+                    if (caster == null) return null;
+                    var profile = ai() == null ? null : ai().profileOf(context.instance().instanceId());
+                    int level = context.instance() instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl
+                            && impl.level > 0 ? impl.level : profile == null ? 1 : profile.level;
+                    MobSpawn spawned = spawnMobCore(targetId, null, caster.getLocation(), false,
+                            null, null, null, Math.max(1, level));
+                    return spawned == null ? null : instances().getInstance(spawned.instanceId()).orElse(null);
+                });
                 try {
                     dev.helstera.ai.skill.SkillExtras.loadScopedVariables(new java.io.File(getDataFolder(), "scoped-variables.yml"));
                     scopedVariablesLoaded = true;
@@ -29655,6 +29677,14 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                    boolean forwardOffset, String aiProfileOverride,
                                    org.bukkit.entity.LivingEntity existingEntity,
                                    org.bukkit.entity.Entity parentEntity) {
+        return spawnMobCore(mobId, modelOverride, base, forwardOffset, aiProfileOverride,
+                existingEntity, parentEntity, 0);
+    }
+
+    private MobSpawn spawnMobCore(String mobId, String modelOverride, org.bukkit.Location base,
+                                   boolean forwardOffset, String aiProfileOverride,
+                                   org.bukkit.entity.LivingEntity existingEntity,
+                                   org.bukkit.entity.Entity parentEntity, int levelOverride) {
         org.bukkit.configuration.ConfigurationSection cfg = mobConfig(mobId);
         if (cfg == null) return null;
         if (instances == null) return new MobSpawn(-1, "实例系统未启用（需 2.0+ 版本）");
@@ -29725,7 +29755,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 // 两个键都写时以 bossbar.enabled 为准——它更具体，能表达「不要血条」。
                 .showHealthBar(cfg.getBoolean("show-health-bar", false)
                         || cfg.getBoolean("bossbar.enabled", false))
-                .spawnHitbox(cfg.getBoolean("spawn-hitbox", true)));
+                .spawnHitbox(cfg.getBoolean("spawn-hitbox", true))
+                .level(levelOverride));
 
         if (base == null || base.getWorld() == null) return new MobSpawn(-1, "生成位置无效");
         org.bukkit.Location loc = base.clone();
@@ -29914,8 +29945,10 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         // 等级挂到实例上：AiManager 在受伤/生成事件里靠它取缩放结果
         // 默认 0 表示「未指定」，AiManager 会回落用 profile.level（通常就是 1）
         org.bukkit.configuration.ConfigurationSection aiSecForLevel = cfg.getConfigurationSection("ai");
+        if (levelOverride > 0 && inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl)
+            impl.level = levelOverride;
         if (inst instanceof dev.helstera.runtime.instance.ModelInstanceImpl impl && aiSecForLevel != null) {
-            int lv = aiSecForLevel.getInt("level", 0);
+            int lv = levelOverride > 0 ? levelOverride : aiSecForLevel.getInt("level", 0);
             if (lv > 0) impl.level = lv;
             // 按等级缩放 HP：compute() 直接返回 base * growth^(level-1)，
             // 无需再乘 baseHp；level<=1 时 compute 返回 identity（1.0），等价于不缩放
