@@ -8358,3 +8358,57 @@ Native sibling metadata mutation, full dispatcher execution, rendering,
 reload/removal lifecycle, nondefault global filters, external integrations and
 the strict release gate remain separate. The internal implementation backlog
 is now T06–T11 and S01/S03–S10 (15 groups).
+
+## 2026-11-26 block and vein selectors (T06/T07)
+
+[Block targeter r3](reports/paper-1.21.1-block-targeter-20261126-r3.json) passes
+180 observations: 90 independent cases through direct and imported runtime
+routes, each compared with the public native selector and actual SetBlock
+effects. Two observations preserve the explicit native inline-guard difference.
+Paper 1.21.1 and public MythicMobs 5.7.2 retain their pinned hashes. Plugin
+SHA-256: `c68dd9ab0b5033c76aaffc7b550ea5c627cfe8e89efcf52ec493ce31bc74d015`.
+
+Coverage includes heightmap lookup, native obstruction probe order and yaw,
+inherited entity/location inputs and duplicates, empty inputs, radius geometry,
+zero/fractional/negative axes, air masks, alias priority, location mutation,
+material filters, final sorting/limits, negative chunks and inclusive maxHeight.
+The vein cases distinguish 26-neighbor connectivity, origin requirements,
+traversal budgets and final output limits. Native and runtime inputs, prepared
+materials, raw counts, selected coordinates and actual block changes are
+independently checked; agreement between two incorrect outputs cannot pass.
+The loaded-chunk set remains unchanged by each runtime query. The maximum-height
+row is query-only; no claim is made that unbuildable VOID_AIR can be changed.
+
+The auditor passes `--check-current`, and 15 synthetic negative-control tests
+reject altered geometry, scope, inheritance, raw counts, effects, guard behavior,
+chunk loading, incomplete logs, clients and hashes. The build's `./mvnw -q verify`
+passes 3,028 Maven tests with zero failures/errors/skips and 11 clean SpotBugs
+reports. Offline block tests cover work/output caps, unloaded chunks, duplicate
+centers and nested positional conditions. The server and observer client exit
+successfully, releasing the fixture port. The r1–r3 archives have zero matches
+in the independent sensitive-value redaction scan.
+
+[Redacted r3 archive](reports/paper-1.21.1-block-targeter-20261126-r3-logs.zip)
+SHA-256: `1e2f56ef83e94311fe01bbe65e2b53a461778ed5eccb11cd374d8e8528f2c018`.
+Rejected [r1](reports/paper-1.21.1-block-targeter-20261126-r1.json) exposed a
+zero-radius NaN comparison defect and fixture assumptions about air-only chunk
+sections and out-of-build-height blocks. Runtime comparison and the fixture were
+corrected. Rejected [r2](reports/paper-1.21.1-block-targeter-20261126-r2.json)
+has matching selection/effect results but a negative-zero pitch introduced by
+the fixture's `setDirection`; r3 constructs explicit zero-pitch yaw locations.
+Rejected archives remain unchanged.
+
+[Aiming targeter r3](reports/paper-1.21.1-aiming-targeter-20261126-r3.json) passes
+all 134 prior T05 observations on the same JAR, retaining 6 explicit inline-guard
+differences. Its audit passes `--check-current` with 29 source files, including
+the newly shared location filter. Ten auditor tests pass. Historical manifests
+remain accepted only at their complete historical scope; partial manifests fail.
+[Redacted archive](reports/paper-1.21.1-aiming-targeter-20261126-r3-logs.zip)
+SHA-256: `a878f64a4837a6e23a5f31dc5545ff570a0c8d7da5294a8f650b0d738846da32`.
+Its redaction scan has zero matches. Earlier reports do not certify this JAR.
+
+See [the contract](../../docs/BLOCK_TARGETER_CONTRACT.md) for explicit loaded-only
+query and work/output-cap extensions. Full native dispatcher/event scheduling,
+random distributions and long branching veins, unload/reload lifecycle, client
+rendering, external blocks and the strict final release gate remain separate.
+Remaining internal implementation: T08–T11 and S01/S03–S10, 13 groups.

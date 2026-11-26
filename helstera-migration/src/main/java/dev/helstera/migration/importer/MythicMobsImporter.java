@@ -4354,6 +4354,11 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "targetedtarget", "targeted" -> "targetedtarget";
             case "targetedlocation", "targetedlocations", "targetedloc" -> "targetedlocation";
             case "targetblock" -> "targetblock";
+            case "highestblock", "obstructingblock" -> rawName.toLowerCase(Locale.ROOT);
+            case "blocksinchunk", "bic" -> "blocksinchunk";
+            case "blocksinradius", "bir" -> "blocksinradius";
+            case "blocksnearorigin", "bno" -> "blocksnearorigin";
+            case "blockvein", "vein", "bv" -> "blockvein";
             case "eir", "entitiesinradius", "livingentitiesinradius" -> "livingentitiesinradius";
             case "mir", "mobsinradius" -> "mobsinradius";
             case "monstersinradius" -> "monstersinradius";

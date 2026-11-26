@@ -57,6 +57,13 @@ class AuditTest(unittest.TestCase):
     def test_complete_synthetic_evidence(self):
         self.assertEqual(2 * len(audit.CASES), audit.audit(*fixture())['observations'])
 
+    def test_shared_location_filter_manifest_is_complete(self):
+        report, files = fixture()
+        report['sourceHashes'] = {name: 'c' * 64 for name in audit.BLOCK_SOURCE_FILES}
+        self.assertEqual(2 * len(audit.CASES), audit.audit(report, files)['observations'])
+        del report['sourceHashes']['helstera-api/src/main/java/dev/helstera/api/behavior/NativeLocationTargetFilters.java']
+        with self.assertRaises(ValueError): audit.audit(report, files)
+
     def mutate(self, operation):
         report, files = fixture()
         rows = yaml.safe_load(files[audit.DATA])['observations']

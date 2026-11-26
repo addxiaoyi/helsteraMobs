@@ -15,6 +15,25 @@ class ContextTargeterExtensionsImportTest {
     @TempDir Path root;
 
     @Test
+    void importsBlockQueriesWithNativeRawArgumentsAndAllAliases() throws Exception {
+        List<String> selectors = List.of("highestblock", "obstructingBlock", "blocksInChunk", "BIC",
+                "blocksInRadius", "BIR", "blocksNearOrigin", "BNO", "blockVein", "vein", "bv");
+        List<String> expected = List.of("highestblock", "obstructingblock", "blocksinchunk", "blocksinchunk",
+                "blocksinradius", "blocksinradius", "blocksnearorigin", "blocksnearorigin", "blockvein", "blockvein", "blockvein");
+        var input = new YamlConfiguration();
+        input.set("blocks.Skills", selectors.stream().map(selector ->
+                "setblock{type=DIAMOND_BLOCK} @" + selector + "{r=2;radius=\"1\";nearorigin=true;limit=4}").toList());
+        Path file = root.resolve("Skills/blocks.yml");
+        Files.createDirectories(file.getParent()); Files.writeString(file, input.saveToString());
+        var plans = new MythicMobsImporter().convert(file);
+        var plan = plans.stream().filter(item -> "skills.yml".equals(item.get("target-file"))).findFirst().orElseThrow();
+        var result = YamlConfiguration.loadConfiguration(new StringReader(plan.get("content").toString()));
+        assertEquals(expected.stream().map(selector -> "set-block DIAMOND_BLOCK @" + selector
+                + "{r=2;radius=\"1\";nearorigin=true;limit=4}").toList(), result.getStringList("skills.blocks.on-decision"));
+        assertTrue(plans.stream().noneMatch(item -> "WARN".equals(item.get("severity"))));
+    }
+
+    @Test
     void keepsAimingAndInheritedTargetsDistinctAndPreservesRawOptions() throws Exception {
         var input = new YamlConfiguration();
         input.set("inherited.Skills", List.of(

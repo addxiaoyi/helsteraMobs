@@ -6,7 +6,7 @@ This is a finite, source-checked development backlog, not a claim that the 33
 broad `mapped-unverified` matrix rows constitute 33 missing implementations.
 An item is complete only after its native contract, migration, direct runtime,
 negative controls and appropriate Paper evidence agree.
-Remaining implementation: T06–T11 and S01/S03–S10, 15 groups. The verification
+Remaining implementation: T08–T11 and S01/S03–S10, 13 groups. The verification
 and external integration work below is tracked separately.
 
 ## Already implemented in the current development batch
@@ -103,6 +103,13 @@ These need validation and release evidence, not another implementation:
   its existing per-point behavior. Dropped-item r5 also passes all 132
   observations on the same JAR after sharing entity filters. See
   [AIMING_INHERITED_TARGETER_CONTRACT.md](AIMING_INHERITED_TARGETER_CONTRACT.md).
+- Block selectors `@highestblock`, `@obstructingBlock`, `@BIC`, `@BIR`, `@BNO`
+  and `@blockVein`, including all public aliases (T06/T07), now have bounded
+  runtime queries and importer support. The 2026-11-26 r3 report passes 180
+  native/direct/imported observations of selection and real block changes,
+  including 2 explicit inline-guard differences. Offline tests cover caps,
+  unloaded chunks, inherited collection dispatch and duplicate query centers.
+  See [BLOCK_TARGETER_CONTRACT.md](BLOCK_TARGETER_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
@@ -151,8 +158,8 @@ Names come from native `@MythicTargeter` declarations and were checked against
 | T03 | `@interactionLastAttacker/@lastAttacker`, `@interactionLastInteract/@lastInteract` | Implemented; 2026-11-26 r1 passes prepared-history lookup cases. Actual client attack/interaction input is outside that evidence. |
 | T04 | `@locationsOfTargets/@locationOfTarget/@LOT` | Implemented; 2026-11-26 r1 passes scoped projection/deduplication and location-selection cases. Native HashSet iteration does not promise stable ordering. |
 | T05 | `@targetBlock`, `@targetedLocation/@targetedLocations/@targetedLoc`, `@targetedTarget/@targeted` | Implemented; 2026-11-26 r2 passes 134 scoped native/direct/imported observations, including 6 explicit inline-guard differences. Plural context/condition/delay and managed-provider ownership tests pass. Full dispatcher, lifecycle, special variable contexts and threat policy remain separate; see [the contract](AIMING_INHERITED_TARGETER_CONTRACT.md). |
-| T06 | `@highestblock`, `@obstructingBlock` | Establish world/heightmap or obstruction query semantics and unloaded-world/chunk behavior. |
-| T07 | `@blocksinchunk/@BIC`, `@blocksinradius/@BIR`, `@blocksnearorigin/@BNO`, `@blockVein/@vein/@bv` | Bounded block-location enumeration with native geometry, material filters and explicit output caps. |
+| T06 | `@highestblock`, `@obstructingBlock` | Implemented; the combined T06/T07 2026-11-26 r3 fixture passes 180 scoped observations. Heightmap, rounded orientation, obstruction order, mutation/filter priority and actual block effects are covered. Full dispatcher and lifecycle acceptance remain; see [the contract](BLOCK_TARGETER_CONTRACT.md). |
+| T07 | `@blocksinchunk/@BIC`, `@blocksinradius/@BIR`, `@blocksnearorigin/@BNO`, `@blockVein/@vein/@bv` | Implemented; combined r3 passes 180 scoped observations. Inherited inputs, native geometry/air masks, negative chunks, inclusive maxHeight, connected veins and real effects are covered. Work/output caps and loaded-only queries are explicit extensions. Random distributions, larger vein topology, full dispatcher/lifecycle and release acceptance remain. |
 | T08 | `@nearestStructure` | Use public structure lookup with bounded radius and unloaded-generation policy; native defaults require inspection. |
 | T09 | `@randomLocationsNearOrigin/@RLO/@randomLocationsOrigin/@RLNO`, `@randomLocationsNearTargets/@RLNT`, `@randomLocationsNearCaster/@RLNC/@randomLocations` | Deterministic testable sampling, native radius/count/height rules and distinct caster/origin/recipient scope. |
 | T10 | `@randomRingPoint`, `@ringAroundOrigin/@ringOrigin/@RAO` | Location-valued ring sampling, which differs from filtering existing living entities with `ring`. |
@@ -219,7 +226,7 @@ Names come from native `@MythicTargeter` declarations and were checked against
    strict release gate only against the final artifact.
 2. Finish M06/M07/M21 acceptance and M22's broader dispatcher/lifecycle checks;
    preserve the boundary between target scheduling and native movement Goals.
-3. Implement T06–T11 with bounded location/block enumeration and
+3. Implement T08–T11 with bounded location queries and
    separate entity-valued versus location-valued dispatch.
 4. Complete S01/S03–S10 as distinct runtime/state-machine and conversion slices;
    retain the existing base Aura charge implementation while extending its

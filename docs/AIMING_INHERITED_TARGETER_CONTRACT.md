@@ -124,6 +124,14 @@ setting an empty location collection, and reused mutable native location inputs
 across cases. The auditor rejected it; r2 repairs the preparation and records
 both actual input collections without weakening the expected selections.
 
+The subsequent [r3 regression](../tools/paper-integration/reports/paper-1.21.1-aiming-targeter-20261126-r3.json)
+passes the same 134 observations after the T06/T07 implementation extracted
+shared location filters. Its audit passes `--check-current` for plugin SHA-256
+`c68dd9ab0b5033c76aaffc7b550ea5c627cfe8e89efcf52ec493ce31bc74d015`.
+The manifest pins both new source files; the auditor accepts complete historical
+or complete expanded manifests, rejecting partial coverage. Ten auditor tests
+pass. Earlier reports retain their original artifact hashes.
+
 Reproduce after building the plugin:
 
 ```sh

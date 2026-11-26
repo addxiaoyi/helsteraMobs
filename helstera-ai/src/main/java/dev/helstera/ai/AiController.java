@@ -278,10 +278,10 @@ public final class AiController {
         if (threat != null && entity != null) threat.addThreat(entity.getUniqueId(), amount);
     }
 
-    /** 当前仇恨表；未启用时为 null。 */
     /** Last entity that caused aggro, retained independently of living-only AI target selection. */
     public org.bukkit.entity.Entity lastAggroCause() { return lastAggroCause; }
 
+    /** 当前仇恨表；未启用时为 null。 */
     public ThreatTable threatTable() {
         return threat;
     }

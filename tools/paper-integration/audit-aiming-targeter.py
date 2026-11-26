@@ -28,6 +28,10 @@ SOURCE_FILES = {
     'helstera-ai/src/main/java/dev/helstera/ai/AiController.java',
     'helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java',
 }
+BLOCK_SOURCE_FILES = SOURCE_FILES | {
+    'helstera-api/src/main/java/dev/helstera/api/behavior/BlockLocationTargeter.java',
+    'helstera-api/src/main/java/dev/helstera/api/behavior/NativeLocationTargetFilters.java',
+}
 DATA = 'plugins/HelsteraAimingTargeterProbe/observations.yml'
 TAG = 'helstera_aiming_targeter_probe'
 WORLD = 'integration-world'
@@ -166,7 +170,7 @@ def audit(report, files):
     require(report.get('mythicMobsSha256') == '9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f', 'native pin')
     for key in ('pluginSha256', 'probeJarSha256'):
         require(re.fullmatch('[0-9a-f]{64}', report.get(key, '')), key)
-    require(set(report.get('sourceHashes', {})) == SOURCE_FILES, 'source coverage')
+    require(set(report.get('sourceHashes', {})) in (SOURCE_FILES, BLOCK_SOURCE_FILES), 'source coverage')
     require(all(re.fullmatch('[0-9a-f]{64}', value) for value in report['sourceHashes'].values()), 'source hashes')
     expected_files = {'server.log', 'client.log', 'plugins/MythicMobs/Mobs/location.yml', DATA}
     require(set(files) == expected_files, 'archive paths')

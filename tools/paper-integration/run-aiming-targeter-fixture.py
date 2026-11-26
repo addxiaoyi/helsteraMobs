@@ -87,6 +87,7 @@ def main():
         'helstera-api/src/main/java/dev/helstera/api/behavior/Targeters.java',
         'helstera-api/src/main/java/dev/helstera/api/behavior/InheritedTargetLocations.java',
         'helstera-api/src/main/java/dev/helstera/api/behavior/NativeEntityTargetFilters.java',
+        'helstera-api/src/main/java/dev/helstera/api/behavior/NativeLocationTargetFilters.java',
         'helstera-ai/src/main/java/dev/helstera/ai/AiController.java',
         'helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java',
         'helstera-api/src/main/java/dev/helstera/api/behavior/SkillTreeContext.java',
