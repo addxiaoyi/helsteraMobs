@@ -2880,6 +2880,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (dev.helstera.api.util.EntitySetterSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
+        if (dev.helstera.api.util.MythicJsonMessageSpec.supports(name)) return true;
         return switch (name) {
             case "damage-target", "heal-targets", "message-target", "ignite-targets",
                     "knockback-targets", "effect-targets", "teleport-targets", "teleport-self", "teleport-caster", "explode",
@@ -2951,6 +2952,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "messagejson", "jsonmessage", "jmsg", "jm", "message-json" ->
+                    preserveNamedMechanic("message-json", trimmed, brace);
             case "equipcopy", "equip-copy", "giveitemfromslot", "givefromslot", "give-item-from-slot" ->
                     preserveNamedMechanic(dev.helstera.api.util.MythicItemCopySpec.canonical(head), trimmed, brace);
             case "setglobalscore", "sgs", "set-global-score", "setmobscore", "sms", "set-mob-score",
@@ -3288,7 +3291,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (mapped == null) return null;
         if (Set.of("determinecondition", "detcond").contains(head)
                 || dev.helstera.api.util.MythicScoreboardSpec.supports(head)
-                || dev.helstera.api.util.MythicItemCopySpec.supports(head)) {
+                || dev.helstera.api.util.MythicItemCopySpec.supports(head)
+                || dev.helstera.api.util.MythicJsonMessageSpec.supports(head)) {
             return mapped + executionSuffix(trimmed);
         }
         return withExecutionOptions(mapped + executionSuffix(trimmed), trimmed);

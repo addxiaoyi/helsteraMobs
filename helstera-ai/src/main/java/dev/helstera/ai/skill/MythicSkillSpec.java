@@ -64,7 +64,8 @@ public record MythicSkillSpec(
                         "subtractvariable", "subvar", "reducevariable").contains(mechanic.toLowerCase(Locale.ROOT)),
                 dev.helstera.api.util.MythicVariableLocation.supports(mechanic),
                 dev.helstera.api.util.MythicScoreboardSpec.supports(mechanic)
-                        || dev.helstera.api.util.MythicItemCopySpec.supports(mechanic));
+                        || dev.helstera.api.util.MythicItemCopySpec.supports(mechanic)
+                        || dev.helstera.api.util.MythicJsonMessageSpec.supports(mechanic));
 
         String targeter = null;
         String trigger = null;

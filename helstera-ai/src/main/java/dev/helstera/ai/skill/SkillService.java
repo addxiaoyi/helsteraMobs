@@ -1637,6 +1637,7 @@ public final class SkillService {
             if (isVariableMechanic(name) || dev.helstera.api.util.EntitySetterSpec.supports(name)
                     || dev.helstera.api.util.MythicScoreboardSpec.supports(name)
                     || dev.helstera.api.util.MythicItemCopySpec.supports(name)
+                    || dev.helstera.api.util.MythicJsonMessageSpec.supports(name)
                     || dev.helstera.api.util.NumericMechanicSpec.supports(name)
                     || dev.helstera.api.util.PercentHealthSpec.supports(name)
                     || dev.helstera.api.util.SetSpeedSpec.supports(name)
@@ -3651,6 +3652,8 @@ public final class SkillService {
     private static String canonicalActionName(String name) {
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name))
             return dev.helstera.api.util.MythicItemCopySpec.canonical(name);
+        if (dev.helstera.api.util.MythicJsonMessageSpec.supports(name))
+            return dev.helstera.api.util.MythicJsonMessageSpec.canonical(name);
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name))
             return dev.helstera.api.util.MythicScoreboardSpec.canonical(name);
         if (dev.helstera.api.util.EntitySetterSpec.supports(name))
