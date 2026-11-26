@@ -144,7 +144,7 @@ def audit(report, files):
     for index,(path,sample) in enumerate((path,sample) for path in PATHS for sample in c.CASES):
         row = doc(files[PROBE+f'observations/{index:04d}.yml'])
         require(set(row)=={'case','path','source','mapped','objective','sentinel','nativeResult','nativeBefore',
-                           'runtimeBefore','nativeAfter','runtimeAfter','sameState','primary','tick'},'row fields')
+                           'runtimeBefore','nativeAfter','runtimeAfter','sameState','primary','tick','nativePreparedTick'},'row fields')
         require(row['case']==sample['key'] and row['path']==path,'case order')
         objective,sentinel,source,before,native_after,runtime_after = expected(sample,index,ids_by_path[path])
         require((row['objective'],row['sentinel'],row['source'])==(objective,sentinel,source),'source identity')
@@ -156,6 +156,10 @@ def audit(report, files):
         same = native_after==runtime_after
         require(row['sameState'] is same and row['primary'] is True,'state difference/thread')
         require(type(row['tick']) is int and row['tick']>=last_tick>=-1,'tick'); last_tick=row['tick']
+        require(type(row['nativePreparedTick']) is int and row['nativePreparedTick'] >= 0
+                and row['tick'] - row['nativePreparedTick'] >= 6, 'native placeholder initialization')
+        require(log.count(f"SCOREBOARD_PREPARED|actions={n}|tick={row['nativePreparedTick']}") == 1,
+                'native preparation log')
         require(log_rows[(sample['key'],path,sample['result'],str(same).lower())]==1,'raw observation')
         differences += not same
     require(differences==8,'explicit public-native differences')

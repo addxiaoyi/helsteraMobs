@@ -7961,3 +7961,52 @@ The setter r1/r2 reports remain rejected. r1 led to valid loaded-entity fixture
 preconditions; r2 then exposed the target coordinate mismatch and MiniMessage
 serialization assumption. Corrective implementation and fixture work must be
 followed by a new successful report, never by relabeling those old reports.
+
+## Internal completion batch: 2026-11-26 scoped observations
+
+These three reports observed plugin SHA-256
+`e479ed3d9e51b48f3d9948fc439be0cba52b98172dc8581a509a91e07e0781b0` on pinned
+Paper 1.21.1 and public MythicMobs 5.7.2. Their archived audits and current-source
+checks passed before the subsequent JSON-message implementation changed the
+artifact. They are feature evidence for that recorded JAR, not a final release
+gate for the later build.
+
+- [Scoreboard r2](reports/paper-1.21.1-scoreboard-actions-20261126-r2.json):
+  212 observations and eight explicit public-build dynamic-integer differences.
+  Native mechanics are constructed at least six real scheduler ticks before
+  invocation, allowing TriggerPlaceholder initialization. The auditor rejected
+  13,629 semantic mutations. The rejected r1 remains archived.
+- [Context targeters r1](reports/paper-1.21.1-targeter-context-20261126-r1.json):
+  66 native/direct/imported observations with a real online player. The dynamic
+  name selector is prepared before its delayed native initialization. Eight
+  auditor tests pass. Interaction history is seeded through server data, so
+  actual player attack/interaction packet handling is not established here.
+- [Variable subtraction r1](reports/paper-1.21.1-variable-subtract-20261126-r1.json):
+  300 observations. Twenty public numeric-parser fallbacks and ten non-finite
+  float writes remain explicit native/runtime differences. The independent
+  audit passed and rejected 43 altered-evidence controls. Real-time expiry
+  crossing remains outside this run.
+
+The later JSON-message implementation passed the complete Maven verification:
+2,865 tests, zero failures/errors, and 11 clean SpotBugs checks. Its plugin
+SHA-256 is `b916a8c124774882aa971e3ca9b775d1e02a4157217e2cf970637d189689e706`.
+JSON messages still require dedicated Paper/client acceptance, and the complete
+strict release gate remains outstanding. Item-copy r2/r3 failed during client
+recipe decoding; r4 completed 165 operations but was rejected because ordinary
+sample items carried unintended durability metadata. Historical failures are
+retained without changing their result.
+
+[Item copy r9](reports/paper-1.21.1-item-copy-20261126-r9.json) passes 165
+native/direct/imported observations on that later `b916a8c1...` artifact, with
+two connected clients and a passing current-source/current-JAR archive audit.
+It includes actual inventory metadata, overflow, private fake-item packets,
+collection timing, explicit disable cleanup and dimension changes. The audit
+checks client inventories against server state and verifies both clients reach
+the last phase. Multiple recipients, actual plugin reload and disconnect
+cleanup still require separate evidence. No generated-loot (M04b), complete
+native parity or final release claim is made.
+
+Negative controls on r8 rejected 20,567 focused row/metadata/overflow mutations
+and 74 rehashed client/archive mutations. The client-only rerun scopes private
+visibility assertions to fake item IDs: normal overflow entities may be seen
+by both clients. The final r9 run records the corrected test source hash.

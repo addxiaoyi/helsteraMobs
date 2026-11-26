@@ -28,6 +28,9 @@ public final class ScoreboardActionsProbe extends JavaPlugin {
     private int observations, waits;
     private Player player;
     private Scoreboard board;
+    private final List<Object> nativeActions = new ArrayList<>();
+    private final List<String> nativeSources = new ArrayList<>();
+    private int nativePreparedTick;
 
     @Override public void onEnable() { Bukkit.getScheduler().runTaskLater(this, this::begin, 100); }
     private void begin() {
@@ -37,6 +40,48 @@ public final class ScoreboardActionsProbe extends JavaPlugin {
             Bukkit.getScheduler().runTaskLater(this, this::begin, 5); return;
         }
         try {
+            prepareNativeActions();
+            Bukkit.getScheduler().runTaskLater(this, this::execute, 6);
+        } catch (Throwable failure) {
+            getLogger().severe("SCOREBOARD_FAILED|" + failure); failure.printStackTrace();
+        }
+    }
+
+    private void prepareNativeActions() throws Exception {
+        var mythic = Bukkit.getPluginManager().getPlugin("MythicMobs");
+        var loader = mythic.getClass().getClassLoader();
+        var executorType = Class.forName("io.lumine.mythic.core.skills.SkillExecutor", true, loader);
+        var configType = Class.forName("io.lumine.mythic.api.config.MythicLineConfig", true, loader);
+        var configImpl = Class.forName("io.lumine.mythic.core.config.MythicLineConfigImpl", true, loader);
+        var manager = mythic.getClass().getMethod("getSkillManager").invoke(mythic);
+        var sourceFile = getDataFolder().toPath().resolve("variable-source/Skills/variables.yml");
+        Files.createDirectories(sourceFile.getParent());
+        var input = YamlConfiguration.loadConfiguration(getDataFolder().toPath().resolve("cases.yml").toFile());
+        for (String path : List.of("direct", "imported")) {
+            for (Map<?, ?> sample : input.getMapList("cases")) {
+                String mode = sample.get("objective").toString();
+                String objective = mode.equals("target") || mode.equals("no-target") ? "<target.uuid>"
+                        : mode.equals("trigger") ? "<trigger.uuid>" : "ScoreAudit" + nativeActions.size();
+                String arguments = sample.get("arguments").toString();
+                if (!mode.contains("empty")) arguments = "o=" + objective + (arguments.isEmpty() ? "" : ";" + arguments);
+                String source = sample.get("mechanic") + "{" + arguments + "}";
+                nativeSources.add(source);
+                nativeActions.add(Class.forName("io.lumine.mythic.core.skills.mechanics."
+                                + family(sample.get("mechanic").toString()) + "Mechanic", true, loader)
+                        .getConstructor(executorType, java.io.File.class, String.class, configType)
+                        .newInstance(manager, sourceFile.toFile(), source, configImpl.getConstructor(String.class).newInstance(source)));
+            }
+        }
+        // Trigger/caster placeholder delegates initialize through MythicClock.queueAfterLoad.
+        // Let the real scheduler resolve them before invoking the same mechanic instances.
+        nativePreparedTick = Bukkit.getCurrentTick();
+        getLogger().info("SCOREBOARD_PREPARED|actions=" + nativeActions.size() + "|tick=" + nativePreparedTick);
+    }
+
+    private void execute() {
+        try {
+            if (Bukkit.getCurrentTick() - nativePreparedTick < 6)
+                throw new IllegalStateException("Native placeholders have not passed six scheduler ticks");
             run();
             getLogger().info("SCOREBOARD_SUMMARY|observations=" + observations + "|completed=true");
             player.sendMessage("SCOREBOARD_DONE");
@@ -112,10 +157,9 @@ public final class ScoreboardActionsProbe extends JavaPlugin {
         seed(objective, sentinel, seeds, seed != null);
         Map<String, Object> nativeBefore = snapshot(objective, sentinel);
         Object meta = h.meta(h.a, trigger);
-        Object nativeAction = h.nativeType("io.lumine.mythic.core.skills.mechanics." + family + "Mechanic")
-                .getConstructor(h.executorType, java.io.File.class, String.class, h.configType)
-                .newInstance(h.nativeSkills, h.source.toFile(), nativeSource,
-                        h.configImpl.getConstructor(String.class).newInstance(nativeSource));
+        if (!nativeSource.equals(nativeSources.get(observations)))
+            throw new IllegalStateException("Prepared mechanic source changed: " + nativeSource);
+        Object nativeAction = nativeActions.get(observations);
         String nativeResult;
         try {
             if (family.contains("Target")) {
@@ -159,6 +203,7 @@ public final class ScoreboardActionsProbe extends JavaPlugin {
         row.set("nativeAfter", nativeAfter); row.set("runtimeAfter", runtimeAfter);
         row.set("sameState", nativeAfter.equals(runtimeAfter));
         row.set("primary", Bukkit.isPrimaryThread()); row.set("tick", Bukkit.getCurrentTick());
+        row.set("nativePreparedTick", nativePreparedTick);
         var file = getDataFolder().toPath().resolve("observations/%04d.yml".formatted(observations));
         Files.createDirectories(file.getParent()); row.save(file.toFile());
         getLogger().info("SCOREBOARD_ROW|case=" + key + "|path=" + path + "|nativeResult=" + nativeResult

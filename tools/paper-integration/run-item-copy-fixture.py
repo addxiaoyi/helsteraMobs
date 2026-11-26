@@ -82,6 +82,7 @@ def main():
     (probe_data / 'cases.yml').write_text(yaml.safe_dump(cases.source_cases(), sort_keys=False))
     source_names = ['tools/paper-integration/' + name for name in [
         'run-item-copy-fixture.py', 'run-player-variable-fixture.py', 'item-copy-cases.py', 'item-copy-client.js',
+        'paper-1.21.1-client-protocol.js', 'test-paper-1.21.1-client-protocol.js',
         'audit-item-copy.py', 'test-item-copy-audit.py',
         'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ItemCopyProbe.java',
         'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java']]
@@ -166,6 +167,11 @@ def main():
         if common.digest(path) != report[key]:
             raise RuntimeError('Artifact changed during fixture')
     files = [server / 'server.log', server / 'client.log', mobs / 'item-copy.yml', probe_data / 'cases.yml', *snapshots, probe_data / 'identities.yml']
+    missing = [str(path.relative_to(server)) for path in files if not path.is_file()]
+    if missing:
+        failure = failure or 'Missing fixture files: ' + ', '.join(missing)
+        report.update(validationResult='rejected: ' + failure, missingFiles=missing)
+        files = [path for path in files if path.is_file()]
     report['files'] = [{'path': str(path.relative_to(server)), 'sha256': common.digest(path)} for path in files]
     audit_spec = importlib.util.spec_from_file_location('item_copy_audit', TOOLS / 'audit-item-copy.py')
     auditor = importlib.util.module_from_spec(audit_spec); audit_spec.loader.exec_module(auditor)

@@ -2,6 +2,7 @@
 
 const mineflayer = require('mineflayer');
 const mcData = require('minecraft-data')('1.21.1');
+const customPackets = require('./paper-1.21.1-client-protocol');
 const itemType = mcData.entitiesByName.item.id;
 const itemMetadataKey = mcData.entitiesByName.item.metadataKeys.indexOf('item');
 const clients = new Map();
@@ -79,7 +80,8 @@ function installStrictParser(state) {
     } catch (error) {
       event({ event: 'packet-error', ...phaseFields(state), state: state.bot._client.state,
         packetType: packetIdentity(state.bot._client.state, buffer),
-        partial: Boolean(error.partialReadError), bytes: buffer.length, message: error.message });
+        partial: Boolean(error.partialReadError), bytes: buffer.length, message: error.message,
+        rawBase64: buffer.toString('base64') });
       finish(error, state.role);
       // ProtoDef drops PartialReadError without emitting an error; finish above is deliberate.
       throw error;
@@ -182,7 +184,7 @@ function message(state, text) {
 
 function connect(role, username) {
   const bot = mineflayer.createBot({ host: '127.0.0.1', port: 25731,
-    username, version: '1.21.1', auth: 'offline' });
+    username, version: '1.21.1', auth: 'offline', customPackets });
   bot.physicsEnabled = false;
   const state = { role, bot, phase: null, tick: -1, lastIndex: -1, ended: true, items: new Map() };
   clients.set(role, state);

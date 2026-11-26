@@ -1,0 +1,917 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-scoreboard-actions-20261126-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-26T00:43:21.618543+00:00",
+  "pluginSha256": "e479ed3d9e51b48f3d9948fc439be0cba52b98172dc8581a509a91e07e0781b0",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "4773093b15b8f5cdcf6243fab89871fea8b2dcf28d25bc1b3da99a4ba8d030e2",
+  "sourceHashes": {
+    "tools/paper-integration/run-scoreboard-actions-fixture.py": "5b46333dab45f6467f0eb9bb51d76dc5a69b4c41e622e1ef1cb75bdf0d946329",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/scoreboard-actions-cases.py": "e7e3cfc025147a56e5d5b3ad8950485ab0a6f502c6844ac67aeff5dd819cc79f",
+    "tools/paper-integration/scoreboard-actions-client.js": "764263a0c9dd7133a70e69f5bf9b6346aab3ce37afa29a553d8eb70986182bef",
+    "tools/paper-integration/audit-scoreboard-actions.py": "ff10ae07c0048adf581b07b7197c5e5837d09a8994a37ce627db7cbc7a0ba4d9",
+    "tools/paper-integration/test-scoreboard-actions-audit.py": "eba5ccd121bffb82accf2e4ebe455003d7ecd57d5efa25fdaf387cc9d994135b",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ScoreboardActionsProbe.java": "4e848a1deda439e3509408d8efb3580a67d2fc69617b3b7a66efc18b7b3adec3",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "8a1242910f2d4a49c191314cea121381f6d131a7d2a53c98f26225a5c54aeb6a",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "dcf4402df73e2e9f1a85d473965dd7a9714b1c80fea360d792721680610c919b",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "f40634744156fa694121a0ba226bea269f0fe5595eea4292913b4030a8b7f41c",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicScoreboardSpec.java": "8d1c770e1cf42e860e6ec4548748082d507f3828d6670351d367ce391b497dd3",
+    "helstera-api/src/main/java/dev/helstera/api/util/NumericExpression.java": "38185514f6d5e74048dedef43539a2fb4b92f7f331ba71b424af6c2b2520a4f7",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "bb41a8c3c0a1309fbba719831256de23411069e51a48f2b0b28dbe69f148f7fc",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/ScoreboardActions.java": "2e5d2cada808466f00e9d5819477258baf7b7cbaa8a3f6d36b29c3147f4f4b8c",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/Placeholders.java": "f33ce6fbc655aff02c4821bbd5664b2fb2a6c72cc85585839ee0bcf5d64137ed",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "f39ea430a8d484a1ac98374d88d3779fe6b275962c99c97fe17c2070e3497e5a"
+  },
+  "limitations": [
+    "Native constructors and cast/castAtEntity are invoked directly; full native dispatcher scheduling is not covered.",
+    "Dynamic setTargetScore operands are independently implemented by Helstera; pinned public native substitutes one.",
+    "Uses real main scoreboard and a real player, with source-defined cases and direct/imported runtime paths.",
+    "Scoreboard state is observed before and after each action; no release or complete native parity claim."
+  ],
+  "exitCode": 0,
+  "clientExitCode": 0,
+  "observationCount": 212,
+  "validationResult": "rejected: scoreboard mutation entry-explicit-trigger-context",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "36e125d16afb372d09cdcd725c65b0423c37d623681bdeb40fb64de209ec2d00"
+    },
+    {
+      "path": "client.log",
+      "sha256": "9c42cf71279440fb4aa75f04783a93cf48d7e4448a7305dfe4b70e62a1fe1843"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/scoreboard.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/cases.yml",
+      "sha256": "ff9739aafd0d230663eaba005036100dffec42570b16b7784493acfb630e7ae2"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0000.yml",
+      "sha256": "5ec6341f504c226765efd6863804e121c829530f3b88bdfd273dcc018c39bbed"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0001.yml",
+      "sha256": "1bd3770f5a49276d08bde02bc69b5ae6fd28d3ece915ba0325b1d2d59667b516"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0002.yml",
+      "sha256": "96de165217052d40d23c3217d36be4e3f707a89444bccf936f0c09bd66e96707"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0003.yml",
+      "sha256": "3f495e04ba204af66a4c5a8cf44e7435d308c573282e456b447a142c100ca73e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0004.yml",
+      "sha256": "3f40b033a156904dae4e8d10fb2bfaf1ff9fd2750082ce69d9847d583901d113"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0005.yml",
+      "sha256": "475c03deaf8e93d6f7bfc00be0ca4a657c5506b52695180622f376a063b60b57"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0006.yml",
+      "sha256": "925a436ec726194a308fa71a40127e0bd09d5bae24799d27c6151e6431b7c572"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0007.yml",
+      "sha256": "1e61eb1a2b07440f2d2e218e9e14cb7eb76f4168d63414280f5b0b881ac278e1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0008.yml",
+      "sha256": "71e9ca73940156186204e72914a1a6981a8f5d9b23f6563476399e0a09a2ce57"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0009.yml",
+      "sha256": "ad0d3180e1660fb1e225a49b5da51f38c1eac05e638972973e858c5ddfd986b8"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0010.yml",
+      "sha256": "e844528d5ed6dd98e2fbc65f8a97ee0f732e2f8258724cb7fecc0661a4ed8cd3"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0011.yml",
+      "sha256": "b84a5eaaaa8b6032319db22c6b9e1fd41300d1bfc8e4a7923b6d35364a976221"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0012.yml",
+      "sha256": "a855fe6d792921b7d400e164196e3eccda691e7fd94463442830d80790c3f081"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0013.yml",
+      "sha256": "a9ba75b0d0d2809930369ea091425cfdb9839301f2370db9a1c2dcbbe8dd2628"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0014.yml",
+      "sha256": "013e581b7618f2134724f0194ae5e599bea2be829e90e81ad8575403a74e2235"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0015.yml",
+      "sha256": "887b45e9ab5150471cd8bec347cd5aa2998709c62392ec280d24acabb96082b4"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0016.yml",
+      "sha256": "2d9d3a486209700c637941cdd58a85dc9e7ad120daba51c6255f4fb4ad83e892"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0017.yml",
+      "sha256": "1e4808e77ec90983d8fe81210f834b861fad3cc839003d7115caee5063b0e55f"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0018.yml",
+      "sha256": "89b4f45317fc191d0cf60a250bc1cdb927508177de45a075d00b27975b8b0e56"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0019.yml",
+      "sha256": "26bdf3c725f7b1e0ac7c0eec642cf8e8faefba6601f054dfcbc9e900f2801d4c"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0020.yml",
+      "sha256": "0e9ea346cb87e5b690900e5451122c94b6649edf29b8737c183508fb59ade540"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0021.yml",
+      "sha256": "d66a3f5c56af1af3486aeab89f4a315b99765f0a42ee58ac31d0f94b711582fe"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0022.yml",
+      "sha256": "c37228948d9743bfa064ae7ca82175ca5861bcfc9654c9cf9ad1a8a5ff92fc46"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0023.yml",
+      "sha256": "2edf30c59c02547b71df4563c9735d8612cc5b12896c5e5a9e30874ea450067d"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0024.yml",
+      "sha256": "4be9cc01ff842e14b2badb1d543b9a87f67b7e6ab92d128f56c1a2c221363952"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0025.yml",
+      "sha256": "c780d2165f88a4be272c7a38bbc28787774c2ff2be2db5156233c3417fc9f432"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0026.yml",
+      "sha256": "ad5844d4f21bef2674e589a26328b76f10f40d51c17e6efdffc682ff5bd71e24"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0027.yml",
+      "sha256": "7b9ddc75d8e72ef48d94bfff9c53155041554e0244ddef9e9fb7cdd0c919a213"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0028.yml",
+      "sha256": "7dde6d43e57f94a255f28f0e83730df17b2f9cde03853ea8d45b1ffb66241060"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0029.yml",
+      "sha256": "deaa1fee58ea460b3fee2ac9c1f6f9017d634cfb7dde63cf44090ad25525a2b3"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0030.yml",
+      "sha256": "550807a4967f3ab72d094419f49ec40c23747b3aaaa9bbf0db5878f14ae84d8e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0031.yml",
+      "sha256": "32a75a51e04130d7fa9531acf9bce0d82fb72db317c1ab105d69a6e6aabd1273"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0032.yml",
+      "sha256": "94f3b9c6ac01adf91fd99facbf98ddd27dda65cf6545b9d5dd2d905a3836b76b"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0033.yml",
+      "sha256": "99ae406d0132875e15dc5a35ce3e3f33ce0ed1f9f29692413495660f4243949a"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0034.yml",
+      "sha256": "e21aeb2b4f90b3c477453f473415c89a73b5c854eaf4ac9eea6493b7e85ade65"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0035.yml",
+      "sha256": "2118ac1d6d651dcc711aa999d7151f1d6d3ffdca5de9e0682875a21910a674d5"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0036.yml",
+      "sha256": "0f3b789c4e0bcb342979386c4651534b9f1b0acafad74a77bb249ed4a92d9b9c"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0037.yml",
+      "sha256": "e9eef0d8a7b99cd6b3efdf5ef1aea84fb644cf483dc20e640fa14cf2efdafc41"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0038.yml",
+      "sha256": "fb07223c0e0d5bcf23c62efe1d5c7ce316f3a8c2ffec0720daf6bfcb6c711691"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0039.yml",
+      "sha256": "372e88f78262724168bf318a3f345bd6e3cc03b39636ab6ecd57ade22ef0438d"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0040.yml",
+      "sha256": "18738b154452baa263374462d4ba602155479bf825a670bec42d335ba6b086f1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0041.yml",
+      "sha256": "f6d09c7e254290024f96be5b35bf8b1b88a07688de6d4e85d6e338d8a8205cd1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0042.yml",
+      "sha256": "ae0b70aef677a943fe19889143bb17c563b6d7d7f22d7755f0cc116e8421bd40"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0043.yml",
+      "sha256": "22fe3b554195f4b22173a1cf6de2fba4df7b53940e5c6bf8ca0311911819756d"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0044.yml",
+      "sha256": "82c75470c459a8cb94090744a46c8fe460a71e5c2f5f095bdfbbca99b6dea613"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0045.yml",
+      "sha256": "15b781d396bf58d8cbb3a674d27883387d401b8346af9c941d0d278b1e06e73d"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0046.yml",
+      "sha256": "d26acf0435a30d2062f09312bc3220983735a2c681415467d6c66cd7a3e20981"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0047.yml",
+      "sha256": "d7ab8b34d5db8418ffe08cc4003cf9b57842da01124fc7ed454de095b410eaa7"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0048.yml",
+      "sha256": "4609937ee472c56c62f06951cb65f66cc1c5670c9f2ce09958b411b06090dde8"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0049.yml",
+      "sha256": "e80a3ef341f04a1fe0c3bd829307c3d745011cbf90dfae58b09b4f94b6ab64e7"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0050.yml",
+      "sha256": "2b231403050d5fb9d034f4fa9ac09b866d7d2e916d7c98b99b5a63950d1c2ebc"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0051.yml",
+      "sha256": "db6e92f3c8818195ecbb654c571193eb40469da8f64111d1625a59465adcb3da"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0052.yml",
+      "sha256": "b3190ae8d2a5e57c614daa60e61d304af9bdb95508fac8810f3ff7a5a224f186"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0053.yml",
+      "sha256": "ccd50d282f75a8ca7bc3b971b2340239f984885ddfcca30309358cb95d6f33e7"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0054.yml",
+      "sha256": "e3fb68418d505611ca7d8a14097aef5999d3ac06f31c48ff426daf5a4dd5e822"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0055.yml",
+      "sha256": "37769eec5e54ba04ee41bcb987d5449ff800a9f500d031e85b39b1552cea8456"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0056.yml",
+      "sha256": "8a4ce2c486a82ca2df8961073bdddf33650b128870c4c08348407be7c5fafc10"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0057.yml",
+      "sha256": "f9dd8a42cbcba052339bbc66bb64793c620073e69d2fb32351203e8d24758b1f"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0058.yml",
+      "sha256": "4b2f67b4dc8cfe1106b0e35d1441171fca2ff91a1e4b33277139fb18ac874b0e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0059.yml",
+      "sha256": "4246af8ea654774181306ad3ca6bf51b7de3a5e3054cb9e44bef88f72f69cd4b"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0060.yml",
+      "sha256": "537e3383224850e78dc0fb13e1a9e037288ef72fdeacb9bc4106475f1650c97c"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0061.yml",
+      "sha256": "8a2c7c2ede5ad55cba4590687a808122e008143b65a5a38b456f343fccb5a90e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0062.yml",
+      "sha256": "55675e51755d7fa169a9a13561248d872c953e89ccba485510a103cefcfc9923"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0063.yml",
+      "sha256": "55140fcfea7289bd9af051c3c8bc04fb35a90f2cef97797673f97cbc4bebe60a"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0064.yml",
+      "sha256": "18f19f792096bc6e281715b636f0244c756389124ad54a1a33e33f66852fb59e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0065.yml",
+      "sha256": "110ce4759b96f8231e3fd322cab223ddbce11de03b804945c1f39e304712d2f2"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0066.yml",
+      "sha256": "2283a36c5d2c3b7c0b9a22aee71d370e71783348d569cd24d561c835e875ea6e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0067.yml",
+      "sha256": "18815871082127e2cec878ec792777d0b67ef6e1bc27bc338948cf7552aa1865"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0068.yml",
+      "sha256": "f0c40eaf7acb7944c3c38b1c59a4c812af0f25fed9bd6d721948aee592736d16"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0069.yml",
+      "sha256": "849b70f1d5308e2678fd0e4de2923d9dde9245f092630d675f8c403240385115"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0070.yml",
+      "sha256": "03d50fb19a8e6b9e732cd9bcb8251d9400d2505b8df9380c2d0338b6dd006ec4"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0071.yml",
+      "sha256": "2276263d12148d745c037a93f79121d68454032becd37a1c77bfc80748885653"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0072.yml",
+      "sha256": "ded40740291e7a63c2c73d5030706368296b814d5185a70cb05c13ea292ab005"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0073.yml",
+      "sha256": "e3ced1f0b659669f778526fc85bcee2163717e6b3438d9a0859fc05b39b483c7"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0074.yml",
+      "sha256": "d5d436d95bc6ad9711104bf2bcde5dd5023531d7cce3a36ce78a2523d5ea631f"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0075.yml",
+      "sha256": "6c512449bfca1e87d995fcea4c1a0261966c8cb3a17be22fc464defa3c841daa"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0076.yml",
+      "sha256": "90494b83dc0a56ee2c002fc93e6d1249ee731782fd06aa5e17f3507f4772c929"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0077.yml",
+      "sha256": "65c1db14d0c52fc26d297efd36ef945f1f6cc9572b64dc4535b231fe11026373"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0078.yml",
+      "sha256": "3cae7f70451e0fa981260782aaf6f26838c03181c30e8cd29049957e2bb25ffb"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0079.yml",
+      "sha256": "2ca5ebc17acc6bf4d6b372f7ec80702d9e13bfe26bbc7861403d74ce1c4f3b30"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0080.yml",
+      "sha256": "d319a095f5cc357ec6fecf95e3b12ac290ac7a15daf9a7f18f09bc586151c602"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0081.yml",
+      "sha256": "07c58bcda4c265975cb1af88dee8748bd4369076e2b25278d5991a979b328497"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0082.yml",
+      "sha256": "e9073eeda381e1edb7af5bee41edf292bf0a563575ffbbc2bd61acf609263f14"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0083.yml",
+      "sha256": "ddef78d95277ef1a34945aadeadf397c39e27a955549dd556c4048a5a5d5cc7a"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0084.yml",
+      "sha256": "b97172184604e596566e49fa5394238b51a80ad2831b40a82e92af5c739456eb"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0085.yml",
+      "sha256": "7cbe9c45f2992745780fec1cb3d97e95bdde2961dba64804c589977963156104"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0086.yml",
+      "sha256": "84598f83cc5a46fba59de6d92d396c4effc823dbcc64e073892a2a781fd29868"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0087.yml",
+      "sha256": "bc12f33efab7b117729051dbee89916c83b4006ca6640d9ccd4aaa2b2b97c729"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0088.yml",
+      "sha256": "96355731fbe03213b1c11bd569a8209a2020363dfd416cd93014870699e09420"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0089.yml",
+      "sha256": "fd260b007b2db8860fd82ac1f3f4577592e04cf03fbc9d4c8c3a17bd366b2928"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0090.yml",
+      "sha256": "359731be69e1db143ffe360e6d82e89059de78935c39aa6793b409b28eaf5da2"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0091.yml",
+      "sha256": "af4ca8c26288b73dffc08bd79924b6fd4a412b6911038e983a7d56df7b6ddc62"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0092.yml",
+      "sha256": "b9cf424da00f1a5168fe87479c00b74830df564f839498586b0965adb9db9fdd"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0093.yml",
+      "sha256": "66e402eed8240b191e79ae76f6bc577c76a97a56248744e5bdbede9652555f81"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0094.yml",
+      "sha256": "3a89524d6b05473f61af08740dbd156abe9ab1913bf91d1a2f2b41a51b5d26f5"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0095.yml",
+      "sha256": "3725300571a6c24f2b4949bf7822197dcb34f1ad3f3a211e90ecc18a1e7ab92c"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0096.yml",
+      "sha256": "8481e979285571afcb67bac95d7cd8ade36681cadca3a18a6709bcbc971f7505"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0097.yml",
+      "sha256": "9cafd7b351748c5f8421b6556b3d3dd971e54b79ac3b69bcb3be3c005f0fe5b3"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0098.yml",
+      "sha256": "38996946792e2cb7fbd5e4c9cbb40bb50deec32c7776ee8c54fb037bdb522bf5"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0099.yml",
+      "sha256": "274df59f7055ec1e1fa32bdfb04b5c434a78a201ed7d881ac235bfc524a9028c"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0100.yml",
+      "sha256": "6f181f3ddfd541dcdda8ba5fd54ca751156bc3c104473052a8609597933d4696"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0101.yml",
+      "sha256": "0807e05011c6912a3fe006915030ef5246269f59d0d82fe1e9aba390637726d5"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0102.yml",
+      "sha256": "1462858f42846a234f7ac869d3bb0d47b50934c707a9dff52737aaa9732c8532"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0103.yml",
+      "sha256": "675ecd4cc767516d795529a7203e677a769db9c447ef7cdead6ec9c0772f77aa"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0104.yml",
+      "sha256": "43f30278892731c102f71ed3130bcb6e9d90c922f629462aff257811449f6203"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0105.yml",
+      "sha256": "0ee14d85513a7231c58b060180d378e40778a4786b3ece3dac8292d125f706e7"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0106.yml",
+      "sha256": "34aa59c5abe8de08097674f3afa1253365a7b57320b7d55463d90a5ef989f5f1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0107.yml",
+      "sha256": "8c5d2c80db9dc8a91864a276fae009dcc54c6d6294d68f8d09cedd8930cfe54e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0108.yml",
+      "sha256": "f8f249b63469ba14229e0ae5463d89074edc68014f12daff962662971219b8cd"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0109.yml",
+      "sha256": "3f054d5b92b93f4eaa14df83e57e67dfa8fdc10a033e5a0de86c5ba3edc78153"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0110.yml",
+      "sha256": "5c9072313ab85e20c5d740a1a268be3ff25353fcc8fc97d19333399c48117459"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0111.yml",
+      "sha256": "1c7d4419e58ef8bc915d4c5519984d30fc9171c25c27256ae5691c57d3109deb"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0112.yml",
+      "sha256": "210fc30c83e764d727eaeab771898710c07f8178e369e0d748202d363775de00"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0113.yml",
+      "sha256": "df1ecd9d7ca397328e4a9075c75f7d87de63b502cedebf3171c312c85dcd1452"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0114.yml",
+      "sha256": "63b5146475e8772bff3448dabbbdb79f6137b00062ad49c19d97ee77be77bda5"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0115.yml",
+      "sha256": "18b47ee1ef755ad799f57e510e50bcfdd14cfd56c5988b096260617bcd2db629"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0116.yml",
+      "sha256": "837241607bca7821437f588a0148f61eaf989b865201276c51c85302e7390949"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0117.yml",
+      "sha256": "9ef1cfc2c9dbf2fa8aa368ead4e45d607cf4b26131f0aa66f4553aba08071620"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0118.yml",
+      "sha256": "8ccdd23145e53467a34fd57ed5f3b3c26dd6eb2d2cd20af94e4f7416726a92df"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0119.yml",
+      "sha256": "411d987c810b11cde4efcd3cc5f60c9425fdafd6285174de29318592da4b22bb"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0120.yml",
+      "sha256": "66c3c3b77cbb0a326bd601614bdd4f970d04ecd20b703dfb8cdd472f9e7e3d08"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0121.yml",
+      "sha256": "810c45d6f16d6b79e6e238f3b019023318bdd51ff2d5400b7a5b0e91c1a907e7"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0122.yml",
+      "sha256": "1710dd1528df80e7cbb96bdaec974cba8ce14f4a436be5ec62ac998f0d3492c8"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0123.yml",
+      "sha256": "20c515cc242aa9593e9d47f1be3c76f239011cf3f8665b7a4f2cf80f88477acf"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0124.yml",
+      "sha256": "0acd1ea14cb85fe32a9ec25c3f8361eb75180932184e83a5aee71e78498df03e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0125.yml",
+      "sha256": "0b6375ee94ae5ce19a77ae0323892cbb1fcf7193d5471d48f8bd4b07d54dd4b3"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0126.yml",
+      "sha256": "d54ce60ab8e19a68491796e8538e28b95c197ce85395be7a6de455d9fa1bba3f"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0127.yml",
+      "sha256": "2e80f068be36f659dd8bc096bfb388b0cd020825e69e0993baf80fc1cdf16e74"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0128.yml",
+      "sha256": "a485c3f8edf1f7217dca832958b2f7e122cf26f527adcff133bace3a889e84a3"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0129.yml",
+      "sha256": "645f7db54c5b563627c72ad578f36a0ce1246762856f773dcc6ee5ccb823a802"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0130.yml",
+      "sha256": "7bf0a703a1fe7e64395d5508fd18e6b5cac4163663b0e8ca3aceba51b7b59074"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0131.yml",
+      "sha256": "a7eefc0b4591c8aa5073f5c1b94a18920c1d9301476df359767c7811b3b53b53"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0132.yml",
+      "sha256": "57cce7221d5f0b1cc3d4742782801860ed60f051799a320ed486e0432980e252"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0133.yml",
+      "sha256": "653a041ca02f46f7cebdd0e7f327a603c18b923d7bea960f22c81f8426ec38b8"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0134.yml",
+      "sha256": "3984941707bbe2fbdd90db9a640127d2f36a210d99d1bed46b3e58ed520ab689"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0135.yml",
+      "sha256": "5b40dd7d90ee7c2a67aab62a4d0bf5855916a32d2d8f9b106372ab6078294495"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0136.yml",
+      "sha256": "b7e203af19c317f56713b77262aedd93b96e209c7f610c07497664b4c51a0a99"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0137.yml",
+      "sha256": "e8e8569cd4230d43baa3685cd43c0446c9f59b6c232928c06520d88c66dc599c"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0138.yml",
+      "sha256": "8b8453b55b633ff3dfd0a23ce47ed685babb06231763d91f925b7da13f3b06eb"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0139.yml",
+      "sha256": "fe6ea5f5d6b98278753d0ebcfb07aaac06d0ae53a5b43589dccbe4171bc27c7a"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0140.yml",
+      "sha256": "eed0eeb696322a9f6feaa91f88ff2382ac020d3118817bad6c26600c6934856d"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0141.yml",
+      "sha256": "32d6e5380e38f53e1a3a211c69ba9256c7eecf2345cba231634feda259af4801"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0142.yml",
+      "sha256": "09a63ef80687fcef53ceec611adbe1a3ca963e4ead59dae2a8920eb43efde82d"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0143.yml",
+      "sha256": "7a264dd06446a018964f550d32e458f64bdb95011d22ec4efe147442c9000fae"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0144.yml",
+      "sha256": "c14a62530ff7f8ee5e1a3f1241784fac72ed7f1ab9c2ab2bacc1f3aed2028add"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0145.yml",
+      "sha256": "895cbc8d2f39a9375c1c0673b0fb55b6334a4e61a53650d8f4187ab5970512fa"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0146.yml",
+      "sha256": "9dad80e1d655c9577d6e76b3cc48964802b9d05504778035b5d3c0dbc525fd7a"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0147.yml",
+      "sha256": "d800f7c32bf68a68cf187687d789929c22694e56620e1a47a5a57d8017a46c46"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0148.yml",
+      "sha256": "10078938f00bf8a5a443612ed350f1471e88f604ccceeed47e722e757aaf6c62"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0149.yml",
+      "sha256": "7173afe85411429cd54de8fb30e2241ba2e958b744b0f4116ed1765de3f09172"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0150.yml",
+      "sha256": "c32c342a1423e51aeabfc4610e0034a87382c20eed5a5926a9bf57afff58b022"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0151.yml",
+      "sha256": "c4be79a7dd42173780d317ce25e6166aa397f91b1a7dafe5ee6cecb6fa174ec1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0152.yml",
+      "sha256": "de24f705e80d00c8156e28c28fe0b1c8a30e64b9a131ba02c9e2d295a36a4cb0"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0153.yml",
+      "sha256": "91239ae456b58ad1492422c676ebd5fa329c1d9a215248bcbf1b60f155ecb19f"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0154.yml",
+      "sha256": "45b92dc9764841423c6347568e9fbf412fc16bb3a47f67b7c5be8040c6857ca1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0155.yml",
+      "sha256": "bcfb818dfdd493847d865a2a8e6fdf21cfe5a993e5bb664f187f621caae0f8b1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0156.yml",
+      "sha256": "40ad0a743ea0384f3064ab19e8314f82b6541bb73cc6adcacc3cf5cfdb468e5c"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0157.yml",
+      "sha256": "7b0024da301ed64e8006c34513a4a0c76115c16ca0a943bf849e3e99daba91bf"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0158.yml",
+      "sha256": "cb0d9f36a4cd505151e554739e434d8e0b44dd576c2cc17d0e5b1128eee71c67"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0159.yml",
+      "sha256": "e3d063cc08a8ea2f3ef8e3bee5a96dff04d762de0823664deeea4c6542ce1f82"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0160.yml",
+      "sha256": "3b96a8de2795f2eaf072b62b01b97f189daa7d8966dbe28b78d3104267b57198"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0161.yml",
+      "sha256": "19e645d274418c53a5106b4ab21febf1e773f1162384e0203112c4fe6355fa9c"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0162.yml",
+      "sha256": "0b36420d24187ea89b725a9f9c2b893a3b4374f41d13b9a6e76146951b465cd8"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0163.yml",
+      "sha256": "34895ff6a33882207b18512f27ce7573f621c24f61f6fe7f498e67ac6d10ffce"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0164.yml",
+      "sha256": "11b24c9c61ab0235e1baf73e8f5bc703de1db6ea00a034b6fa51818d517e1feb"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0165.yml",
+      "sha256": "a16a217959c2533e192dc9abcd4f519c268fbe5f926107fafa35b820dcbf9385"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0166.yml",
+      "sha256": "b6d5e27452dcb2b7b00f0404fe8de7b8005ce685d9722db7ec4b7485e62399c1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0167.yml",
+      "sha256": "5f891e82a61916d2d256a7927d31a887737df44a41b418680584b064f53d06f2"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0168.yml",
+      "sha256": "8d69504880a30d6e91ca0b07ea8f62cc92ed310ffe52fcf6baf1af44ba34384f"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0169.yml",
+      "sha256": "9ed262bd1d5adccb9f88b910d1f2e4362ae657cc6900b0547fd4dc30c12d2157"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0170.yml",
+      "sha256": "ca320698d3fdcd24ca42603fb309994e12b110504972ef6bb16fcb265a94c7b9"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0171.yml",
+      "sha256": "ed2a0c824ae263d54f480baa08ef08b912d7063be5bf10c438bc63ee36ecabdc"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0172.yml",
+      "sha256": "77b91d6b92f9b31db8f74cffe1f6fbd3b2a3e3f17cc1b4447c9cee797a5738d4"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0173.yml",
+      "sha256": "4c192ff2559cd25cbb2e0b69cf7be0d21a4e7f428fc6d084996f39b6301cf18e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0174.yml",
+      "sha256": "627c3150b1779d0d4bfff49fd4df1dd6249c44fe1b9dc15d2863d4c1dd052995"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0175.yml",
+      "sha256": "5ca2fd9b4ee0ebc67bb908a56b124f5c78a134a65341c27dca066e810c31a711"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0176.yml",
+      "sha256": "267e504b6657f48c6f0a7b633040d07db9a965c0747056858e8f95cc2003d70f"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0177.yml",
+      "sha256": "e504e11420d2d3fce089ede296dd35eed1f5f9db5cb679bccae69055dff2072e"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0178.yml",
+      "sha256": "d8d040cdf7549774fbacd21eb44e9c8586398cb371932285ef1307c94f8ca03f"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0179.yml",
+      "sha256": "73acef4d1fd1b4082602fe28b6bb28ec3556f5d114727357e4a161aab761f729"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0180.yml",
+      "sha256": "b04b22d6bb4da1651b625642a534d742a339814bd23d02a0c061961ff05e91a5"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0181.yml",
+      "sha256": "bc99b92e8c449a28f232251e5203c0032c598beefed734007410c8eaf5e675cd"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0182.yml",
+      "sha256": "4fe8d34cc1d3c39c8bd5404177235e60d605fee96d3038d2de10e9b0b398c748"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0183.yml",
+      "sha256": "dd778a37c83ae7bec028361fd0e900707b484a48701ab176219ba31b41598fe3"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0184.yml",
+      "sha256": "335395296492c7ded927d8a08e96eb38c76f19f8c83666de5c7a14274c5748df"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0185.yml",
+      "sha256": "6d9f44ebabfd21a43f3ec80059aa65c8713b020568e4f432612e6aa0b35bfef1"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0186.yml",
+      "sha256": "bd164a9549a8c97d60274e9b32ca81fc2dff359b52ad37daf28c51c673832da9"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0187.yml",
+      "sha256": "889075bf0bab45ef894167b2b0daf46c65d4aec32b664aedc70bb91a63413fef"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0188.yml",
+      "sha256": "5d835760833804cfc7cb4a3a8763ac5dcd3f504590093a9c1c26b52adcb51c5b"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0189.yml",
+      "sha256": "01240bec6569d89d85215eabddb9c2e89552879a600d367a97ab1f7847d85bc6"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0190.yml",
+      "sha256": "79a362a46d51d729c68b0aac77d4b29703c836d1e0af101f0cbbf89884cb3757"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0191.yml",
+      "sha256": "848b28e1b61eb8acc786a0b9dfaf7ac729f4a5a43c12a1fcdb15c134bf663127"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0192.yml",
+      "sha256": "05f10449946ace85661d07a6424a9900187c03d6820b40bd3d1e30e150eb1a61"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0193.yml",
+      "sha256": "7b021ce669159682ca3c3605224cd3d8f78a49144a9bcbcc52c5e66e54fe5e31"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0194.yml",
+      "sha256": "e564ad57c559b5df48e2650f10f53483bfd55e3a49c588bc40ec8a671aa3a43d"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0195.yml",
+      "sha256": "a187d08c4f47fcdff52067fbbddac9c414fad794ece7d1d324a496ead42143e4"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0196.yml",
+      "sha256": "da961b07174d1a486bbc25285ec506c6fe0cffa98d8c38cd0784a52c81c779d4"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0197.yml",
+      "sha256": "9bd69871f642e9e1f417898b6bad45e27d30b67044a90a7a44a690dbd804f836"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0198.yml",
+      "sha256": "e80251342078030fb1faa6984f23e12ec4b3829982358e5635d6955263999743"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0199.yml",
+      "sha256": "1fb71ae17f1404c6a35e73a2aba36e28420969377b2ddfa3de1380eadd051f76"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0200.yml",
+      "sha256": "b09ee79e5d0e3f8b8621ca564c44c7beadce98132abced66d544a45c0ee97edc"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0201.yml",
+      "sha256": "f8b196013ab3f393a7dc20f645a6b09448a671e42cc0ec2603ad0d2afd4c5df3"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0202.yml",
+      "sha256": "89bde09eaf8591325ad9d0087e57b8b442097fbcdbcdc7ecdd38ac5749696fe2"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0203.yml",
+      "sha256": "0d6f542a9eb6a9add9dff56e9a5d3566a5372df5563a2b0244541e11471395b0"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0204.yml",
+      "sha256": "19ec33ea564065b7c8e9eedf109fd9054f193cd7ba572c43947fc226630d84d7"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0205.yml",
+      "sha256": "b9c64e78efc3a3362ac22037df1478b6685a58a933ed38989e175049f05b2843"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0206.yml",
+      "sha256": "bf75c2b962474df324d9af71625d5c4737014cb6674f5598ec12e150d2d4294b"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0207.yml",
+      "sha256": "887da87a2d440c8173242bdd691f85523922608c5baf128198513d57ab3f1568"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0208.yml",
+      "sha256": "6b4c20cad149ba8b1dd9e583fbbc3b2dc25f6a9f838763de296d700c1703b074"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0209.yml",
+      "sha256": "f47e15bfe565c33772e5b489c1a073d939e8fb33aee82235bfeaec9ef8b44355"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0210.yml",
+      "sha256": "c190720311448952df0b20269530bcc015ac1cf026c46cad9044f669b2046212"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/observations/0211.yml",
+      "sha256": "8d189ab3cacbe31391e50c4c8339110ca8cf9ccbed544591eebaae8dd7d05c36"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/identities-direct.yml",
+      "sha256": "8dc6b2c95aceb87546836985913f1c4f1042892c5d68c3d4e7be3d28c2b75cbf"
+    },
+    {
+      "path": "plugins/HelsteraScoreboardActionsProbe/identities-imported.yml",
+      "sha256": "33289c1ca5105b9568609041bb4e5227b749c6689c74d00db9025955ef9752f9"
+    }
+  ],
+  "logArchive": "paper-1.21.1-scoreboard-actions-20261126-r1-logs.zip",
+  "logArchiveSha256": "f3508470a5523c2d43b84278d4cc68d31589f5e3f46498fbcd5efef14173b9ff"
+}

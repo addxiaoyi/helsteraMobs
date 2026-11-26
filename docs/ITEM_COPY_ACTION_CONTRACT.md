@@ -102,6 +102,30 @@ item packets. Server entity snapshots must show no corresponding item entity.
 Reload, disconnect, and dimension transitions must leave no pending visuals.
 Mocks and reflection-signature inspection do not replace that evidence.
 
+The [2026-11-26 r9 report](../tools/paper-integration/reports/paper-1.21.1-item-copy-20261126-r9.json)
+passes 165 observations (55 cases through native, direct and imported paths)
+with two connected clients. It verifies slot aliases, invalid configurations,
+equipment direction, cloned metadata, inventory overflow, fake-item packet
+privacy, collection timing, explicit disable cleanup and dimension changes.
+Client storage inventory metadata is checked against the server snapshots.
+The independent archive audit also passes with current source and JAR hashes.
+Multiple recipients, actual plugin reload and disconnect cleanup remain outside
+this focused run; it does not complete M04b or the release gate.
+
+The pinned client protocol corrects the 1.21.1 recipe serializer IDs and trim
+material wire fields against Paper's implementation. Strict packet parsing is
+retained, and independent binary samples exercise the corrected definitions.
+The runner now archives failed client setup even when identities were never
+created. The rejected r2/r3/r4 reports are retained without relabeling them.
+
+Negative controls on the preceding r8 data rejected 20,567 focused
+row/metadata/overflow mutations and 74 rehashed client/archive mutations.
+The latter run uses `test-item-copy-audit.py <report> --client-only`; the default
+command exercises both groups through the full archive auditor. Normal physical
+overflow items are public, so private-recipient mutations apply only to fake
+item IDs absent from server state. These controls are offline checks of real
+evidence, not additional live observations.
+
 ## M04b remains unfinished
 
 `giveitemfromtarget`, `givefromtarget`, `giveitemsfromtarget`, and
@@ -116,3 +140,12 @@ probability semantics, item/experience/command delivery, and independent live
 verification. Existing `LootService` is not changed by this slice. External
 custom drop providers must be listed separately instead of silently replacing
 their drops with vanilla items.
+
+The pinned constructor resolves `items/item/i` through
+`DropExecutor.queueSecondPass`: a fixture must exercise drop-table loading
+before casting, rather than instantiate and immediately invoke an uninitialized
+mechanic. Named-table lookup precedes inline comma splitting. Generation uses
+the caster as both the dropper and trigger in `DropMetadataImpl`, independently
+of the selected animation origin. The native mechanic generates the bag even
+for a non-player caster, then delivers only when the caster is a player. These
+are implementation requirements for M04b, not claims that it is implemented.

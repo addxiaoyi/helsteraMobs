@@ -19,15 +19,29 @@ def rejected(action):
     except (ValueError,KeyError,TypeError,AttributeError): return
     raise AssertionError('Tampered item-copy evidence accepted')
 
-def test(report,files):
+def test(report,files,client_only=False):
     assert v.audit(report,files)==len(v.c.CASES)*3
+    # doc() caches immutable parsed blobs. Retain successful argument objects
+    # so their IDs cannot be reused, and skip only identical, already validated
+    # row inputs. Every altered blob still gets a fresh semantic validation;
+    # full manifest, log, client inventory and packet checks still run each time.
+    validate_row=v.check_row
+    validated={}
+    def cached_row(row,sample,index,path,ids):
+        key=(id(row),id(sample),index,path,id(ids))
+        if key not in validated:
+            validate_row(row,sample,index,path,ids)
+            validated[key]=(row,sample,ids)
+    v.check_row=cached_row
     count=0
     def mutate(name,data):
         nonlocal count
         r=copy.deepcopy(report);f=dict(files);f[name]=data;rehash(r,f)
-        rejected(lambda:v.audit(r,f));count+=1
+        try: rejected(lambda:v.audit(r,f))
+        except AssertionError as error: raise AssertionError('Accepted mutation in '+name) from error
+        count+=1
     for name,data in files.items():
-        if '/observations/' not in name: continue
+        if client_only or '/observations/' not in name: continue
         row=v.doc(data)
         for field in row:
             bad=copy.deepcopy(row);bad[field]='tampered';mutate(name,yaml.safe_dump(bad).encode())
@@ -46,13 +60,18 @@ def test(report,files):
                     bad=copy.deepcopy(row);bad[state]['drops'][0][field]=value
                     mutate(name,yaml.safe_dump(bad).encode())
     events=[json.loads(line.split('ITEM_COPY_CLIENT ',1)[1]) for line in files['client.log'].decode().splitlines() if 'ITEM_COPY_CLIENT ' in line]
+    physical={row['index']:{drop['entityId'] for drop in row['after']['drops']}
+              for name,data in files.items() if '/observations/' in name for row in [v.doc(data)]}
     def client(changed): mutate('client.log',('\n'.join('ITEM_COPY_CLIENT '+json.dumps(e) for e in changed)+'\n').encode())
     for i,event in enumerate(events):
         if event.get('event')=='packet' and event['packetType']=='collect':
             for field,value in [('pickupItemCount',7),('collectorEntityId',-1)]:
                 changed=copy.deepcopy(events);changed[i]['data'][field]=value;client(changed)
             changed=copy.deepcopy(events);changed[i]['tick']=3;client(changed)
-        if event.get('event')=='packet' and event['packetType']=='spawn_entity':
+        if (event.get('event')=='packet' and event['packetType']=='spawn_entity'
+                and event['data']['entityId'] not in physical.get(event['index'],set())):
+            # Real overflow entities are public. Privacy/origin mutations apply
+            # only to the synthetic item whose ID is absent from server state.
             changed=copy.deepcopy(events);changed[i]['role']='observer';client(changed)
             changed=copy.deepcopy(events);changed[i]['data']['x']+=1;client(changed)
     for name in files:
@@ -60,7 +79,8 @@ def test(report,files):
     for field,value in [('validationResult','rejected'),('exitCode',True),('clientExitCode',1),
                         ('parityStatus','passed'),('sourceHashes',{}),('observationCount',0)]:
         bad=copy.deepcopy(report);bad[field]=value;rejected(lambda:v.audit(bad,files));count+=1
-    print(f'Rejected {count} item-copy evidence mutations after rehashing.')
+    scope='client/archive' if client_only else 'full'
+    print(f'Rejected {count} item-copy {scope} evidence mutations after rehashing.')
 
 def fake_stack(material,amount=7,slot=None,changed=False,damage=0):
     raw=('synthetic-in-memory-only:'+material+str(slot)+str(changed)).encode()
@@ -68,6 +88,13 @@ def fake_stack(material,amount=7,slot=None,changed=False,damage=0):
                 name='Changed source' if changed else 'Copy-'+slot if slot else '',
                 lore=['Line one','Line two'] if slot else [],model=100+v.SLOTS.index(slot) if slot else 0,
                 proof='private-meta-'+str(v.SLOTS.index(slot)) if slot else '',damage=damage)
+
+def client_stack(entry):
+    item=entry['item']; slot=entry['slot']
+    return dict(slot=slot+36 if slot<9 else slot,name=item['type'].lower(),count=item['amount'],components=[
+        dict(type='custom_name',data=item['name']),dict(type='lore',data=item['lore']),
+        dict(type='custom_model_data',data=item['model']),dict(type='damage',data=item['damage']),
+        dict(type='custom_data',data={'PublicBukkitValues':{'helsteraitemcopyprobe:proof':item['proof']}})])
 
 def synthetic():
     files={};events=[];logs=[];rows=[]
@@ -87,6 +114,9 @@ def synthetic():
         if sample['fill']!='empty':
             inv=[dict(slot=i,item=fake_stack('BARRIER',64)) for i in range(36)]
             if sample['fill']=='partial':inv[0]['item']=copy.deepcopy(equipped['HAND']);inv[0]['item']['amount']=62
+        if sample['target'] in ('player','self'):
+            target=copy.deepcopy(equipped) if sample['source']=='player' else {slot:{'type':'AIR','amount':0} for slot in v.SLOTS}
+            target['HAND']=copy.deepcopy(next((entry['item'] for entry in inv if entry['slot']==0),{'type':'AIR','amount':0}))
         before=dict(caster=caster,target=target,inventory=inv,observerInventory=[],drops=[])
         after=copy.deepcopy(before)
         if sample['copy']:
@@ -101,6 +131,8 @@ def synthetic():
                 item['amount']=overflow
                 after['drops']=[dict(item=item,owner='none',thrower='none',canMobPickup=True,
                     location=dict(world='world',x=110.4,y=170.4,z=2.4),entityId=10000+index)]
+        if sample['target'] in ('player','self'):
+            after['target']['HAND']=copy.deepcopy(next((entry['item'] for entry in after['inventory'] if entry['slot']==0),{'type':'AIR','amount':0}))
         mutated=copy.deepcopy(after)
         if sample['variant']=='mutate':mutated['caster']['HAND']=fake_stack('IRON_INGOT',1,'HAND',True)
         source=sample['mechanic']+'{'+sample['arguments']+'} @trigger'
@@ -118,7 +150,8 @@ def synthetic():
         for role in ('receiver','observer'):
             events.append(dict(event='phase',role=role,index=index,path=path,case=sample['key'],tick=-1))
             for tick in range(11):events.append(dict(event='tick',role=role,index=index,tick=tick))
-            events.append(dict(event='end',role=role,index=index,trackedItemIds=[]))
+            events.append(dict(event='end',role=role,index=index,trackedItemIds=[],
+                               inventory=[client_stack(entry) for entry in mutated['inventory']] if role=='receiver' else []))
         if sample['fake']:
             item_id=index+1000
             def packet(kind,tick,data):events.append(dict(event='packet',role='receiver',index=index,tick=tick,packetType=kind,data=data))
@@ -127,7 +160,8 @@ def synthetic():
             if path=='native' or sample['cleanup']=='normal':
                 packet('collect',4,dict(collectedEntityId=item_id,collectorEntityId=ids['receiver']['id'],pickupItemCount=1))
             if path!='native' and sample['cleanup']!='world':packet('entity_destroy',2 if sample['cleanup']=='disable' else 4,dict(entityIds=[item_id]))
-    events.append(dict(event='summary',passed=True))
+    for role in ('receiver','observer'): events.append(dict(event='done',role=role,index=len(rows)-1,tick=10))
+    events.append(dict(event='summary',passed=True,doneRoles=['observer','receiver'],error=None))
     files['client.log']=('\n'.join('ITEM_COPY_CLIENT '+json.dumps(e) for e in events)+'\n').encode()
     logs += [f'ITEM_COPY_SUMMARY|observations={len(rows)}|completed=true','[00:00:00 INFO]: Stopping server']
     files['server.log']=('\n'.join(logs)+'\n').encode()
@@ -143,4 +177,4 @@ def synthetic():
 if __name__=='__main__':
     if sys.argv[1]=='--self-test':
         test(*synthetic());print('Synthetic in-memory selfcheck only; no Paper/client evidence created.')
-    else:test(*v.load(sys.argv[1]))
+    else:test(*v.load(sys.argv[1]),client_only='--client-only' in sys.argv)

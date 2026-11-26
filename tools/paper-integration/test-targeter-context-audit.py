@@ -17,7 +17,7 @@ def manifest(report, files):
 
 
 def fixture():
-    rows, logs = [], []
+    rows, logs = [], ['TARGETERS_PREPARED|tick=90']
     for path in ('direct', 'imported'):
         for case, (selector, selected) in audit.CASES.items():
             rows.append({'path': path, 'case': case, 'selector': selector, 'source': audit.source(case),
@@ -25,7 +25,7 @@ def fixture():
                          'nativeSelected': selected, 'runtimeSelected': selected, 'expected': selected,
                          'nativeEffects': audit.effects(case), 'runtimeEffects': audit.effects(case),
                          'expectedEffects': audit.effects(case), 'nativeAccepted': True,
-                         'runtimeAccepted': True, 'matched': True})
+                         'runtimeAccepted': True, 'matched': True, 'placeholderPreparedTick': 90, 'tick': 100})
             logs.append(f'TARGETERS_ROW|path={path}|case={case}|matched=true')
     count = len(rows)
     logs.append(f'TARGETERS_SUMMARY|observations={count}|passed=true')
@@ -68,6 +68,7 @@ class AuditTest(unittest.TestCase):
             'nativeSelected': ['wrong'], 'runtimeSelected': ['wrong'], 'expected': ['wrong'],
             'nativeEffects': ['wrong'], 'runtimeEffects': ['wrong'], 'expectedEffects': ['wrong'],
             'nativeAccepted': False, 'runtimeAccepted': False, 'matched': False,
+            'placeholderPreparedTick': 95, 'tick': 95,
         }.items():
             with self.subTest(field=field):
                 self.mutate(lambda rows: rows[0].__setitem__(field, value))

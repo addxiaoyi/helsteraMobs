@@ -32,6 +32,8 @@ def test(report,files):
             bad=copy.deepcopy(row)
             bad[field]='tampered'
             mutate(name,yaml.safe_dump(bad,sort_keys=False).encode())
+        bad=copy.deepcopy(row);bad['nativePreparedTick']=row['tick']-5
+        mutate(name,yaml.safe_dump(bad,sort_keys=False).encode())
         for field in ('nativeBefore','runtimeBefore','nativeAfter','runtimeAfter'):
             for objective,scores in row[field].items():
                 if not isinstance(scores,dict):continue
@@ -51,7 +53,7 @@ def test(report,files):
 def synthetic():
     files={}
     player=str(uuid.uuid4())
-    log=[];i=0
+    log=[f'SCOREBOARD_PREPARED|actions={len(v.c.CASES)*2}|tick=90'];i=0
     for path in v.PATHS:
         ids={role:str(uuid.uuid4()) for role in ('caster','target','trigger','other','interaction')}
         ids.update(player=player,playerName='ScoreboardPlayer')
@@ -63,7 +65,7 @@ def synthetic():
                      mapped=source if path=='direct' else v.c.canonical(sample['mechanic'])+source[len(sample['mechanic']):],
                      objective=objective,sentinel=sentinel,nativeResult=sample['result'],
                      nativeBefore=before,runtimeBefore=before,nativeAfter=native_after,runtimeAfter=runtime_after,
-                     sameState=same,primary=True,tick=100)
+                     sameState=same,primary=True,tick=100,nativePreparedTick=90)
             files[v.PROBE+f'observations/{i:04d}.yml']=yaml.safe_dump(row,sort_keys=False).encode()
             log.append(f'SCOREBOARD_ROW|case={sample["key"]}|path={path}|nativeResult={sample["result"]}|sameState={str(same).lower()}')
             i+=1

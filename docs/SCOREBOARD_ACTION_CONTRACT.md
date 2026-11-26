@@ -88,3 +88,12 @@ It uses a real player, actual scoreboard snapshots, native constructors plus
 seeded holder and an unrelated objective after each call. Full native dispatcher
 scheduling and the project's release gate remain outside this fixture's scope.
 Rejected runs remain archived and cannot be promoted by the semantic auditor.
+
+The 2026-11-26 r2 [Paper report](../tools/paper-integration/reports/paper-1.21.1-scoreboard-actions-20261126-r2.json)
+passes 212 observations, including eight explicit public-build numeric-parser
+differences. Its audit rejects 13,629 altered-evidence controls. The native
+mechanics are prepared and retained at least six scheduler ticks before use:
+Mythic's TriggerPlaceholder delegate initializes through queueAfterLoad. The
+auditor requires preparation logs and per-row tick evidence. Earlier failed
+reports remain historical failures; their uninitialized native placeholders
+are not the runtime entry-holder contract.

@@ -147,7 +147,12 @@ def audit(report, files):
     for row in rows:
         require(set(row) == {'path', 'case', 'selector', 'source', 'binding', 'nativeSelected', 'runtimeSelected',
                             'expected', 'nativeEffects', 'runtimeEffects', 'expectedEffects', 'nativeAccepted',
-                            'runtimeAccepted', 'matched'}, 'row schema')
+                            'runtimeAccepted', 'matched', 'placeholderPreparedTick', 'tick'}, 'row schema')
+        require(type(row['placeholderPreparedTick']) is int and row['placeholderPreparedTick'] >= 0
+                and type(row['tick']) is int and row['tick'] - row['placeholderPreparedTick'] >= 6,
+                'native trigger placeholder initialization')
+        require(log.count(f"TARGETERS_PREPARED|tick={row['placeholderPreparedTick']}") == 1,
+                'native placeholder preparation log')
         key = (row['path'], row['case'])
         require(key[0] in ('direct', 'imported') and key[1] in CASES and key not in seen, 'case identity')
         seen.add(key)

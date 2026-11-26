@@ -1,6 +1,6 @@
 # Internal feature completion checklist
 
-Inventory date: 2026-11-21; development status updated 2026-11-22.
+Inventory date: 2026-11-21; development status updated 2026-11-26.
 Baseline: Paper 1.21.1 / public MythicMobs 5.7.2.
 This is a finite, source-checked development backlog, not a claim that the 33
 broad `mapped-unverified` matrix rows constitute 33 missing implementations.
@@ -33,24 +33,40 @@ These need validation and release evidence, not another implementation:
   validation, importer mapping and generic direct entity recipients. See
   [ENTITY_SETTER_CONTRACT.md](ENTITY_SETTER_CONTRACT.md) for the deliberately
   bounded selector/condition scope and pending Paper evidence.
+- `equipCopy` and `giveitemfromslot/givefromslot` (M04a) are implemented;
+  2026-11-26 r9 passes 165 two-client inventory/packet observations. Multiple
+  recipients, actual reload and disconnect cleanup still need acceptance.
+  Generated item grants (`giveitemfromtarget`, M04b) remain unimplemented.
+- `stopusingitem/releaseitem`, `matchrotation/matchrot` and `GoatRam` have
+  implementation and offline tests. Their complete Paper/client acceptance
+  remains pending; see [ENTITY_INTERACTION_CONTRACT.md](ENTITY_INTERACTION_CONTRACT.md).
+- The 2026-11-26 focused reports pass 212 scoreboard, 66 context-targeter and
+  300 variable-subtraction observations. The native dynamic placeholder
+  fixtures now wait for initialization; public numeric-parser and float-overflow
+  differences remain explicit. These reports do not complete the strict
+  release gate. See the [evidence index](../tools/paper-integration/STARTUP_EVIDENCE.md).
+- JSON messages (M05) now have runtime and importer implementations, including
+  structured components, recipient placeholders and audience filtering. Offline
+  tests pass; Paper/client acceptance remains pending. See
+  [JSON_MESSAGE_CONTRACT.md](JSON_MESSAGE_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
 Native names and aliases below come from `@MythicMechanic` in the pinned
-5.7.2 JAR. The importer allowlist/mapping and runtime factories do not expose
-these native entry points. Some have reusable lower-level capabilities;
-that does not establish the native argument, recipient or persistence contract.
-No paid plugin is required to implement these items. Rows M01/M08–M12/M14–M16
-were implemented after this inventory was taken; their remaining work is validation
-and the explicit boundaries in the setter contract, not duplicate implementation.
+5.7.2 JAR. These entry points were missing when the original inventory was taken;
+the current status column and implemented list above record subsequent work.
+Reusable lower-level capabilities alone do not establish the native argument,
+recipient or persistence contract. No paid plugin is required to implement
+these items. Implemented rows need their remaining validation and explicit
+contract extensions, not duplicate implementations.
 
 | ID | Exact mechanic names / aliases | Remaining work and completion boundary |
 | --- | --- | --- |
 | M01 | `setpathfindingmalus`, `setmalus`, `malus` | Connect a skill action to the new pinned adapter. Native aliases are `malus/type/malustype`, default `OPEN`; `value/amount`, default `0`. Compare selected recipients and invalid types. |
-| M02 | `variableSubtract`, `variableSub`, `subtractVariable`, `subVar`, `reduceVariable` | Implemented with typed arithmetic and lifetime handling. Revised Paper evidence must distinguish quoted/dynamic public-build fallback and non-finite overflow from matching cases. |
-| M03 | `setGlobalScore/sgs`, `setMobScore/sms`, `setTargetScore/sts`, `modifyGlobalScore/mgs`, `modifyMobScore/mms`, `modifyTargetScore/mts`, `modifyScore` | Main-scoreboard implementation and importer are under validation. Keep the existing internal `score-set/score-add` map separate; verify holder identity, operations, overflow, division by zero and native UNSET no-op. |
-| M04 | `equipCopy`, `giveitemfromslot/givefromslot`, `giveitemfromtarget/givefromtarget/giveitemsfromtarget/itemgivefromtarget` | Copy or transfer correct equipment/items without losing metadata; establish slot, amount, clone/ownership and full-inventory behavior. |
-| M05 | `messagejson/jsonmessage/jmsg/jm` | Parse native JSON components and deliver to the selected player audience; reject malformed payloads and verify actual client text. |
+| M02 | `variableSubtract`, `variableSub`, `subtractVariable`, `subVar`, `reduceVariable` | Implemented; 2026-11-26 r1 passes 300 scoped observations, with 20 public-parser and 10 non-finite overflow differences. Real-time expiry crossing and full release validation remain. |
+| M03 | `setGlobalScore/sgs`, `setMobScore/sms`, `setTargetScore/sts`, `modifyGlobalScore/mgs`, `modifyMobScore/mms`, `modifyTargetScore/mts`, `modifyScore` | Implemented; 2026-11-26 r2 passes 212 scoped observations. Full native dispatcher scheduling and release validation remain. |
+| M04 | `equipCopy`, `giveitemfromslot/givefromslot`, `giveitemfromtarget/givefromtarget/giveitemsfromtarget/itemgivefromtarget` | Equipment copy and slot grants pass 165 scoped two-client observations; multi-recipient/reload/disconnect acceptance remains. Generated item grants (M04b) remain unimplemented. |
+| M05 | `messagejson/jsonmessage/jmsg/jm` | Runtime/importer and offline tests implemented. Real Paper/client component, placeholder and audience acceptance remains. |
 | M06 | `addTrade/setTrade/removeTrade/replaceTrade` | Villager recipe mutation with native mode/index/material/metadata handling and wrong-entity rejection. |
 | M07 | `opentrades/opentrade/trade` | Open the selected villager's trade UI for the appropriate player; verify actor/recipient direction and UI closure. |
 | M08 | `setleashholder/setleasher` | Use `LivingEntity.setLeashHolder`; establish caster/target direction, unbinding, world constraints and rejected leash results. |
@@ -62,10 +78,10 @@ and the explicit boundaries in the setter contract, not duplicate implementation
 | M14 | `setRaiderCanJoinRaid/setCanJoinRaid` | Apply and read back `Raider.setCanJoinRaid`. |
 | M15 | `setRaiderPatrolBlock/setRaiderBlock` | Apply the selected block through `Raider.setPatrolTarget`; establish location/caster direction and nullable target rules. |
 | M16 | `setRaiderPatrolLeader/setRaiderLeader` | Apply and read back `Raider.setPatrolLeader`; compare equipment side effects separately. |
-| M17 | `stopusingitem/releaseitem` | Native 5.7.2 calls NMS `releaseUsingItem`; Paper `clearActiveItem` calls `stopUsingItem`. Implement release behavior with item-use/event tests; the public clear method alone is not equivalent, particularly for bows. |
+| M17 | `stopusingitem/releaseitem` | Release behavior is implemented through the pinned native adapter; complete bow/item-use/event acceptance remains. Paper `clearActiveItem` alone is not equivalent. |
 | M18 | `shieldbreak/disableshield` | Compare active shield cancellation, cooldown duration and player item-hand semantics. Existing generic material cooldown does not prove shield equivalence. |
-| M19 | `setpitch`, `matchrotation/matchrot` | Native pinned `setEntityPitch` is an empty default method (the v1_21_R1 handler does not override it). A useful pitch mutation must be identified as an extension. MatchRotation resolves a nested selector, excludes player recipients, and sets body/head yaw plus pitch. |
-| M20 | `GoatRam` | Paper 1.21.1 exposes `Goat.ram(LivingEntity)`; compare invocation eligibility and natural damage/event behavior. |
+| M19 | `setpitch`, `matchrotation/matchrot` | Pinned native SetPitch is a no-op. MatchRotation is implemented with nested selection, non-player recipients and body/head yaw plus pitch; Paper/client acceptance remains. |
+| M20 | `GoatRam` | Implemented through Paper `Goat.ram(LivingEntity)`; natural damage/event acceptance remains. |
 | M21 | `summonAreaEffectCloud/summonCloud`, `summonFallingBlock`, `summonPassenger` | Add typed entity spawning with native argument and lifecycle rules; generic managed-model summon is a separate operation. |
 | M22 | `runaitargetselector/aitarget` | Add native syntax mapping and selected-controller mutation, then test priority, clear/reset and rebind behavior. Do not claim native Goal equivalence from current controller mutation. |
 
@@ -76,10 +92,10 @@ Names come from native `@MythicTargeter` declarations and were checked against
 
 | ID | Exact selector names / aliases | Required behavior |
 | --- | --- | --- |
-| T01 | `@playerByName/@specificplayer` | Implementation under validation: native `Bukkit.getPlayerExact` behavior, placeholder name, missing-player and cross-world cases. |
+| T01 | `@playerByName/@specificplayer` | Implemented; 2026-11-26 r1 context fixture passes its exact-name, placeholder, missing-player and cross-world cases. Full native scheduling remains outside this slice. |
 | T02 | `@itemsInRadius/@IIR`, `@itemsNearOrigin/@INO` | Select dropped Item entities. Current general selector collections are primarily `LivingEntity`; a name alias alone cannot add this capability. |
-| T03 | `@interactionLastAttacker/@lastAttacker`, `@interactionLastInteract/@lastInteract` | Implementation under validation: public history records, online player lookup and absent-history handling. |
-| T04 | `@locationsOfTargets/@locationOfTarget/@LOT` | Implementation under validation: native set projection/deduplication and location selectors, with plural runtime dispatch. Native HashSet iteration does not promise stable ordering. |
+| T03 | `@interactionLastAttacker/@lastAttacker`, `@interactionLastInteract/@lastInteract` | Implemented; 2026-11-26 r1 passes prepared-history lookup cases. Actual client attack/interaction input is outside that evidence. |
+| T04 | `@locationsOfTargets/@locationOfTarget/@LOT` | Implemented; 2026-11-26 r1 passes scoped projection/deduplication and location-selection cases. Native HashSet iteration does not promise stable ordering. |
 | T05 | `@targetBlock`, `@targetedLocation/@targetedLocations/@targetedLoc`, `@targetedTarget/@targeted` | Implement their distinct native aiming/inherited-target contracts; existing VariableLocation player aiming is not automatically an implementation of these targeters. |
 | T06 | `@highestblock`, `@obstructingBlock` | Establish world/heightmap or obstruction query semantics and unloaded-world/chunk behavior. |
 | T07 | `@blocksinchunk/@BIC`, `@blocksinradius/@BIR`, `@blocksnearorigin/@BNO`, `@blockVein/@vein/@bv` | Bounded block-location enumeration with native geometry, material filters and explicit output caps. |
@@ -144,14 +160,16 @@ Names come from native `@MythicTargeter` declarations and were checked against
 
 ## Recommended next implementation batches
 
-1. Validate the implemented M01/M08–M12/M14–M16 setter slice on the final JAR;
-   extend its generic selectors and nonliving target conditions in a separate slice.
-2. M02 and T01/T03/T04: extend existing variable/context infrastructure with
-   comparatively small, observable native contracts.
-3. M03/M04/M06/M07: actual scoreboard and equipment/trade semantics, including
-   ownership and UI tests.
-4. S01, S02–S04 and S05–S07: larger runtime/state-machine work with separate
-   fixtures; avoid mixing them into a single unreviewable “full parity” change.
+1. Complete the remaining M04a/M05/M17/M19/M20 Paper/client acceptance and the
+   setter contract's selector/nonliving-condition boundaries. Refresh the full
+   strict release gate only against the final artifact.
+2. Implement M04b/M06/M07/M13/M18/M21/M22 with independent native contracts and
+   recipient/ownership/UI checks.
+3. Implement T02 and T05–T11 with bounded location/block enumeration and
+   separate entity-valued versus location-valued dispatch.
+4. Complete S01/S03–S10 as distinct runtime/state-machine and conversion slices;
+   retain the existing base Aura charge implementation while extending its
+   event-specific consumption behavior.
 
 Sources inspected: `SkillCatalog`, `SkillExtras`, `SkillService`, `Targeters`,
 `SelectorPlan`, `AiController`, `MythicMobsImporter`, model bridge registrations,

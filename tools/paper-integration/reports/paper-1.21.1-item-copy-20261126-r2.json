@@ -1,0 +1,67 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-item-copy-20261126-r2",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-26T00:54:48.991859+00:00",
+  "pluginSha256": "e479ed3d9e51b48f3d9948fc439be0cba52b98172dc8581a509a91e07e0781b0",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "fcbc051ca392e88cd3b72cde3d982fa2ff34e979774cea0449dfc3d4ad2d91f5",
+  "sourceHashes": {
+    "tools/paper-integration/run-item-copy-fixture.py": "09ca82016ebbffe435a73618f3ac484450ef96822bf2f0304d371d843e350be9",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/item-copy-cases.py": "5a2d88ae0a2b21996c6bbbe97aa4de38a4aaa138cee060c3495046aea40a1860",
+    "tools/paper-integration/item-copy-client.js": "3ab1754f38dc7c84b2a35c27120e062df23f88c67b9b21d395fcb2bdd0c46a59",
+    "tools/paper-integration/paper-1.21.1-client-protocol.js": "4599d44339e6179dd2b68b4ab760eada81f196a80517de0375772073083eccdf",
+    "tools/paper-integration/test-paper-1.21.1-client-protocol.js": "bf045806dc4864e937775d28c3f418815d342f92b2ef0418aca68a385eb872f1",
+    "tools/paper-integration/audit-item-copy.py": "4d71a4376c42ae0f0cc5fadecdc2a489cc4449e65b9b8d45b2fe1e5eced406ec",
+    "tools/paper-integration/test-item-copy-audit.py": "4f08a2fac9902133553924cc1742ad8811f056ead42161365247f1b59c56b24b",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ItemCopyProbe.java": "24e396a2422f2e9f1236d64bdc66e38418dd09ff9a7461558ce7491d56949785",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/ItemCopyActions.java": "ab5d0edd219a5c853e87397b77b214d260c1584157f2a4a4a95823c7b6203ccb",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/FakeItemLoot.java": "067dfe940aa59a8297c490792ade422497e0eb8363b1fd3c83e7d4eed6027e48",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/PaperFakeItemLoot.java": "c7b1e7dff7ec9bf1fc7270a52ebea99b9ba0784e29455cd9b5300560754576d0",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "f40634744156fa694121a0ba226bea269f0fe5595eea4292913b4030a8b7f41c",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "f39ea430a8d484a1ac98374d88d3779fe6b275962c99c97fe17c2070e3497e5a",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "dcf4402df73e2e9f1a85d473965dd7a9714b1c80fea360d792721680610c919b",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicItemCopySpec.java": "4c288d27449f2cd746217e6c846997a889097814278148af5e7154ac8097ec6c",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "bb41a8c3c0a1309fbba719831256de23411069e51a48f2b0b28dbe69f148f7fc",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "8a1242910f2d4a49c191314cea121381f6d131a7d2a53c98f26225a5c54aeb6a",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7"
+  },
+  "limitations": [
+    "Native constructors/castAtEntity are invoked directly, not native dispatcher scheduling.",
+    "Two real clients record private item packets, server tick markers and actual inventories.",
+    "Packet tick offsets are bracketed by delivered tick messages; asynchronous native sends can cross a boundary.",
+    "Explicit post-collection removal and shutdown/world-transition cleanup are Helstera lifecycle extensions.",
+    "No completed M04b generated-loot or cross-version compatibility claim."
+  ],
+  "exitCode": 0,
+  "clientExitCode": 1,
+  "observationCount": 0,
+  "validationResult": "rejected: Player client exited before completion",
+  "missingFiles": [
+    "plugins/HelsteraItemCopyProbe/identities.yml"
+  ],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "de1adebe972123c58ea34a6ec2875495ebebf93296928008cd6b59d18210db90"
+    },
+    {
+      "path": "client.log",
+      "sha256": "f8715e2d608f87de04997a2bc95d2f8ea4ccd6be8f0f3701de6e05a8e800874d"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/item-copy.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraItemCopyProbe/cases.yml",
+      "sha256": "4ab6f0de8479b057a1706187e125d9d876893e67f8f2cb1529cb999ef34f46b5"
+    }
+  ],
+  "logArchive": "paper-1.21.1-item-copy-20261126-r2-logs.zip",
+  "logArchiveSha256": "0a5ecaa2eb00bf5a5c8b019ae8e4101d861b7acaf015abb2bb15f2a78b4658ef"
+}

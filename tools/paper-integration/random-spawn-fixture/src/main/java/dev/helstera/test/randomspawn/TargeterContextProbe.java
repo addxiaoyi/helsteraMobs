@@ -26,6 +26,7 @@ import java.util.function.UnaryOperator;
 /** Native selection/filtering and real mechanic effects versus direct/imported production binding. */
 public final class TargeterContextProbe extends JavaPlugin {
     private static final String TAG = "helstera_targeter_probe";
+    private static final String PLAYER_PLACEHOLDER_SELECTOR = "@playerbyname{n=<trigger.name>}";
     private final List<Map<String, Object>> rows = new ArrayList<>();
     private final Map<Chunk, Boolean> pinned = new LinkedHashMap<>();
     private VariablePlaceholderAudit.Harness h;
@@ -34,8 +35,23 @@ public final class TargeterContextProbe extends JavaPlugin {
     private Location origin;
     private String path;
     private Map<Entity, String> labels;
+    private Object placeholderTargeter;
+    private int placeholderPreparedTick;
 
     @Override public void onEnable() {
+        try {
+            var mythic = Bukkit.getPluginManager().getPlugin("MythicMobs");
+            Object manager = mythic.getClass().getMethod("getSkillManager").invoke(mythic);
+            placeholderTargeter = manager.getClass().getMethod("getTargeter", String.class)
+                    .invoke(manager, PLAYER_PLACEHOLDER_SELECTOR);
+            require(placeholderTargeter != null, "native placeholder targeter missing");
+            placeholderPreparedTick = Bukkit.getCurrentTick();
+            getLogger().info("TARGETERS_PREPARED|tick=" + placeholderPreparedTick);
+        } catch (Exception failure) {
+            getLogger().severe("TARGETERS_FAILED|prepare=" + failure);
+            failure.printStackTrace();
+            return;
+        }
         new BukkitRunnable() {
             int attempts;
             @Override public void run() {
@@ -56,6 +72,8 @@ public final class TargeterContextProbe extends JavaPlugin {
         Location original = player.getLocation();
         GameMode mode = player.getGameMode();
         try {
+            require(Bukkit.getCurrentTick() - placeholderPreparedTick >= 6,
+                    "native trigger placeholder has not passed six scheduler ticks");
             player.setGameMode(GameMode.SURVIVAL);
             for (String route : List.of("direct", "imported")) run(route);
             if (rows.size() != 66) throw new IllegalStateException("Expected 66 observations, got " + rows.size());
@@ -110,7 +128,7 @@ public final class TargeterContextProbe extends JavaPlugin {
             entity("player-prefix", "@playerbyname{n=TargeterT}", h.a, List.of());
             entity("player-missing", "@playerbyname{n=MissingTargeter}", h.a, List.of());
             entity("player-default", "@playerbyname", h.a, List.of());
-            entity("player-placeholder", "@playerbyname{n=<trigger.name>}", h.a, List.of("player"));
+            entity("player-placeholder", PLAYER_PLACEHOLDER_SELECTOR, h.a, List.of("player"));
             entity("player-filtered", "@playerbyname{n=TargeterTester;targetPlayers=false}", h.a, List.of());
             Location here = player.getLocation();
             Location cross = here.clone(); cross.setWorld(h.d.getWorld());
@@ -278,6 +296,9 @@ public final class TargeterContextProbe extends JavaPlugin {
     }
 
     private Object nativeTargeter(String selector) throws Exception {
+        // TriggerPlaceholder resolves its delegate through MythicClock.queueAfterLoad.
+        // Reuse the prepared selector after actual ticks rather than invoking it at construction.
+        if (selector.equals(PLAYER_PLACEHOLDER_SELECTOR)) return placeholderTargeter;
         Object targeter = h.nativeSkills.getClass().getMethod("getTargeter", String.class).invoke(h.nativeSkills, selector);
         require(targeter != null, "native targeter missing " + selector);
         return targeter;
@@ -363,6 +384,7 @@ public final class TargeterContextProbe extends JavaPlugin {
         row.put("nativeSelected", nativeSelected); row.put("runtimeSelected", runtimeSelected); row.put("expected", expected);
         row.put("nativeEffects", nativeEffects); row.put("runtimeEffects", runtimeEffects); row.put("expectedEffects", expectedEffects);
         row.put("nativeAccepted", nativeAccepted); row.put("runtimeAccepted", runtimeAccepted); row.put("matched", matched);
+        row.put("placeholderPreparedTick", placeholderPreparedTick); row.put("tick", Bukkit.getCurrentTick());
         rows.add(row);
         getLogger().info("TARGETERS_ROW|path=" + path + "|case=" + id + "|matched=" + matched);
         if (!matched) throw new IllegalStateException("Targeter mismatch " + row);

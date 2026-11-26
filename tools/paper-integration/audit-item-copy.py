@@ -21,6 +21,7 @@ SLOTS = list(c.SLOTS)
 MATERIALS = ['EMERALD', 'DIAMOND', 'AMETHYST_SHARD', 'LAPIS_LAZULI', 'IRON_INGOT', 'GOLD_INGOT']
 SOURCE_FILES = {'tools/paper-integration/' + name for name in [
     'run-item-copy-fixture.py','run-player-variable-fixture.py','item-copy-cases.py','item-copy-client.js',
+    'paper-1.21.1-client-protocol.js','test-paper-1.21.1-client-protocol.js',
     'audit-item-copy.py','test-item-copy-audit.py',
     'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ItemCopyProbe.java',
     'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java']}
@@ -114,10 +115,15 @@ def check_row(row,sample,index,path,ids):
     require(row['caster']==ids['receiver' if sample['source']=='player' else 'nonliving' if sample['source']=='nonliving' else 'caster']['uuid'],'caster identity')
     require(row['target']==ids['receiver' if sample['target'] in ('player','self') else 'nonliving' if sample['target']=='nonliving' else 'target']['uuid'],'target identity')
     require(row['origin']=={'world':row['origin']['world'],'x':112.0,'y':170.0,'z':0.0},'origin differs from caster')
+    require(row['receiverLocation']=={'world':row['origin']['world'],'x':110.0,'y':170.0,'z':2.0},'receiver location')
     for field in ('before','after','afterSourceMutation','settled'): state(row[field])
     before,after=row['before'],row['after']
     require(before['drops']==[] and before['observerInventory']==[],'clean setup')
     if sample['copy']:
+        if sample['source']!='nonliving':
+            require(all({key:value for key,value in item.items() if key not in ('fingerprint','data')}
+                        =={'type':'BARRIER','amount':1,'name':'','lore':[],'model':0,'proof':'','damage':0}
+                        for item in before['caster'].values()),'copy destination seed')
         if sample['target']!='nonliving':
             for slot in SLOTS:
                 if sample['variant']=='air' and slot=='HEAD': require(before['target'][slot]=={'type':'AIR','amount':0},'air seed')
@@ -131,6 +137,12 @@ def check_row(row,sample,index,path,ids):
         require(strict(after['caster'],before['caster']),'source consumed')
         # A selected player sees its HAND equipment change if the inventory's selected slot receives items.
         if sample['target'] not in ('player','self'): require(strict(after['target'],before['target']),'wrong target equipment')
+        else:
+            for snapshot in (before,after):
+                hand=next((entry['item'] for entry in snapshot['inventory'] if entry['slot']==0),{'type':'AIR','amount':0})
+                require(strict(snapshot['target']['HAND'],hand),'selected player hand/inventory mismatch')
+            require(all(strict(after['target'][slot],before['target'][slot]) for slot in SLOTS if slot!='HAND'),
+                    'grant changed recipient equipment outside selected hand')
         if sample['result']!='SUCCESS': require(strict(after,before),'invalid grant changed state')
         else:
             original=before['caster'][sample['slot']]
@@ -149,14 +161,50 @@ def check_row(row,sample,index,path,ids):
         expected=copy.deepcopy(after); expected['caster']['HAND']=mutated['caster']['HAND']
         item=mutated['caster']['HAND']
         require(item['amount']==1 and item['name']=='Changed source' and item['fingerprint']!=after['caster']['HAND']['fingerprint'],'source mutation boundary')
+        require(all(item[key]==after['caster']['HAND'][key] for key in ('type','lore','model','proof','damage')),
+                'source mutation changed unrelated metadata')
         require(strict(mutated,expected),'source metadata mutation leaked into copy')
     else: require(strict(mutated,after),'unexpected post-grant mutation')
     # Gravity was disabled for real overflow immediately after grant, so ten ticks cannot move it.
     require(strict(row['settled'],mutated),'settled item state changed')
     require(all(type(v) is int for v in row['entityIds']) and row['entityIds']==sorted(set(row['entityIds'])),'entity id set')
 
+def nbt_value(value):
+    if not isinstance(value,dict) or 'type' not in value: return value
+    if value['type']=='compound': return {key:nbt_value(item) for key,item in value['value'].items()}
+    if value['type']=='list': return [nbt_value(item) for item in value['value']['value']]
+    return value.get('value')
+
+def component_text(value):
+    value=nbt_value(value)
+    if isinstance(value,str): return value
+    if isinstance(value,list): return ''.join(component_text(item) for item in value)
+    require(isinstance(value,dict),'client text component')
+    return value.get('text','')+''.join(component_text(item) for item in value.get('extra',[]))
+
+def client_inventory(items,expected):
+    require(isinstance(items,list),'client inventory snapshot')
+    actual={}
+    for item in items:
+        slot=item.get('slot'); require(type(slot) is int,'client inventory slot type')
+        if not 9<=slot<=44: continue  # Storage only, matching PlayerInventory.getStorageContents.
+        slot=slot-36 if slot>=36 else slot
+        require(slot not in actual,'duplicate client slot')
+        components=unique((component['type'],component['data']) for component in item.get('components',[]))
+        custom=nbt_value(components.get('custom_data')) or {}
+        actual[slot]={'type':item['name'].upper(),'amount':item['count'],
+            'name':component_text(components['custom_name']) if 'custom_name' in components else '',
+            'lore':[component_text(line) for line in components.get('lore',[])],
+            'model':components.get('custom_model_data',0),'damage':components.get('damage',0),
+            'proof':custom.get('PublicBukkitValues',{}).get('helsteraitemcopyprobe:proof','')}
+    wanted={entry['slot']:{key:value for key,value in entry['item'].items() if key not in ('fingerprint','data')}
+            for entry in expected}
+    require(strict(actual,wanted),'client inventory/metadata differs from server')
+
 def packets(events,rows,ids):
-    joins={event['role']:event for event in events if event.get('event')=='join'}
+    joined=[event for event in events if event.get('event')=='join']
+    require(len(joined)==2,'duplicate client joins')
+    joins={event['role']:event for event in joined}
     require(set(joins)=={'receiver','observer'},'two real clients')
     for role,name in [('receiver','CopyReceiver'),('observer','CopyObserver')]:
         require(joins[role]['name']==name and joins[role]['uuid']==ids[role]['uuid']
@@ -170,7 +218,9 @@ def packets(events,rows,ids):
             require(len(markers)==1 and markers[0]['path']==row['path'] and markers[0]['case']==row['case'],'client phase')
             ticks=[e['tick'] for e in own if e.get('event')=='tick']
             require(ticks==list(range(11)),'client tick markers')
-            require(len([e for e in own if e.get('event')=='end'])==1,'client end')
+            ends=[e for e in own if e.get('event')=='end']
+            require(len(ends)==1,'client end')
+            if role=='receiver': client_inventory(ends[0].get('inventory'),row['settled']['inventory'])
         raw=[e for e in phase if e.get('event')=='packet']
         actual={drop['entityId'] for drop in row['after']['drops']}
         fake_spawns=[e for e in raw if e['packetType']=='spawn_entity' and e['data']['entityId'] not in actual]
@@ -237,7 +287,12 @@ def audit(report,files):
             for line in files['client.log'].decode().splitlines() if 'ITEM_COPY_CLIENT ' in line]
     require(not any(e.get('event') in ('error','packet-error') for e in events),'client packet failure')
     summaries=[e for e in events if e.get('event')=='summary']
-    require(len(summaries)==1 and summaries[0].get('passed') is True,'client completion')
+    require(len(summaries)==1 and summaries[0].get('passed') is True
+            and summaries[0].get('doneRoles')==['observer','receiver'] and summaries[0].get('error') is None,
+            'client completion')
+    done=[event for event in events if event.get('event')=='done']
+    require(len(done)==2 and {event.get('role') for event in done}=={'receiver','observer'}
+            and all(event.get('index')==n-1 and event.get('tick')==10 for event in done),'both clients completed all phases')
     packets(events,rows,ids)
     return n
 

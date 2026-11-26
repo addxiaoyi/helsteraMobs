@@ -32,7 +32,12 @@ the public API. This validates history lookup, not client input packet handling.
 Its independent audit fixes the complete case list and expected outcomes;
 synthetic audit tests are rejection controls, not server evidence.
 
-The new fixture and final artifact verification remain pending. These additions
-do not by themselves implement all entity targeters, global native targeter
+The 2026-11-26 r1 [Paper report](../tools/paper-integration/reports/paper-1.21.1-targeter-context-20261126-r1.json)
+passes 66 native/direct/imported observations. The dynamic native PlayerByName
+targeter is constructed before the server's delayed placeholder initialization;
+the audit checks that at least six real scheduler ticks elapsed. Eight auditor
+tests also pass, including rejection of a shorter initialization wait.
+Final artifact verification remains pending. These additions do not by
+themselves implement all entity targeters, global native targeter
 configuration, or multi-location metadata collections throughout every existing
 skill primitive.

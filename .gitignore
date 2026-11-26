@@ -74,6 +74,10 @@ tools/**/*.zip
 !tools/paper-integration/reports/paper-1.21.1-variable-action-scope-*-logs.zip
 !tools/paper-integration/reports/paper-1.21.1-variable-math-*-logs.zip
 !tools/paper-integration/reports/paper-1.21.1-variable-location-*-logs.zip
+!tools/paper-integration/reports/paper-1.21.1-scoreboard-actions-*-logs.zip
+!tools/paper-integration/reports/paper-1.21.1-targeter-context-*-logs.zip
+!tools/paper-integration/reports/paper-1.21.1-variable-subtract-*-logs.zip
+!tools/paper-integration/reports/paper-1.21.1-item-copy-*-logs.zip
 tools/**/*.jar
 tools/paper-integration/node_modules/
 tools/paper-integration/.external-cache/

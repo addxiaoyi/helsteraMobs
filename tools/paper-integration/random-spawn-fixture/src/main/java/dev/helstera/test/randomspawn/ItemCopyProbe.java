@@ -214,7 +214,7 @@ public final class ItemCopyProbe extends JavaPlugin {
         meta.setDisplayName("Copy-" + SLOTS.get(slot).name()); meta.setLore(List.of("Line one", "Line two"));
         meta.setCustomModelData(100 + slot); meta.setEnchantmentGlintOverride(true);
         meta.getPersistentDataContainer().set(new NamespacedKey(this, "proof"), PersistentDataType.STRING, "private-meta-" + slot);
-        if (meta instanceof org.bukkit.inventory.meta.Damageable durability) durability.setDamage(17);
+        if (damageable && meta instanceof org.bukkit.inventory.meta.Damageable durability) durability.setDamage(17);
         item.setItemMeta(meta); return item;
     }
 
