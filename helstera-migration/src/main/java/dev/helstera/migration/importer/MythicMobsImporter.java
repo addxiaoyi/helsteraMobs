@@ -2288,13 +2288,16 @@ public final class MythicMobsImporter implements MigrationImporter {
                 return;
             }
         }
-        if (dev.helstera.api.util.ShieldBreakSpec.supports(mechanic)) {
+        if (dev.helstera.api.util.ShieldBreakSpec.supports(mechanic)
+                || dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic)) {
             try {
-                dev.helstera.api.util.ShieldBreakSpec.parse(MythicSpec.rawKeyedArguments(raw));
+                if (dev.helstera.api.util.DisplayTransformationSpec.supports(mechanic))
+                    dev.helstera.api.util.DisplayTransformationSpec.parse(MythicSpec.rawKeyedArguments(raw));
+                else dev.helstera.api.util.ShieldBreakSpec.parse(MythicSpec.rawKeyedArguments(raw));
                 List<String> tokens = MythicSpec.executionTokens(raw);
                 for (String token : tokens.subList(1, tokens.size())) {
                     if (!potionSuffixStart(token) && !token.equals(">"))
-                        throw new IllegalArgumentException("Shield disabling requires named arguments inside braces");
+                        throw new IllegalArgumentException("Mechanic requires named arguments inside braces");
                     if (token.startsWith("@")) dev.helstera.api.util.EntitySetterSpec
                             .requireKnownTargeter(normalizeTargeterSuffix(token).trim());
                 }
@@ -2302,7 +2305,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                 scan.unsupported.add(raw);
                 note(entries, srcFile, mobKey + ".Skills[]",
                         standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
-                        "unsupported", "Invalid shield-break arguments or targeter; original line preserved: "
+                        "unsupported", "Invalid " + mechanic + " arguments or targeter; original line preserved: "
                                 + invalid.getMessage(), "WARN");
                 return;
             }
@@ -2931,6 +2934,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (dev.helstera.api.util.EntitySetterSpec.supports(name)) return true;
         if (dev.helstera.api.util.EntityInteractionSpec.supports(name)) return true;
         if (dev.helstera.api.util.ShieldBreakSpec.supports(name)) return true;
+        if (dev.helstera.api.util.DisplayTransformationSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(name)) return true;
@@ -3007,6 +3011,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "displaytransformation", "settransformation", "transformation", "display-transformation" ->
+                    preserveNamedMechanic("display-transformation", trimmed, brace);
             case "shieldbreak", "disableshield", "disable-shield" -> preserveNamedMechanic("disable-shield", trimmed, brace);
             case "giveitemfromtarget", "givefromtarget", "giveitemsfromtarget", "itemgivefromtarget",
                     "give-item-from-target" -> preserveNamedMechanic("give-item-from-target", trimmed, brace);
@@ -3350,6 +3356,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (Set.of("determinecondition", "detcond").contains(head)
                 || dev.helstera.api.util.MythicScoreboardSpec.supports(head)
                 || dev.helstera.api.util.ShieldBreakSpec.supports(head)
+                || dev.helstera.api.util.DisplayTransformationSpec.supports(head)
                 || dev.helstera.api.util.MythicItemCopySpec.supports(head)
                 || dev.helstera.api.util.MythicGeneratedLootSpec.supports(head)
                 || dev.helstera.api.util.MythicJsonMessageSpec.supports(head)) {

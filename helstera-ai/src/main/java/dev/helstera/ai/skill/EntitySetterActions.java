@@ -28,6 +28,10 @@ final class EntitySetterActions {
     static Map<String, SkillCatalog.ActionFactory> wrap(Map<String, SkillCatalog.ActionFactory> factories,
                                                        Function<String, ItemStack> items) {
         var result = new LinkedHashMap<>(factories);
+        result.put("display-transformation", arguments -> {
+            var spec = dev.helstera.api.util.DisplayTransformationSpec.parse(arguments);
+            return context -> DisplayTransformationActions.apply(spec, context);
+        });
         for (String name : EntitySetterSpec.names()) {
             result.put(name, args -> {
                 var spec = EntitySetterSpec.parse(name, args);

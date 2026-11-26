@@ -8098,3 +8098,28 @@ repeated casts, blocking warmup, randomized ranges, visual/audio rendering,
 full native dispatcher scheduling and strict final release gates remain.
 Earlier focused reports retain their own JAR/source hashes and do not certify
 this later artifact.
+
+## 2026-11-26 Display transformations (bounded M13 evidence)
+
+[Display transform r1](reports/paper-1.21.1-display-transform-20261126-r1.json)
+passes 87 observations, covering 29 scenarios through native/direct/imported
+paths. Two Paper 1.21.1 protocol clients observe block/item/text Displays and
+an unchanged control. Coverage includes SET/ADD/MULTIPLY/DIVIDE on translation,
+scale and left/right quaternion rotations, argument aliases and priority,
+dynamic/quoted parser differences, fixed ranges, no-target caster selection,
+wrong entities and short vectors.
+
+The independent auditor computes transformation results separately from the
+Java implementation, reconstructs actual client metadata and verifies delay
+restart with preserved interpolation/teleport durations. It passes current
+source/JAR checks and rejects all 3,842 rehashed semantic mutations. The artifact
+passes 2,928 Maven tests with zero failures/errors/skips and 11 clean SpotBugs
+checks. Plugin SHA-256:
+`d8ca14a7aa255ecf30d240f393c4dae9f7f62cccc25c6dbcc31df14d6e8279b6`.
+[Redacted archive](reports/paper-1.21.1-display-transform-20261126-r1-logs.zip).
+
+The [Display transformation contract](../../docs/DISPLAY_TRANSFORMATION_CONTRACT.md)
+records finite-result rejection and public parser differences. Actual rendered
+interpolation/orientation, randomized ranges, broader nonliving selectors and
+conditions, native scheduling, lifecycle and strict release gates remain.
+Earlier reports retain their own artifacts and do not certify this new JAR.

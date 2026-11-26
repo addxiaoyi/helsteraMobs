@@ -6,6 +6,11 @@ on Paper 1.21.1. Constructor aliases, defaults and mutation direction were
 checked in the native bytecode before implementing the shared parser and importer.
 This document records implementation scope; it does not itself certify a server run.
 
+M13 Display transformations have a separate argument/operation contract and
+two-client fixture in [DISPLAY_TRANSFORMATION_CONTRACT.md](DISPLAY_TRANSFORMATION_CONTRACT.md).
+They share the generic recipient dispatch but retain native alias priority and
+enum fallbacks rather than the strict duplicate-alias rules below.
+
 | Native mechanic / aliases | Arguments and defaults | Mutation |
 | --- | --- | --- |
 | `setpathfindingmalus`, `setmalus`, `malus` | `malus/type/malustype=OPEN`, `value/amount=0`; static float | Selected mob's native PathType cost through the pinned adapter |

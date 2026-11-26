@@ -60,6 +60,11 @@ These need validation and release evidence, not another implementation:
   r2 report passes 57 scoped two-client observations. Occupied-slot
   conservation and quit/death/shutdown cleanup are explicit extensions; actual
   lifecycle acceptance remains. See [SHIELD_BREAK_CONTRACT.md](SHIELD_BREAK_CONTRACT.md).
+- Display transformations (M13) now have runtime/importer implementations.
+  The 2026-11-26 r1 report passes 87 scoped observations with two clients,
+  covering all four operations on translation, scale and both rotations.
+  Rendering and broader acceptance remain; see
+  [DISPLAY_TRANSFORMATION_CONTRACT.md](DISPLAY_TRANSFORMATION_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
@@ -85,7 +90,7 @@ contract extensions, not duplicate implementations.
 | M10 | `setTextDisplay/setText` | Implemented with generic entity dispatch and scoped setter r3 evidence. Broader selectors, nonliving conditions and client rendering acceptance remain. |
 | M11 | `setDisplayEntityItem` | Implemented through production item resolution with scoped setter r3 evidence. Broader selectors, nonliving conditions and client rendering acceptance remain. |
 | M12 | `setInteractionSize/interactionSize` | Implemented with scoped setter r3 evidence and an explicit public dynamic-float parser difference. Broader selectors/nonliving conditions and release validation remain. |
-| M13 | `displaytransformation/settransformation/transformation` | Apply Display transformation, including translation, rotation and scale; compare interpolation and client rendering. |
+| M13 | `displaytransformation/settransformation/transformation` | Runtime/importer implemented; 2026-11-26 r1 passes 87 scoped observations including two-client transformation/interpolation metadata. Actual rendering, randomized inputs, broader selectors and release validation remain. See [DISPLAY_TRANSFORMATION_CONTRACT.md](DISPLAY_TRANSFORMATION_CONTRACT.md). |
 | M14 | `setRaiderCanJoinRaid/setCanJoinRaid` | Implemented with scoped setter r3 evidence; full release validation remains. |
 | M15 | `setRaiderPatrolBlock/setRaiderBlock` | Implemented with bounded nested-location selection and scoped setter r3 evidence. Plural/conditional nested selectors and release validation remain. |
 | M16 | `setRaiderPatrolLeader/setRaiderLeader` | Implemented with scoped setter r3 evidence; broader equipment side effects and release validation remain. |
@@ -171,10 +176,10 @@ Names come from native `@MythicTargeter` declarations and were checked against
 
 ## Recommended next implementation batches
 
-1. Complete the remaining M04/M05/M17–M20 Paper/client acceptance and the
+1. Complete the remaining M04/M05/M13/M17–M20 Paper/client acceptance and the
    setter contract's selector/nonliving-condition boundaries. Refresh the full
    strict release gate only against the final artifact.
-2. Implement M06/M07/M13/M21/M22 with independent native contracts and
+2. Implement M06/M07/M21/M22 with independent native contracts and
    recipient/ownership/UI checks.
 3. Implement T02 and T05–T11 with bounded location/block enumeration and
    separate entity-valued versus location-valued dispatch.

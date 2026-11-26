@@ -1,0 +1,417 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-display-transform-20261126-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-26T02:56:11.960694+00:00",
+  "pluginSha256": "d8ca14a7aa255ecf30d240f393c4dae9f7f62cccc25c6dbcc31df14d6e8279b6",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "505ada67afb8643d2f7d20830d0b59c72436caaefd74d9ac1ccfd84531960b3c",
+  "sourceHashes": {
+    "tools/paper-integration/run-display-transform-fixture.py": "6aa092369eff4ebe61eb1c46e6d7a8286ae6bffa994fe30214508a75cc2edbc9",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/display-transform-cases.py": "f381da48f7b28ed677b97df1030a233328c7a1248238f3250329ade9986520ea",
+    "tools/paper-integration/display-transform-client.js": "f37042282eb6a977ed79ceff2293c9a61d2a0d651c2e6c80a4c1b9d3552cad25",
+    "tools/paper-integration/paper-1.21.1-client-protocol.js": "835e9031ccd7b85cca0d9f678e6c7a746899d33f93c6f913ea1873ab004d5c21",
+    "tools/paper-integration/test-paper-1.21.1-client-protocol.js": "756ee120e573323fcf6120d0ea2b0b1c3958f9a98b21920b730404db89f0074b",
+    "tools/paper-integration/audit-display-transform.py": "a2b0014861f0a9f06f2d6cee04ce1619498d02757e99c3da0a10dfa24ddd95c8",
+    "tools/paper-integration/test-display-transform-audit.py": "b78ef26cbdb9145e323478bb1d413cc3eb47af195ce703444ac649b7bc4b0e71",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/DisplayTransformProbe.java": "39c1816d40add888a2c0107b145dfecf69f1d6b9d9432b5fee8afcf960a8807e",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/DisplayTransformationActions.java": "4653567be090164577f94b9c28a17d75998b4b5251c57ac4e134b4cc13ec02fc",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/EntitySetterActions.java": "4f4b476ff984be64af8fc992248130816b0a5095656ebcd8b24fad62e10375f9",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "1c778964716de7ac39e06ec8453fe625b1417aa7634896292f405654c9a9ed9f",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "d8c1d7687697b759a0f8895f9097def1f7bba35dbe58596664bc1fbcfa4f2abc",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "908bf0f5b1092e0b073733962c783d368f6372aee74a0f94d37d8b68b6f8f274",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/Placeholders.java": "f33ce6fbc655aff02c4821bbd5664b2fb2a6c72cc85585839ee0bcf5d64137ed",
+    "helstera-api/src/main/java/dev/helstera/api/util/DisplayTransformationSpec.java": "78abd3bb57f23f6ea55168cf32d2fba26d050a99e4b1a56f2d49ace7920a7096",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicMessageText.java": "39ece7ac8cda8084c5af9a945b5bb24516b6e37b0d80948e66829bd967282016",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "bb41a8c3c0a1309fbba719831256de23411069e51a48f2b0b28dbe69f148f7fc",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "9b2790898509619e31712f324e3dafd7b93b6b44b30054046896697f47537904",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7"
+  },
+  "limitations": [
+    "Native constructors initialize before direct casts; full native dispatcher scheduling is outside this slice.",
+    "Two clients capture Display entity metadata and interpolation settings; no human visual rendering assertion.",
+    "Dynamic and quoted vector values are explicit Helstera extensions over the public native parser.",
+    "Malformed vector arity is rejected before runtime mutation/import, while native can fail during casting.",
+    "Non-finite results, randomized ranges, broader nonliving selectors/conditions and final release gates remain separate."
+  ],
+  "exitCode": 0,
+  "clientExitCode": 0,
+  "observationCount": 87,
+  "validationResult": "passed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "0f3996ce255326388b664bb0b8bcd30383218503f1b5afef83715617fa28c879"
+    },
+    {
+      "path": "client.log",
+      "sha256": "2b3eb0cd778affb85908bd7bfe2ef71aa68c13465446dabb9e8973c50b77ed7f"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/display-transform.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/cases.yml",
+      "sha256": "f562060788e2044c730f346512bff606fe60675e4d94cd172cac95eb3e5f4c89"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0000.yml",
+      "sha256": "b962e71b8b69bec977a24f785973e446c3f3068e6ec599ca8a42d67956a2f622"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0001.yml",
+      "sha256": "7071d7d579f245c635dfed2a3d65ff1126c43a872d59c80d9e6176004061cd3e"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0002.yml",
+      "sha256": "fa34c0b2db15adbda5910d0fda4b90c33de9c0f1929626ee187e200a4cadcb30"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0003.yml",
+      "sha256": "0b122b4c40374ecd8bedf11178debe36422c456260f81bdc94820f1364ad9067"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0004.yml",
+      "sha256": "1dc9cebb81cb2729ee97ae92f13971bf9f8947e51d9d50aa4238f361ffaa1e3c"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0005.yml",
+      "sha256": "ad72a46d64f60bd0b5f44f1a10ed6a24a8286623f0b93932c81569ec35453ddc"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0006.yml",
+      "sha256": "223ca20cb49e7d52e52c210370c85e014f4fbe24cb70626646595df48d77120e"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0007.yml",
+      "sha256": "20d73d23a6f6c714603ac0ce7d57d8ec8d25388aeadb9344ae8a9911249dd63a"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0008.yml",
+      "sha256": "d05a98d21d15457fd6d02577e3451787c69ad6f2fb13e02d01046a4d6ece4eab"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0009.yml",
+      "sha256": "c91fca34074fa01da00cec9e56df23b3aacf3fb3de8f1a61ba060841bccccf14"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0010.yml",
+      "sha256": "b6c32fef54825bcdbf0314d732ca632c46b07232527bf7d56702c7dcde72737a"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0011.yml",
+      "sha256": "faedcee014b16e7afdf6f233748d52d20baac5aa6ea155abe116ed62a2a9e50d"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0012.yml",
+      "sha256": "163e0256ad0bf0e4db501eeb6a809fd15ea37a03503b21d930fb1276957ad212"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0013.yml",
+      "sha256": "1dc6b763e768d1d93fd6e92bf433ac1810728057167e35721be93f4ecaad562c"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0014.yml",
+      "sha256": "1999041297cd8d9c1005a1de6e861be2ae3f146e499c98c10c29c1677fd80fb7"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0015.yml",
+      "sha256": "131ec154f72e98288def4a0adde36d5374dca2dc317e297783d574df00c4f4f2"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0016.yml",
+      "sha256": "cee99ffaf62f719959297f657823afbaa247c10939fe0cf27e26adb05158aca4"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0017.yml",
+      "sha256": "33247dbb4997cc0f195969cd3f1eab1702abae66fa8df059890308c0065a04b9"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0018.yml",
+      "sha256": "de869453dcb4ffe9f19155942cdd37d275fc9abbefb797c0b32bdc4222d2aa66"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0019.yml",
+      "sha256": "3cc33c049ecd159b9a75f03cb8efa5cf6f27c5ce70d4c87cddc3b80a06b885dd"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0020.yml",
+      "sha256": "9a17dbedb7dc23dea972a56e1d95a6325bf535c3cc759ecaa6485b74b9d93917"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0021.yml",
+      "sha256": "e8693592fea899a2b95b3b101f478014ffede4c8141bc338575e2480cd0edbf1"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0022.yml",
+      "sha256": "00a1fa6aaa98e686618f18c0235d1210454ce1d6a03348b3942c032099a3de16"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0023.yml",
+      "sha256": "f21dd30c1a018276292ba3f96b13729773868d1e644622a9c9f3bbb34c3a00fd"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0024.yml",
+      "sha256": "74319a2d5cf05214df88caaa5f3d45900beb40b6cbe6a8b1870717b2e9da8f70"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0025.yml",
+      "sha256": "d3819992c954c90444ede72320c5be02bd8807918f74cff8a7c6e80654cb40c4"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0026.yml",
+      "sha256": "0c5d69035dc300773c4c0c56d44a52cac37493c98a2b52bc67a0bccb09b24534"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0027.yml",
+      "sha256": "e51ed64edfb49d0bec82e725447dbb174623237ed84d1d3224bd5c3ec155bd31"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0028.yml",
+      "sha256": "d46362986ffba74b1cf6909e9cf9e355450a850201ad9a43bc855d214eb26631"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0029.yml",
+      "sha256": "53620ad8c9f9f5f32ed6fc641f8eb7430936c0cb661f3445333776240bec8de7"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0030.yml",
+      "sha256": "3e1f6fcb892e99334d10677bf47a4d57bf5106bdc63b2215c7863e03110a215b"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0031.yml",
+      "sha256": "7ddeb04dcd9a1fe8413ad94581c6125975847da0b73d7392fdda62e9b09fb3bb"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0032.yml",
+      "sha256": "521e32c8c39f3dff1fa5c3642148cf66058228d5d5ba7d06b6e0623c4926ea41"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0033.yml",
+      "sha256": "75fd5456bad1178a3d25be5ee4e9bd9efb991bbaa1b86548496d685905d7a9d9"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0034.yml",
+      "sha256": "bb44790b17705da848e06fee86ba430acc95c23c48e0232acd1af13ba3c026ac"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0035.yml",
+      "sha256": "052ccf46d6dbdb3cbf39625a8a12b9db5a00a1f6d97ff6109c874f7de0f89816"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0036.yml",
+      "sha256": "40a62dc755c56ac3244d6b72ac253029870e1118444f6d7d37b603ea6b52dd54"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0037.yml",
+      "sha256": "2bb1daa41026bad9c201d18ffb3b7ea6bc80be34b951bb4b3077fb97ae1cf05c"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0038.yml",
+      "sha256": "25890fffff21ed364772f9aff847a29aabe358016550e359604f1bbf289c141b"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0039.yml",
+      "sha256": "97379348cede0675ab2ec173cf5466cb374f62dc4aed27ce2f13aab48161d01e"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0040.yml",
+      "sha256": "c451db2bd2c7a1a5975a8b2826b8348ecd04bc8123896499fd5e2e675c9fd0cd"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0041.yml",
+      "sha256": "484c6cee95c40f0245c725bce7563596120115d34ed4e229b94a8e0a3b41b1e4"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0042.yml",
+      "sha256": "0502e0b8753d44870a5a9557b6c3046d891acb39ec5aaf3feb87e06e950f7ed4"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0043.yml",
+      "sha256": "9fb74773d6f68dfadbb24a7bd3b783183105bea1c8e4b9f84572b29566ad8304"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0044.yml",
+      "sha256": "5790e6137f48af9dd6a17d4600405b896f1cc8b0c2a6a0bab093b786c14d333c"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0045.yml",
+      "sha256": "dc7271a3acd41f4f2e612e0dcb6b2302a0cbe5afe7e9a7ae64833714140e9101"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0046.yml",
+      "sha256": "949cef172be294ae14586f00d91972a3380008b0daa83aa3a7ca24f4d85076b1"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0047.yml",
+      "sha256": "afb798dc5f6148e3ea811322298b44dd12de17714abf4db6ead9514af855eb04"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0048.yml",
+      "sha256": "0e14e39a90b4a63650a2dc76f0ed53e42e0affd069651124740c59b7423c7deb"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0049.yml",
+      "sha256": "944784615a98c8085ef3d2889737c6e87fd4daabe673b8313beaeda67816034a"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0050.yml",
+      "sha256": "3be2916ef013ceaf0a9fac98e5798b33de211833f147a70d4b5a6ad5de80ba3c"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0051.yml",
+      "sha256": "fd2059a8d8bc491db14a6eb1ba71354857ce9554cefe678a51e1b090bc23b525"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0052.yml",
+      "sha256": "e75c2ace1bcc3f0797aa6286bae7aebe422dd7e52dde448f3a87d58d58de598d"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0053.yml",
+      "sha256": "86c53d71477f937e5ddd6e17ac5d028709b1d818f08e990a79421cdb128aa1b6"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0054.yml",
+      "sha256": "3caf264341a01c1ae29dffe99d301fca45796fef39f57e5a0e4ef5dda9d7a905"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0055.yml",
+      "sha256": "4953a133645edb48c71ef69450d8d58fb94040661d21471ce384d3237e6d5f0a"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0056.yml",
+      "sha256": "59b40a0a80d6a63e7609b66fd3ae9b8f6a5a5b46f7ef442701a32f24dec4388c"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0057.yml",
+      "sha256": "19c22c40ee8c33617dbd8b8ac72ed5b6ef1d7dde8ae15438aaa1ee05c459dfdf"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0058.yml",
+      "sha256": "99b2bb835f681d2d682f04bd655582c097fa6f543388748ea4f1d3d1c0cd5143"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0059.yml",
+      "sha256": "2b57ece7be00c4c76ea0613231b5fd1bb955da6d373a0dc35e573aa77670fe5b"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0060.yml",
+      "sha256": "983b52711bc0a21deeec5cf61d47f691bb38b4029080f72382bd667a80fd23d5"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0061.yml",
+      "sha256": "07a2e9f4547605ccf258281b2f3ddb686962f3e8ceadd27c64fa57628bbd7945"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0062.yml",
+      "sha256": "5f1c99b0f98be3ebab759b484f5f0fdc5cddc905db52edaa356fe61a12054a3a"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0063.yml",
+      "sha256": "2ad77e41aacfc97034fd121aa3db2bd21efc581ae75f076b051322745fdcc02e"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0064.yml",
+      "sha256": "dd014e33dcf3322e39d333984ab700e9418015a459775fb76a9f544f4b724e34"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0065.yml",
+      "sha256": "b66812675067dce25cd88f8db2f70ebdd3677f6b18c70e9de98216b065d98b5d"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0066.yml",
+      "sha256": "de2f9256b5dbb20ebb2e81ab1702bd3aa889c7764fcbb10eb98a007b46fb417b"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0067.yml",
+      "sha256": "2eed5da5dca8bf6b622b2362f989d99604a077c1e505a99f562789be776c122f"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0068.yml",
+      "sha256": "3d9ccc57f2865db6637a7d387a92576f14dc84b89e055a06add5601c887d93aa"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0069.yml",
+      "sha256": "44b9f302aeecf63e3cfac3c075e147d6c9668574cd32322ad9321e3ae08a8b38"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0070.yml",
+      "sha256": "11e2938feca010d284657e9086418cefed65632a64847547547e43bc63a03d81"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0071.yml",
+      "sha256": "00569d37dd2ffc5e66254a55664b91651d7c11cc1b19727927351a4868bdaa18"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0072.yml",
+      "sha256": "ec44d25268dde9f92cab517bccc341ffc44023bf2fd504283c75f8472e7a5e12"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0073.yml",
+      "sha256": "474d64bd5addc3320c95c2f2a9b43e02ee59b4cef35496cba04a39d2500231a1"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0074.yml",
+      "sha256": "5390a63d8c781e8509b8d49d40e374b5c04351f62a5a102465c80ea3d567b952"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0075.yml",
+      "sha256": "ebc6d64f9126d2d5f6df0bcf2e6b8d70ebcbcfafe74673dbf07ef35fe7fd1b22"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0076.yml",
+      "sha256": "5120c3950d9f1990d4d77616b23bf1a3542f8ceea2366ca03d843de9d389e410"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0077.yml",
+      "sha256": "2aa0286842d8b67708bfbcc2fd50ed2846f2c156a5d98a6e6731296667755858"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0078.yml",
+      "sha256": "e77a8e21851a0af448430b57dec0c5f0c32a4046267ad2be7edb741eff867458"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0079.yml",
+      "sha256": "9562348967baa0bea98492b74647d640e100a43843f5bb40e1bd5eba92f25c61"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0080.yml",
+      "sha256": "e5a0556edec4f5ba30949e8a8aa646739e0cfa669cd8b5c881eb78b1414700ea"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0081.yml",
+      "sha256": "492ab4b2d9eae72ba5a63851668de0119201bc5ff84e91010cff77a6432964d0"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0082.yml",
+      "sha256": "27d0669e155767ef9e8b8963d876ccd3463df905f1cf2cc7787081971cdc2c0e"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0083.yml",
+      "sha256": "073059a44e844558008c262e2dfe761c547c0ea9750e48aeaf7bafa6509c3484"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0084.yml",
+      "sha256": "bb6fb18c28a1e62b00bdb4873a52fde0b4f124a686485322a678b8331de3f727"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0085.yml",
+      "sha256": "3ad2004104283352f3ff75bbd8cabb3ab9b9039dce3d60600d36078a1e90615b"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/observations/0086.yml",
+      "sha256": "218ff5d9655e62b4f0fce6eeb8b6edb6d814b88a8ed82b00ce7d9bc9c07ae127"
+    },
+    {
+      "path": "plugins/HelsteraDisplayTransformProbe/identities.yml",
+      "sha256": "71751cc82fa3a546a47ee99a9d45315dce5190a9d77b6c0c26509e2edbd6c3ab"
+    }
+  ],
+  "logArchive": "paper-1.21.1-display-transform-20261126-r1-logs.zip",
+  "logArchiveSha256": "287a4f71d61dd424508e8b660f7ca41083cd76370031a93c274c9bc5905adc40"
+}

@@ -1636,6 +1636,7 @@ public final class SkillService {
             List<String> mechanicArgs = new ArrayList<>(parsed.positional());
             if (isVariableMechanic(name) || dev.helstera.api.util.EntitySetterSpec.supports(name)
                     || dev.helstera.api.util.EntityInteractionSpec.supports(name)
+                    || dev.helstera.api.util.DisplayTransformationSpec.supports(name)
                     || dev.helstera.api.util.ShieldBreakSpec.supports(name)
                     || dev.helstera.api.util.MythicScoreboardSpec.supports(name)
                     || dev.helstera.api.util.MythicItemCopySpec.supports(name)
@@ -1714,7 +1715,8 @@ public final class SkillService {
         String targeterSpec = positionSpec.selector();
         if (dev.helstera.api.util.EntitySetterSpec.supports(name)
                 || dev.helstera.api.util.EntityInteractionSpec.supports(name)
-                || dev.helstera.api.util.ShieldBreakSpec.supports(name)) {
+                || dev.helstera.api.util.DisplayTransformationSpec.supports(name)
+                    || dev.helstera.api.util.ShieldBreakSpec.supports(name)) {
             try { dev.helstera.api.util.EntitySetterSpec.requireKnownTargeter(targeterSpec); }
             catch (IllegalArgumentException invalid) {
                 warn("invalid entity setter targeter in \"" + spec + "\": " + invalid.getMessage());
@@ -1871,6 +1873,7 @@ public final class SkillService {
                             withConditionActions(mechanic, true, () -> {
                                 if (!(dev.helstera.api.util.EntitySetterSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.EntityInteractionSpec.supports(registeredActionName)
+                                        || dev.helstera.api.util.DisplayTransformationSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.ShieldBreakSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicItemCopySpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicGeneratedLootSpec.supports(registeredActionName)
@@ -1883,6 +1886,7 @@ public final class SkillService {
                             withConditionActions(mechanic, true, () -> {
                                 if (!(dev.helstera.api.util.EntitySetterSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.EntityInteractionSpec.supports(registeredActionName)
+                                        || dev.helstera.api.util.DisplayTransformationSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.ShieldBreakSpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicItemCopySpec.supports(registeredActionName)
                                         || dev.helstera.api.util.MythicGeneratedLootSpec.supports(registeredActionName)
@@ -1891,6 +1895,10 @@ public final class SkillService {
                                     invokeTargeted(action, "targets", mechanic, targetConditionKeys);
                                 return null;
                             });
+                        } else if (dev.helstera.api.util.DisplayTransformationSpec.supports(registeredActionName)) {
+                            // Native INoTargetSkill acts on its caster even with inherited targets.
+                            if (mechanic != null && mechanic.instanceValid()) mechanic.instance().baseEntity()
+                                    .ifPresent(caster -> action.accept(mechanic.withEntityRecipient(caster)));
                         } else {
                             action.accept(mechanic);
                         }
@@ -3661,6 +3669,8 @@ public final class SkillService {
     }
 
     private static String canonicalActionName(String name) {
+        if (dev.helstera.api.util.DisplayTransformationSpec.supports(name))
+            return dev.helstera.api.util.DisplayTransformationSpec.canonical(name);
         if (dev.helstera.api.util.ShieldBreakSpec.supports(name))
             return dev.helstera.api.util.ShieldBreakSpec.canonical(name);
         if (dev.helstera.api.util.EntityInteractionSpec.supports(name))
