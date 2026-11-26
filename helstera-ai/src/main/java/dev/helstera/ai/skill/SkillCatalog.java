@@ -835,7 +835,7 @@ public final class SkillCatalog {
                      return ctx -> {
                          Vector delta = finiteVelocity(new Vector(
                                  x.applyAsDouble(ctx), y.applyAsDouble(ctx), z.applyAsDouble(ctx)));
-                         for (LivingEntity target : activeTargets(ctx)) {
+                         for (Entity target : activeEntityTargets(ctx)) {
                              applyVelocity(target, delta, mode, relative);
                          }
                      };
@@ -956,7 +956,7 @@ public final class SkillCatalog {
                 java.util.Map.entry("teleport-targets", (ActionFactory) a -> {
                     String location = str(a, 0, "@origin");
                     return ctx -> dev.helstera.api.behavior.Targeters.resolveLocation(location, ctx)
-                            .ifPresent(destination -> activeTargets(ctx).forEach(target -> target.teleport(destination)));
+                            .ifPresent(destination -> activeEntityTargets(ctx).forEach(target -> target.teleport(destination)));
                 }),
                 java.util.Map.entry("message-target", (ActionFactory) a -> {
                     String text = str(a, 0, "");
@@ -1289,8 +1289,14 @@ public final class SkillCatalog {
         return ctx.targetEntity().map(List::of).orElseGet(List::of);
     }
 
+    private static List<Entity> activeEntityTargets(BehaviorContext ctx) {
+        if (ctx == null) return List.of();
+        if (!ctx.entityTargets().isEmpty()) return ctx.entityTargets();
+        return ctx.entityRecipient().map(List::of).orElseGet(List::of);
+    }
+
     /** Applies MythicMobs Velocity's mode and optional local-coordinate transform. */
-    private static void applyVelocity(LivingEntity target, Vector delta, String mode, boolean relative) {
+    private static void applyVelocity(Entity target, Vector delta, String mode, boolean relative) {
         if (target == null || delta == null) return;
         Vector current = finiteVelocity(target.getVelocity());
         if (relative) {

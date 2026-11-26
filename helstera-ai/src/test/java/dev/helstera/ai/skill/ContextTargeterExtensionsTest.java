@@ -26,8 +26,16 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class ContextTargeterExtensionsTest {
-    private final World world = mock(World.class);
+    // Bukkit Location keeps a weak world reference; retain mock worlds for the whole test.
+    private final List<World> worlds = new ArrayList<>();
+    private final World world = world();
     private final Location origin = new Location(world, 100, 64, 0);
+
+    private World world() {
+        World value = mock(World.class);
+        worlds.add(value);
+        return value;
+    }
 
     private <T extends Entity> T entity(Class<T> type, Location location) {
         T entity = mock(type);
@@ -59,7 +67,7 @@ class ContextTargeterExtensionsTest {
     @Test
     void namedPlayerUsesNativeLookupAliasesDefaultAndCallerPlaceholderScope() {
         LivingEntity caster = entity(LivingEntity.class, origin);
-        Player player = entity(Player.class, new Location(mock(World.class), 0, 64, 0));
+        Player player = entity(Player.class, new Location(world(), 0, 64, 0));
         BehaviorContext context = context(caster, List.of());
         context.skillTree().orElseThrow().setVariable("PlayerName", "Chosen");
         var registry = new BehaviorRegistryImpl();
@@ -92,7 +100,7 @@ class ContextTargeterExtensionsTest {
     @Test
     void interactionHistoryBelongsToCasterAndRejectsMissingOrOfflineRecords() {
         Interaction caster = entity(Interaction.class, origin);
-        Player attacker = entity(Player.class, new Location(mock(World.class), 1, 64, 0));
+        Player attacker = entity(Player.class, new Location(world(), 1, 64, 0));
         Player interacting = entity(Player.class, new Location(world, 2, 64, 0));
         Interaction.PreviousInteraction attack = mock(Interaction.PreviousInteraction.class);
         Interaction.PreviousInteraction interact = mock(Interaction.PreviousInteraction.class);
@@ -123,7 +131,7 @@ class ContextTargeterExtensionsTest {
     void inheritedLocationsSnapshotEveryTargetDeduplicateAndKeepTerminalEntities() {
         LivingEntity caster = entity(LivingEntity.class, origin);
         LivingEntity first = entity(LivingEntity.class, new Location(world, 2.25, 64, 1));
-        LivingEntity second = entity(LivingEntity.class, new Location(mock(World.class), 4, 65, 2));
+        LivingEntity second = entity(LivingEntity.class, new Location(world(), 4, 65, 2));
         when(second.isValid()).thenReturn(false);
         when(second.isDead()).thenReturn(true);
         BehaviorContext context = context(caster, List.of(first, second, first));

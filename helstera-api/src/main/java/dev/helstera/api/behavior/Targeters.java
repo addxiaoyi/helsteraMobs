@@ -269,6 +269,29 @@ public final class Targeters {
         return list;
     }
 
+    /**
+     * Generic entity selection for skill dispatch. Bare inherited targets preserve nonliving
+     * recipients; selectors with living-specific filters keep using the living selector API.
+     */
+    public static List<org.bukkit.entity.Entity> selectEntities(String spec, BehaviorContext context,
+            Collection<? extends org.bukkit.entity.Entity> candidates, List<String> fallbackArgs,
+            java.util.function.UnaryOperator<String> argumentResolver) {
+        if (context == null) return List.of();
+        String name = spec == null ? "" : spec.trim().replaceFirst("^@", "");
+        List<LivingEntity> living = candidates == null ? List.of() : candidates.stream()
+                .filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast).toList();
+        List<LivingEntity> selectedLiving = select(spec, context, living, fallbackArgs, argumentResolver);
+        if (name.equalsIgnoreCase("targets") && (context.entityTargets().stream()
+                .anyMatch(entity -> !(entity instanceof LivingEntity)) || context.entityRecipient()
+                .filter(entity -> !(entity instanceof LivingEntity)).isPresent())) {
+            List<org.bukkit.entity.Entity> selected = context.entityTargets();
+            if (selected.isEmpty()) selected = context.entityRecipient().map(List::of).orElseGet(List::of);
+            return selected.stream().filter(entity -> entity instanceof LivingEntity
+                    ? selectedLiving.contains(entity) : entity.isValid() && !entity.isDead()).toList();
+        }
+        return List.copyOf(selectedLiving);
+    }
+
     /** Resolves context-bound targeters before applying normal candidate filtering. */
     public static List<LivingEntity> select(String spec, BehaviorContext context,
                                             Collection<? extends LivingEntity> candidates,

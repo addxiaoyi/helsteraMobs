@@ -8,7 +8,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.entity.EntityDamageEvent;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.LinkedHashSet;
@@ -72,6 +71,7 @@ public final class BehaviorContext {
     private final String payload;
     private final Entity trigger;
     private final List<LivingEntity> targets;
+    private final List<Entity> entityTargets;
     /** Native metadata distinguishes an absent entity collection from an explicitly empty one. */
     private final boolean entityTargetsPresent;
     private final Location origin;
@@ -98,7 +98,7 @@ public final class BehaviorContext {
 
     private BehaviorContext(ModelInstance instance, Player target, double healthRatio,
                             double distanceToTarget, long decisionCount, String state,
-                            String payload, Entity trigger, List<? extends LivingEntity> targets,
+                            String payload, Entity trigger, List<? extends Entity> targets,
                             Location origin, SkillTreeContext skillTree) {
         this(instance, target, target, healthRatio, distanceToTarget, decisionCount, state,
                 payload, trigger, targets, origin, skillTree, null);
@@ -107,7 +107,7 @@ public final class BehaviorContext {
     private BehaviorContext(ModelInstance instance, Player target, LivingEntity targetEntity,
                             double healthRatio, double distanceToTarget, long decisionCount,
                             String state, String payload, Entity trigger,
-                            List<? extends LivingEntity> targets, Location origin,
+                            List<? extends Entity> targets, Location origin,
                             SkillTreeContext skillTree) {
         this(instance, target, targetEntity, healthRatio, distanceToTarget, decisionCount, state,
                 payload, trigger, targets, origin, skillTree, null);
@@ -116,7 +116,7 @@ public final class BehaviorContext {
     private BehaviorContext(ModelInstance instance, Player target, LivingEntity targetEntity,
                             double healthRatio, double distanceToTarget, long decisionCount,
                             String state, String payload, Entity trigger,
-                            List<? extends LivingEntity> targets, Location origin,
+                            List<? extends Entity> targets, Location origin,
                             SkillTreeContext skillTree, Cancellable cancellableEvent) {
         this(instance, target, targetEntity, healthRatio, distanceToTarget, decisionCount, state,
                 payload, trigger, targets, origin, skillTree, cancellableEvent, null);
@@ -125,7 +125,7 @@ public final class BehaviorContext {
     private BehaviorContext(ModelInstance instance, Player target, LivingEntity targetEntity,
                             double healthRatio, double distanceToTarget, long decisionCount,
                             String state, String payload, Entity trigger,
-                            List<? extends LivingEntity> targets, Location origin,
+                            List<? extends Entity> targets, Location origin,
                             SkillTreeContext skillTree, Cancellable cancellableEvent,
                             EntityDamageEvent.DamageCause damageCause) {
         this(instance, target, targetEntity, healthRatio, distanceToTarget, decisionCount, state,
@@ -135,7 +135,7 @@ public final class BehaviorContext {
     private BehaviorContext(ModelInstance instance, Player target, LivingEntity targetEntity,
                             double healthRatio, double distanceToTarget, long decisionCount,
                             String state, String payload, Entity trigger,
-                            List<? extends LivingEntity> targets, Location origin,
+                            List<? extends Entity> targets, Location origin,
                             SkillTreeContext skillTree, Cancellable cancellableEvent,
                             EntityDamageEvent.DamageCause damageCause, Location targetLocation) {
         this(instance, target, targetEntity, healthRatio, distanceToTarget, decisionCount, state,
@@ -145,7 +145,7 @@ public final class BehaviorContext {
     private BehaviorContext(ModelInstance instance, Player target, LivingEntity targetEntity,
                             double healthRatio, double distanceToTarget, long decisionCount,
                             String state, String payload, Entity trigger,
-                            List<? extends LivingEntity> targets, Location origin,
+                            List<? extends Entity> targets, Location origin,
                             SkillTreeContext skillTree, Cancellable cancellableEvent,
                             EntityDamageEvent.DamageCause damageCause, Location targetLocation,
                             Entity entityRecipient) {
@@ -162,7 +162,9 @@ public final class BehaviorContext {
         this.payload = payload;
         this.trigger = trigger;
         this.entityTargetsPresent = targets != null || entityRecipient != null;
-        this.targets = List.copyOf(targets == null ? List.of() : new ArrayList<>(targets));
+        this.entityTargets = List.copyOf(targets == null ? List.of() : targets);
+        this.targets = entityTargets.stream().filter(LivingEntity.class::isInstance)
+                .map(LivingEntity.class::cast).toList();
         this.origin = origin == null ? null : origin.clone();
         this.targetLocation = targetLocation == null ? null : targetLocation.clone();
         this.skillTree = skillTree;
@@ -198,6 +200,7 @@ public final class BehaviorContext {
         this.payload = source.payload;
         this.trigger = source.trigger;
         this.targets = source.targets;
+        this.entityTargets = source.entityTargets;
         this.entityTargetsPresent = source.entityTargetsPresent;
         this.origin = source.origin == null ? null : source.origin.clone();
         this.targetLocation = source.targetLocation == null ? null : source.targetLocation.clone();
@@ -221,6 +224,7 @@ public final class BehaviorContext {
         this.payload = source.payload;
         this.trigger = source.trigger;
         this.targets = source.targets;
+        this.entityTargets = source.entityTargets;
         this.entityTargetsPresent = source.entityTargetsPresent;
         this.origin = source.origin == null ? null : source.origin.clone();
         this.targetLocation = source.targetLocation == null ? null : source.targetLocation.clone();
@@ -269,7 +273,7 @@ public final class BehaviorContext {
     public static BehaviorContext execution(ModelInstance instance, Player target,
                                             double healthRatio, double distanceToTarget,
                                             long decisionCount, String state, String payload,
-                                            Entity trigger, List<? extends LivingEntity> targets,
+                                            Entity trigger, List<? extends Entity> targets,
                                             Location origin) {
         return new BehaviorContext(instance, target, healthRatio, distanceToTarget,
                 decisionCount, state, payload, trigger, targets, origin,
@@ -281,7 +285,7 @@ public final class BehaviorContext {
     public static BehaviorContext continueExecution(ModelInstance instance, Player target,
                                                     double healthRatio, double distanceToTarget,
                                                     long decisionCount, String state, String payload,
-                                                    Entity trigger, List<? extends LivingEntity> targets,
+                                                    Entity trigger, List<? extends Entity> targets,
                                                     Location origin, SkillTreeContext skillTree) {
         return new BehaviorContext(instance, target, healthRatio, distanceToTarget,
                 decisionCount, state, payload, trigger, targets, origin, skillTree);
@@ -291,7 +295,7 @@ public final class BehaviorContext {
     public static BehaviorContext continueExecution(ModelInstance instance, Player target,
                                                     double healthRatio, double distanceToTarget,
                                                     long decisionCount, String state, String payload,
-                                                    Entity trigger, List<? extends LivingEntity> targets,
+                                                    Entity trigger, List<? extends Entity> targets,
                                                     Location origin, SkillTreeContext skillTree,
                                                     Cancellable cancellableEvent) {
         return continueExecution(instance, target, healthRatio, distanceToTarget, decisionCount,
@@ -302,7 +306,7 @@ public final class BehaviorContext {
     public static BehaviorContext continueExecution(ModelInstance instance, Player target,
                                                     double healthRatio, double distanceToTarget,
                                                     long decisionCount, String state, String payload,
-                                                    Entity trigger, List<? extends LivingEntity> targets,
+                                                    Entity trigger, List<? extends Entity> targets,
                                                     Location origin, SkillTreeContext skillTree,
                                                     Cancellable cancellableEvent,
                                                     EntityDamageEvent.DamageCause damageCause) {
@@ -315,7 +319,7 @@ public final class BehaviorContext {
     public static BehaviorContext continueExecution(ModelInstance instance, LivingEntity target,
                                                     double healthRatio, double distanceToTarget,
                                                     long decisionCount, String state, String payload,
-                                                    Entity trigger, List<? extends LivingEntity> targets,
+                                                    Entity trigger, List<? extends Entity> targets,
                                                     Location origin, SkillTreeContext skillTree,
                                                     Cancellable cancellableEvent) {
         return continueExecution(instance, target, healthRatio, distanceToTarget, decisionCount,
@@ -326,7 +330,7 @@ public final class BehaviorContext {
     public static BehaviorContext continueExecution(ModelInstance instance, LivingEntity target,
                                                     double healthRatio, double distanceToTarget,
                                                     long decisionCount, String state, String payload,
-                                                    Entity trigger, List<? extends LivingEntity> targets,
+                                                    Entity trigger, List<? extends Entity> targets,
                                                     Location origin, SkillTreeContext skillTree,
                                                     Cancellable cancellableEvent,
                                                     EntityDamageEvent.DamageCause damageCause) {
@@ -340,7 +344,7 @@ public final class BehaviorContext {
     public static BehaviorContext continueExecution(ModelInstance instance, LivingEntity target,
                                                     double healthRatio, double distanceToTarget,
                                                     long decisionCount, String state, String payload,
-                                                    Entity trigger, List<? extends LivingEntity> targets,
+                                                    Entity trigger, List<? extends Entity> targets,
                                                     Location origin, SkillTreeContext skillTree) {
         Player player = target instanceof Player p ? p : null;
         return new BehaviorContext(instance, player, target, healthRatio, distanceToTarget,
@@ -394,12 +398,34 @@ public final class BehaviorContext {
         return Optional.ofNullable(entityRecipient);
     }
 
+    /** All selected entities; {@link #targets()} remains the living-only projection. */
+    public List<Entity> entityTargets() {
+        return entityTargets;
+    }
+
+    /** Replaces the complete selection, including an explicitly empty selection. */
+    public BehaviorContext withEntityTargets(List<? extends Entity> entities) {
+        List<Entity> selected = List.copyOf(entities);
+        Entity first = selected.isEmpty() ? null : selected.getFirst();
+        LivingEntity living = first instanceof LivingEntity entity ? entity : null;
+        double maximum = living == null ? 0 : living.getMaxHealth();
+        double ratio = maximum > 0 ? living.getHealth() / maximum : 0;
+        double distance = -1;
+        Location location = first == null ? null : first.getLocation();
+        if (origin != null && origin.getWorld() != null && location != null
+                && origin.getWorld().equals(location.getWorld())) distance = origin.distance(location);
+        return new BehaviorContext(instance, first instanceof Player player ? player : null, living, ratio, distance,
+                decisionCount, state, payload, trigger, selected, origin, skillTree,
+                cancellableEvent, damageCause, null, first)
+                .withExecutionAudienceFrom(this).withConditionScope(conditionScope);
+    }
+
     public boolean entityTargetsPresent() { return entityTargetsPresent; }
 
     /** Replaces tree-local state without selecting targets or losing native collection presence. */
     public BehaviorContext withSkillTree(SkillTreeContext tree) {
         return new BehaviorContext(instance, target, targetEntity, healthRatio, distanceToTarget,
-                decisionCount, state, payload, trigger, entityTargetsPresent ? targets : null,
+                decisionCount, state, payload, trigger, entityTargetsPresent ? entityTargets : null,
                 origin, tree, cancellableEvent, damageCause, targetLocation, entityRecipient)
                 .withExecutionAudienceFrom(this).withConditionScope(conditionScope);
     }
@@ -413,7 +439,7 @@ public final class BehaviorContext {
         if (origin != null && origin.getWorld() != null && location != null
                 && origin.getWorld().equals(location.getWorld())) distance = origin.distance(location);
         return new BehaviorContext(instance, null, null, 0, distance, decisionCount, state, payload,
-                trigger, List.of(), origin, skillTree, cancellableEvent, damageCause, null, entity)
+                trigger, List.of(entity), origin, skillTree, cancellableEvent, damageCause, null, entity)
                 .withExecutionAudienceFrom(this);
     }
 

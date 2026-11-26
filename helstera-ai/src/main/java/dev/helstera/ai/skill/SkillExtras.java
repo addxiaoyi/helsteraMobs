@@ -6260,11 +6260,11 @@ public final class SkillExtras {
                 }),
                 Map.entry("add-tag-targets", (SkillCatalog.ActionFactory) a -> {
                     String tag = scoreboardTag(a);
-                    return ctx -> targetEntities(ctx).forEach(entity -> addScoreboardTag(entity, tag));
+                    return ctx -> entityTargets(ctx).forEach(entity -> addScoreboardTag(entity, tag));
                 }),
                 Map.entry("remove-tag-targets", (SkillCatalog.ActionFactory) a -> {
                     String tag = scoreboardTag(a);
-                    return ctx -> targetEntities(ctx).forEach(entity -> removeScoreboardTag(entity, tag));
+                    return ctx -> entityTargets(ctx).forEach(entity -> removeScoreboardTag(entity, tag));
                 }),
                 Map.entry("equip", (SkillCatalog.ActionFactory) SkillExtras::equipmentAction),
                 Map.entry("set-item", (SkillCatalog.ActionFactory) SkillExtras::equipmentAction),
@@ -7693,11 +7693,11 @@ public final class SkillExtras {
                     String raw = str(a, 0, "");
                     boolean visible = bool(a, 1, true);
                     return ctx -> {
-                        String name = raw.isEmpty() ? null
-                                : org.bukkit.ChatColor.translateAlternateColorCodes('&',
-                                Placeholders.resolve(raw, ctx));
-                        for (LivingEntity target : targetEntities(ctx)) {
+                        for (Entity target : entityTargets(ctx)) {
                             try {
+                                String name = raw.isEmpty() ? null
+                                        : org.bukkit.ChatColor.translateAlternateColorCodes('&',
+                                        Placeholders.resolve(raw, ctx.withEntityRecipient(target)));
                                 target.setCustomName(name);
                                 target.setCustomNameVisible(name != null && visible);
                             } catch (Throwable ignored) { SkillFaults.swallow("SkillExtras#setNameTargets"); }
@@ -8440,6 +8440,8 @@ public final class SkillExtras {
         if (ctx == null) return List.of();
         if (!ctx.targets().isEmpty()) return ctx.targets();
         return ctx.targetEntity().map(List::of).orElseGet(() -> {
+            if (!ctx.entityTargets().isEmpty() || ctx.entityRecipient()
+                    .filter(entity -> !(entity instanceof LivingEntity)).isPresent()) return List.of();
             if (!ctx.instanceValid()) return List.of();
             return ctx.instance().baseEntity()
                     .filter(LivingEntity.class::isInstance)
@@ -8485,6 +8487,12 @@ public final class SkillExtras {
         if (ctx == null) return List.of();
         if (!ctx.targets().isEmpty()) return ctx.targets();
         return ctx.targetEntity().map(List::of).orElseGet(List::of);
+    }
+
+    private static List<Entity> entityTargets(BehaviorContext ctx) {
+        if (ctx == null) return List.of();
+        if (!ctx.entityTargets().isEmpty()) return ctx.entityTargets();
+        return ctx.entityRecipient().map(List::of).orElseGet(List::of);
     }
 
     private static String scoreboardTag(List<String> args) {

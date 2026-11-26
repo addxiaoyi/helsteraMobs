@@ -35,7 +35,7 @@ final class InheritedTargetLocations {
             // to the location collection. A location continuation has no entity recipient.
             List<Location> inherited = new ArrayList<>();
             if (context.entityTargetsPresent()) {
-                for (var target : context.targets()) inherited.add(target.getLocation());
+                for (var target : context.entityTargets()) inherited.add(target.getLocation());
                 if (context.targets().isEmpty() && context.targetLocation().isEmpty())
                     context.entityRecipient().ifPresent(entity -> inherited.add(entity.getLocation()));
             } else context.targetLocation().ifPresent(inherited::add);

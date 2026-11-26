@@ -1133,7 +1133,7 @@ public final class SkillService {
         MetaskillConditionFrame frame = new MetaskillConditionFrame();
         dev.helstera.api.behavior.SkillTreeContext parent = context.skillTree().orElse(null);
         dev.helstera.api.behavior.SkillTreeContext scopedTree = new dev.helstera.api.behavior.SkillTreeContext(
-                context.trigger().orElse(null), context.targets(), context.origin().orElse(null), parent);
+                context.trigger().orElse(null), context.entityTargets(), context.origin().orElse(null), parent);
         scopedTree.setVariable(METASKILL_FRAME_VARIABLE, frame.token);
         for (var parameter : parameters.entrySet()) {
             String value = Placeholders.resolve(parameter.getValue(), context);
@@ -1973,8 +1973,8 @@ public final class SkillService {
                             "target", context, context.targets(), List.of()));
                 }
             }
-            case "targets" -> selected = context.targets().isEmpty()
-                    ? context.entityRecipient().map(List::of).orElseGet(List::of) : List.copyOf(context.targets());
+            case "targets" -> selected = context.entityTargets().isEmpty()
+                    ? context.entityRecipient().map(List::of).orElseGet(List::of) : context.entityTargets();
             default -> { return false; }
         }
         for (var entity : selected) {
@@ -2018,7 +2018,7 @@ public final class SkillService {
         List<org.bukkit.entity.LivingEntity> candidates = ctx.skillTree()
                 .map(dev.helstera.api.behavior.SkillTreeContext::targets)
                 .orElse(ctx.targets());
-        if (candidates.isEmpty() && ctx.instanceValid()) {
+        if (candidates.isEmpty() && !targeterName.trim().equalsIgnoreCase("targets") && ctx.instanceValid()) {
             org.bukkit.Location origin = ctx.origin().orElse(ctx.instance().location());
             if (origin != null && origin.getWorld() != null) {
                 candidates = new ArrayList<>();
@@ -2034,14 +2034,15 @@ public final class SkillService {
                 }
             }
         }
-        List<org.bukkit.entity.LivingEntity> selected = dev.helstera.api.behavior.Targeters.select(
+        List<org.bukkit.entity.Entity> selected = dev.helstera.api.behavior.Targeters.selectEntities(
                 targeterSpec, ctx, candidates, List.of(), value -> Placeholders.resolve(value, ctx));
         if (selected.isEmpty()) return;
         if (!targetConditionKeys.isEmpty()) {
-            List<org.bukkit.entity.LivingEntity> passing = new ArrayList<>();
+            List<org.bukkit.entity.Entity> passing = new ArrayList<>();
             for (var candidate : selected) {
-                if (validConditionTarget(candidate) && conditionsPass(targetConditionKeys,
-                        targetConditionContext(ctx, candidate, List.of(candidate))
+                if (candidate instanceof org.bukkit.entity.LivingEntity living
+                        && validConditionTarget(living) && conditionsPass(targetConditionKeys,
+                        targetConditionContext(ctx, living, List.of(living))
                                 .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) {
                     passing.add(candidate);
                 }
@@ -2050,22 +2051,8 @@ public final class SkillService {
             if (selected.isEmpty()) return;
         }
         var tree = ctx.skillTree().orElse(null);
-        if (tree != null) tree.targets(selected);
-        org.bukkit.entity.LivingEntity activeTarget = selected.get(0);
-        double targetHealth = activeTarget.getMaxHealth() > 0
-                ? activeTarget.getHealth() / activeTarget.getMaxHealth() : 0;
-        double targetDistance = -1;
-        org.bukkit.Location origin = ctx.origin().orElse(null);
-        if (origin != null && origin.getWorld() != null
-                && origin.getWorld().equals(activeTarget.getWorld())) {
-            targetDistance = origin.distance(activeTarget.getLocation());
-        }
-        var scoped = dev.helstera.api.behavior.BehaviorContext.continueExecution(
-                ctx.instance(), activeTarget, targetHealth, targetDistance, ctx.decisionCount(),
-                ctx.state(), ctx.payload().orElse(null), ctx.trigger().orElse(null), selected,
-                ctx.origin().orElse(null), tree, ctx.cancellableEvent().orElse(null),
-                ctx.damageCause().orElse(null)).withExecutionAudienceFrom(ctx);
-        action.accept(scoped);
+        if (tree != null) tree.entityTargets(selected);
+        action.accept(ctx.withEntityTargets(selected));
     }
 
     private void invokeLocationTargeted(Consumer<dev.helstera.api.behavior.BehaviorContext> action,
@@ -2549,9 +2536,9 @@ public final class SkillService {
             var saved = persistedTrees.get(treeInstanceId);
             tree = saved == null
                     ? new dev.helstera.api.behavior.SkillTreeContext(
-                    ctx.trigger().orElse(null), ctx.targets())
+                    ctx.trigger().orElse(null), ctx.entityTargets())
                     : dev.helstera.api.behavior.SkillTreeContext.restore(saved,
-                    ctx.trigger().orElse(null), ctx.targets(), org.bukkit.Bukkit::getWorld);
+                    ctx.trigger().orElse(null), ctx.entityTargets(), org.bukkit.Bukkit::getWorld);
             ctx = ctx.withSkillTree(tree);
         }
         for (SkillDef declared : defs.values()) {
@@ -2702,7 +2689,7 @@ public final class SkillService {
         // A non-living trigger has no active living target or health. Never inherit the selected target.
         double ratio = living == null ? Double.NaN
                 : living.getMaxHealth() > 0 ? living.getHealth() / living.getMaxHealth() : 0;
-        List<org.bukkit.entity.LivingEntity> inherited = ctx.targets();
+        List<org.bukkit.entity.Entity> inherited = ctx.entityTargets();
         return dev.helstera.api.behavior.BehaviorContext.continueExecution(
                 ctx.instance(), living, ratio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
                 ctx.payload().orElse(null), trigger, inherited, ctx.origin().orElse(null),
@@ -2727,7 +2714,7 @@ public final class SkillService {
         double healthRatio = maxHealth > 0 ? living.getHealth() / maxHealth : 0;
         return dev.helstera.api.behavior.BehaviorContext.continueExecution(
                 ctx.instance(), living, healthRatio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
-                ctx.payload().orElse(null), ctx.trigger().orElse(null), ctx.targets(),
+                ctx.payload().orElse(null), ctx.trigger().orElse(null), ctx.entityTargets(),
                 ctx.origin().orElse(null), ctx.skillTree().orElse(null),
                 ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null))
                 .withExecutionAudienceFrom(ctx)
@@ -2767,7 +2754,7 @@ public final class SkillService {
                 var saved = qs.restoreTree ? persistedTrees.get(instId) : null;
                 if (saved != null) {
                     var tree = dev.helstera.api.behavior.SkillTreeContext.restore(saved,
-                            context.trigger().orElse(null), context.targets(), org.bukkit.Bukkit::getWorld);
+                            context.trigger().orElse(null), context.entityTargets(), org.bukkit.Bukkit::getWorld);
                     context = context.withSkillTree(tree);
                 }
                 int[] d = depth.get();

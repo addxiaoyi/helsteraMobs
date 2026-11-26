@@ -53,9 +53,22 @@ trigger, origin and event metadata. Location-scoped entity setters do not fall
 back to a caster or retained target. The chunk setter consumes positional targets
 or selected entities' locations.
 
+The generic collection API now retains multiple nonliving recipients through
+context copies, skill-tree recreation, nested skills and delayed bare `@targets`
+dispatch. The older `targets()` accessors expose only the living subset;
+`entityTargets()` exposes the complete selection. `@LOT` projects all inherited
+entity locations. Explicit entity/location retargeting replaces the previous
+collection. Velocity, teleport, target tags and target names also consume the
+generic collection; name placeholders resolve separately for each recipient.
+Living-only item actions do not fall back to the caster when the selection
+contains only nonliving entities. These paths have offline regression coverage;
+they do not have new Paper/native evidence yet.
+
 The general radius/chain selector engine still primarily enumerates LivingEntity;
 this batch does not claim generic Display/Interaction selection through those
-selectors. Target conditions on a nonliving recipient are conservatively skipped
+selectors or through parameterized `@targets`. The dropped-item selectors T02
+remain unregistered pending their own query/filter contract. Target conditions
+on a nonliving recipient are conservatively skipped
 because existing condition factories require LivingEntity. Nonliving entity
 variable registries are also outside this slice. These boundaries require a
 separate generic target/condition contract, rather than silently broadening filters.

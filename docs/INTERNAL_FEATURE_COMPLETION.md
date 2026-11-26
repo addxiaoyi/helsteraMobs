@@ -84,6 +84,11 @@ These need validation and release evidence, not another implementation:
   native/direct/imported observations. This does not complete native movement
   Goals or threat switching.
   See [AI_TARGET_SELECTOR_CONTRACT.md](AI_TARGET_SELECTOR_CONTRACT.md).
+- Generic entity target collections now survive context copies, nested skills,
+  delayed inherited selection and skill-tree recreation. Bare `@targets` and
+  `@LOT` retain nonliving recipients; velocity, teleport, tags and per-recipient
+  name placeholders consume them. This is a tested prerequisite for T02, whose
+  dropped-item query, importer bindings and native Paper acceptance remain open.
 
 ## Concrete public-build mechanics inventory
 
@@ -128,7 +133,7 @@ Names come from native `@MythicTargeter` declarations and were checked against
 | ID | Exact selector names / aliases | Required behavior |
 | --- | --- | --- |
 | T01 | `@playerByName/@specificplayer` | Implemented; 2026-11-26 r1 context fixture passes its exact-name, placeholder, missing-player and cross-world cases. Full native scheduling remains outside this slice. |
-| T02 | `@itemsInRadius/@IIR`, `@itemsNearOrigin/@INO` | Select dropped Item entities. Current general selector collections are primarily `LivingEntity`; a name alias alone cannot add this capability. |
+| T02 | `@itemsInRadius/@IIR`, `@itemsNearOrigin/@INO` | Generic entity collections and inherited dispatch are implemented. Dropped-item world queries, native radius/alias/filter semantics, importer bindings and Paper acceptance remain; neither selector is registered yet. |
 | T03 | `@interactionLastAttacker/@lastAttacker`, `@interactionLastInteract/@lastInteract` | Implemented; 2026-11-26 r1 passes prepared-history lookup cases. Actual client attack/interaction input is outside that evidence. |
 | T04 | `@locationsOfTargets/@locationOfTarget/@LOT` | Implemented; 2026-11-26 r1 passes scoped projection/deduplication and location-selection cases. Native HashSet iteration does not promise stable ordering. |
 | T05 | `@targetBlock`, `@targetedLocation/@targetedLocations/@targetedLoc`, `@targetedTarget/@targeted` | Implement their distinct native aiming/inherited-target contracts; existing VariableLocation player aiming is not automatically an implementation of these targeters. |

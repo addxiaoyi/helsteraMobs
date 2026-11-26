@@ -140,22 +140,22 @@ public final class SkillTreeContext {
     private final Entity trigger;
     private final SkillTreeContext parent;
     private final ExpiringVariables<Object> variables = new ExpiringVariables<>();
-    private volatile List<LivingEntity> targets;
+    private volatile List<Entity> targets;
     private volatile boolean targetsSet;
     private final ExpiringVariables<Location> locations = new ExpiringVariables<>();
     private final ConcurrentHashMap<String, Set<String>> branchRequirements = new ConcurrentHashMap<>();
     private final java.util.Set<String> unlockedBranches = ConcurrentHashMap.newKeySet();
     private volatile Set<String> damageTags = Set.of();
 
-    public SkillTreeContext(Entity trigger, List<? extends LivingEntity> targets) {
+    public SkillTreeContext(Entity trigger, List<? extends Entity> targets) {
         this(trigger, targets, null, null);
     }
 
-    public SkillTreeContext(Entity trigger, List<? extends LivingEntity> targets, Location origin) {
+    public SkillTreeContext(Entity trigger, List<? extends Entity> targets, Location origin) {
         this(trigger, targets, origin, null);
     }
 
-    public SkillTreeContext(Entity trigger, List<? extends LivingEntity> targets,
+    public SkillTreeContext(Entity trigger, List<? extends Entity> targets,
                             Location origin, SkillTreeContext parent) {
         this.trigger = trigger;
         this.parent = parent;
@@ -181,11 +181,21 @@ public final class SkillTreeContext {
     }
 
     public List<LivingEntity> targets() {
+        return entityTargets().stream().filter(LivingEntity.class::isInstance)
+                .map(LivingEntity.class::cast).toList();
+    }
+
+    /** All inherited entity targets, including dropped items and display entities. */
+    public List<Entity> entityTargets() {
         if (targetsSet || parent == null) return targets;
-        return parent.targets();
+        return parent.entityTargets();
     }
 
     public void targets(List<? extends LivingEntity> next) {
+        entityTargets(next);
+    }
+
+    public void entityTargets(List<? extends Entity> next) {
         targets = List.copyOf(next == null ? List.of() : next);
         targetsSet = true;
     }
@@ -302,7 +312,7 @@ public final class SkillTreeContext {
      * Runtime values are copied by reference, matching the native registry-map clone,
      * while Bukkit locations and absolute expiration deadlines retain their usual semantics.
      */
-    public SkillTreeContext copyForAuraTracker(Entity trigger, List<? extends LivingEntity> targets) {
+    public SkillTreeContext copyForAuraTracker(Entity trigger, List<? extends Entity> targets) {
         SkillTreeContext copiedParent = parent == null ? null : parent.copyForAuraTracker(trigger, targets);
         SkillTreeContext copied = new SkillTreeContext(trigger, targets, null, copiedParent);
         var variableState = variables.snapshotWithRetention();
@@ -337,7 +347,7 @@ public final class SkillTreeContext {
 
     /** Restores state while allowing the caller to resolve current trigger and target entities. */
     public static SkillTreeContext restore(Snapshot snapshot, Entity trigger,
-                                           List<? extends LivingEntity> targets,
+                                           List<? extends Entity> targets,
                                            Function<String, org.bukkit.World> worldResolver) {
         if (snapshot == null) throw new IllegalArgumentException("snapshot must not be null");
         SkillTreeContext parent = snapshot.parent()
