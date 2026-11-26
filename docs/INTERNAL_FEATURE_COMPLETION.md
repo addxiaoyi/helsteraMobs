@@ -55,6 +55,11 @@ These need validation and release evidence, not another implementation:
   structured components, recipient placeholders and audience filtering. Offline
   tests pass; Paper/client acceptance remains pending. See
   [JSON_MESSAGE_CONTRACT.md](JSON_MESSAGE_CONTRACT.md).
+- `shieldbreak/disableshield` (M18) now have runtime/importer implementations,
+  dedicated one-tick restoration ownership and offline tests. The 2026-11-26
+  r2 report passes 57 scoped two-client observations. Occupied-slot
+  conservation and quit/death/shutdown cleanup are explicit extensions; actual
+  lifecycle acceptance remains. See [SHIELD_BREAK_CONTRACT.md](SHIELD_BREAK_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
@@ -85,7 +90,7 @@ contract extensions, not duplicate implementations.
 | M15 | `setRaiderPatrolBlock/setRaiderBlock` | Implemented with bounded nested-location selection and scoped setter r3 evidence. Plural/conditional nested selectors and release validation remain. |
 | M16 | `setRaiderPatrolLeader/setRaiderLeader` | Implemented with scoped setter r3 evidence; broader equipment side effects and release validation remain. |
 | M17 | `stopusingitem/releaseitem` | Release behavior is implemented through the pinned native adapter; complete bow/item-use/event acceptance remains. Paper `clearActiveItem` alone is not equivalent. |
-| M18 | `shieldbreak/disableshield` | Native contract inspected; implementation remains. Requires blocking, cooldown, main-hand-first selection and one-tick shield removal/restoration, including occupied-slot/lifecycle handling. See [SHIELD_BREAK_CONTRACT.md](SHIELD_BREAK_CONTRACT.md). |
+| M18 | `shieldbreak/disableshield` | Runtime/importer and one-tick restoration ownership implemented; 2026-11-26 r2 passes 57 scoped two-client observations. Real lifecycle, warmup, randomized ranges and full release acceptance remain. Occupied-slot conservation is an explicit extension. See [SHIELD_BREAK_CONTRACT.md](SHIELD_BREAK_CONTRACT.md). |
 | M19 | `setpitch`, `matchrotation/matchrot` | Pinned native SetPitch is a no-op. MatchRotation is implemented with nested selection, non-player recipients and body/head yaw plus pitch; Paper/client acceptance remains. |
 | M20 | `GoatRam` | Implemented through Paper `Goat.ram(LivingEntity)`; natural damage/event acceptance remains. |
 | M21 | `summonAreaEffectCloud/summonCloud`, `summonFallingBlock`, `summonPassenger` | Add typed entity spawning with native argument and lifecycle rules; generic managed-model summon is a separate operation. |
@@ -166,10 +171,10 @@ Names come from native `@MythicTargeter` declarations and were checked against
 
 ## Recommended next implementation batches
 
-1. Complete the remaining M04/M05/M17/M19/M20 Paper/client acceptance and the
+1. Complete the remaining M04/M05/M17–M20 Paper/client acceptance and the
    setter contract's selector/nonliving-condition boundaries. Refresh the full
    strict release gate only against the final artifact.
-2. Implement M06/M07/M13/M18/M21/M22 with independent native contracts and
+2. Implement M06/M07/M13/M21/M22 with independent native contracts and
    recipient/ownership/UI checks.
 3. Implement T02 and T05–T11 with bounded location/block enumeration and
    separate entity-valued versus location-valued dispatch.

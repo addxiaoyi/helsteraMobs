@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-shield-break-20261126-r2",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-26T02:41:12.954919+00:00",
+  "pluginSha256": "c4aa0d30cc8ee5653a3f14f39bf13686b49e2fffdd5d804c6aa84887dfee10e3",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "c131fba1caadb8da6d28515473b73bf128d08c1f6efea05d622776b0f92ac451",
+  "sourceHashes": {
+    "tools/paper-integration/run-shield-break-fixture.py": "2de2bc7466f2100c52856db1fd7cbaf8557268de05870372a1dc76727c13de9c",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/shield-break-cases.py": "565273503a452ffdb2e616fb7a64906d71cbab4e2c23026d071246c55eb18f1e",
+    "tools/paper-integration/shield-break-client.js": "546d434a31feee8b3a35568b2d7caeab73b8108d756b3456012770f8b2a3f74c",
+    "tools/paper-integration/paper-1.21.1-client-protocol.js": "835e9031ccd7b85cca0d9f678e6c7a746899d33f93c6f913ea1873ab004d5c21",
+    "tools/paper-integration/test-paper-1.21.1-client-protocol.js": "756ee120e573323fcf6120d0ea2b0b1c3958f9a98b21920b730404db89f0074b",
+    "tools/paper-integration/audit-shield-break.py": "2c02c2c56d247d1e90673566f2c63932d0cb33d298bc5497ed349e809472eebe",
+    "tools/paper-integration/test-shield-break-audit.py": "cd1cc15780bede4e9c1e47df1b26d49e4b4512c6743cf6647b226f6bbf53a2e6",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ShieldBreakProbe.java": "d2bafec3b026d006d39bbf69929eb9de50444acaa29556ccc9d9823d4a042813",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/ShieldBreakActions.java": "22a540c2dc1e63da48cd6bd983716fbba23cadba4fc31d20e2623b1c17b40cfc",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/ShieldBreakService.java": "58deca149eec725c99437e45cac0e51f51cd13af35dce23ac44e196bd7739abc",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "3adb96cb685c29dd344c968cff04536ff0ef72150c89dcf89a6758ddd8618954",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "d8c1d7687697b759a0f8895f9097def1f7bba35dbe58596664bc1fbcfa4f2abc",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "f9ff94d11182dfe432d8acb8d207b85f4ce6cfe3ca92864c2f1a0ec0e9d7a868",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/Placeholders.java": "f33ce6fbc655aff02c4821bbd5664b2fb2a6c72cc85585839ee0bcf5d64137ed",
+    "helstera-api/src/main/java/dev/helstera/api/util/ShieldBreakSpec.java": "8f0379ef345b580e3c684392fa2f924a30e2de1a1c583e0091f8ca23768c0bba",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicMessageText.java": "39ece7ac8cda8084c5af9a945b5bb24516b6e37b0d80948e66829bd967282016",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "bb41a8c3c0a1309fbba719831256de23411069e51a48f2b0b28dbe69f148f7fc",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "7e0d64f1fbd3baa3d57b33419aac64a4eb0a7e53a879b905ce1e7815d31fea00",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7"
+  },
+  "limitations": [
+    "Native constructors initialize before casts, which bypass native dispatcher scheduling.",
+    "Two protocol clients send real use-item packets and capture cooldown, sounds and inventory; no visual rendering assertion.",
+    "Quoted/dynamic durations are Helstera extensions; the pinned public native parser falls back to one.",
+    "Occupied-slot conservation is an intentional extension over native add-before-clear behavior.",
+    "Host close is a service-level cleanup exercise, not an actual plugin reload.",
+    "Actual disconnect/reconnect, death/keepInventory/vanishing, repeated casts and final release gates remain separate."
+  ],
+  "exitCode": 0,
+  "clientExitCode": 0,
+  "observationCount": 57,
+  "validationResult": "passed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "96aad09793c8b1c6f5bc98d84717defb118fcfe225255cc086368139b2e48ab6"
+    },
+    {
+      "path": "client.log",
+      "sha256": "0967a56198bf7631a737cf1ba4c3c8805c3c7859b0872a5a7e06dbca673909aa"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/shield-break.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/cases.yml",
+      "sha256": "28240b54a9795e4c79172688aa93a0324385a5ce76fcffc8e1ad654e53ee8faf"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0000.yml",
+      "sha256": "dd280cdfe7fedb9701d55726f3b62681d539c662c10f390846f33e1d1df4f066"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0001.yml",
+      "sha256": "f9dcde4ca20e590c9c4818330ba6ac587ecc61cc29ab14394b5697e80f7c38a0"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0002.yml",
+      "sha256": "8b2365e8312be850a5c731889c1a8255ecf2b2a51d4527e75ec1b7e7fb6ca26c"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0003.yml",
+      "sha256": "18b7c97335b8e8ce8130dba145cea1f1db4502cc7fe30f95b96a53d72bf23e35"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0004.yml",
+      "sha256": "e168c7012dfd301341432393b3bfd5559e97468da89acee6b98bb73451884ae5"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0005.yml",
+      "sha256": "8b8026fb431911bf17f9a1226f613b1ba4ed9c377c3b4ae9298be41e6cee52c8"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0006.yml",
+      "sha256": "255128f9d7544cc1e88011c6619345a89b3522d529dd13b53e34fd27615872f7"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0007.yml",
+      "sha256": "0f7113e1f01fe7915520fe97301711b5b0d3508cc5ad759a6adad20acfbadc9e"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0008.yml",
+      "sha256": "541f0c340387245a0c5575abca7a18bbdd4fa9db16959aa9ccd5f9a284c4ae0e"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0009.yml",
+      "sha256": "06dfa1913762f4f03a955cc8063815e7db13c5b6b758b09774d4b4427ab95a87"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0010.yml",
+      "sha256": "783f87190a5d8970b9da4a2f9d212edcf972c60f1a9b8aaf27ccd5a1495b1cb4"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0011.yml",
+      "sha256": "6fef482d6c6b189b63a2edd4f7cba699764dc75b0b68c3e90aadca47e5671021"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0012.yml",
+      "sha256": "6f0b6c7a527b7ecf49acc4c0758cb57a00b601ae54042cba3526fe2e4a11326b"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0013.yml",
+      "sha256": "18f2d256fd15ca2e8e889a1a2b6ffc192ff5fc27827f35a99fabfd466b50d5c9"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0014.yml",
+      "sha256": "42f4a1f5081ca02f5b81f3f285ed37101ff999924d1de55956ca4e9b81cfc920"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0015.yml",
+      "sha256": "401194550d12ee20835cb98e651ad220b2843e3e0a63e97df7bcc16660ab6340"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0016.yml",
+      "sha256": "21941d822fd087912a42b442feeee22ef2ca387ee6e4c2fd0c18c10ad332e249"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0017.yml",
+      "sha256": "9c1464c531c39873df78f3b9137e4d41f13959722896774685c10a0bf894a961"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0018.yml",
+      "sha256": "27d0fe50d42d9865bc966f9108e9227f99e877bcbbdda9549891dd93d99eb462"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0019.yml",
+      "sha256": "d83755701b88b769f3ed046ba6d9e22a490e234f459143b899e41cc4f5730fa7"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0020.yml",
+      "sha256": "f1a852e5fb685a9e15238d8c4a08aa543a2a12c8d7b05f1451409c60f37385c2"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0021.yml",
+      "sha256": "6a068c4887fd3117ba8f7d0d8d27d469fdc524c45417a284940de136b2c253a1"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0022.yml",
+      "sha256": "cf47734ff6748eaec78d1bb13ef323dfd3a7b3945beb7b353982e2c3dfb409a8"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0023.yml",
+      "sha256": "3337af86aadc4b12d8b8383de63a7dfa46dde9f6e984800bd40b3a43874a5104"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0024.yml",
+      "sha256": "2129b7070b5b931ab52476568d1d20b0c8f6d7801e1bc6a528b2623468883e11"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0025.yml",
+      "sha256": "923f151647b852d6092f12f226e628313c98fffce622819c14d44fd70a88c54d"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0026.yml",
+      "sha256": "14c8420a960b041d929706d52a62a62408c6310b819d4c6fa575569413228fd7"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0027.yml",
+      "sha256": "a36d6b37c26bdf01dd3a67ce198166eeca7ac6202937fbfc57a9375c54e8e734"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0028.yml",
+      "sha256": "2c9e02cd8072386ac5325f7b9356a1934940ee01d45259f2ac0e527c8f4a1a8f"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0029.yml",
+      "sha256": "4caf7dd54eff8e7c9e73e48d33565403834afb86aed004ce72c4294b46ddb51b"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0030.yml",
+      "sha256": "f9c923e607e893e3d9270a61592cb98a492d75ee0a92e29a0121fa6ae2d63fdc"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0031.yml",
+      "sha256": "43b9cab06deafb206445ae16b7c2bc55e3eff0a209903def01f2abe80554a984"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0032.yml",
+      "sha256": "eecea5dba447c5776eeee6870952cd845d6b3a317156ab031ed575c1f9e5e5cc"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0033.yml",
+      "sha256": "3cf309e82aeb1638c810401e0f531440f7e854bade389fecee047f08b8ee4281"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0034.yml",
+      "sha256": "6c80bd1f96dbb9ed6c227bb41606ba237c4eab548298235cb8e3a73d4fb306fb"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0035.yml",
+      "sha256": "281da20fb2535181f470882fbd09eb4b0c29e1c3556e1516a587f20acda0315a"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0036.yml",
+      "sha256": "d15ae83a940e10e6a01d1c436011cfdec276b9ca17cda8f75c759837b4158a4e"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0037.yml",
+      "sha256": "e43408b16a8026b8f0a7746f5134bda08e59957d96d52144661f9d8945439b08"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0038.yml",
+      "sha256": "e6c498fefc5882abfd6e834d77217a8c5a4d96c4fe650694a12a0a07c122f708"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0039.yml",
+      "sha256": "851b5a44ed6d1d3571fdab84f18926d175f2a87d07ec5718900ca5d2ea44a63f"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0040.yml",
+      "sha256": "6e315d908e6a8648ad5e9bc16ffd1b15e444e1072ce5a39539d9cf6a8cb5ce44"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0041.yml",
+      "sha256": "38ef1d105263680e7f5ef56e6451c80411ba8d987975efd135321a28216457ab"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0042.yml",
+      "sha256": "c3d529550ebb93bace57b804cb4ecbcf125d8adcfbe94cdb365b6ef3e403cfba"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0043.yml",
+      "sha256": "ac221f354b7e70b11ed4b2af7498b9603b2b116a7386ecc005db82b7d5607b15"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0044.yml",
+      "sha256": "d84396eb14a987365f485fe9694b15173af17532d53a44f6cdca70599d943a50"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0045.yml",
+      "sha256": "6b44514cb8fca6e5a4b15f0ff81418ff86115b9809751cd1ba1e114b9796a281"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0046.yml",
+      "sha256": "abfaaea329baa84770c83e4fb8479d46350d5b783e2e59a37e3b3699e9d8b45f"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0047.yml",
+      "sha256": "a11254a053db0a3f3cf809903c6cc79df7aec6128eeb579406125851fd8e239c"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0048.yml",
+      "sha256": "9c17bad83f0c78b1b969ca809d81830d11fdbd0ad002210becf3ba9b8e9a149e"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0049.yml",
+      "sha256": "8eee5689739c641219eb8c94266dec3b1f4694ca9ce1b99b0ce86eed7e034d4e"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0050.yml",
+      "sha256": "3fd1d35a66ad36b2364b3e053025efd28e17ba35eda9cad5817332d4c893d611"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0051.yml",
+      "sha256": "7c4c0c0d38783e093732883b6b8612698c37405f74405ef261573f4ac8adb27e"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0052.yml",
+      "sha256": "342e2a6c06ccf047904e095520dab62e6ecc4b74fd5616615fb2636462e85b18"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0053.yml",
+      "sha256": "4bb190e94c30e1c237b8900c4763663ccf206eceb1b6f88a10fa621dbd2da46d"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0054.yml",
+      "sha256": "99378058a97c2147be5b8224e4691820609c562ebdcef233d010930e2da4b057"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0055.yml",
+      "sha256": "9df9f81fcd6b6a5a2efed36eabb7203c2ea3c1f5848d4443e1e04e683b16ef69"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/observations/0056.yml",
+      "sha256": "d3e9206955075a86d22a26ee8b78438f4c4d9ccc4a892ef33c8b16929132d216"
+    },
+    {
+      "path": "plugins/HelsteraShieldBreakProbe/identities.yml",
+      "sha256": "f27fd0fc3a0ef090258912d7f9facc404136d495320277ea26d49e33c468ddf9"
+    }
+  ],
+  "logArchive": "paper-1.21.1-shield-break-20261126-r2-logs.zip",
+  "logArchiveSha256": "834886389d74e84981d4039956dbe0a078ead7312639740a02b1f7c59a04930e"
+}

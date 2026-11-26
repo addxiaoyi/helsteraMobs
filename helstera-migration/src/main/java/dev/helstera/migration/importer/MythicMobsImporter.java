@@ -2288,6 +2288,25 @@ public final class MythicMobsImporter implements MigrationImporter {
                 return;
             }
         }
+        if (dev.helstera.api.util.ShieldBreakSpec.supports(mechanic)) {
+            try {
+                dev.helstera.api.util.ShieldBreakSpec.parse(MythicSpec.rawKeyedArguments(raw));
+                List<String> tokens = MythicSpec.executionTokens(raw);
+                for (String token : tokens.subList(1, tokens.size())) {
+                    if (!potionSuffixStart(token) && !token.equals(">"))
+                        throw new IllegalArgumentException("Shield disabling requires named arguments inside braces");
+                    if (token.startsWith("@")) dev.helstera.api.util.EntitySetterSpec
+                            .requireKnownTargeter(normalizeTargeterSuffix(token).trim());
+                }
+            } catch (IllegalArgumentException invalid) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid shield-break arguments or targeter; original line preserved: "
+                                + invalid.getMessage(), "WARN");
+                return;
+            }
+        }
         if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(mechanic)) {
             try { dev.helstera.api.util.MythicGeneratedLootSpec.parse(MythicSpec.rawKeyedArguments(raw)); }
             catch (IllegalArgumentException invalid) {
@@ -2911,6 +2930,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (brace >= 0) name = name.substring(0, brace);
         if (dev.helstera.api.util.EntitySetterSpec.supports(name)) return true;
         if (dev.helstera.api.util.EntityInteractionSpec.supports(name)) return true;
+        if (dev.helstera.api.util.ShieldBreakSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(name)) return true;
@@ -2987,6 +3007,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "shieldbreak", "disableshield", "disable-shield" -> preserveNamedMechanic("disable-shield", trimmed, brace);
             case "giveitemfromtarget", "givefromtarget", "giveitemsfromtarget", "itemgivefromtarget",
                     "give-item-from-target" -> preserveNamedMechanic("give-item-from-target", trimmed, brace);
             case "messagejson", "jsonmessage", "jmsg", "jm", "message-json" ->
@@ -3328,6 +3349,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (mapped == null) return null;
         if (Set.of("determinecondition", "detcond").contains(head)
                 || dev.helstera.api.util.MythicScoreboardSpec.supports(head)
+                || dev.helstera.api.util.ShieldBreakSpec.supports(head)
                 || dev.helstera.api.util.MythicItemCopySpec.supports(head)
                 || dev.helstera.api.util.MythicGeneratedLootSpec.supports(head)
                 || dev.helstera.api.util.MythicJsonMessageSpec.supports(head)) {

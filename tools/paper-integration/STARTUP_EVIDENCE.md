@@ -8065,3 +8065,36 @@ SpotBugs checks. Plugin SHA-256:
 These are offline routing tests. They do not replace charged-item release,
 rotation packet or natural goat-damage acceptance. The generated-loot r3 report
 retains its preceding artifact; omit `--check-current` for that historical run.
+
+## 2026-11-26 shield disabling (bounded M18 evidence)
+
+[Shield break r2](reports/paper-1.21.1-shield-break-20261126-r2.json) passes
+57 observations: 19 scenarios through native/direct/imported paths, with two
+Paper 1.21.1 protocol clients. Actual use-item packets establish main/off-hand
+blocking. The auditor checks cooldown and tick decay, main-hand priority with
+both shields, one-tick removal/restoration, serialized metadata, recipient-only
+sounds, server/client inventories, rejection cases, replacement stacks, full
+inventories, changed hotbar and service host close.
+
+Quoted/dynamic cooldowns are explicit public-parser differences. Native loses
+three displaced emeralds in the free-storage and changed-hotbar cases;
+Helstera's shield-first restoration preserves them. Immediate host-close
+restoration can preserve active blocking, unlike normal one-tick restoration.
+These differences are recorded in the [shield contract](../../docs/SHIELD_BREAK_CONTRACT.md).
+
+The independent audit passed with `--check-current`. All 1,485 rehashed
+semantic mutations were rejected. The artifact passes 2,919 Maven tests with
+zero failures/errors/skips and all 11 SpotBugs checks. Plugin SHA-256:
+`c4aa0d30cc8ee5653a3f14f39bf13686b49e2fffdd5d804c6aa84887dfee10e3`.
+[Redacted archive](reports/paper-1.21.1-shield-break-20261126-r2-logs.zip).
+
+[r1](reports/paper-1.21.1-shield-break-20261126-r1.json) remains rejected and
+archived: the client helper omitted off-hand equipment from its inventory
+snapshot. r2 captures every inventory slot and verifies off-hand slot 45.
+
+Host close is a service-level exercise, not an actual plugin reload. Actual
+disconnect/reconnect, death/respawn with keepInventory and Curse of Vanishing,
+repeated casts, blocking warmup, randomized ranges, visual/audio rendering,
+full native dispatcher scheduling and strict final release gates remain.
+Earlier focused reports retain their own JAR/source hashes and do not certify
+this later artifact.
