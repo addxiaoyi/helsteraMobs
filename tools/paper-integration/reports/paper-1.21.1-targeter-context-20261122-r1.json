@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-targeter-context-20261122-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-22T08:35:36.983593+00:00",
+  "pluginSha256": "52eb0bee209ad3fb3fe266905ee34dfc280f8302213cb68cc135cd1ea58be11d",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "9d99f26b9a7dc1d869f679ad8f3552159e8dc5870c6694041eedf7210a80fc4d",
+  "sourceHashes": {
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/Placeholders.java": "f33ce6fbc655aff02c4821bbd5664b2fb2a6c72cc85585839ee0bcf5d64137ed",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "f40634744156fa694121a0ba226bea269f0fe5595eea4292913b4030a8b7f41c",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "bb41a8c3c0a1309fbba719831256de23411069e51a48f2b0b28dbe69f148f7fc",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/InheritedTargetLocations.java": "6a15ca9105998dba893095b4900e623ecf8b1727eab6d15b95963325afff0471",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/NamedPlayerTargeter.java": "03fb1ba6cca7bf799607f5c25cc285e23ff7dbe2b50fe97456eccd814ccb4287",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/SkillTreeContext.java": "464d5da0ef0b2737a9a5e50d5c5d235f462551f8531e07844ee3e4813c8fb971",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/Targeter.java": "033a9df314c66ce7fc74375844a86736baaf382ec8667f8fa279ddb840be0e93",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/Targeters.java": "2f0fb4fd093a176c99c555bfbed0ab5673966431e054593860cdf72e846334f3",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "8a1242910f2d4a49c191314cea121381f6d131a7d2a53c98f26225a5c54aeb6a",
+    "tools/paper-integration/audit-targeter-context.py": "93d8b0795046baa3552e1bfa6a6ff6189b62dd6c636b9d88e43197be73cfc995",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/TargeterContextProbe.java": "3a878e4f6c3b724f504ac95620da7feb768532bc6e18918bbac27fffe95d7835",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/run-targeter-context-fixture.py": "f097eac033c9161bd955a736be067fbf2b89f6c040f6a4675dfc7947c11768da",
+    "tools/paper-integration/targeter-context-client.js": "392a3a08999fe2b783440968dd6d87d09755ff4b51e4a736cecfbb16913f7be7",
+    "tools/paper-integration/test-targeter-context-audit.py": "cb7c0206c1e9e90ae6bcb2a8a1f53f4c4327817fff01de9de3b83f1ce7d3cb98"
+  },
+  "limitations": [
+    "Covers PlayerByName, Interaction history and LocationsOfTargets on the pinned server.",
+    "Native targeter constructors are invoked directly; full native metaskill scheduling is outside this slice.",
+    "One actual online player supplies server and client join evidence; Interaction history is prepared in fixture data.",
+    "Results are scoped observations and do not establish whole-catalog parity or release readiness."
+  ],
+  "exitCode": 0,
+  "clientExitCode": -15,
+  "observationCount": 0,
+  "validationResult": "rejected: Location probe failed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "9704bda9d2b2f313a81ae645f92164dca0f4ddca8995530dc08dd34c14552744"
+    },
+    {
+      "path": "client.log",
+      "sha256": "f8f97500fa578adc633f0652ab716589d689dcbab1c2fa108cddbd9324c7444f"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/location.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraTargeterContextProbe/observations.yml",
+      "sha256": "42a77d50f697602baf608efcd0322edae49d769b16b0a1ec7404d9ca8d8aa4cb"
+    }
+  ],
+  "logArchive": "paper-1.21.1-targeter-context-20261122-r1-logs.zip",
+  "logArchiveSha256": "19bc8698c3d9749575e1b69e6aa44734d70f64b79e25d800bad1080afad24638"
+}

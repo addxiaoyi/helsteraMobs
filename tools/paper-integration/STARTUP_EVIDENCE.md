@@ -1,18 +1,155 @@
-Terminal role reads, work in progress (2026-11-20): detached target/trigger
-placeholders now preserve their original token instead of borrowing caster
-variables; independent live peers stay readable. onDespawn now retains the
-removed entity as trigger. The current build passes 2,477 Maven tests and
-11 clean SpotBugs reports. See [observations and remaining differences](../../docs/TERMINAL_READ_OBSERVATIONS.md).
-
-Initial command-removal reads and native delayed registry removal still differ.
-Condition/location reads and the full exact-artifact strict refresh remain open.
-The release gate correctly rejects this new JAR against the previous artifact's
-evidence. No matrix status is promoted; the latest fully release-gated artifact
-remains the model-bridge build documented below.
-
 # Paper Startup Evidence
 
 Latest full-catalog fixture `srv-paper-model-bridge-strict-20261120-r1` passed the full strict gate on Paper 1.21.1-133 with 471 registered probes (452 passed and 19 expected rejections). Imported variable-condition composition passes with escaped quotes and literal boolean operators; skill-trigger, tagged damage, and cancellation probes all pass on the production Paper event path. Plugin SHA-256: `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`. [Strict report](reports/paper-1.21.1-model-bridge-strict-20261120-r1.json) · [Redacted server log](reports/paper-1.21.1-model-bridge-strict-20261120-r1.log.gz) · [Redacted client logs](reports/paper-1.21.1-model-bridge-strict-20261120-r1.client-logs.zip) This artifact passes 2,474 Maven tests and SpotBugs. The strict radius controls verify exact-zero mob defaults, explicit type selection, ArmorStand inclusion and restored caster state; the focused native comparison is scoped separately.
+
+Terminal condition/location read observations (2026-11-21):
+`srv-paper-terminal-condition-location-20261121-r5` covers 16 COW cases across
+direct/imported runtime paths, 32 entities, 96 lifecycle rows, 576 location
+observations and 544 callbacks. Expired target/trigger conditions and location
+targeters fail closed in the runtime; native missing-registry errors remain
+recorded. The independent audit passes and 33 evidence mutations are rejected.
+The report pins the production plugin SHA-256
+`7064312b63b71745c4072c37c799f9f26183f382f8f3f2d6bc7935bd2399f88f` and all
+eight observer/audit source files. This is observation-only, not parity or
+release evidence. [Report](reports/paper-1.21.1-terminal-condition-location-20261121-r5.json) · [Redacted archive](reports/paper-1.21.1-terminal-condition-location-20261121-r5-logs.zip)
+
+Variable action scope import and direct binding (2026-11-21):
+`srv-paper-variable-action-scope-20261121-r2` passes 428 observations on Paper
+1.21.1-133 / MythicMobs 5.7.2. Each observation compares seven registries before
+and after set/add/unset/location dispatch. There are 372 valid executions across
+31 forms and imported/native-direct/canonical-direct paths, plus 56 unsupported
+scope rejections across imported/native-direct paths. Raw native source is bound
+verbatim; invalid direct references produce diagnostics and leave registries
+unchanged. The 433-file archive includes 12 entity UUIDs, all 56 native scope
+diagnostics and exceptions, 28 direct binding diagnostics and preserved import
+sources/warnings. The independent audit passed against that run's source and JAR,
+and 36 altered-evidence controls are rejected. Plugin SHA-256:
+`6bb8cb7c0360bce6aaa69110615f7dfe1f523e6cfd97523c2cb60a7676ce033c`.
+This is observation-only and does not establish native variablemath equations,
+location targeter semantics or full variable parity.
+[Report](reports/paper-1.21.1-variable-action-scope-20261121-r2.json)
+· [Archive](reports/paper-1.21.1-variable-action-scope-20261121-r2-logs.zip)
+· [Contract](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-action-scope-import-2026-11-21)
+
+The historical [r1 report](reports/paper-1.21.1-variable-action-scope-20261121-r1.json)
+and [archive](reports/paper-1.21.1-variable-action-scope-20261121-r1-logs.zip) retain
+their original 276-row imported/canonical-direct scope; the backward-compatible
+audit still passes without a current-artifact check.
+
+Variable math equations (2026-11-21):
+`srv-paper-variable-math-20261121-r1` records 300 observations on Paper 1.21.1-133 /
+MythicMobs 5.7.2: 30 cases × five scopes × native-direct/imported paths. The
+304-file archive retains eight entities, 12 source hashes, seven candidate
+registries per key and deadline timestamps. Finite equations, INTEGER/FLOAT
+preservation, equation/duration alias precedence and deadline replacement or
+preservation pass. There are 270 equal value results and 30 explicit differences
+where native writes NaN/Infinity-derived values and the runtime leaves the old
+value and deadline unchanged. Native division-zero exceptions and missing or
+non-numeric `INVALID_CONFIG` outcomes are recorded separately from runtime
+dispatch without mutation. The independent audit passed against that run's source and JAR,
+and 36 altered-evidence controls are rejected. Plugin SHA-256:
+`ee4333f20c596741aae64f662ae90c7a7e4f79c97667b0bdc33ef969d02a983f`.
+[Report](reports/paper-1.21.1-variable-math-20261121-r1.json)
+· [Archive](reports/paper-1.21.1-variable-math-20261121-r1-logs.zip)
+· [Contract and migration note](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-math-equations-2026-11-21)
+This remains observation-only: full native skill dispatch, placeholder parity,
+real-time expiry crossing and full variable parity are not established. The
+earlier scope and terminal reports retain their original artifacts.
+
+Variable location values (2026-11-21):
+`srv-paper-variable-location-20261121-r1` records 300 observations on Paper
+1.21.1-133 / MythicMobs 5.7.2: 15 cases × five scopes × entity/location dispatch ×
+native-direct/imported paths. Distinct caster, recipient, trigger, origin and outer
+positions verify static value selection, coordinates and orientation independently
+of the registry. All live values and deadlines match: native records 252 successful
+writes, 30 TARGET/location `INVALID_CONFIG` results and 18 missing-trigger exceptions;
+runtime dispatch leaves registries unchanged for the latter cases. Eighteen raw
+deadline-1000 location writes expire on read, with native stored/live snapshots
+kept separately. The archive has 304 files, eight entity UUIDs and 13 source hashes.
+The independent audit passed against that run's source and JAR, and 49 rehashed altered-evidence
+controls are rejected. Plugin SHA-256:
+`a607c685d8cb066cfc619c7885dfc612d2d62294998edc61eb0d522228178968`.
+[Report](reports/paper-1.21.1-variable-location-20261121-r1.json)
+· [Archive](reports/paper-1.21.1-variable-location-20261121-r1-logs.zip)
+· [Contract and migration note](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-values-2026-11-21)
+This is observation-only: target/AI values are covered separately below; dynamic
+selectors and full native dispatch remain open. This static-location archive and
+the math, scope and terminal archives retain their original JARs; audit them
+without a current-artifact check.
+
+Variable location AI targets (2026-11-21):
+`srv-paper-variable-location-target-20261121-r1` passes 240 observations on Paper
+1.21.1-133 / MythicMobs 5.7.2. The supported subset is Creature casters without
+threat tables. `@target` / `@T` and `@targetlocation` / `@targetLoc` / `@TL` read
+the current caster AI target independently of the recipient registry, including
+54 writes after binding-time targets are changed. Missing `@targetlocation`
+produces 36 origin fallbacks. Native records 198 `SUCCESS`, 24 TARGET/location
+`INVALID_CONFIG` and 18 missing-`@target` exceptions; runtime preserves state for
+the latter 42 observations. Values and deadlines match in nine candidate
+registries. The 244-file archive retains 12 entity UUIDs and 15 source hashes.
+The independent audit passed against that run's source and JAR, and all 56
+rehashed altered-evidence controls are rejected. Plugin SHA-256:
+`88f82621a911078edad0f0e39a2760ee513824538367a99666602f1ebaf99f1d`.
+[Report](reports/paper-1.21.1-variable-location-target-20261121-r1.json)
+· [Archive](reports/paper-1.21.1-variable-location-target-20261121-r1-logs.zip)
+· [Contract and remaining work](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-ai-targets-2026-11-21)
+This is observation-only. That increment excludes player, non-Creature,
+threat-backed and retained terminal contexts; threat targets are extended below.
+Full native parsing/scheduling and full variable parity remain open; native
+mechanics are invoked directly here. Audit this historical archive without
+`--check-current` after the subsequent threat-target change.
+
+Variable location threat targets (2026-11-21):
+`srv-paper-variable-location-threat-20261121-r1` passes 240 observations on Paper
+1.21.1-133 / MythicMobs 5.7.2. Saved threat selections take precedence over
+distinct vanilla AI targets. Native setup retains A at threat 100 after B gains
+105; runtime explicitly selects A with the same scores. Reads preserve both
+tables and selected UUIDs. The comparison includes 54 writes after switching the
+selection following binding and 36 empty-table origin fallbacks. Native records
+198 `SUCCESS`, 24 TARGET/location `INVALID_CONFIG` and 18 missing-`@target`
+exceptions; runtime leaves state unchanged for those failures. The 244-file
+archive retains 14 entity UUIDs, ten candidate registries and 17 source hashes.
+The independent audit passed against that run's source and JAR and rejects all
+73 rehashed altered-evidence controls. Plugin SHA-256:
+`da83199884e855b632a567a69d2e61c9a33d1f654aa319e35a0ad4fc4e2400ce`.
+[Report](reports/paper-1.21.1-variable-location-threat-20261121-r1.json)
+· [Archive](reports/paper-1.21.1-variable-location-threat-20261121-r1-logs.zip)
+· [Contract and remaining work](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-threat-targets-2026-11-21)
+This is observation-only. The runtime table is prepared explicitly; production AI
+tick wiring is covered by unit tests. Native switching, focus, removal and decay
+policies remain different. Full native parsing/scheduling and terminal target
+selection remain open; ordinary players are covered separately below. This threat
+archive and earlier archives retain their own artifact hashes; omit
+`--check-current` when auditing them.
+
+Variable location player targets (2026-11-21):
+`srv-paper-variable-location-player-20261121-r1` passes 300 observations with two
+real Mineflayer players on Paper 1.21.1-133 / MythicMobs 5.7.2. Native player
+profiles exercise ordinary player aiming: 32-block entity selection and 64-block
+location rays, with distinct recipients and origins. Stone/glass obstruction,
+BARRIER passage, creative filtering, survival player selection, origin misses,
+block intersections, empty endpoints and aiming changes after binding match.
+Native records 270 `SUCCESS` and 30 TARGET/location `INVALID_CONFIG` outcomes;
+runtime preserves state for the latter. The archive has 305 files, 12 distinct
+UUIDs, 17 source hashes and nine candidate registries per case. Two online player
+UUIDs are explicitly reused across the direct/imported paths.
+The independent audit passes with `--check-current` and rejects all 67 rehashed
+altered-evidence controls. Plugin SHA-256:
+`59e9a1cc8012712bb2a8352e38ccf454376cae0cb1040f8bb167ce4d83ec8b3f`.
+[Report](reports/paper-1.21.1-variable-location-player-20261121-r1.json)
+· [Archive](reports/paper-1.21.1-variable-location-player-20261121-r1-logs.zip)
+· [Contract and remaining work](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-player-targets-2026-11-21)
+This is observation-only, using directly constructed native mechanics. Player
+models with threat tables, ActiveMob-wrapped players, retained terminal contexts,
+selector options and external modifications to the default transparent-material
+set remain excluded. Candidate overlap ordering and spectator targeting have
+unit/bytecode coverage, not Paper coverage in this fixture.
+
+The current build passes 2,639 Maven tests and 11 clean SpotBugs reports. The
+full exact-artifact strict refresh remains open.
+The release gate correctly rejects this new JAR against the previous artifact's
+evidence. No matrix status is promoted; the latest fully release-gated artifact
+remains the model-bridge build documented above.
 
 Focused BowTension comparison `srv-paper-bow-tension-20261120-r10` passes six
 real Mineflayer player shots on Paper 1.21.1-133. For each observed force,
@@ -7796,3 +7933,31 @@ The plugin SHA-256 is
 `9b66ac4f5ad543cac9c27414b8cfa6c20ae83544da499c46971c445de2dd67e2` and the
 Paper jar SHA-256 is `39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9`.
 
+
+
+## Internal completion batch: 2026-11-22 scoped observations
+
+The full Maven verification at `/tmp/helstera-completion-20261122-verify-r3.log`
+passed 2,802 tests and 11 SpotBugs module checks. The observed plugin SHA-256 is
+`5b7cb5b06527541c22df4d8140e5ce4857177873f853799ee6829cdcb902e711`.
+Further source changes are in progress; these reports certify their recorded
+artifact and scope, not the subsequent JAR or the final release gate.
+
+- [Model extension actions](reports/paper-1.21.1-model-actions-20261122-r1.json):
+  53 observations through native dispatch, including reload and invalid binding
+  controls. The independent evidence validator passed and rejected 1,013
+  semantic/archive mutations. These are Helstera-defined extensions, not
+  same-name native Mythic mechanics.
+- [AI selector repairs](reports/paper-1.21.1-selector-repairs-20261122-r1.json):
+  21 observations with a real player, covering door-policy restoration, flee
+  species selection and random look behavior. The validator passed and rejected
+  263 mutations. Native Goal composition remains separate work.
+- [Base Aura lifecycle](reports/paper-1.21.1-aura-lifecycle-20261122-r1.json):
+  38 cases and six real-client BossBars. The validator passed and rejected
+  2,252 mutations. Event-specific Aura subclasses, attachments and whole-Aura
+  parity are outside this report.
+
+The setter r1/r2 reports remain rejected. r1 led to valid loaded-entity fixture
+preconditions; r2 then exposed the target coordinate mismatch and MiniMessage
+serialization assumption. Corrective implementation and fixture work must be
+followed by a new successful report, never by relabeling those old reports.

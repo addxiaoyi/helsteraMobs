@@ -29,6 +29,25 @@ class MythicModelArgumentsTest {
         for (String line : new String[]{"modelplaying{m=idle;delay=2} true", "modelplaying{m=idle} cast foo", "modelplaying idle true", "other true"})
             assertThrows(IllegalArgumentException.class, () -> MythicModelArguments.parse("modelplaying", line, true));
     }
+    @Test void customMountExtensionsHaveNoPrivateArguments() {
+        for (String name : new String[]{"modelmount", "modelunmount"}) {
+            assertNotNull(MythicModelArguments.parse(name, name + "{} @target", false));
+            assertNotNull(MythicModelArguments.parse(name, name + "{delay=2;forcesync=true} @target", false));
+            for (String body : new String[]{"seat=1", "m=example/emberling", "amount=1", "animation=idle"})
+                assertThrows(IllegalArgumentException.class,
+                        () -> MythicModelArguments.parse(name, name + "{" + body + "}", false));
+        }
+    }
+    @Test void customHealingRequiresFiniteNonnegativeLiteralAmountAndRejectsConflictingAliases() {
+        assertEquals(1, MythicModelArguments.parse("modelheal", "modelheal{}", false).amount());
+        assertEquals(0, MythicModelArguments.parse("modelheal", "modelheal{amount=0}", false).amount());
+        assertEquals(2.5, MythicModelArguments.parse("modelheal", "modelheal{a=2.5;delay=2} @target", false).amount());
+        assertEquals(Double.MAX_VALUE, MythicModelArguments.parse("modelheal", "modelheal{amount=1.7976931348623157e308}", false).amount());
+        for (String body : new String[]{"amount=-1", "amount=NaN", "amount=Infinity", "amount=1e999",
+                "amount=", "amount=<caster.health>", "a=1;amount=1", "amount=1;AMOUNT=2", "m=2", "overheal=true"})
+            assertThrows(IllegalArgumentException.class,
+                    () -> MythicModelArguments.parse("modelheal", "modelheal{" + body + "}", false), body);
+    }
     @Test void registrationVersionScopeIsNarrowerThanLookupScope() {
         assertTrue(MythicMobsModelMechanics.supportsVersion("5.7.2"));
         assertTrue(MythicMobsModelMechanics.supportsVersion("5.7.2-SNAPSHOT"));

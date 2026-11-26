@@ -746,9 +746,11 @@ public final class SkillCatalog {
                 java.util.Map.entry("damage-target", (ActionFactory) a -> {
                     var dmg = dynamicKeyedNum(a, 0, 0.0, "amount", "a", "damage", "value");
                     var tags = damageTags(a);
+                    boolean powerAffectsDamage = a.stream().noneMatch(value ->
+                            value.equalsIgnoreCase("poweraffectsdamage=false") || value.equalsIgnoreCase("pad=false"));
                     return ctx -> {
-                        double amount = dmg.applyAsDouble(ctx);
-                        if (amount <= 0) return;
+                        double amount = dmg.applyAsDouble(ctx) * (powerAffectsDamage ? ctx.skillPower() : 1.0);
+                        if (!Double.isFinite(amount) || amount <= 0) return;
                         Location origin = ctx.origin().orElse(ctx.instanceValid() ? ctx.instance().location() : null);
                         if (origin == null || origin.getWorld() == null) return;
                         Entity source = ctx.instanceValid()

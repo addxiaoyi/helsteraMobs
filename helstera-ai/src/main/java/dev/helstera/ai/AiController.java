@@ -67,6 +67,8 @@ public final class AiController {
     private Location patrolTarget;
     private Location home;
     private final Random random = new Random();
+    private final ZombieDoorPolicy doorPolicy = new ZombieDoorPolicy();
+    private boolean closed;
     /** Last Paper goal-selector check observed for each conditional target rule. */
     private final Map<String, Integer> lastConditionalTargetCheckTicks = new HashMap<>();
     /** 寻路服务；未注入时全部走直线，保证旧配置行为不变。 */
@@ -88,7 +90,18 @@ public final class AiController {
      * @param fresh 新档案；null 会被忽略（保留旧引用优于退化成无档案）
      */
     public void rebindProfile(AiProfile fresh) {
-        if (fresh != null) this.profile = fresh;
+        if (fresh != null && !closed) {
+            this.profile = fresh;
+            applySelectorProfile(inst.entity(), inst.location());
+        }
+    }
+
+    /** Releases temporary native attributes when the controller detaches or is replaced. */
+    public void close() {
+        if (closed) return;
+        closed = true;
+        try { doorPolicy.close(); }
+        catch (RuntimeException error) { warnSelector("breakdoors-restore", error.getClass().getSimpleName()); }
     }
 
     public AiController(ModelInstanceImpl inst, AiProfile profile,
@@ -139,8 +152,9 @@ public final class AiController {
         LivingEntity previous = targetEntity();
         combatTarget = entity;
         target = entity instanceof Player player ? player : null;
-        syncNativeTarget(entity);
         if (entity instanceof Player player && threat != null) threat.focus(player.getUniqueId());
+        commitThreatTarget(entity);
+        syncNativeTarget(entity);
         if (previous != entity) bus.post(new ModelTargetChangedEvent(inst, previous, entity));
     }
 
@@ -148,6 +162,7 @@ public final class AiController {
         LivingEntity previous = targetEntity();
         combatTarget = null;
         target = null;
+        commitThreatTarget(null);
         syncNativeTarget(null);
         if (previous != null) bus.post(new ModelTargetChangedEvent(inst, previous, null));
     }
@@ -164,7 +179,8 @@ public final class AiController {
                 + " target-matches=" + selectorTargetMatches(combatTarget)
                 + " combat-target=" + (combatTarget == null ? null : combatTarget.getUniqueId())
                 + " conditional=" + lastSelectorConditionDiagnostic
-                + " conditional-player=" + lastConditionalPlayerDiagnostic;
+                + " conditional-player=" + lastConditionalPlayerDiagnostic
+                + " warnings=" + new java.util.TreeSet<>(reportedSelectorWarnings);
     }
 
     /**
@@ -204,6 +220,7 @@ public final class AiController {
             }
             if (living instanceof Player p) target = p;
             combatTarget = living;
+            commitThreatTarget(living);
         }
         if (anim != null) anim.intent(EntityAnimationStateMachine.AnimState.HURT);
     }
@@ -244,6 +261,7 @@ public final class AiController {
     }
 
     public void markDead() {
+        commitThreatTarget(null);
         transition(State.DEAD);
         inst.dead = true;
         if (anim != null) anim.intent(EntityAnimationStateMachine.AnimState.DEATH);
@@ -251,7 +269,7 @@ public final class AiController {
 
     /** AI 决策节拍（建议每 10 Tick 调一次，主线程）。 */
     public void tick() {
-        if (inst.dead || !inst.isValid()) return;
+        if (closed || inst.dead || !inst.isValid()) return;
         Entity base = inst.entity();
         if (base == null || !base.isValid()) return;
         Location loc = base.getLocation();
@@ -298,7 +316,10 @@ public final class AiController {
     private AiProfile.TargetMode selectorTargetMode = AiProfile.TargetMode.PLAYERS;
     private boolean selectorLooksAtPlayers;
     private boolean selectorLooksAtTarget;
+    private boolean selectorRandomLookAround;
+    private int nextRandomLookTick = Integer.MIN_VALUE;
     private boolean selectorAvoidsEntities;
+    private List<SelectorFleeRule> fleeRules = List.of();
     private boolean selectorAttackerFirst;
     private boolean selectorHurtByFirst;
     private boolean selectorThreatPriority;
@@ -351,9 +372,9 @@ public final class AiController {
                 "fleewolf", "flee_wolf", "fleewolves", "flee_wolves", "runfromwolves",
                 "run_from_wolves", "fleefaction", "flee_faction", "runfromfaction",
                 "run_from_faction");
-        selectorRangedAttack = policy.rangedAttack() || profile.rangedAttack
+        selectorRangedAttack = policy.rangedAttack()
                 || hasGoal("rangedattack", "ranged_attack", "arrowattack", "bowattack", "bowshoot", "bowmaster");
-        selectorLeapAtTarget = policy.leapAtTarget() || profile.leapAtTarget
+        selectorLeapAtTarget = policy.leapAtTarget()
                 || hasGoal("leapattarget", "leap_at_target");
         selectorCanSwim = policy.swim() || hasGoal("float", "swim");
         selectorCanOpenDoors = policy.openDoors() || hasGoal("opendoor", "opendoors", "open_door", "open_doors");
@@ -367,8 +388,10 @@ public final class AiController {
         selectorAllowsPlayerTargets = policy.playerTargets();
         selectorTargetMode = policy.targetMode();
         selectorLooksAtPlayers = policy.lookAtPlayers()
-                || hasGoal("lookatplayers", "look_at_players", "randomlookaround", "lookaround");
+                || hasGoal("lookatplayers", "look_at_players");
         selectorLooksAtTarget = hasGoal("lookattarget", "look_at_target");
+        selectorRandomLookAround = hasGoal("randomlookaround", "lookaround");
+        if (!selectorRandomLookAround) nextRandomLookTick = Integer.MIN_VALUE;
         selectorAvoidsEntities = policy.avoidEntities() || hasGoal("avoidentity", "avoid_entity",
                 "fleeplayers", "flee_players", "runfromplayers", "run_from_players", "fleegolems",
                 "flee_golems", "runfromgolems", "run_from_golems", "fleevillagers", "flee_villagers",
@@ -381,20 +404,34 @@ public final class AiController {
         selectorTargetFaction = policy.targetFaction();
         selectorFactionHostile = policy.factionHostile();
         selectorTemptItem = policy.temptItem();
-        if (selectorTemptItem == null) selectorTemptItem = temptItemFromGoals(profile.goals);
         selectorTemptRange = policy.temptRange();
         selectorHasExplicitGoalPriority = !profile.goals.isEmpty();
         selectorHasExplicitTargets = selectorPlan.explicitTargets();
-        selectorFleePriority = policy.goalPriority(profile.goals, "flee");
-        selectorAttackPriority = policy.goalPriority(profile.goals, "attack");
+        List<String> activeGoals = selectorPlan.goals().stream().map(SelectorPlan.Rule::raw).toList();
+        selectorFleePriority = policy.goalPriority(activeGoals, "flee");
+        selectorAttackPriority = policy.goalPriority(activeGoals, "attack");
+        List<SelectorFleeRule> activeFleeRules = new ArrayList<>();
+        for (SelectorPlan.Rule rule : selectorPlan.goals()) {
+            try {
+                SelectorFleeRule fleeRule = SelectorFleeRule.parse(rule, profile.sightRadius);
+                if (fleeRule != null) activeFleeRules.add(fleeRule);
+            } catch (IllegalArgumentException error) { warnSelector("goal", rule.raw() + " (" + error.getMessage() + ")"); }
+        }
+        fleeRules = List.copyOf(activeFleeRules);
         applySelectorAdapters(base, loc);
+        for (String unsupported : policy.unsupported()) {
+            if (unsupported.contains("(")) warnSelector("policy", unsupported);
+        }
         for (String unsupported : selectorPlan.unsupported()) {
             int separator = unsupported.indexOf(':');
             warnSelector(separator < 0 ? "selector" : unsupported.substring(0, separator),
                     separator < 0 ? unsupported : unsupported.substring(separator + 1));
         }
         if (selectorTargetMode != AiProfile.TargetMode.PLAYERS) target = null;
-        if (!selectorTargetMatches(combatTarget)) combatTarget = null;
+        if (combatTarget != null && !selectorTargetMatches(combatTarget)) {
+            combatTarget = null;
+            commitThreatTarget(null);
+        }
     }
 
     private void refreshRouteState() {
@@ -427,20 +464,14 @@ public final class AiController {
 
     private void applySelectorAdapters(Entity base, Location loc) {
         try {
+            if (!doorPolicy.apply(base, selectorCanBreakDoors))
+                warnSelector("goal", "breakdoors requires a Zombie supporting door breaking");
             if (base instanceof org.bukkit.entity.Mob mob) {
                 com.destroystokyo.paper.entity.Pathfinder pathfinder = mob.getPathfinder();
                 if (pathfinder != null) {
                     pathfinder.setCanFloat(selectorCanFloat);
                     pathfinder.setCanOpenDoors(selectorCanOpenDoors);
                     pathfinder.setCanPassDoors(selectorCanOpenDoors);
-                    // Paper 没有 setCanBreakDoors；vanilla 的破门能力由生物属性
-                    // 固定，只能记为诊断，不能假装已生效。
-                    if (selectorCanBreakDoors && !reportedSelectorWarnings.contains("goal-breakdoors")) {
-                        reportedSelectorWarnings.add("goal-breakdoors");
-                        org.bukkit.Bukkit.getLogger().warning(
-                                "AI goal 'breakdoors' has no public Pathfinder toggle;"
-                                        + " native mob attributes decide door breaking.");
-                    }
                     if (selectorTargetMode == AiProfile.TargetMode.NONE && !selectorCanPatrol) {
                         pathfinder.stopPathfinding();
                     }
@@ -448,13 +479,36 @@ public final class AiController {
             }
             if (base instanceof LivingEntity living) living.setSwimming(selectorCanFloat && base.isInWater());
             if (selectorAvoidSun && base instanceof org.bukkit.entity.Mob mob && mob.isInDaylight()) moveToShade(mob, loc);
-            if (selectorLooksAtPlayers) { Player player = nearestVisiblePlayer(loc); if (player != null) faceToward(player.getLocation()); }
-            if (selectorLooksAtTarget) {
-                LivingEntity current = targetEntity();
-                if (current != null) faceToward(current.getLocation());
-            }
+            applyLookGoals(loc);
         } catch (RuntimeException ex) {
             warnSelector("adapter", ex.getClass().getSimpleName());
+        }
+    }
+
+    private void applyLookGoals(Location location) {
+        if (location == null || (!selectorLooksAtPlayers && !selectorLooksAtTarget && !selectorRandomLookAround)) return;
+        for (SelectorPlan.Rule rule : selectorPlan.goals()) {
+            switch (rule.token()) {
+                case "lookatplayers", "look_at_players" -> {
+                    Player player = nearestVisiblePlayer(location);
+                    if (player != null) { faceToward(player.getLocation()); return; }
+                }
+                case "lookattarget", "look_at_target" -> {
+                    LivingEntity current = targetEntity();
+                    if (current != null && current.isValid() && !current.isDead()) { faceToward(current.getLocation()); return; }
+                }
+                case "randomlookaround", "lookaround" -> {
+                    if (isInCombat()) continue;
+                    int tick = Bukkit.getCurrentTick();
+                    if (tick >= nextRandomLookTick) {
+                        double angle = random.nextDouble() * Math.PI * 2;
+                        faceToward(location.clone().add(Math.cos(angle), 0, Math.sin(angle)));
+                        nextRandomLookTick = tick + 20 + random.nextInt(21);
+                    }
+                    return;
+                }
+                default -> { }
+            }
         }
     }
 
@@ -486,19 +540,22 @@ public final class AiController {
         if (state == State.DEAD) return;
         boolean fleeHasPriority = !selectorHasExplicitGoalPriority
                 || selectorFleePriority <= selectorAttackPriority;
-        if (selectorCanFlee && fleeHasPriority && healthRatio <= profile.fleeHealthRatio) {
+        if (selectorCanFlee && (!selectorAvoidsEntities || hasGoal("panic"))
+                && fleeHasPriority && healthRatio <= profile.fleeHealthRatio) {
             transition(State.FLEE);
             flee(loc);
             return;
         }
         if (selectorAvoidsEntities && fleeHasPriority) {
-            LivingEntity danger = nearestDanger(loc);
-            if (danger != null) {
+            FleeTarget selected = nearestDanger(loc);
+            if (selected != null && (!selectorHasExplicitGoalPriority || selected.rule().priority() <= selectorAttackPriority)) {
+                LivingEntity danger = selected.entity();
                 target = danger instanceof Player player ? player : null;
                 combatTarget = danger;
                 syncNativeTarget(danger);
                 transition(State.FLEE);
-                moveAwayFrom(loc, danger.getLocation());
+                double distance = safeDistance(loc, danger.getLocation());
+                moveAwayFrom(loc, danger.getLocation(), distance < 7 ? selected.rule().speed() : selected.rule().safeSpeed());
                 return;
             }
         }
@@ -507,6 +564,7 @@ public final class AiController {
         // 那等于仇恨表白建。
         LivingEntity foe = preferredCombatTarget(loc, sensed);
         if (foe != null && (!foe.isValid() || foe.isDead())) foe = null;
+        commitThreatTarget(foe);
         syncNativeTarget(foe);
         if (foe != null) {
             double dist = safeDistance(loc, foe.getLocation());
@@ -559,6 +617,11 @@ public final class AiController {
         }
     }
 
+    /** Records the committed threat member independently of incidental flee/native targets. */
+    private void commitThreatTarget(LivingEntity entity) {
+        if (threat != null) threat.selectTarget(entity == null ? null : entity.getUniqueId());
+    }
+
     /** Mirrors the custom selector result into Bukkit's native Mob target slot. */
     private void syncNativeTarget(LivingEntity entity) {
         Entity base = inst.entity();
@@ -571,26 +634,30 @@ public final class AiController {
     }
 
     /** 按仇恨选出当前目标；未启用仇恨表或无有效仇恨时返回 null。 */
-    private LivingEntity nearestDanger(Location origin) {
+    private record FleeTarget(LivingEntity entity, SelectorFleeRule rule) {}
+
+    private FleeTarget nearestDanger(Location origin) {
         if (origin == null || origin.getWorld() == null) return null;
         Entity self = inst.entity();
-        LivingEntity nearest = null;
-        double best = profile.sightRadius * profile.sightRadius;
-        for (Entity entity : origin.getWorld().getNearbyEntities(origin, profile.sightRadius, profile.sightRadius, profile.sightRadius)) {
-            if (!(entity instanceof LivingEntity living) || living == self || !living.isValid() || living.isDead()) continue;
-            if (dev.helstera.api.behavior.Factions.allied(self, living)) continue;
-            double distance = living.getLocation().distanceSquared(origin);
-            if (distance < best) { nearest = living; best = distance; }
+        for (SelectorFleeRule rule : fleeRules) {
+            LivingEntity nearest = null;
+            double best = rule.distance();
+            for (Entity entity : origin.getWorld().getNearbyEntities(origin, rule.distance(), rule.distance(), rule.distance())) {
+                if (!(entity instanceof LivingEntity living) || !rule.matches(self, living)) continue;
+                double distance = safeDistance(origin, living.getLocation());
+                if (distance >= 0 && distance <= best) { nearest = living; best = distance; }
+            }
+            if (nearest != null) return new FleeTarget(nearest, rule);
         }
-        return nearest;
+        return null;
     }
 
-    private void moveAwayFrom(Location origin, Location danger) {
+    private void moveAwayFrom(Location origin, Location danger, double multiplier) {
         if (origin == null || danger == null || origin.getWorld() == null || !origin.getWorld().equals(danger.getWorld())) return;
         Vector away = origin.toVector().subtract(danger.toVector());
         away.setY(0);
         if (away.lengthSquared() < 0.001) away = new Vector(1, 0, 0);
-        moveBy(away.normalize().multiply(profile.moveSpeed), origin);
+        moveBy(away.normalize().multiply(profile.moveSpeed * multiplier), origin);
         if (anim != null) anim.enterLocomotion();
     }
 
@@ -1037,20 +1104,6 @@ public final class AiController {
                     || inventory.getItemInOffHand().getType() == material) return true;
         }
         return false;
-    }
-
-    private static String temptItemFromGoals(List<String> goals) {
-        if (goals == null) return null;
-        for (String raw : goals) {
-            if (raw == null) continue;
-            String[] parts = raw.trim().split("\\s+");
-            int index = parts.length > 0 && parts[0].matches("\\d+") ? 1 : 0;
-            if (index < parts.length && parts[index].equalsIgnoreCase("tempt")
-                    && index + 1 < parts.length && !parts[index + 1].isBlank()) {
-                return parts[index + 1].trim();
-            }
-        }
-        return null;
     }
 
     /**

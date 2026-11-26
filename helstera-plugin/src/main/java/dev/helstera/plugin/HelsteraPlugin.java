@@ -323,6 +323,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                                         mythicMobs.getDataFolder().toPath().resolve("Packs"), packId));
                 this.auraRegistry = new dev.helstera.ai.skill.AuraRegistry();
                 dev.helstera.ai.skill.SkillExtras.auraRegistry(auraRegistry);
+                getServer().getPluginManager().registerEvents(
+                        new dev.helstera.ai.skill.AuraLifecycleListener(() -> auraRegistry), this);
                 this.auraCleanupTask = getServer().getScheduler().runTaskTimer(
                         this, () -> {
                             auraRegistry.tick();
@@ -1632,6 +1634,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             null, auraTarget, 1.0, 0, 0, "mythic-aura-event-probe", null,
                             auraTarget, java.util.List.of(auraTarget), auraTarget.getLocation(), tree, auraEvent);
                     var startSkillCasts = new java.util.concurrent.atomic.AtomicInteger();
+                    var startCallbackTree = new java.util.concurrent.atomic.AtomicReference<dev.helstera.api.behavior.SkillTreeContext>();
                     var targetContextPreserved = new java.util.concurrent.atomic.AtomicBoolean(true);
                     var tickSkillCasts = new java.util.concurrent.atomic.AtomicInteger();
                     var tickTargetContextPreserved = new java.util.concurrent.atomic.AtomicBoolean(true);
@@ -1642,6 +1645,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                     dev.helstera.ai.skill.SkillExtras.auraRegistry(tickRegistry);
                     dev.helstera.ai.skill.SkillExtras.auraStartSkillDispatcher((name, scoped) -> {
                         startSkillCasts.incrementAndGet();
+                        startCallbackTree.set(scoped == null ? null : scoped.skillTree().orElse(null));
                         targetContextPreserved.compareAndSet(true,
                                 scoped != null && scoped.targetEntity().orElse(null) == auraTarget);
                         return skills.castSkill(name, scoped);
@@ -1745,7 +1749,8 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                             }
                         }
                         auraStartFirstDispatched = runIntegrationAction(skills, behaviors, auraAction, auraContext)
-                                && startSkillCasts.get() == 1 && tree.branchUnlocked("combat");
+                                && startSkillCasts.get() == 1 && startCallbackTree.get() != null
+                                && startCallbackTree.get().branchUnlocked("combat") && !tree.branchUnlocked("combat");
                         boolean mergedApply = runIntegrationAction(skills, behaviors, auraAction, auraContext);
                         auraStartMergeNoRedispatch = mergedApply && startSkillCasts.get() == 1;
                         auraStartTargetContextPreserved = targetContextPreserved.get();
@@ -29838,6 +29843,15 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         } else {
             inst = instances().spawn(model, loc, opts);
         }
+        if (cfg.contains("ai.pathfinding-malus")) {
+            var malusResult = dev.helstera.runtime.instance.PaperPathfindingMalus.apply(
+                    inst == null ? null : inst.baseEntity().orElse(null), cfg.get("ai.pathfinding-malus"));
+            if (!malusResult.success()) {
+                String warning = mobId + " ai.pathfinding-malus: " + malusResult.detail();
+                getLogger().warning("[Mob Options] " + warning);
+                mobWarnings.add(warning);
+            }
+        }
         if (inst != null) {
             inst.baseEntity().ifPresent(entity ->
                     dev.helstera.api.behavior.ManagedMobIdentity.mark(entity, mobId));
@@ -32412,6 +32426,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
         var cfg = YamlConfiguration.loadConfiguration(new java.io.File(getDataFolder(), "skills.yml"));
         try {
             reloadPins(source);
+            if (auraRegistry != null) auraRegistry.clear();
             sk.loadSkills(cfg.getConfigurationSection("skills"));
             var sec = cfg.getConfigurationSection("skills");
             int count = sec == null ? 0 : sec.getKeys(false).size();
@@ -32649,6 +32664,19 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
 
                 org.bukkit.configuration.ConfigurationSection aiSec = cfg.getConfigurationSection("ai");
                 if (aiSec != null) {
+                    if (aiSec.contains("pathfinding-malus")) {
+                        var parsedMalus = dev.helstera.api.util.MythicPathfindingMalus.parseRuntime(
+                                aiSec.get("pathfinding-malus"));
+                        for (String warning : parsedMalus.warnings()) {
+                            out.add("mobs/" + p.getFileName() + " ai.pathfinding-malus: " + warning);
+                        }
+                        if (!parsedMalus.values().isEmpty()
+                                && !dev.helstera.runtime.instance.PaperPathfindingMalus.supportsVersion(
+                                        getServer().getName(), getServer().getMinecraftVersion())) {
+                            out.add("mobs/" + p.getFileName()
+                                    + " ai.pathfinding-malus requires Paper 1.21.1; values will not be applied.");
+                        }
+                    }
                     String prof = aiSec.getString("profile");
                     if (prof != null && !prof.isBlank() && !profiles.contains(prof.toLowerCase(Locale.ROOT))) {
                         out.add("mobs/" + p.getFileName() + " 的 ai.profile \"" + prof

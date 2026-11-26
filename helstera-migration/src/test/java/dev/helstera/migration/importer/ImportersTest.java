@@ -1822,7 +1822,7 @@ class ImportersTest {
                       - commandtarget{c=msg @s hello}
                       - setvariable{var=skill.counter;type=INTEGER;value=2}
                       - variableadd{var=skill.counter;amount=3}
-                      - variablemath{var=skill.counter;op=*;value=2}
+                      - variablemath{var=skill.counter;equation=x*2}
                       - variableunset{var=skill.counter}
                       - setvariablelocation{var=skill.mark}
                       - locationunset{var=skill.mark}
@@ -1867,9 +1867,9 @@ class ImportersTest {
         assertTrue(actions.contains("command-target \"msg @s hello\""), actions.toString());
         assertTrue(actions.contains("set-variable var=skill.counter type=INTEGER value=\"2\""), actions.toString());
         assertTrue(actions.contains("variable-add var=skill.counter value=3"), actions.toString());
-        assertTrue(actions.contains("var-math var=skill.counter op=* value=2"), actions.toString());
+        assertTrue(actions.contains("variable-math var=skill.counter equation=\"x*2\""), actions.toString());
         assertTrue(actions.contains("variable-unset var=skill.counter"), actions.toString());
-        assertTrue(actions.contains("variable-location-set var=skill.mark"), actions.toString());
+        assertTrue(actions.contains("variable-location-set var=skill.mark value=@self"), actions.toString());
         assertTrue(actions.contains("location-unset var=skill.mark"), actions.toString());
         assertTrue(actions.contains("signal \"phase2\" \"ready\" global"), actions.toString());
         assertTrue(actions.contains("suicide"), actions.toString());

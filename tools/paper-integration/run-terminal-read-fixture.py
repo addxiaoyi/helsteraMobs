@@ -25,13 +25,14 @@ def main():
     parser.add_argument('--revision',required=True)
     parser.add_argument('--cache-directory',required=True)
     parser.add_argument('--observe-only',action='store_true')
-    parser.add_argument('--boundary',action='store_true',help='observe ticks 0-8, including target mutations and native evaluation stamps')
+    mode=parser.add_mutually_exclusive_group()
+    mode.add_argument('--boundary',action='store_true',help='observe ticks 0-8, including target mutations and native evaluation stamps')
+    mode.add_argument('--condition-location',action='store_true',help='observe terminal variable conditions and location targeters')
     args=parser.parse_args()
     if not args.observe_only:raise ValueError('Observation fixture: native results must be audited before a parity validator is added')
     import yaml
     if not re.fullmatch(r'r[1-9][0-9]*',args.revision):raise ValueError('Invalid revision')
-    validator=None if args.observe_only else module('terminal_variable_validator','validate-terminal-read.py')
-    kind='terminal-boundary' if args.boundary else 'terminal-read'
+    kind='terminal-condition-location' if args.condition_location else 'terminal-boundary' if args.boundary else 'terminal-read'
     day=datetime.now(timezone.utc).strftime('%Y%m%d');fixture=f'srv-paper-{kind}-{day}-{args.revision}';server=ROOT/fixture
     if server.exists():raise ValueError('Refusing to reuse fixture')
     paper=ROOT/'srv-1.21.1/paper.jar';native=TOOLS/'.external-cache/MythicMobs-5.7.2-FTWvGuE5.jar';plugin=ROOT/'helstera-plugin/target/helsteraMobs-1.0.0-full.jar'
@@ -46,8 +47,9 @@ def main():
         for item in source.infolist():
             if item.filename!='plugin.yml':dest.writestr(item,source.read(item.filename))
         dest.writestr('plugin.yml',"name: HelsteraTerminalReadProbe\nversion: '1.0'\napi-version: '1.21'\nmain: dev.helstera.test.randomspawn.TerminalReadProbe\ndepend: [helsteraMobs, MythicMobs]\ncommands:\n  terminalreadprobe: {}\n")
-    contract=module('callback_cases','terminal-boundary-cases.py' if args.boundary else 'terminal-read-cases.py')
-    (probe_data/'config.yml').write_text(yaml.safe_dump({'cases':list(contract.CASES),'boundary':args.boundary}))
+    contract=module('callback_cases',kind+'-cases.py')
+    (probe_data/'config.yml').write_text(yaml.safe_dump(
+        {'cases':list(contract.CASES),'boundary':args.boundary,'condition-location':args.condition_location}))
     mobs=plugins/'MythicMobs/Mobs';mobs.mkdir(parents=True)
     (mobs/'terminal-read.yml').write_text(yaml.safe_dump(contract.native_mobs(),sort_keys=False))
     native_skills=plugins/'MythicMobs/Skills';native_skills.mkdir()
@@ -62,9 +64,11 @@ def main():
     (data/'skills.yml').write_text('skills: {}\n');(data/'spawners.yml').write_text('spawners: {}\n');(data/'mobs').mkdir()
     sources=[Path(__file__).resolve(),TOOLS/'run-player-variable-fixture.py',TOOLS/'terminal-read-cases.py',TOOLS/'random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/TerminalReadProbe.java']
     if args.boundary:sources.extend(TOOLS/n for n in ('terminal-boundary-cases.py','audit-terminal-boundary.py','test-terminal-boundary-audit.py'))
-    if validator:sources.extend(TOOLS/n for n in ('validate-terminal-read.py','validate-player-variables.py','test-terminal-read-evidence.py'))
-    report={'schemaVersion':1,'fixtureDirectory':fixture,'evidenceMode':'observation' if args.observe_only else 'comparison-with-exception','knownExceptions':[] if validator is None else validator.PARITY_EXCEPTIONS,
-        'parityStatus':'unassessed' if args.observe_only else 'scoped-comparison',
+    if args.condition_location:sources.extend(TOOLS/n for n in (
+        'terminal-condition-location-cases.py', 'audit-terminal-condition-location.py',
+        'test-terminal-condition-location-audit.py', 'audit-terminal-boundary.py'))
+    report={'schemaVersion':1,'fixtureDirectory':fixture,'evidenceMode':'observation','knownExceptions':[],
+        'parityStatus':'unassessed',
         'generatedAtUtc':datetime.now(timezone.utc).isoformat(),'pluginSha256':digest(plugin),'paperJarSha256':common.PAPER_HASH,'mythicMobsSha256':common.NATIVE_HASH,'probeJarSha256':digest(probe_jar),
         'sourceHashes':{str(p.relative_to(ROOT)):digest(p) for p in sources},'observations':[],'files':[]}
     latest=server/'logs/latest.log';error=None;started=datetime.now(timezone.utc).isoformat()
@@ -90,7 +94,8 @@ def main():
     snapshot=server/'snapshots';snapshot.mkdir()
     for f in [probe_data/'final-scoped.yml',data/'scoped-variables.yml',*sorted((data/'skill-trees').glob('*.yml'))]:
         if f.exists():shutil.copy2(f,snapshot/f.name)
-    report['observations']=[l for l in (server/'server.log').read_text().splitlines() if 'TREAD_ROW|' in l]
+    report['observations']=[l for l in (server/'server.log').read_text().splitlines()
+                            if 'TREAD_ROW|' in l or args.condition_location and 'TREAD_POINTS|' in l]
     report['gapCases']=[]
     shutil.copytree(probe_data/'imports',server/'imports')
     shutil.copy2(mobs/'terminal-read.yml',server/'source-mobs.yml')
@@ -101,9 +106,6 @@ def main():
         if digest(p)!=report[key]:raise RuntimeError('Artifact changed during fixture')
     for f in [server/'server.log',server/'source-mobs.yml',server/'source-skills.yml',*sorted(snapshot.iterdir()),*sorted((server/'imports').iterdir())]:report['files'].append({'path':str(f.relative_to(server)),'sha256':digest(f)})
     local=server/'terminal-read-report.json';local.write_text(json.dumps(report,indent=2)+'\n')
-    if validator and error is None:
-        try:validator.main(server)
-        except (ValueError,KeyError) as exc:error=exc
     if error:report['parityStatus']='unassessed';report['evidenceMode']='observation';report['validationResult']='rejected: '+str(error);local.write_text(json.dumps(report,indent=2)+'\n')
     name=f'paper-1.21.1-{kind}-{day}-{args.revision}';report_path=TOOLS/'reports'/(name+'.json');archive_path=TOOLS/'reports'/(name+'-logs.zip')
     if report_path.exists() or archive_path.exists():raise RuntimeError('Refusing to overwrite evidence')
@@ -112,7 +114,6 @@ def main():
     report['logArchive']=archive_path.name;report['logArchiveSha256']=digest(archive_path);report_path.write_text(json.dumps(report,indent=2)+'\n')
     print('Terminal read evidence:',report_path,flush=True)
     if error:raise RuntimeError('Rejected evidence archived: '+str(error)) from error
-    if validator:validator.main(report_path)
 
 if __name__=='__main__':main()
 

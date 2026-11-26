@@ -350,13 +350,23 @@ public final class AiProfile {
             String token = selectorToken(entry);
             if (token == null) continue;
             switch (token) {
-                case "clear" -> {
+                case "clear", "reset" -> {
                     chase = false;
                     attack = false;
                     patrol = false;
                     flee = false;
                     rangedAttack = false;
                     leapAtTarget = false;
+                    swim = false;
+                    openDoors = false;
+                    avoidSunPolicy = false;
+                    floatGoal = false;
+                    breakDoors = false;
+                    lookAtPlayers = false;
+                    avoidEntities = false;
+                    temptItem = null;
+                    playerTargets = true;
+                    targetMode = TargetMode.PLAYERS;
                 }
                 case "meleeattack", "melee_attack", "zombieattack", "spiderattack" -> {
                     attack = true;
@@ -365,10 +375,12 @@ public final class AiProfile {
                         "bowshoot", "bowmaster" -> { attack = true; rangedAttack = true; }
                 case "leapattarget", "leap_at_target" -> { attack = true; leapAtTarget = true; }
                 case "randomstroll", "random_stroll" -> patrol = true;
-                case "avoidentity", "avoid_entity", "fleeplayers", "runfromplayers",
-                        "fleegolems", "flee_golems", "runfromgolems", "fleevillagers",
-                        "runfromvillagers", "fleewolf", "fleewolves", "runfromwolves",
-                        "fleefaction", "runfromfaction" -> { flee = true; avoidEntities = true; }
+                case "avoidentity", "avoid_entity", "fleeplayers", "flee_players", "runfromplayers", "run_from_players",
+                        "fleegolems", "flee_golems", "runfromgolems", "run_from_golems", "fleevillagers", "flee_villagers",
+                        "runfromvillagers", "run_from_villagers", "fleewolf", "flee_wolf", "fleewolves", "flee_wolves",
+                        "runfromwolves", "run_from_wolves", "fleefaction", "flee_faction", "runfromfaction", "run_from_faction" -> {
+                    flee = true; avoidEntities = true;
+                }
                 // Panic uses the same flee/pathfinding policy as avoid-entity;
                 // the native goal differs in trigger conditions, not movement.
                 case "panic" -> flee = true;
@@ -403,8 +415,9 @@ public final class AiProfile {
                 case "opendoor", "opendoors", "open_door", "open_doors" -> openDoors = true;
                 case "avoidsun", "avoid_sun", "restrictsun", "restrict_sun", "fleesun",
                         "flee_sun" -> avoidSunPolicy = true;
-                case "lookatplayers", "look_at_players", "randomlookaround", "lookaround" -> lookAtPlayers = true;
-                case "lookattarget", "look_at_target" -> { }
+                case "lookatplayers", "look_at_players" -> lookAtPlayers = true;
+                case "lookattarget", "look_at_target", "randomlookaround", "lookaround",
+                        "followroute", "followpath", "patrol", "patrolroute" -> { }
                 // 原生 Pathfinder Goal 的别名：语义与对应 core goal 相同，
                 // 不做二次实现，只映射到同一策略位，避免被当成未知选择器告警。
                 case "meleeattacktarget", "nearestattackabletarget", "targetofopportunity",
@@ -456,7 +469,11 @@ public final class AiProfile {
                 continue;
             }
             switch (token) {
-                case "clear" -> { playerTargets = false; targetMode = TargetMode.NONE; }
+                case "clear", "reset" -> {
+                    playerTargets = false; targetMode = TargetMode.NONE;
+                    attackerFirst = false; hurtByTargetFirst = false;
+                    targetFaction = null; factionHostile = false; factionAllied = false;
+                }
                 case "players", "nearestplayer", "nearest_player" -> {
                     playerTargets = true;
                     targetMode = TargetMode.PLAYERS;
@@ -551,13 +568,8 @@ public final class AiProfile {
     }
 
     private static String selectorArgument(String raw) {
-        if (raw == null) return null;
-        String value = raw.trim();
-        if (value.matches("^\\d+\\s+.*")) value = value.replaceFirst("^\\d+\\s+", "");
-        int colon = value.indexOf(':');
-        if (colon >= 0 && colon + 1 < value.length()) return value.substring(colon + 1).trim();
-        String[] parts = value.split("\\s+", 2);
-        return parts.length == 2 ? parts[1].trim() : null;
+        SelectorPlan.Rule rule = SelectorPlan.parse(raw, 0);
+        return rule == null || rule.argument().isBlank() ? null : rule.argument();
     }
 
     private static List<String> orderedSelectors(List<String> selectors) {
@@ -578,18 +590,17 @@ public final class AiProfile {
     }
 
     private static String selectorToken(String raw) {
-        if (raw == null || raw.isBlank()) return null;
-        String[] parts = raw.trim().toLowerCase(Locale.ROOT).split("\\s+");
-        int tokenIndex = parts.length > 1 && parts[0].matches("\\d+") ? 1 : 0;
-        return tokenIndex < parts.length ? parts[tokenIndex].replace('-', '_') : null;
+        SelectorPlan.Rule rule = SelectorPlan.parse(raw, 0);
+        return rule == null ? null : rule.token();
     }
 
     private static String goalCategory(String token) {
         if (token == null) return "";
+        if (SelectorFleeRule.kind(token) != null) return "flee";
         return switch (token) {
             case "panic", "avoid_entity", "avoidentity" -> "flee";
-            case "meleeattack", "melee_attack", "rangedattack", "ranged_attack",
-                    "leapattarget", "leap_at_target" -> "attack";
+            case "meleeattack", "melee_attack", "zombieattack", "spiderattack", "rangedattack", "ranged_attack",
+                    "arrowattack", "bowattack", "bowshoot", "bowmaster", "leapattarget", "leap_at_target" -> "attack";
             case "randomstroll", "random_stroll" -> "patrol";
             default -> token;
         };

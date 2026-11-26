@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-variable-subtract-20261122-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-22T02:41:08.869439+00:00",
+  "pluginSha256": "7b029146bfdfa7669b025aca17e0993923d4511f8a275d0c471743baf3eae6c5",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "ca8d49f9d42333402de682b054ac6e515af001e0c7ad9ab9c6c4750d4821ad40",
+  "sourceHashes": {
+    "tools/paper-integration/run-variable-subtract-fixture.py": "80d47380b8bc09be400f1897ca0e47280d28d8d2cf8e8c5fda72ad7786bd2e3b",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariableSubtractProbe.java": "64d3d3352418a5566fd7b54a14276e5ad0148a7eb101b3a56eb773342cd1e770",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "c7f6b3abb6e19ec31a0862862d3369962aff92fbf380f63ea331060859500e81",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "d36ada3808a71a66f87d6862de9217d846247d44954a73ea0f420093ccfedb79",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "0dccee23c3fe0e1676168d821971aca2cf26d525e4b4188f68485594a51fd124",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicVariableReference.java": "7f23249193065e04bf848556406ee43b9c6674ea9c63b15c555ba23e96235cbb",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicVariableArithmetic.java": "64c4aa22a0d89fd24dca095d626e3ee8904464d17ecb4052afc63be36a5ebca0",
+    "helstera-api/src/main/java/dev/helstera/api/util/NumericExpression.java": "38185514f6d5e74048dedef43539a2fb4b92f7f331ba71b424af6c2b2520a4f7",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "51a325fbc3c11264a7826566c65641199812558d750e820eb1b1da6882975268"
+  },
+  "limitations": [
+    "Covers subtraction, aliases, typed mutation, five reference scopes, and deadline preservation/replacement.",
+    "Ten native float-overflow writes differ from runtime finite-value preservation and remain explicit.",
+    "Snapshots contain each case key across seven registries; this is not full variable parity.",
+    "No real-time expiry crossing or full exact-artifact release gate is claimed."
+  ],
+  "exitCode": 0,
+  "observationCount": 14,
+  "validationResult": "rejected: Subtraction probe failed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "4b7269c22290d6b3ca3035b8369c8c14620758edd8b27f745e8711cda8597e05"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/subtract.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0000.yml",
+      "sha256": "d314219142207ff43018da40ec286b303173bfaf91fc56c0c7db34060253115e"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0001.yml",
+      "sha256": "dca59f565ce7e5626b11dd3272cb7298402a60b72e8a66dd6ccaf16fa5f277a8"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0002.yml",
+      "sha256": "555499dfc56a1fa8883ae28c8b079d3bd4fac593f4403c8d61cd77cb617594d5"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0003.yml",
+      "sha256": "bf0149dd5862615ee723ee456f46a681668c25ba084be741ba85d0177f90f24e"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0004.yml",
+      "sha256": "95902e9a10afa91dae96c75c0bffd2983b490941930e210d92646f6058c079fe"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0005.yml",
+      "sha256": "811e42e0fe31bb994164f123afbaeef906e6b00538c84d31f7f8e683f9fe0650"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0006.yml",
+      "sha256": "d6ea5c753d3a6995610798c10168e633b5da2d319021b37d0d7bf2a01f6da025"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0007.yml",
+      "sha256": "a275603cd3e4798e4968675d973ef76c99f92c951c54cc82f95251a8afb32d9b"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0008.yml",
+      "sha256": "7215badd32aad134a05b46d4ca326b673562a8bf69f6ebb751cb5b11c463f153"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0009.yml",
+      "sha256": "5ce98768ef1b8c566b6c6a13616436e3e3d0cab5406ddae7787992471e87e9d9"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0010.yml",
+      "sha256": "79d5daf9f705e139e597ea4ecb80ed4556cd0135877a91efb6eff568b7937daa"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0011.yml",
+      "sha256": "857e7dc7468238d06f1ebb3206524e36faa60fb165b1d6a39fbea1b5b01e0010"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0012.yml",
+      "sha256": "d5d98da28339ba1b0b35318d86b789157c2f564624b3ac4780d550b9d8e53ea8"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/observations/0013.yml",
+      "sha256": "ddc7f04a8785be7339dfda2543083dd28996a934c6cf3e26022d90deea9da890"
+    },
+    {
+      "path": "plugins/HelsteraVariableSubtractProbe/identities-native-direct.yml",
+      "sha256": "93756d985555632438e44db9da2aed8c1c0bc7e17cb27599b5dc6fc7d9f9fa9f"
+    }
+  ],
+  "logArchive": "paper-1.21.1-variable-subtract-20261122-r1-logs.zip",
+  "logArchiveSha256": "47bf0d251e82cfefae2bd9af5fc573c80898fade44f955754e885692b771d530"
+}

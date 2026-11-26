@@ -1,15 +1,44 @@
-Terminal variable-registry boundary, work in progress (2026-11-20): Paper
+Variable location, equation and scope observations (2026-11-21): the current build
+passes 2,639 Maven tests and 11 clean SpotBugs reports. The latest player fixture
+records 300 observations with two real players: entity/block aiming, stone,
+glass, barrier, creative filtering, origin fallback and a changed direction after
+binding. Its audit rejects 67 altered-evidence controls. See the
+[player target contract](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-player-targets-2026-11-21).
+The earlier threat-target
+fixture records 240 observations, including a saved target below the highest
+score, changes after binding, empty-table fallbacks and unchanged threat state
+after reads; its audit rejects 73 altered-evidence controls. Runtime AI selection policy remains separate from native threat
+policy. See the
+[threat-target contract](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-threat-targets-2026-11-21).
+The earlier AI-target fixture
+records 240 observations for Creature casters without threat tables, including
+36 origin fallbacks and 54 writes after changing the target following binding.
+Its independent audit passes and rejects 56 altered-evidence controls.
+Player, non-Creature, threat-backed and retained terminal contexts are outside
+that earlier fixture's boundary. See the
+[AI target contract](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-ai-targets-2026-11-21).
+The earlier static-location fixture records
+300 entity/location observations with static caster/origin/trigger value selection;
+its independent audit and 49 altered-evidence controls pass. Native missing-registry
+and missing-trigger outcomes remain explicit. The earlier equation fixture records
+300 observations with 30 explicit non-finite value differences. These and prior
+condition/location and scope fixtures retain their own artifact hashes. See
+[current evidence and reproduction links](STARTUP_EVIDENCE.md) and the
+[location-value contract](../../docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-values-2026-11-21).
+These observations do not promote full parity or the release gate.
+
+Historical terminal variable-registry boundary (2026-11-20): Paper
 observation now covers immediate removal, death, CHUNK unload, cancellation and
 living controls, including the exact native five-tick death and six-tick
 unload-offset windows. Runtime callbacks stop the same nested action chain when
 the target registry expires while sibling delayed/repeated skills continue.
 Detached role placeholders stay distinct from the caster snapshot; the native
-initial evaluation-order difference remains visible. The current build passes
+initial evaluation-order difference remains visible. That build passes
 2,484 Maven tests and 11 clean SpotBugs reports. See
 [boundary observations and remaining differences](../../docs/TERMINAL_READ_OBSERVATIONS.md).
 
-Condition/location reads, broader variable semantics and the full exact-artifact
-strict refresh remain open.
+Condition/location reads have subsequent observations linked above. Broader
+variable semantics and the full exact-artifact strict refresh remain open.
 The release gate correctly rejects this new JAR against the previous artifact's
 evidence. No matrix status is promoted; the latest fully release-gated artifact
 remains the model-bridge build documented below.

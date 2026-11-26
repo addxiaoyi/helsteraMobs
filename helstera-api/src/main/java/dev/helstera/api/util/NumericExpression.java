@@ -47,6 +47,20 @@ public final class NumericExpression {
         return finite(resolveText(source, resolver));
     }
 
+    /** VariableMath always evaluates an equation, with x bound to the current variable value. */
+    public static void validateEquation(String source) {
+        requireText(source);
+        equation(substitute(source, ignored -> "1"), 1);
+    }
+
+    /** Resolve each distinct placeholder once and reject non-finite equation results. */
+    public static double resolveEquation(String source, double x, UnaryOperator<String> resolver) {
+        requireText(source);
+        double value = equation(substitute(source, resolver), x).evaluate();
+        if (!Double.isFinite(value)) throw new IllegalArgumentException("non-finite equation result");
+        return value;
+    }
+
     public static String resolveText(String source, UnaryOperator<String> resolver) {
         requireText(source);
         if (!dynamic(source)) { finite(source); return source; }
@@ -94,6 +108,13 @@ public final class NumericExpression {
     private static Expression expression(String source) {
         var expression = new ExpressionBuilder(source).operator(OPERATORS).functions(FUNCTIONS).build();
         if (!expression.validate().isValid()) throw new IllegalArgumentException("invalid numeric expression");
+        return expression;
+    }
+
+    private static Expression equation(String source, double x) {
+        var expression = new ExpressionBuilder(source).operator(OPERATORS).functions(FUNCTIONS)
+                .variable("x").build().setVariable("x", x);
+        if (!expression.validate().isValid()) throw new IllegalArgumentException("invalid variable equation");
         return expression;
     }
 

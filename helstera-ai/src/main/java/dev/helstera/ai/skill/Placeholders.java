@@ -104,6 +104,7 @@ public final class Placeholders {
             case "c.h" -> "caster.health";
             case "c.mh" -> "caster.maxhealth";
             case "c.ph" -> "caster.healthpercent";
+            case "c.l.x", "c.l.y", "c.l.z" -> "caster" + k.substring(1);
             default -> k;
         };
 
@@ -240,22 +241,22 @@ public final class Placeholders {
     }
 
     private static String target(BehaviorContext ctx, String field, DoubleFunction<String> numbers) {
-        LivingEntity target = ctx.targetEntity().orElse(null);
+        Entity target = ctx.entityRecipient().orElse(null);
         if (target == null) return null;
         field = normalizeField(field);
         if (field.equals("name")) return target instanceof Player p ? p.getName()
                 : target.getCustomName() == null ? target.getType().name().toLowerCase(Locale.ROOT) : target.getCustomName();
-        if (field.equals("hp.percent")) {
-            return numbers.apply(100.0 * (target.getHealth() / target.getMaxHealth()));
+        if (target instanceof LivingEntity living) {
+            if (field.equals("hp.percent")) return numbers.apply(100.0 * (living.getHealth() / living.getMaxHealth()));
+            if (field.equals("hp.raw") || field.equals("health")) return numbers.apply(living.getHealth());
+            if (field.equals("absorption") || field.equals("absorb")) return numbers.apply(living.getAbsorptionAmount());
+            if (field.equals("hp.max") || field.equals("maxhealth")) return numbers.apply(living.getMaxHealth());
         }
-        if (field.equals("hp.raw") || field.equals("health")) return numbers.apply(target.getHealth());
-        if (field.equals("absorption") || field.equals("absorb")) return numbers.apply(target.getAbsorptionAmount());
-        if (field.equals("hp.max") || field.equals("maxhealth")) return numbers.apply(target.getMaxHealth());
         if (field.startsWith("loc.")) {
             return locationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(4), numbers);
         }
         if (field.startsWith("l.")) {
-            return mythicLocationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(2), numbers);
+            return targetLocationField(java.util.Optional.ofNullable(target.getLocation()), field.substring(2), numbers);
         }
         if (field.equals("world")) {
             return target.getWorld() == null ? null : target.getWorld().getName();
@@ -270,7 +271,7 @@ public final class Placeholders {
         }
         if (field.equals("uuid")) return target.getUniqueId().toString();
         if (field.equals("is-player")) return target instanceof Player ? "true" : "false";
-        if (field.equals("is-living")) return "true";
+        if (field.equals("is-living")) return Boolean.toString(target instanceof LivingEntity);
         String entityState = entityState(target, field);
         if (entityState != null) return entityState;
         if (field.equals("type")) return target.getType().name().toLowerCase(Locale.ROOT);
@@ -278,7 +279,7 @@ public final class Placeholders {
             return ctx.distanceToTarget() < 0 ? null : numbers.apply(ctx.distanceToTarget());
         }
         if (field.equals("distancesquared")) return distanceSquared(ctx, true);
-        String gameplayField = gameplayField(target, field, numbers);
+        String gameplayField = gameplayField(target instanceof LivingEntity living ? living : null, field, numbers);
         if (gameplayField != null) return gameplayField;
         return null;
     }
@@ -310,7 +311,7 @@ public final class Placeholders {
         if (!field.startsWith("l.")) return null;
         Location location = trigger.getLocation();
         if (location == null) return null;
-        // TargetLocation placeholders use block coordinates, unlike caster's block centers.
+        // TargetLocation placeholders use block coordinates; caster axes retain exact coordinates.
         return switch (field.substring(2)) {
             case "x" -> numbers.apply(location.getBlockX());
             case "y" -> numbers.apply(location.getBlockY());
@@ -323,6 +324,7 @@ public final class Placeholders {
 
     /** Resolves current skill context and skill-tree variables. */
     private static String skill(BehaviorContext ctx, String field, DoubleFunction<String> numbers) {
+        if (field.equalsIgnoreCase("power")) return numbers.apply(ctx.skillPower());
         String parameterName = field;
         String parameter = ctx.skillTree().flatMap(tree -> tree.variable(parameterName))
                 .filter(value -> value instanceof Number || value instanceof CharSequence || value instanceof Boolean)
@@ -457,7 +459,7 @@ public final class Placeholders {
             }
         }
         out.addAll(List.of("c.h", "c.mh", "c.ph"));
-        out.addAll(List.of("skill.payload", "ctx.payload", "ctx.state",
+        out.addAll(List.of("skill.payload", "skill.power", "ctx.payload", "ctx.state",
                 "caster.id", "caster.state", "caster.decisions",
                 "random.1to10", "random.1to100", "random.percent",
                 "random.float.0to1", "random.float.rounded.0to1"));
@@ -484,14 +486,14 @@ public final class Placeholders {
         };
     }
 
-    /** Mythic's {@code l.*} location family; plain axes refer to block centers. */
+    /** Native caster axes are exact; target/trigger axes use the block-coordinate helper below. */
     private static String mythicLocationField(java.util.Optional<Location> loc, String field, DoubleFunction<String> numbers) {
         Location location = loc.orElse(null);
         if (location == null) return null;
         return switch (field) {
-            case "x" -> numbers.apply(Math.floor(location.getX()) + 0.5);
-            case "y" -> numbers.apply(Math.floor(location.getY()) + 0.5);
-            case "z" -> numbers.apply(Math.floor(location.getZ()) + 0.5);
+            case "x" -> numbers.apply(location.getX());
+            case "y" -> numbers.apply(location.getY());
+            case "z" -> numbers.apply(location.getZ());
             case "x.double" -> exact(location.getX());
             case "y.double" -> exact(location.getY());
             case "z.double" -> exact(location.getZ());
@@ -499,6 +501,18 @@ public final class Placeholders {
             case "pitch" -> Float.isFinite(location.getPitch()) ? Float.toString(location.getPitch()) : null;
             case "w" -> location.getWorld() == null ? null : location.getWorld().getName();
             default -> null;
+        };
+    }
+
+    private static String targetLocationField(java.util.Optional<Location> loc, String field,
+                                               DoubleFunction<String> numbers) {
+        Location location = loc.orElse(null);
+        if (location == null) return null;
+        return switch (field) {
+            case "x" -> numbers.apply(location.getBlockX());
+            case "y" -> numbers.apply(location.getBlockY());
+            case "z" -> numbers.apply(location.getBlockZ());
+            default -> mythicLocationField(loc, field, numbers);
         };
     }
 
@@ -535,7 +549,7 @@ public final class Placeholders {
         Location caster = loc(ctx).orElse(null);
         if (caster == null || caster.getWorld() == null) return null;
         if (!targetScope) return "0.0";
-        LivingEntity target = ctx.targetEntity().orElse(null);
+        Entity target = ctx.entityRecipient().orElse(null);
         if (target == null) return null;
         Location targetLocation = target.getLocation();
         if (targetLocation == null || targetLocation.getWorld() == null
@@ -650,7 +664,7 @@ public final class Placeholders {
     private static String deltaField(BehaviorContext ctx, String axis, DoubleFunction<String> numbers) {
         Location self = loc(ctx).orElse(null);
         if (self == null) return null;
-        LivingEntity target = ctx.targetEntity().orElse(null);
+        Entity target = ctx.entityRecipient().orElse(null);
         if (target == null) return null;
         Location other = target.getLocation();
         if (other == null) return null;
@@ -733,6 +747,8 @@ public final class Placeholders {
             return "permission." + field.substring(field.indexOf('.') + 1);
         }
         return switch (lower) {
+            case "location.x", "location.y", "location.z", "location.x.double",
+                    "location.y.double", "location.z.double" -> "l." + lower.substring(9);
             case "hp", "thp" -> "hp.raw";
             case "mhp" -> "hp.max";
             case "healthpercent", "percenthealth", "php" -> "hp.percent";
@@ -752,7 +768,7 @@ public final class Placeholders {
 
     private static boolean supportsRounding(String key) {
         String lower = key.toLowerCase(Locale.ROOT);
-        if (List.of("c.h", "c.mh", "c.ph").contains(lower)) return true;
+        if (List.of("c.h", "c.mh", "c.ph", "c.l.x", "c.l.y", "c.l.z").contains(lower)) return true;
         if (lower.startsWith("random.float.") && !lower.startsWith("random.float.rounded.")) return true;
         int dot = lower.indexOf('.');
         if (dot < 0 || !List.of("caster", "target", "mob", "player").contains(lower.substring(0, dot))) return false;

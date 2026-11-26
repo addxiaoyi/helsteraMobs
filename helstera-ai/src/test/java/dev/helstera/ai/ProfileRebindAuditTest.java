@@ -11,6 +11,7 @@ import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 
@@ -141,17 +142,36 @@ class ProfileRebindAuditTest {
 
     @Test
     @DisplayName("换绑不重置仇恨表与状态机")
-    void rebindKeepsCombatState() throws IOException {
-        String src = read("AiController.java");
-        int start = src.indexOf("public void rebindProfile(");
-        assertTrue(start > 0, "未定位到 rebindProfile");
-        int end = src.indexOf("\n    public ", start + 10);
-        int close = end > start ? end : src.length();
-        String body = src.substring(start, close);
-        assertTrue(!body.contains("this.threat ="),
-                "换绑不得重建仇恨表：reload 会顺带清掉「谁正在打我」，"
-                        + "让 reload 变成一次战斗状态清档");
-        assertTrue(body.contains("if (fresh != null)"),
-                "fresh 为 null 时必须忽略，保留旧引用优于退化成无档案");
+    void rebindKeepsCombatState() throws Exception {
+        var profile = new AiProfile("combat");
+        profile.threatEnabled = true;
+        profile.targets.add("0 living");
+        var instance = mock(dev.helstera.runtime.instance.ModelInstanceImpl.class);
+        var bus = new dev.helstera.api.event.HelsteraEventBus();
+        var controller = new AiController(instance, profile, null, bus);
+        var attacker = mock(org.bukkit.entity.LivingEntity.class);
+        var attackerId = java.util.UUID.randomUUID();
+        when(attacker.getUniqueId()).thenReturn(attackerId);
+        when(attacker.isValid()).thenReturn(true);
+        controller.onDamaged(attacker, 5);
+        var threat = controller.threatTable();
+        var field = AiController.class.getDeclaredField("profile");
+        field.setAccessible(true);
+
+        controller.rebindProfile(null);
+        assertSame(profile, field.get(controller), "null reload retains the existing profile");
+        assertSame(threat, controller.threatTable());
+        assertSame(attacker, controller.targetEntity());
+        assertEquals(AiController.State.HURT, controller.state());
+        assertTrue(threat.contains(attackerId));
+
+        var fresh = new AiProfile(profile); fresh.sightRadius = 42;
+        controller.rebindProfile(fresh);
+        assertSame(fresh, field.get(controller), "reload installs the new profile");
+        assertSame(threat, controller.threatTable(), "reload must not recreate accumulated threat");
+        assertEquals(attackerId, threat.currentTarget());
+        assertSame(attacker, controller.targetEntity());
+        assertEquals(AiController.State.HURT, controller.state());
+        assertTrue(threat.contains(attackerId));
     }
 }

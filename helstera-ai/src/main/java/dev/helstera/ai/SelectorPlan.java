@@ -389,7 +389,7 @@ final class SelectorPlan {
         return index;
     }
 
-    private static Rule parse(String raw, int order) {
+    static Rule parse(String raw, int order) {
         if (raw == null || raw.isBlank()) return null;
         // Token matching is case-insensitive, but arguments are not: permission
         // nodes, faction ids, and condition values can be intentionally cased.

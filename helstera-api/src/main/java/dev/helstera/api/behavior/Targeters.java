@@ -33,7 +33,7 @@ public final class Targeters {
     private static final java.util.Set<String> DIRECT_CONTEXT_TARGETERS = java.util.Set.of(
             "self", "caster", "target", "targets", "trigger", "attacker", "owner", "parent",
             "targetoftarget", "children", "child", "passengers", "passenger", "vehicle", "mount",
-            "lastdamager");
+            "lastdamager", "playerbyname", "interactionlastattacker", "interactionlastinteract");
     private static final List<String> CONTEXT_TARGETERS = List.of(
             "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer");
     private static final java.util.Set<String> LOCATION_TARGETERS = java.util.Set.of(
@@ -42,7 +42,7 @@ public final class Targeters {
             "targetlocation", "targetloc", "tl", "targetpredictedlocation", "targetpredictedloc",
             "tpl", "predictedtargetlocation", "triggerlocation", "spawnlocation",
             "casterspawnlocation", "casterspawn", "trackedlocation", "ownerlocation", "parentlocation",
-            "forward", "projectileforward");
+            "forward", "projectileforward", "locationsoftargets");
     private static final Map<String, String> TARGET_LOCATION_ARGUMENTS = Map.of(
             "maxdistance", "maxdistance", "max", "maxdistance", "distance", "maxdistance",
             "d", "maxdistance", "ignoretransparent", "ignoretransparent", "it", "ignoretransparent");
@@ -273,20 +273,29 @@ public final class Targeters {
     public static List<LivingEntity> select(String spec, BehaviorContext context,
                                             Collection<? extends LivingEntity> candidates,
                                             List<String> fallbackArgs) {
+        return select(spec, context, candidates, fallbackArgs, java.util.function.UnaryOperator.identity());
+    }
+
+    /** Resolves private targeter placeholders against the calling metadata, before retargeting. */
+    public static List<LivingEntity> select(String spec, BehaviorContext context,
+                                            Collection<? extends LivingEntity> candidates,
+                                            List<String> fallbackArgs,
+                                            java.util.function.UnaryOperator<String> argumentResolver) {
         if (context == null) return List.of();
         List<String> chain = splitTargeterChain(spec);
         if (chain.size() > 1) {
-            List<LivingEntity> current = selectContextScoped(chain.get(0), context, candidates, fallbackArgs, true);
+            List<LivingEntity> current = selectContextScoped(chain.get(0), context, candidates, fallbackArgs, true, argumentResolver);
             for (int i = 1; i < chain.size() && !current.isEmpty(); i++) {
-                current = selectContextScoped(chain.get(i), context, current, fallbackArgs, false);
+                current = selectContextScoped(chain.get(i), context, current, fallbackArgs, false, argumentResolver);
             }
             return List.copyOf(current);
         }
-        return selectContextScoped(spec, context, candidates, fallbackArgs, true);
+        return selectContextScoped(spec, context, candidates, fallbackArgs, true, argumentResolver);
     }
 
     private static List<LivingEntity> selectContextScoped(String spec, BehaviorContext context,
-            Collection<? extends LivingEntity> candidates, List<String> fallbackArgs, boolean expandWorld) {
+            Collection<? extends LivingEntity> candidates, List<String> fallbackArgs, boolean expandWorld,
+            java.util.function.UnaryOperator<String> argumentResolver) {
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!parsed.valid()) return List.of();
         if (CONTEXT_TARGETERS.contains(parsed.name())) {
@@ -296,7 +305,8 @@ public final class Targeters {
         // LastDamager has no targeter-specific arguments. Generic filters such as
         // limit/radius are still handled below, while an unknown named or
         // positional argument must not silently broaden the targeter contract.
-        if (parsed.name().equals("lastdamager") && !parsed.args().isEmpty()) return List.of();
+        if ((parsed.name().equals("lastdamager") || parsed.name().startsWith("interactionlast"))
+                && !parsed.args().isEmpty()) return List.of();
         if (!DIRECT_CONTEXT_TARGETERS.contains(parsed.name())) {
             if (isLocationName(parsed.name()) || isVariableLocationName(parsed.name())) {
                 List<LivingEntity> located = selectContextDirect(spec, context, candidates, fallbackArgs);
@@ -304,7 +314,11 @@ public final class Targeters {
             }
             return selectScoped(spec, context.instance(), candidates, fallbackArgs, expandWorld);
         }
-        List<LivingEntity> direct = selectContextDirect(spec, context, candidates, fallbackArgs);
+        List<LivingEntity> direct = parsed.name().equals("playerbyname")
+                ? NamedPlayerTargeter.select(parsed.args(), argumentResolver)
+                : parsed.name().startsWith("interactionlast")
+                ? interactionHistory(context, parsed.name().equals("interactionlastattacker"))
+                : selectContextDirect(spec, context, candidates, fallbackArgs);
         if (!expandWorld) direct = direct.stream().filter(candidates::contains).toList();
         Collection<? extends LivingEntity> scoped = direct;
         if (parsed.radius() != null) {
@@ -312,11 +326,30 @@ public final class Targeters {
         }
         scoped = applyFilter(scoped, context.instance(), parsed.filter());
         scoped = applyEntityFilters(scoped, context.instance(), parsed, parsed.args(), expandWorld);
+        if ((parsed.name().equals("playerbyname") || parsed.name().startsWith("interactionlast"))
+                && !Boolean.TRUE.equals(parsed.targetAll()) && !Boolean.TRUE.equals(parsed.targetSelf())) {
+            // IEntitySelector defaults targetSelf to false. An Interaction caster cannot be
+            // the player in its own history, but it shares the same filter contract.
+            org.bukkit.entity.Entity caster = sourceEntity(context.instance());
+            scoped = scoped.stream().filter(entity -> caster == null
+                    || !entity.getUniqueId().equals(caster.getUniqueId())).toList();
+        }
         if (parsed.name().equals("trigger")) {
             scoped = scoped.stream().filter(Targeters::isEligibleTrigger).toList();
         }
         List<LivingEntity> selected = applySort(new ArrayList<>(scoped), context.instance(), parsed.sort());
         return applySkipAndLimit(selected, parsed);
+    }
+
+    private static List<LivingEntity> interactionHistory(BehaviorContext context, boolean attack) {
+        if (!context.instanceValid()) return List.of();
+        if (!(context.instance().baseEntity().orElse(null) instanceof org.bukkit.entity.Interaction interaction)) {
+            return List.of();
+        }
+        var previous = attack ? interaction.getLastAttack() : interaction.getLastInteraction();
+        if (previous == null || previous.getPlayer() == null) return List.of();
+        Player player = previous.getPlayer().getPlayer();
+        return player == null ? List.of() : List.of(player);
     }
 
     private static List<LivingEntity> selectContextDirect(String spec, BehaviorContext context,
@@ -872,12 +905,43 @@ public final class Targeters {
         return List.copyOf(out);
     }
 
+    /** Snapshots every inherited location; ordinary location selectors retain their single result. */
+    public static List<Location> resolveLocations(String spec, BehaviorContext context) {
+        return resolveLocations(spec, context, java.util.function.UnaryOperator.identity());
+    }
+
+    public static List<Location> resolveLocations(String spec, BehaviorContext context,
+                                                  java.util.function.UnaryOperator<String> argumentResolver) {
+        if (spec == null || context == null) return List.of();
+        ParsedSpec parsed = ParsedSpec.parse(spec);
+        if (!canonicalLocationName(parsed.name()).equals("locationsoftargets")) {
+            return resolveLocation(spec, context).stream().toList();
+        }
+        List<String> arguments = inheritedLocationArguments(parsed);
+        return arguments == null ? List.of() : InheritedTargetLocations.select(arguments, context, argumentResolver);
+    }
+
+    private static List<String> inheritedLocationArguments(ParsedSpec parsed) {
+        if (!parsed.valid() || parsed.skip() != null || parsed.radius() != null || parsed.filter() != null
+                || parsed.targetFilter() != null || parsed.ignoreFilter() != null || parsed.targetSelf() != null
+                || parsed.targetPlayers() != null || parsed.targetCreative() != null || parsed.targetSpectator() != null
+                || parsed.targetInvulnerable() != null || parsed.targetArmorStands() != null
+                || parsed.targetAnimals() != null || parsed.targetCreatures() != null || parsed.targetVillagers() != null
+                || parsed.targetSameFaction() != null || parsed.targetOwner() != null || parsed.targetVanilla() != null
+                || parsed.targetAll() != null) return null;
+        List<String> arguments = new ArrayList<>(parsed.args());
+        if (parsed.limit() != null) arguments.add("limit=" + parsed.limit());
+        if (parsed.sort() != null) arguments.add("sort=" + parsed.sort());
+        return arguments;
+    }
+
     /** Resolves a Mythic-style location targeter without coercing the location into an entity. */
     public static java.util.Optional<Location> resolveLocation(String spec, BehaviorContext context) {
         if (spec == null || context == null) return java.util.Optional.empty();
         if (!validLocationTargeterSpec(spec)) return java.util.Optional.empty();
         ParsedSpec parsed = ParsedSpec.parse(spec);
         String kind = canonicalLocationName(parsed.name());
+        if (kind.equals("locationsoftargets")) return resolveLocations(spec, context).stream().findFirst();
         if (kind.equals("origin") || kind.equals("source")) {
             if (!noLocationOptions(spec)) return java.util.Optional.empty();
             return context.origin();
@@ -1118,6 +1182,7 @@ public final class Targeters {
             case "casterspawn" -> "casterspawnlocation";
             case "summonerlocation" -> "parentlocation";
             case "source" -> "origin";
+            case "locationoftarget", "lot" -> "locationsoftargets";
             default -> compact;
         };
     }
@@ -1133,6 +1198,10 @@ public final class Targeters {
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!parsed.valid()) return false;
         String kind = canonicalLocationName(parsed.name());
+        if (kind.equals("locationsoftargets")) {
+            List<String> arguments = inheritedLocationArguments(parsed);
+            return arguments != null && InheritedTargetLocations.valid(arguments);
+        }
         if (isExplicitLocationName(kind)) return validLocationSpec(spec);
         if (isVariableLocationName(kind)) return validVariableLocationSpec(spec);
         if (kind.equals("origin") || kind.equals("trackedlocation")
@@ -1820,7 +1889,11 @@ public final class Targeters {
                 case "nearestentity", "nearestliving", "nearestlivingentity", "nearestmob",
                         "playersinworld", "mobsinworld", "entitiesinworld", "livingentitiesinworld",
                         "playersonserver", "targetoftarget", "lastdamager",
+                        "playerbyname", "interactionlastattacker", "interactionlastinteract",
                         "nearestconditionaltarget", "nearestconditionalentity", "nearestconditionalplayer" -> compact;
+                case "specificplayer" -> "playerbyname";
+                case "lastattacker" -> "interactionlastattacker";
+                case "lastinteract" -> "interactionlastinteract";
                 case "nearestconditional", "nearestif" -> "nearestconditionaltarget";
                 case "server", "everyone" -> "playersonserver";
                 default -> normalized;
@@ -2011,6 +2084,8 @@ public final class Targeters {
     public static Collection<String> names() {
         var names = new java.util.LinkedHashSet<String>(BUILTIN.keySet());
         names.addAll(CONTEXT_TARGETERS);
+        names.addAll(List.of("playerbyname", "specificplayer", "interactionlastattacker", "lastattacker",
+                "interactionlastinteract", "lastinteract", "locationsoftargets", "locationoftarget", "lot"));
         return Collections.unmodifiableSet(names);
     }
 

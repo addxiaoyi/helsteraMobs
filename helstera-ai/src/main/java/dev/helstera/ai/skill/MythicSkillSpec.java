@@ -54,10 +54,17 @@ public record MythicSkillSpec(
         java.util.LinkedHashMap<String, String> args = new java.util.LinkedHashMap<>();
         boolean potion = java.util.Set.of("potion", "effect", "effect-self", "effect-targets")
                 .contains(mechanic.toLowerCase(Locale.ROOT));
-        boolean strictNumeric = dev.helstera.api.util.NumericMechanicSpec.supports(mechanic)
+        boolean strictNumeric = dev.helstera.api.util.EntitySetterSpec.supports(mechanic)
+                || dev.helstera.api.util.NumericMechanicSpec.supports(mechanic)
                 || dev.helstera.api.util.PercentHealthSpec.supports(mechanic)
                 || dev.helstera.api.util.SetSpeedSpec.supports(mechanic);
-        if (body != null) parseBody(body, args, positional, potion || strictNumeric);
+        if (body != null) parseBody(body, args, positional, potion || strictNumeric,
+                dev.helstera.api.util.MythicVariableReference.supports(mechanic),
+                java.util.Set.of("variablemath", "varmath", "variablesubtract", "variablesub",
+                        "subtractvariable", "subvar", "reducevariable").contains(mechanic.toLowerCase(Locale.ROOT)),
+                dev.helstera.api.util.MythicVariableLocation.supports(mechanic),
+                dev.helstera.api.util.MythicScoreboardSpec.supports(mechanic)
+                        || dev.helstera.api.util.MythicItemCopySpec.supports(mechanic));
 
         String targeter = null;
         String trigger = null;
@@ -116,7 +123,8 @@ public record MythicSkillSpec(
     }
 
     private static void parseBody(String body, Map<String, String> args, List<String> positional,
-                                  boolean strict) {
+                                  boolean strict, boolean nativeVariable, boolean nativeArithmetic,
+                                  boolean nativeLocation, boolean nativeRawArguments) {
         if (body.isBlank()) return;
         for (String part : splitBody(body)) {
             String value = part.trim();
@@ -136,7 +144,13 @@ public record MythicSkillSpec(
                 if (strict && args.containsKey(key)) {
                     throw new IllegalArgumentException("duplicate mechanic argument: " + key);
                 }
-                args.put(key, unquote(value.substring(eq + 1).trim()));
+                String argument = value.substring(eq + 1).trim();
+                args.put(key, nativeRawArguments && !java.util.Set.of("delay", "repeat", "repeatinterval",
+                        "repeat-interval", "cooldown").contains(key)
+                        || nativeVariable && dev.helstera.api.util.MythicVariableReference.isReferenceArgument(key)
+                        || nativeArithmetic && java.util.Set.of("equation", "eq", "e", "duration", "d", "expire").contains(key)
+                        || nativeLocation && dev.helstera.api.util.MythicVariableLocation.isValueArgument(key)
+                        ? argument : unquote(argument));
             } else positional.add(unquote(value));
         }
     }

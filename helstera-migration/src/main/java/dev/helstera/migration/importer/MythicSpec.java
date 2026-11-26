@@ -53,6 +53,13 @@ public final class MythicSpec {
         return close < 0 ? List.of() : splitBody(spec.substring(open + 1, close), false);
     }
 
+    /** Retains quotes for fields where the native parser treats them as literal data. */
+    static List<String> rawKeyedArguments(String spec) {
+        int open = mechanicOpen(spec);
+        int close = open < 0 ? -1 : matchingClose(spec, open);
+        return close < 0 ? List.of() : splitBody(spec.substring(open + 1, close), false, false);
+    }
+
     static int mechanicOpen(String spec) {
         if (spec == null) return -1;
         for (int i = 0; i < spec.length(); i++) {
@@ -120,6 +127,10 @@ public final class MythicSpec {
     }
 
     private static List<String> splitBody(String body, boolean stripKeys) {
+        return splitBody(body, stripKeys, true);
+    }
+
+    private static List<String> splitBody(String body, boolean stripKeys, boolean decodeQuotes) {
         List<String> out = new ArrayList<>();
         if (body == null || body.isEmpty()) return out;
         StringBuilder cur = new StringBuilder();
@@ -129,11 +140,13 @@ public final class MythicSpec {
             char c = body.charAt(i);
             if (quoted && c == '\\' && i + 1 < body.length()
                     && (body.charAt(i + 1) == '"' || body.charAt(i + 1) == '\\')) {
+                if (!decodeQuotes) cur.append(c);
                 cur.append(body.charAt(++i));
                 continue;
             }
             if (c == '"') {
                 quoted = !quoted;
+                if (!decodeQuotes) cur.append(c);
                 continue;
             }
             if (!quoted) {

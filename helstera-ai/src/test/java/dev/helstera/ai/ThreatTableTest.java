@@ -26,6 +26,89 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class ThreatTableTest {
 
+    @Test
+    void scoreChangesAndRankingDoNotSelectOrReplaceTheCommittedTarget() {
+        var t = table(0, 0);
+        UUID a = uuid("selected"), b = uuid("higher-score");
+        t.addThreat(a, 10);
+        t.addThreat(b, 100);
+        assertEquals(b, t.top(null));
+        assertNull(t.currentTarget());
+        t.selectTarget(a);
+        t.addThreat(b, 1000);
+        assertEquals(b, t.top(null));
+        assertEquals(List.of(b, a), t.ordered(null));
+        assertEquals(1100, t.threatOf(b));
+        assertEquals(2, t.snapshot().size());
+        assertEquals(a, t.currentTarget());
+    }
+
+    @Test
+    void readingCommittedTargetDoesNotAdvanceTheClockOrResolveEntities() {
+        var clockCalls = new java.util.concurrent.atomic.AtomicInteger();
+        var t = new ThreatTable(1, 0, () -> {
+            clockCalls.incrementAndGet();
+            return now.get();
+        }, id -> { throw new AssertionError("Target reads must not resolve entities"); });
+        UUID a = uuid("selected");
+        t.addThreat(a, 1);
+        t.selectTarget(a);
+        int before = clockCalls.get();
+        now.addAndGet(600_000);
+        assertEquals(a, t.currentTarget());
+        assertEquals(a, t.currentTarget());
+        assertEquals(before, clockCalls.get());
+    }
+
+    @Test
+    void explicitSelectionRequiresAnExistingPositiveThreatEntry() {
+        var t = table(0, 0);
+        UUID a = uuid("selected"), missing = uuid("unrecorded");
+        t.selectTarget(missing);
+        assertNull(t.currentTarget());
+        t.addThreat(a, 1);
+        t.selectTarget(a);
+        assertEquals(a, t.currentTarget());
+        t.selectTarget(missing);
+        assertNull(t.currentTarget());
+        t.selectTarget(a);
+        t.selectTarget(null);
+        assertNull(t.currentTarget());
+    }
+
+    @Test
+    void focusCommitsWhileRemovingOrClearingDoesNotChooseASuccessor() {
+        var t = table(0, 0);
+        UUID a = uuid("first"), b = uuid("second");
+        t.addThreat(a, 10);
+        t.focus(b);
+        assertEquals(b, t.currentTarget());
+        t.remove(a);
+        assertEquals(b, t.currentTarget());
+        t.addThreat(a, 10);
+        t.remove(b);
+        assertEquals(a, t.top(null));
+        assertNull(t.currentTarget());
+        t.focus(a);
+        t.clear();
+        assertNull(t.currentTarget());
+        assertEquals(0, t.size());
+    }
+
+    @Test
+    void decayCanInvalidateASelectionWithoutCommittingTheRemainingLeader() {
+        var t = table(1, 0);
+        UUID expired = uuid("expired"), survivor = uuid("survivor");
+        t.addThreat(expired, 1);
+        t.selectTarget(expired);
+        now.addAndGet(60_000);
+        t.addThreat(survivor, 100);
+        assertEquals(expired, t.currentTarget());
+        assertEquals(survivor, t.top(null));
+        assertNull(t.currentTarget());
+        assertEquals(Map.of(survivor, 100.0), t.snapshot());
+    }
+
     /** 可手动推进的假时钟。 */
     private final AtomicLong now = new AtomicLong(1_000_000L);
 

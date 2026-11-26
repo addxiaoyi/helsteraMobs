@@ -104,6 +104,16 @@ public record NumericMechanicSpec(List<String> arguments, int numericCount) {
             if (equals < 0) index = position++;
             else {
                 String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                if (canonical(name).equals("damage-target")
+                        && List.of("poweraffectsdamage", "pad").contains(key)) {
+                    if (!value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) {
+                        throw invalid(name, "invalid poweraffectsdamage");
+                    }
+                    if (tags.putIfAbsent("poweraffectsdamage", value.toLowerCase(Locale.ROOT)) != null) {
+                        throw invalid(name, "duplicate poweraffectsdamage");
+                    }
+                    continue;
+                }
                 if (canonical(name).equals("damage-target") &&
                         List.of("tags", "tag", "rawtags", "rawtag", "damagetype", "element").contains(key)) {
                     key = key.equals("tag") ? "tags" : key.equals("rawtag") ? "rawtags" : key;

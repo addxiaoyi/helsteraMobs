@@ -3254,7 +3254,38 @@ public final class MmConditions {
      */
     public static void translateAll(List<String> in, List<String> translatedOut,
                                     List<String> unmappedOut) {
+        translateAll(in, translatedOut, unmappedOut, false);
+    }
+
+    /** Skill metadata supports branching; spawn/drop condition lists do not share that contract. */
+    public static void translateSkillConditions(List<String> in, List<String> translatedOut,
+                                                List<String> unmappedOut) {
+        translateAll(in, translatedOut, unmappedOut, true);
+    }
+
+    private static void translateAll(List<String> in, List<String> translatedOut,
+                                     List<String> unmappedOut, boolean skillActions) {
         for (String raw : in == null ? List.<String>of() : in) {
+            var outcome = dev.helstera.api.util.MythicConditionAction.split(raw);
+            if (outcome != null && (outcome.castsSkill() || outcome.type()
+                    == dev.helstera.api.util.MythicConditionAction.Type.LEVEL
+                    || outcome.type() == dev.helstera.api.util.MythicConditionAction.Type.POWER
+                    || !outcome.argument().isEmpty())) {
+                Mapped leaf = translate(outcome.condition());
+                boolean supported = skillActions && outcome.valid() && leaf.translated()
+                        && leaf.condition() != null;
+                if (supported) {
+                    translatedOut.add(new dev.helstera.api.util.MythicConditionAction(
+                            leaf.condition(), outcome.type(), outcome.castsSkill()
+                            && !outcome.argument().contains("<")
+                            ? MythicMobsImporter.normalizeId(outcome.argument()) : outcome.argument(), false).runtime());
+                } else {
+                    String preserved = raw == null ? "<null>" : raw.trim();
+                    translatedOut.add(preserved);
+                    unmappedOut.add(preserved);
+                }
+                continue;
+            }
             ConditionAction action = splitConditionAction(raw);
             Mapped m = translate(action.condition());
             if (m.condition() == null) {
@@ -3282,10 +3313,10 @@ public final class MmConditions {
         int separator = lastTopLevelWhitespace(value);
         if (separator < 0) return new ConditionAction(value, null);
         String action = value.substring(separator).trim();
-        if (action.equalsIgnoreCase("true")) {
+        if (action.equalsIgnoreCase("true") || action.equalsIgnoreCase("required")) {
             return new ConditionAction(value.substring(0, separator).trim(), true);
         }
-        if (action.equalsIgnoreCase("false")) {
+        if (action.equalsIgnoreCase("false") || action.equalsIgnoreCase("cancel")) {
             return new ConditionAction(value.substring(0, separator).trim(), false);
         }
         return new ConditionAction(value, null);

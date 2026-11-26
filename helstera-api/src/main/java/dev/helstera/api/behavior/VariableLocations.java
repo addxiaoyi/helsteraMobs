@@ -21,7 +21,7 @@ public final class VariableLocations {
     }
 
     public static void set(String scope, String name, BehaviorContext context, Location location, long expiresAt) {
-        if (EntityVariableContext.isDetachedTarget(context, scope)) return;
+        if (isReadOnlyTriggerScope(scope) || EntityVariableContext.isDetachedTarget(context, scope)) return;
         var detached = EntityVariableContext.find(context, scope);
         if (detached.isPresent()) {
             if (name != null && !name.isBlank() && location != null) detached.get().setLocation(name, location, expiresAt);
@@ -33,6 +33,7 @@ public final class VariableLocations {
     }
 
     public static Optional<Location> get(String scope, String name, BehaviorContext context) {
+        if (EntityVariableContext.isUnavailableEntityRole(context, scope)) return Optional.empty();
         var detached = EntityVariableContext.find(context, scope);
         if (detached.isPresent()) return detached.get().location(name);
         return getByKey(scopeKey(scope, context), name);
@@ -51,6 +52,7 @@ public final class VariableLocations {
     }
 
     public static long expirationTime(String scope, String name, BehaviorContext context) {
+        if (EntityVariableContext.isUnavailableEntityRole(context, scope)) return 0;
         var detached = EntityVariableContext.find(context, scope);
         if (detached.isPresent()) return detached.get().locationExpiration(name);
         String key = scopeKey(scope, context);
@@ -59,7 +61,7 @@ public final class VariableLocations {
     }
 
     public static Optional<Location> unset(String scope, String name, BehaviorContext context) {
-        if (EntityVariableContext.isDetachedTarget(context, scope)) return Optional.empty();
+        if (isReadOnlyTriggerScope(scope) || EntityVariableContext.isDetachedTarget(context, scope)) return Optional.empty();
         var detached = EntityVariableContext.find(context, scope);
         if (detached.isPresent()) return detached.get().unsetLocation(name);
         String key = scopeKey(scope, context);
@@ -157,6 +159,9 @@ public final class VariableLocations {
         if (scope.equals("target")) {
             return context.targetEntity().map(VariableLocations::entityScopeKey).orElse(null);
         }
+        if (scope.equals("trigger")) {
+            return context.trigger().map(entity -> entityScopeKey(entity)).orElse(null);
+        }
         if (scope.equals("world")) {
             World world = context.instanceValid()
                     ? context.instance().baseEntity().map(Entity::getWorld).orElse(null) : null;
@@ -176,9 +181,13 @@ public final class VariableLocations {
     public static String normalizeScope(String rawScope) {
         if (rawScope == null || rawScope.isBlank()) return "skill";
         return switch (rawScope.trim().toLowerCase(java.util.Locale.ROOT)) {
-            case "skill", "caster", "target", "world", "global" -> rawScope.trim().toLowerCase(java.util.Locale.ROOT);
+            case "skill", "caster", "target", "trigger", "world", "global" -> rawScope.trim().toLowerCase(java.util.Locale.ROOT);
             default -> null;
         };
+    }
+
+    private static boolean isReadOnlyTriggerScope(String scope) {
+        return scope != null && scope.trim().equalsIgnoreCase("trigger");
     }
 
     private static String entityIdentity(Entity entity) {

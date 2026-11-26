@@ -301,7 +301,19 @@ public final class SkillExtras {
             Map.entry("doendskillonterminate", "doendskillonterminate"),
             Map.entry("desot", "doendskillonterminate"),
             Map.entry("alwaysrunendskill", "doendskillonterminate"),
-            Map.entry("ares", "doendskillonterminate"));
+            Map.entry("ares", "doendskillonterminate"),
+            Map.entry("cancelongivedamage", "cancelongivedamage"), Map.entry("cogd", "cancelongivedamage"),
+            Map.entry("cancelontakedamage", "cancelontakedamage"), Map.entry("cotd", "cancelontakedamage"),
+            Map.entry("cancelondeath", "cancelondeath"), Map.entry("cod", "cancelondeath"),
+            Map.entry("canceloncasterdeath", "canceloncasterdeath"), Map.entry("cocd", "canceloncasterdeath"),
+            Map.entry("cancelonteleport", "cancelonteleport"), Map.entry("cot", "cancelonteleport"),
+            Map.entry("cancelonchangeworld", "cancelonchangeworld"), Map.entry("cocw", "cancelonchangeworld"),
+            Map.entry("cancelonquit", "cancelonquit"), Map.entry("coq", "cancelonquit"),
+            Map.entry("charges", "charges"), Map.entry("c", "charges"),
+            Map.entry("showbartimer", "showbartimer"), Map.entry("bartimer", "showbartimer"),
+            Map.entry("bt", "showbartimer"), Map.entry("bartimerdisplay", "bartimerdisplay"),
+            Map.entry("bartimertext", "bartimerdisplay"), Map.entry("bartimercolor", "bartimercolor"),
+            Map.entry("bartimerstyle", "bartimerstyle"));
     private static final Map<String, String> AURA_REMOVE_ARGUMENTS = Map.ofEntries(
             Map.entry("aura", "name"), Map.entry("auraname", "name"),
             Map.entry("b", "name"), Map.entry("buff", "name"),
@@ -523,6 +535,7 @@ public final class SkillExtras {
 
     public static void host(Plugin plugin) {
         host = plugin;
+        ItemCopyActions.host(plugin);
     }
 
     public static void despawner(Despawner d) {
@@ -537,6 +550,7 @@ public final class SkillExtras {
      * classloader and can route a later action into stale services.</p>
      */
     public static void resetRuntimeHooks() {
+        ItemCopyActions.host(null);
         host = null;
         despawner = null;
         threatLookup = null;
@@ -5234,13 +5248,15 @@ public final class SkillExtras {
                 Map.entry("variable-gte", (SkillCatalog.ConditionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     double threshold = variableNumber(a, 1, 0, "value", "val", "amount", "threshold");
-                    return ctx -> varOf(ctx, ref) >= threshold;
+                    return ctx -> !EntityVariableContext.isUnavailableEntityRole(ctx, ref.scope())
+                            && varOf(ctx, ref) >= threshold;
                 }),
                 Map.entry("variable-lte", (SkillCatalog.ConditionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     double threshold = variableNumber(a, 1, Double.MAX_VALUE,
                             "value", "val", "amount", "threshold");
-                    return ctx -> varOf(ctx, ref) <= threshold;
+                    return ctx -> !EntityVariableContext.isUnavailableEntityRole(ctx, ref.scope())
+                            && varOf(ctx, ref) <= threshold;
                 }),
                 Map.entry("variable-equals", (SkillCatalog.ConditionFactory) a -> {
                     VariableRef ref = variableRef(a);
@@ -5754,6 +5770,21 @@ public final class SkillExtras {
         String intervalRaw = keyedArg(args, "interval", "i");
         boolean onEndWhenRemoved = auraBoolean(args, true, "doendskillonterminate",
                 "desot", "alwaysrunendskill", "ares");
+        Set<AuraRegistry.CancelEvent> cancelEvents = java.util.EnumSet.noneOf(AuraRegistry.CancelEvent.class);
+        if (auraBoolean(args, false, "cancelongivedamage", "cogd")) cancelEvents.add(AuraRegistry.CancelEvent.GIVE_DAMAGE);
+        if (auraBoolean(args, false, "cancelontakedamage", "cotd")) cancelEvents.add(AuraRegistry.CancelEvent.TAKE_DAMAGE);
+        if (auraBoolean(args, true, "cancelondeath", "cod")) cancelEvents.add(AuraRegistry.CancelEvent.DEATH);
+        if (auraBoolean(args, false, "canceloncasterdeath", "cocd")) cancelEvents.add(AuraRegistry.CancelEvent.CASTER_DEATH);
+        if (auraBoolean(args, false, "cancelonteleport", "cot")) cancelEvents.add(AuraRegistry.CancelEvent.TELEPORT);
+        if (auraBoolean(args, false, "cancelonchangeworld", "cocw")) cancelEvents.add(AuraRegistry.CancelEvent.CHANGE_WORLD);
+        if (auraBoolean(args, true, "cancelonquit", "coq")) cancelEvents.add(AuraRegistry.CancelEvent.QUIT);
+        String chargesRaw = keyedArg(args, "charges", "c");
+        if (chargesRaw != null && !chargesRaw.contains("<")) Integer.parseInt(chargesRaw.trim());
+        boolean showBarTimer = auraBoolean(args, false, "showbartimer", "bartimer", "bt");
+        String barDisplay = keyedArg(args, "bartimerdisplay", "bartimertext");
+        String barTitle = barDisplay == null ? "<skill.var.aura-name>" : barDisplay;
+        org.bukkit.boss.BarColor barColor = auraBarColor(keyedArg(args, "bartimercolor"));
+        org.bukkit.boss.BarStyle barStyle = auraBarStyle(keyedArg(args, "bartimerstyle"));
         String maxStacksRaw = keyedArg(args, "maxstacks", "ms");
         if (durationRaw != null && !durationRaw.contains("<")) parseAuraTicks(durationRaw, 200);
         int intervalTicks = parseAuraInterval(intervalRaw);
@@ -5781,8 +5812,7 @@ public final class SkillExtras {
         return ctx -> {
             AuraRegistry store = auraRegistry;
             if (store == null || ctx == null) return;
-            long duration = parseAuraTicks(durationRaw, 200, ctx);
-            if (duration <= 0) return;
+            long applicationGeneration = store.generation();
             String name = resolveAuraValue(configuredName, ctx);
             if (configuredName != null && name == null) return;
             if (name == null || name.isBlank()) name = "default";
@@ -5802,37 +5832,46 @@ public final class SkillExtras {
             var tickDispatcher = auraTickSkillDispatcher;
             var endDispatcher = auraEndSkillDispatcher;
             for (LivingEntity target : targetEntities(ctx)) {
+                // A callback may reload skills. Only a new cast may use the new lifecycle.
+                if (auraRegistry != store || store.generation() != applicationGeneration) return;
                 if (target == null || !target.isValid() || target.isDead()) continue;
                 try {
-                    BehaviorContext tickContext = onTickSkill == null ? null
-                            : ctx.withoutCancellableEvent().periodicTarget(target);
-                    BehaviorContext endContext = onEndSkill == null ? null : ctx.withoutCancellableEvent();
-                    AuraRegistry.ApplyResult result = store.applyWithResult(
+                    BehaviorContext targetContext = ctx.withTargetEntity(target);
+                    long duration = parseAuraTicks(durationRaw, 200, targetContext);
+                    if (duration <= 0) continue;
+                    int charges;
+                    try {
+                        charges = chargesRaw == null ? 0 : Integer.parseInt(resolveAuraValue(chargesRaw, targetContext));
+                    } catch (IllegalArgumentException ignored) { continue; }
+                    String auraName = name;
+                    String auraType = type;
+                    AuraCallbackState callbackState = new AuraCallbackState(ctx, target);
+                    AuraBarTimer timer = showBarTimer && target instanceof Player player
+                            ? new AuraBarTimer(player, barTitle, barColor, barStyle) : null;
+                    AuraRegistry.ApplyResult result = store.applyTracked(
                             target.getUniqueId(), casterId, name, type, duration, maxStacks,
                             refreshDuration, mergeSameCaster, mergeAll, overwriteSameCaster, overwriteAll,
-                            intervalTicks, onTickSkill == null ? null : targetId -> {
-                                Entity affected = org.bukkit.Bukkit.getEntity(targetId);
+                            intervalTicks, snapshot -> {
+                                Entity affected = org.bukkit.Bukkit.getEntity(snapshot.targetId());
                                 if (!(affected instanceof LivingEntity living)
                                         || !living.isValid() || living.isDead()) return;
-                                try {
-                                    tickDispatcher.cast(onTickSkill,
-                                            tickContext.periodicTarget(living));
-                                } catch (RuntimeException ignored) {
-                                    SkillFaults.swallow("SkillExtras#mythicAuraTick");
-                                }
-                            }, onEndSkill == null ? null : targetId -> {
-                                Entity affected = org.bukkit.Bukkit.getEntity(targetId);
-                                if (!(affected instanceof LivingEntity living)
-                                        || !living.isValid() || living.isDead()) return;
-                                try {
-                                    endDispatcher.cast(onEndSkill, endContext.auraEndTarget(living));
-                                } catch (RuntimeException ignored) {
-                                    SkillFaults.swallow("SkillExtras#mythicAuraEnd");
-                                }
-                            }, onEndWhenRemoved);
-                    AuraStartSkillDispatcher dispatcher = auraStartSkillDispatcher;
-                    if (result.started() && onStartSkill != null && dispatcher != null) {
-                        dispatcher.cast(onStartSkill, ctx.withTargetEntity(target));
+                                BehaviorContext tickContext = callbackState.tick(living);
+                                auraVariables(tickContext, snapshot, auraName, auraType);
+                                if (timer != null) timer.update(snapshot, tickContext);
+                                if (onTickSkill != null) tickDispatcher.cast(onTickSkill, tickContext);
+                            }, onEndSkill == null ? null : snapshot -> {
+                                Entity affected = org.bukkit.Bukkit.getEntity(snapshot.targetId());
+                                if (!(affected instanceof LivingEntity living)) return;
+                                BehaviorContext endContext = callbackState.end(living);
+                                auraVariables(endContext, snapshot, auraName, auraType);
+                                endDispatcher.cast(onEndSkill, endContext);
+                            }, onEndWhenRemoved, cancelEvents, charges, timer == null ? null : timer::close);
+                    if (result.started()) {
+                        BehaviorContext startContext = callbackState.start(target);
+                        auraVariables(startContext, result.snapshot(), auraName, auraType);
+                        if (timer != null) timer.update(result.snapshot(), startContext);
+                        AuraStartSkillDispatcher dispatcher = auraStartSkillDispatcher;
+                        if (onStartSkill != null && dispatcher != null) dispatcher.cast(onStartSkill, startContext);
                     }
                 } catch (RuntimeException ignored) {
                     SkillFaults.swallow("SkillExtras#mythicAura");
@@ -5921,6 +5960,29 @@ public final class SkillExtras {
         throw new IllegalArgumentException("invalid aura boolean: " + raw);
     }
 
+    private static void auraVariables(BehaviorContext context, AuraRegistry.Snapshot snapshot,
+                                      String name, String type) {
+        context.skillTree().ifPresent(tree -> {
+            tree.setVariable("aura-name", name);
+            if (type != null) tree.setVariable("aura-type", type);
+            tree.setVariable("aura-charges", snapshot.charges());
+            tree.setVariable("aura-duration", snapshot.remainingTicks());
+            tree.setVariable("aura-duration-millis", snapshot.remainingTicks() > Long.MAX_VALUE / 50
+                    ? Long.MAX_VALUE : snapshot.remainingTicks() * 50);
+            tree.setVariable("aura-stacks", snapshot.stacks());
+        });
+    }
+
+    private static org.bukkit.boss.BarColor auraBarColor(String raw) {
+        try { return org.bukkit.boss.BarColor.valueOf(raw == null ? "RED" : raw); }
+        catch (IllegalArgumentException ignored) { return org.bukkit.boss.BarColor.RED; }
+    }
+
+    private static org.bukkit.boss.BarStyle auraBarStyle(String raw) {
+        try { return org.bukkit.boss.BarStyle.valueOf(raw == null ? "SOLID" : raw); }
+        catch (IllegalArgumentException ignored) { return org.bukkit.boss.BarStyle.SOLID; }
+    }
+
     private static int parseAuraCount(String raw, int fallback) {
         if (raw == null) return fallback;
         try {
@@ -5985,7 +6047,7 @@ public final class SkillExtras {
     }
 
     public static Map<String, SkillCatalog.ActionFactory> actions() {
-        return NumericMechanicActions.wrap(Map.ofEntries(
+        return ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
                 Map.entry("set-speed", (SkillCatalog.ActionFactory) a -> {
                     var spec = dev.helstera.api.util.SetSpeedSpec.parse(a);
                     return ctx -> SetSpeedAction.apply(spec, ctx, itemTargets(ctx));
@@ -7152,13 +7214,28 @@ public final class SkillExtras {
                 Map.entry("variable-location-set", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     VariableLifetime lifetime = VariableLifetime.parse(a);
+                    var selector = keyedArg(a, "value", "val", "v", "amount", "a") == null ? null
+                            : dev.helstera.api.util.MythicVariableLocation.parse(a).selector();
                     return ctx -> {
                         if (ctx == null || ref.name().isEmpty()) return;
+                        if (ref.scope().equals("trigger")) return;
                         if (EntityVariableContext.isDetachedTarget(ctx, ref.scope())) return;
-                        Location location = ctx.targetLocation().orElseGet(() -> ctx.targetEntity()
-                                .map(org.bukkit.entity.Entity::getLocation)
-                                .orElseGet(() -> ctx.origin().orElse(null)));
-                        if (location == null) return;
+                        Location location;
+                        if (selector == null) {
+                            location = ctx.targetLocation().orElseGet(() -> ctx.targetEntity()
+                                    .map(org.bukkit.entity.Entity::getLocation)
+                                    .orElseGet(() -> ctx.origin().orElse(null)));
+                        } else {
+                            location = switch (selector) {
+                                case "@self" -> ctx.instanceValid()
+                                        ? ctx.instance().baseEntity().map(Entity::getLocation).orElse(null) : null;
+                                case "@origin" -> ctx.origin().orElse(null);
+                                case "@trigger" -> ctx.trigger().map(Entity::getLocation).orElse(null);
+                                case "@target", "@targetlocation" -> variableLocationTarget(ctx, selector);
+                                default -> null;
+                            };
+                        }
+                        if (location == null || selector != null && location.getWorld() == null) return;
                         unsetScopedVariable(ctx, ref);
                         // Native SetVariableLocation passes its raw millisecond duration as the deadline.
                         long expiresAt = lifetime.locationExpirationTime();
@@ -7209,6 +7286,24 @@ public final class SkillExtras {
                         setRawVariable(ctx, ref, next, expiresAt);
                     };
                 }),
+                Map.entry("variable-subtract", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    var arithmetic = dev.helstera.api.util.MythicVariableArithmetic.parse(a);
+                    return ctx -> {
+                        if (ctx == null || ref.name().isEmpty()) return;
+                        if (EntityVariableContext.isUnavailableEntityRole(ctx, ref.scope())) {
+                            throw new dev.helstera.ai.SkillActionAbortException();
+                        }
+                        long previousExpiration = variableExpiration(ctx, ref);
+                        Object current = rawVariable(ctx, ref);
+                        float amount = (float) Placeholders.resolveNumber(arithmetic.amount(), ctx, Double.NaN);
+                        Object next = dev.helstera.api.util.MythicVariableArithmetic.subtract(current, amount);
+                        if (next == null) return;
+                        long expiresAt = arithmetic.duration().ticks() > 0
+                                ? arithmetic.duration().expirationTime() : previousExpiration;
+                        setRawVariable(ctx, ref, next, expiresAt);
+                    };
+                }),
                 Map.entry("var-add", (SkillCatalog.ActionFactory) a -> {
                     VariableRef ref = variableRef(a);
                     VariableDuration duration = VariableDuration.parse(a);
@@ -7219,6 +7314,36 @@ public final class SkillExtras {
                         if (current == Double.NEGATIVE_INFINITY) current = 0;
                         long expiresAt = duration.ticks() > 0 ? duration.expirationTime() : variableExpiration(ctx, ref);
                         setRawVariable(ctx, ref, current + amount, expiresAt);
+                    };
+                }),
+                Map.entry("variable-math", (SkillCatalog.ActionFactory) a -> {
+                    VariableRef ref = variableRef(a);
+                    var math = dev.helstera.api.util.MythicVariableMath.parse(a);
+                    return ctx -> {
+                        if (ctx == null || ref.name().isEmpty()) return;
+                        if (EntityVariableContext.isUnavailableEntityRole(ctx, ref.scope())) {
+                            throw new dev.helstera.ai.SkillActionAbortException();
+                        }
+                        long previousExpiration = variableExpiration(ctx, ref);
+                        Object current = rawVariable(ctx, ref);
+                        if (!(current instanceof Integer || current instanceof Float)) return;
+                        double result;
+                        try {
+                            result = dev.helstera.api.util.NumericExpression.resolveEquation(math.equation(),
+                                    ((Number) current).doubleValue(), token -> Placeholders.resolve(token, ctx));
+                        } catch (IllegalArgumentException | ArithmeticException invalid) {
+                            return;
+                        }
+                        Object next;
+                        if (current instanceof Integer) next = (int) result;
+                        else {
+                            float value = (float) result;
+                            if (!Float.isFinite(value)) return;
+                            next = value;
+                        }
+                        long expiresAt = math.duration().ticks() > 0
+                                ? math.duration().expirationTime() : previousExpiration;
+                        setRawVariable(ctx, ref, next, expiresAt);
                     };
                 }),
                 Map.entry("var-math", (SkillCatalog.ActionFactory) a -> {
@@ -7670,7 +7795,7 @@ public final class SkillExtras {
                         }
                     };
                 })
-        ));
+        )), raw -> resolveItem(raw, 1))));
     }
 
     /**
@@ -9157,6 +9282,8 @@ public final class SkillExtras {
     private static VariableRef variableRef(List<String> args) {
         String name = null;
         String scope = null;
+        boolean explicitScope = false;
+        boolean dottedScope = false;
         List<String> positional = new ArrayList<>();
         if (args != null) {
             for (String raw : args) {
@@ -9166,7 +9293,7 @@ public final class SkillExtras {
                     String key = raw.substring(0, equals).trim().toLowerCase(Locale.ROOT);
                     String value = raw.substring(equals + 1).trim();
                     if (key.equals("var") || key.equals("variable") || key.equals("name")) name = value;
-                    else if (key.equals("scope")) scope = value;
+                    else if (key.equals("scope")) { scope = value; explicitScope = true; }
                     else { }
                 } else {
                     positional.add(raw.trim());
@@ -9186,9 +9313,13 @@ public final class SkillExtras {
             int dot = name.indexOf('.');
             scope = name.substring(0, dot);
             name = name.substring(dot + 1);
+            dottedScope = true;
         }
-        String normalized = VariableLocations.normalizeScope(scope);
-        return new VariableRef(name == null ? "" : name.trim(), normalized == null ? "skill" : normalized);
+        String normalized = explicitScope && (scope == null || scope.isBlank()) ? ""
+                : VariableLocations.normalizeScope(scope);
+        if (normalized == null) normalized = explicitScope || dottedScope
+                ? scope.trim().toLowerCase(Locale.ROOT) : "skill";
+        return new VariableRef(name == null ? "" : name.trim(), normalized);
     }
 
     private static String keyedArg(List<String> args, String... names) {
@@ -9341,6 +9472,7 @@ public final class SkillExtras {
 
     private static void setRawVariable(BehaviorContext ctx, VariableRef ref, Object value, long expiresAt) {
         if (ctx == null || ref == null || ref.name().isEmpty() || value == null) return;
+        if (ref.scope().equals("trigger")) return;
         if (EntityVariableContext.isDetachedTarget(ctx, ref.scope())) return;
         if (value instanceof LocationValue locationValue) {
             Location location = resolveLocationValue(ctx, locationValue);
@@ -9410,6 +9542,7 @@ public final class SkillExtras {
 
     private static void unsetScopedVariable(BehaviorContext ctx, VariableRef ref) {
         if (ctx == null || ref == null || ref.name().isEmpty()) return;
+        if (ref.scope().equals("trigger")) return;
         if (EntityVariableContext.isDetachedTarget(ctx, ref.scope())) return;
         var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, ref.scope());
         if (detached.isPresent()) {
@@ -9440,8 +9573,48 @@ public final class SkillExtras {
         VariableLocations.unset(ref.scope(), ref.name(), ctx);
     }
 
+    /** Nested value targeters use caster AI state, independently of the mutation recipient. */
+    private static Location variableLocationTarget(BehaviorContext ctx, String selector) {
+        // Retained terminal contexts can outlive the AI controller and its threat lookup.
+        if (!ctx.instanceValid() || ctx.instance() instanceof EntityVariableContext) return null;
+        Entity caster = ctx.instance().baseEntity().orElse(null);
+        if (caster == null) return null;
+        var threat = threatOf(ctx);
+        if (caster instanceof Player player) {
+            // Ordinary player casters use aiming; a player with mob threat state is a separate case.
+            if (threat != null) return null;
+            if (selector.equals("@targetlocation")) {
+                Location aimed = MythicPlayerTargeting.location(player);
+                return aimed == null ? ctx.origin().orElse(null) : aimed;
+            }
+            LivingEntity aimed = MythicPlayerTargeting.entity(player);
+            return aimed == null ? ctx.origin().orElse(null) : aimed.getLocation();
+        }
+        Entity target;
+        if (threat != null) {
+            // Reading a value must not recalculate ranks, advance decay or select a new target.
+            UUID selected = threat.currentTarget();
+            if (selected == null) target = null;
+            else {
+                Object resolved = threat.resolve(selected);
+                if (!(resolved instanceof Entity entity)) return null;
+                target = entity;
+            }
+        } else if (caster instanceof org.bukkit.entity.Creature creature) {
+            target = creature.getTarget();
+        } else {
+            // Non-Creature last-aggro selection without a threat table requires separate support.
+            return null;
+        }
+        if (target != null) return target.getLocation();
+        // Native @target yields a null entity and throws; preserve state instead. The empty
+        // @targetlocation collection is different: SkillExecutor falls back to the skill origin.
+        return selector.equals("@targetlocation") ? ctx.origin().orElse(null) : null;
+    }
+
     private static void unsetLocation(BehaviorContext ctx, VariableRef ref) {
         if (ctx == null || ref == null || ref.name().isEmpty()) return;
+        if (ref.scope().equals("trigger")) return;
         if (ref.scope().equals("skill")) {
             ctx.skillTree().ifPresent(tree -> tree.unsetLocation(ref.name()));
         } else {
@@ -9468,7 +9641,8 @@ public final class SkillExtras {
     }
 
     private static Object rawVariable(BehaviorContext ctx, VariableRef ref) {
-        if (ctx == null || ref == null || ref.name().isEmpty()) return null;
+        if (ctx == null || ref == null || ref.name().isEmpty()
+                || EntityVariableContext.isUnavailableEntityRole(ctx, ref.scope())) return null;
         var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, ref.scope());
         if (detached.isPresent()) return detached.get().variable(ref.name()).orElseGet(
                 () -> detached.get().location(ref.name()).orElse(null));
@@ -9505,7 +9679,8 @@ public final class SkillExtras {
 
     /** Read the action/condition variable store without allocating a registry on a miss. */
     static Object placeholderVariable(BehaviorContext ctx, String scope, String name) {
-        if (ctx == null || name == null || name.isEmpty()) return null;
+        if (ctx == null || name == null || name.isEmpty()
+                || EntityVariableContext.isUnavailableEntityRole(ctx, scope)) return null;
         var detached = dev.helstera.api.behavior.EntityVariableContext.find(ctx, scope);
         if (detached.isPresent()) return detached.get().variable(name).orElseGet(
                 () -> detached.get().location(name).orElse(null));

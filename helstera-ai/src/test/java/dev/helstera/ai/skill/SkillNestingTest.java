@@ -786,10 +786,10 @@ class SkillNestingTest {
         assertTrue(registry.runAction(action, valid));
         assertEquals(1, fired.get());
         assertEquals(2, observed.size());
-        assertSame(caster, observed.get(0).targetEntity().orElseThrow(),
-                "ordinary inline conditions evaluate against the model caster");
-        assertSame(trigger, observed.get(1).targetEntity().orElseThrow(),
+        assertSame(trigger, observed.get(0).targetEntity().orElseThrow(),
                 "?~ conditions evaluate against the trigger entity");
+        assertSame(caster, observed.get(1).targetEntity().orElseThrow(),
+                "ordinary inline conditions evaluate against the model caster after trigger conditions");
 
         var noTrigger = BehaviorContext.continueExecution(instance, activeTarget, 0.5, 3, 0, "damage",
                 null, null, List.of(activeTarget), null, null);

@@ -42,6 +42,8 @@ public final class ThreatTable {
     }
 
     private final Map<UUID, Entry> entries = new ConcurrentHashMap<>();
+    /** Last explicit threat selection; observing scores must not choose a different target. */
+    private volatile UUID currentTarget;
     private final double decayPerSecond;
     private final double distanceWeightFalloff;
     private final LongSupplier clock;
@@ -92,6 +94,18 @@ public final class ThreatTable {
         Entry entry = entries.computeIfAbsent(id, ignored -> new Entry());
         entry.threat = Math.max(entry.threat, highest + 1000.0);
         entry.lastSeen = clock.getAsLong();
+        selectTarget(id);
+    }
+
+    /** Returns the last committed threat target without ranking, decay or entity resolution. */
+    public UUID currentTarget() {
+        return currentTarget;
+    }
+
+    /** Commits an AI or explicit focus selection; unrecorded/non-positive targets clear it. */
+    public void selectTarget(UUID id) {
+        Entry entry = id == null ? null : entries.get(id);
+        currentTarget = entry != null && entry.threat > 0 ? id : null;
     }
 
     /**
@@ -156,6 +170,9 @@ public final class ThreatTable {
         }
         // 清掉已衰减为零的条目：否则 map 会随玩家进出持续增长
         entries.entrySet().removeIf(en -> en.getValue().threat <= 0);
+        // Decay may invalidate a removed selection, but score reads never select its successor.
+        UUID selected = currentTarget;
+        if (selected != null && !entries.containsKey(selected)) currentTarget = null;
     }
 
     /** 当前全部有效目标（UUID -> 威胁值），按降序。供 /helstera debug 展示。 */
@@ -189,10 +206,14 @@ public final class ThreatTable {
 
     public void clear() {
         entries.clear();
+        currentTarget = null;
     }
 
     public void remove(UUID id) {
-        if (id != null) entries.remove(id);
+        if (id != null) {
+            entries.remove(id);
+            if (id.equals(currentTarget)) currentTarget = null;
+        }
     }
 
     /** 在场目标数（威胁 > 0）。 */

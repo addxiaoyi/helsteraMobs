@@ -17,6 +17,7 @@ import java.util.*;
 /** Observe actual native/runtime role reads after terminal events, without imposing expected parity. */
 public final class TerminalReadProbe extends JavaPlugin implements Listener {
     private static final int Z=256;
+    private static final List<Integer> POINT_TICKS=List.of(2,9,70);
     private Plugin runtime,mythic; private Object manager,service; private World world;
     private Class<?> extras,registryType;
     private final Map<String,UUID> parents=new LinkedHashMap<>();
@@ -38,7 +39,7 @@ public final class TerminalReadProbe extends JavaPlugin implements Listener {
     private int x(String backend){return backend.equals("native")?256:512;}
     @Override public void onEnable(){
         runtime=Bukkit.getPluginManager().getPlugin("helsteraMobs");mythic=Bukkit.getPluginManager().getPlugin("MythicMobs");
-        if(getConfig().getBoolean("boundary"))try{
+        if(getConfig().getBoolean("boundary")||getConfig().getBoolean("condition-location"))try{
             // A public read-only placeholder records evaluation time, separately
             // from the later console callback. Never alter native scheduling.
             Object placeholders=mythic.getClass().getMethod("getPlaceholderManager").invoke(mythic);
@@ -96,10 +97,31 @@ public final class TerminalReadProbe extends JavaPlugin implements Listener {
         var cfg=new YamlConfiguration();cfg.loadFromString(skills.stream().filter(p->"skills.yml".equals(p.get("target-file"))).findFirst().orElseThrow().get("content").toString().replace("hook native","hook runtime"));
         // Exercise both original runtime mechanic spelling and production import output.
         var sourceSkills=YamlConfiguration.loadConfiguration(mythic.getDataFolder().toPath().resolve("Skills/terminal-read.yml").toFile());
-        for(String name:sourceSkills.getKeys(false))if(name.endsWith("_direct"))
+        for(String name:sourceSkills.getKeys(false))if(name.endsWith("_direct")){
             cfg.set("skills."+name+".on-decision",sourceSkills.getStringList(name+".Skills").stream().map(a->a.replace("hook native","hook runtime")).toList());
+            if(getConfig().getBoolean("condition-location"))for(var field:Map.of(
+                    "Conditions","require","TargetConditions","target-conditions","TriggerConditions","trigger-conditions").entrySet()){
+                List<String> conditions=sourceSkills.getStringList(name+"."+field.getKey());
+                if(!conditions.isEmpty())cfg.set("skills."+name+"."+field.getValue(),conditions.stream().map(TerminalReadProbe::directCondition).toList());
+            }
+        }
         cfg.save(getDataFolder().toPath().resolve("imports/skills.yml").toFile());cfg.save(runtime.getDataFolder().toPath().resolve("skills.yml").toFile());
         service.getClass().getMethod("loadSkills",ConfigurationSection.class).invoke(service,cfg.getConfigurationSection("skills"));
+    }
+    private static String directCondition(String nativeLine){
+        int opening=nativeLine.indexOf('{'),end=nativeLine.lastIndexOf('}');
+        String name=switch(nativeLine.substring(0,opening)){
+            case "variableisset"->"variable-is-set";
+            case "variableequals"->"variable-equals";
+            case "variableinrange"->"variable-in-range";
+            default->throw new IllegalArgumentException("Unrecognized probe condition: "+nativeLine);
+        };
+        String prefix=switch(nativeLine.substring(end+1)){
+            case " true"->"";
+            case " false"->"!";
+            default->throw new IllegalArgumentException("Missing probe condition result: "+nativeLine);
+        };
+        return prefix+name+nativeLine.substring(opening,end+1);
     }
     private void load(){for(String b:List.of("native","runtime")){var c=world.getChunkAt(x(b),Z);c.getEntities();c.addPluginChunkTicket(this);}}
     private void next()throws Exception{
@@ -119,12 +141,22 @@ public final class TerminalReadProbe extends JavaPlugin implements Listener {
                 Object pre=variable.getMethod("ofType",type,Object.class,boolean.class).invoke(null,integer,17,true);
                 long deadline=System.currentTimeMillis()+3000;variable.getMethod("setExpirationTime",long.class).invoke(pre,deadline);
                 vars.getClass().getMethod("put",String.class,variable).invoke(vars,"Pre",pre);
+                if(getConfig().getBoolean("condition-location"))seedNativePoints(backend,vars,variable);
                 getLogger().info("TREAD_SEED|key="+key+"|backend="+backend+"|uuid="+e.getUniqueId()+"|deadline="+deadline+"|millis="+System.currentTimeMillis());
             }else{
                 instanceId=((Number)runtime.getClass().getMethod("spawnMobAt",String.class,Location.class,String.class).invoke(runtime,"tr_"+key,at,null)).intValue();Object inst=instances().getClass().getMethod("impl",int.class).invoke(instances(),instanceId);
                 e=(LivingEntity)((Optional<?>)inst.getClass().getMethod("baseEntity").invoke(inst)).orElseThrow();
                 long deadline=System.currentTimeMillis()+3000;
-                Object registry=registryType.getConstructor(Map.class,Map.class,Map.class,Map.class).newInstance(Map.of("Marker",73,"Pre",17),Map.of(),Map.of("Marker",0L,"Pre",deadline),Map.of());extras.getMethod("restoreScopedVariables",String.class,registryType).invoke(null,"entity:"+e.getUniqueId(),registry);
+                Map<String,Object> points=new LinkedHashMap<>();
+                if(getConfig().getBoolean("condition-location")){
+                    var snapshot=rt("dev.helstera.api.behavior.SkillTreeContext$LocationSnapshot")
+                            .getConstructor(String.class,double.class,double.class,double.class,float.class,float.class);
+                    for(String role:List.of("Caster","Target"))for(int tick:POINT_TICKS){
+                        Location atPoint=point(backend,role,tick);
+                        points.put(role+"Point"+tick,snapshot.newInstance(world.getName(),atPoint.getX(),atPoint.getY(),atPoint.getZ(),0f,0f));
+                    }
+                }
+                Object registry=registryType.getConstructor(Map.class,Map.class,Map.class,Map.class).newInstance(Map.of("Marker",73,"Pre",17),points,Map.of("Marker",0L,"Pre",deadline),Map.of());extras.getMethod("restoreScopedVariables",String.class,registryType).invoke(null,"entity:"+e.getUniqueId(),registry);
                 getLogger().info("TREAD_SEED|key="+key+"|backend="+backend+"|uuid="+e.getUniqueId()+"|deadline="+deadline+"|millis="+System.currentTimeMillis());
             }
             parents.put(backend,e.getUniqueId());getLogger().info("TREAD_ID|key="+key+"|backend="+backend+"|uuid="+e.getUniqueId()+"|instance="+instanceId+"|tick="+Bukkit.getCurrentTick());
@@ -135,6 +167,34 @@ public final class TerminalReadProbe extends JavaPlugin implements Listener {
                 String waiting=key;later(120,()->{if(key.equals(waiting)&&!executed)throw new IllegalStateException("Missing unload events");});
             }else execute();
         });
+    }
+    private Location point(String backend,String role,int tick){
+        return new Location(world,(x(backend)+4)*16+2+POINT_TICKS.indexOf(tick)*2,
+                role.equals("Caster")?112:114,Z*16+10);
+    }
+    private void seedNativePoints(String backend,Object vars,Class<?> variable)throws Exception{
+        var adapter=nt("io.lumine.mythic.bukkit.BukkitAdapter").getMethod("adapt",Location.class);
+        var constructor=nt("io.lumine.mythic.core.skills.variables.types.LocationVariable")
+                .getConstructor(nt("io.lumine.mythic.api.adapters.AbstractLocation"));
+        var put=vars.getClass().getMethod("put",String.class,variable);
+        for(String role:List.of("Caster","Target"))for(int tick:POINT_TICKS){
+            Location at=point(backend,role,tick);
+            put.invoke(vars,role+"Point"+tick,constructor.newInstance(adapter.invoke(null,at)));
+        }
+    }
+    private void observePoints(String phase){
+        for(String backend:List.of("native","runtime")){
+            var chunk=world.getChunkAt(x(backend)+4,Z);
+            chunk.addPluginChunkTicket(this);
+            for(String role:List.of("Caster","Target"))for(int tick:POINT_TICKS){
+                Location at=point(backend,role,tick);
+                getLogger().info("TREAD_POINTS|key="+key+"|backend="+backend+"|phase="+phase
+                        +"|uuid="+parents.get(backend)+"|role="+role+"|offset="+tick+"|world="+world.getName()
+                        +"|x="+at.getBlockX()+"|y="+at.getBlockY()+"|z="+at.getBlockZ()
+                        +"|material="+at.getBlock().getType()+"|parentChunk="+world.isChunkLoaded(x(backend),Z));
+                if(phase.equals("settled"))at.getBlock().setType(Material.AIR,false);
+            }
+        }
     }
     @EventHandler(priority=EventPriority.MONITOR) public void unload(EntitiesUnloadEvent e){
         if(!e.getWorld().equals(world)||cleaning||executed||e.getChunk().getZ()!=Z)return;
@@ -158,7 +218,9 @@ public final class TerminalReadProbe extends JavaPlugin implements Listener {
                 if(!e.isDead())throw new IllegalStateException("Damage did not kill parent");
             }else if((scenario.equals("death")||scenario.equals("cancelled"))){LivingEntity e=(LivingEntity)Bukkit.getEntity(parents.get(b));e.setInvulnerable(false);e.setHealth(0);}
         }
-        later(180,()->{load();later(30,()->{observe("settled");cleanup();});});
+        if(getConfig().getBoolean("condition-location")){
+            later(90,()->{observePoints("settled");load();later(25,()->{observe("settled");cleanup();});});
+        }else later(180,()->{load();later(30,()->{observe("settled");cleanup();});});
     }
     private LivingEntity spawnPeer(String backend,Location at)throws Exception{
         LivingEntity peer;
@@ -185,6 +247,7 @@ public final class TerminalReadProbe extends JavaPlugin implements Listener {
         later(20,()->{observe("cleaned");world.removePluginChunkTickets(this);boolean ok=Bukkit.unloadWorld(world,true);getLogger().info("TREAD_SEAL|key="+key+"|accepted="+ok);if(!ok)throw new IllegalStateException("Seal failed");index++;later(10,this::next);});
     }
     private void observe(String phase)throws Exception{
+        if(getConfig().getBoolean("condition-location")&&!phase.equals("settled"))observePoints(phase);
         for(String b:List.of("native","runtime")){
             UUID uuid=parents.get(b);Object reg=b.equals("native")?active(uuid):instance(uuid);Object marker=null;
             if(b.equals("native")&&reg!=null){Object vars=reg.getClass().getMethod("getVariables").invoke(reg),v=vars.getClass().getMethod("get",String.class).invoke(vars,"Marker");if(v!=null)marker=v.getClass().getMethod("get").invoke(v);}

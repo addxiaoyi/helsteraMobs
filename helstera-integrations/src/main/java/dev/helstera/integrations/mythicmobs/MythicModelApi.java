@@ -9,7 +9,8 @@ import java.util.*;
 /** Exact 5.7.2 extension ABI, resolved through the installed native plugin's loader. */
 record MythicModelApi(Class<? extends Event> event, Class<?> extension, Method name, Method config,
                       Method line, Method register, Method readback, Method holder, Method retained, Method source,
-                      Method execute, Method entity, Method safety, Object sync, Map<String, Object> results) {
+                      Method execute, Method entity, Method caster, Method casterEntity,
+                      Method safety, Object sync, Map<String, Object> results) {
     static MythicModelApi resolve(ClassLoader loader, boolean condition) throws ReflectiveOperationException {
         String root = "io.lumine.mythic.";
         Class<?> event = loader.loadClass(root + "bukkit.events.Mythic" + (condition ? "Condition" : "Mechanic") + "LoadEvent");
@@ -19,14 +20,19 @@ record MythicModelApi(Class<? extends Event> event, Class<?> extension, Method n
         Class<?> entity = loader.loadClass(root + "api.adapters.AbstractEntity");
         if (!base.isInterface() || !extension.isInterface() || !base.isAssignableFrom(extension))
             throw new NoSuchMethodException("Native extension must implement the expected interface");
-        Method execute, safety = null; Object sync = null; Map<String, Object> results = new HashMap<>();
+        Method execute, safety = null, caster = null, casterEntity = null;
+        Object sync = null; Map<String, Object> results = new HashMap<>();
         if (condition) {
             execute = exact(extension, "check", boolean.class, entity);
             exact(event, "getArgument", String.class);
         } else {
             Class<?> result = loader.loadClass(root + "api.skills.SkillResult");
             Class<?> thread = loader.loadClass(root + "api.skills.ThreadSafetyLevel");
-            execute = exact(extension, "castAtEntity", result, loader.loadClass(root + "api.skills.SkillMetadata"), entity);
+            Class<?> metadata = loader.loadClass(root + "api.skills.SkillMetadata");
+            Class<?> skillCaster = loader.loadClass(root + "api.skills.SkillCaster");
+            execute = exact(extension, "castAtEntity", result, metadata, entity);
+            caster = exact(metadata, "getCaster", skillCaster);
+            casterEntity = exact(skillCaster, "getEntity", entity);
             safety = exact(base, "getThreadSafetyLevel", thread);
             exact(base, "getPlugin", loader.loadClass(root + "api.MythicPlugin"));
             exact(base, "getTargetsSpectators", boolean.class);
@@ -50,7 +56,7 @@ record MythicModelApi(Class<? extends Event> event, Class<?> extension, Method n
                 exact(event, "register", void.class, base), exact(event, getter, Optional.class),
                 exact(event, "getContainer", holder), exact(holder, getter, Optional.class),
                 condition ? exact(holder, "getLine", String.class) : null, execute,
-                exact(entity, "getBukkitEntity", Entity.class), safety, sync, Map.copyOf(results));
+                exact(entity, "getBukkitEntity", Entity.class), caster, casterEntity, safety, sync, Map.copyOf(results));
     }
 
     static Method exact(Class<?> owner, String name, Class<?> result, Class<?>... arguments) throws NoSuchMethodException {

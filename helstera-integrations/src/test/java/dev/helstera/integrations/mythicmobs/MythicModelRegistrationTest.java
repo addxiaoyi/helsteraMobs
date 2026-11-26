@@ -54,14 +54,16 @@ class MythicModelRegistrationTest {
     @SuppressWarnings("unchecked") private static <T> T proxy(Class<T> type, InvocationHandler handler) {
         return (T)Proxy.newProxyInstance(type.getClassLoader(), new Class<?>[]{type}, handler);
     }
-    private static MythicModelApi api(boolean condition) throws Exception {
+    static MythicModelApi api(boolean condition) throws Exception {
         Class<?> extension = condition ? Predicate.class : Mechanic.class;
         return new MythicModelApi(LoadEvent.class, extension, LoadEvent.class.getMethod("name"), LoadEvent.class.getMethod("config"),
                 Config.class.getMethod("getLine"), LoadEvent.class.getMethod("register", Object.class), LoadEvent.class.getMethod("readback"),
                 LoadEvent.class.getMethod("holder"), LoadEvent.class.getMethod("readback"), LoadEvent.class.getMethod("source"),
                 condition ? Predicate.class.getMethod("check", Wrapped.class) : Mechanic.class.getMethod("cast", Object.class, Wrapped.class),
-                Wrapped.class.getMethod("getBukkitEntity"), condition ? null : Mechanic.class.getMethod("thread"), "SYNC_ONLY",
-                Map.of("MISSING_COMPATIBILITY", "MISSING_COMPATIBILITY", "INVALID_CONFIG", "INVALID_CONFIG", "ERROR", "ERROR"));
+                Wrapped.class.getMethod("getBukkitEntity"), Metadata.class.getMethod("getCaster"), Caster.class.getMethod("getEntity"),
+                condition ? null : Mechanic.class.getMethod("thread"), "SYNC_ONLY",
+                Map.of("MISSING_COMPATIBILITY", "MISSING_COMPATIBILITY", "INVALID_CONFIG", "INVALID_CONFIG", "ERROR", "ERROR",
+                        "SUCCESS", "SUCCESS", "INVALID_TARGET", "INVALID_TARGET"));
     }
     @Test void advertisesOnlySeparatelyConfirmedRegistrations() throws Exception {
         assertFalse(bridge.hasMechanics()); assertFalse(bridge.hasConditions());
@@ -145,7 +147,17 @@ class MythicModelRegistrationTest {
     }
     public interface Mechanic { String cast(Object source, Wrapped entity); default String thread(){return "EITHER";} default int inherited(){return 17;} }
     public interface Predicate { boolean check(Wrapped entity); }
-    public static final class Wrapped { public Entity getBukkitEntity(){throw new AssertionError("Must reject before entity access");} }
+    public record Metadata(Caster getCaster) {}
+    public record Caster(Wrapped getEntity) {}
+    public static final class Wrapped {
+        private final Entity entity; private final boolean readable;
+        public Wrapped() { entity = null; readable = false; }
+        public Wrapped(Entity entity) { this.entity = entity; readable = true; }
+        public Entity getBukkitEntity() {
+            if (!readable) throw new AssertionError("Must reject before entity access");
+            return entity;
+        }
+    }
     public record Config(String getLine) {}
     public static final class LoadEvent extends Event {
         private static final HandlerList HANDLERS = new HandlerList();

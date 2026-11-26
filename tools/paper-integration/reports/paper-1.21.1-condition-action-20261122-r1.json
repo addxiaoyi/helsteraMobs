@@ -1,0 +1,679 @@
+{
+  "schemaVersion": 2,
+  "fixtureDirectory": "srv-paper-condition-action-20261122-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-22T02:36:29.893108+00:00",
+  "pluginSha256": "7b029146bfdfa7669b025aca17e0993923d4511f8a275d0c471743baf3eae6c5",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "8865c9f674c160e29a3ab6ce2a3558401cd9ca74488ea8c1477edcb021d6f098",
+  "sourceHashes": {
+    "tools/paper-integration/run-condition-action-fixture.py": "fd4766add4e47425b35c29649ebbd02ca3252439b835cb7b2f8450ec4fbe8c70",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ConditionActionProbe.java": "5b71af177ef595c862301b51c410dd7e44277884281a752d292314d618565898",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "c7f6b3abb6e19ec31a0862862d3369962aff92fbf380f63ea331060859500e81",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MmConditions.java": "1403e3c9bc328c40c20a9a9283978adf96999bb94b85f5aeb68239cea3069562",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "d36ada3808a71a66f87d6862de9217d846247d44954a73ea0f420093ccfedb79",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "0dccee23c3fe0e1676168d821971aca2cf26d525e4b4188f68485594a51fd124",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicConditionAction.java": "c5915953e07707be6fb10c2d29161ed45e69f5e1ce91143d6ed794c1c617e607",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "0b17e12fecc7d098fbab439946c945fae5184056f925701de77168b6bd71da41",
+    "helstera-api/src/main/java/dev/helstera/api/util/NumericMechanicSpec.java": "0e9609e0051bb46513c9d27735839bf194fa23937a0ee7d5877143feef619af3",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillCatalog.java": "d566f8669370d179485799fe7fd427c40b3d5c6afe7ebcf8e2be89e532dd4494",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/Placeholders.java": "0e1dfd4a846e28e0dfda52d302fdfb788353621591643be99dc15013438472c8"
+  },
+  "limitations": [
+    "Compares native SkillCondition dispatch with direct/imported named skill execution.",
+    "One entity target; child availability is controlled by a registered native Skill proxy.",
+    "Covers ordinary skill LEVEL no-op, not random-spawn LEVEL mutation.",
+    "Does not promote the exact-artifact release gate or full condition parity."
+  ],
+  "exitCode": 0,
+  "observationCount": 156,
+  "validationResult": "passed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "eb4b491953dad8c8d7f811c719f911ac58a4a698ba84848ce9ce774ad60857a1"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/conditions.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0000.yml",
+      "sha256": "b98b01bfb95eb00f1bd94badf54e6474d2d49276fd3bce090044b5b4d8d0ece8"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0001.yml",
+      "sha256": "a57ebfe7a63b48813f9ae24c12cfa11e7b669425df49f4ada47e1ef0419a10ed"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0002.yml",
+      "sha256": "cdeda3bd7e08e4293966147bdece0b664f37fd4be34df30905cf326b6782a647"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0003.yml",
+      "sha256": "4de2ebdf120cef80d911d4a1d56f80e03c76629f50587128c865e582712ac114"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0004.yml",
+      "sha256": "7881436a7a62b833391e2830757f326ee21aee8a18fe43a15c60e2eee718fd94"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0005.yml",
+      "sha256": "d92483b40c22de0cad6107ff6ffad3962e468837c36fd2401adaac1d6aefad1a"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0006.yml",
+      "sha256": "4bf95c495cdb9861ec4b08aa2c56b001a9080f4e8831da75627ded3ff40f7d59"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0007.yml",
+      "sha256": "f1941fc871cc22c30bc712e8ea3cca757865f5a10cef3251181057bb665efc44"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0008.yml",
+      "sha256": "5043985c78e11b5db84cd62ec1467d81b50a10522b4c9062378ed25f50700fa5"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0009.yml",
+      "sha256": "33745dd171c2cfc919d58805f8ee66dcac1d82a240ec47a4e6ddaf633c15d4de"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0010.yml",
+      "sha256": "4822f7ca83a1917990a0e385e80471d5266c40d3f1ac7b9af4bc3144ed9ab8e0"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0011.yml",
+      "sha256": "e269878b6d565bdcb9b964b3a7b1d99b0746ecac293e88c89c029c8a7dbc3319"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0012.yml",
+      "sha256": "8cd1d33164de5d832533799b58a126cf3a7598712d1c3404eaa18ecdf578943e"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0013.yml",
+      "sha256": "64017f4ad38de9778895d15337a586717f2c50df3b9129258d7934065ca07b4c"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0014.yml",
+      "sha256": "6c1003aef59215596eff2c0c9aef75bd1d6c6db2c0f5e73cec60e2bd0a6e2073"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0015.yml",
+      "sha256": "4711cdea1fe5a724745d9523d05a9e8e619578496b08f562a7f3d614cc473737"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0016.yml",
+      "sha256": "4c2efaf8d643a44b7a00ddfeb0fea2ee23864cc4ba453ec2d21a85e556bebd6c"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0017.yml",
+      "sha256": "04554f02bef58baffd795eb58b3660f417d79e67ec8247b534fa3533615753b2"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0018.yml",
+      "sha256": "7ff457b3154ecc58a1baf50885202cb7b4c325d0d73c83f3596c28792c4aeee2"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0019.yml",
+      "sha256": "7bc0c3b4483f6d4bbfda41e9cfa550a59c5a50fd80e002a3e5932a5ee9182616"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0020.yml",
+      "sha256": "9e62f802f9748f9bc80f0866414963eeff0251960ff97c0accbf644979228522"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0021.yml",
+      "sha256": "294466caebdc0615700928809e76a3a93db52a517a1573786edffb05879060d8"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0022.yml",
+      "sha256": "64050253b3553d95eeda26d97f19cd4a0d138d9b075b22e13b6634b9bd97472b"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0023.yml",
+      "sha256": "2c4e3b2502f1fbcb26498206bd88b4417f3813eaa0094ddb18c9255fbabca993"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0024.yml",
+      "sha256": "70fb60390f388f553bb289aaa37f092d598a36936d31cf3aadbfccf1f7f76d7c"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0025.yml",
+      "sha256": "c48a0372ca403ec0394ecd7d080b85b54195529f3a15c8d26db1728e088fadf1"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0026.yml",
+      "sha256": "e9f5566891eb131a073ad6890f00224a779fdb39c7c990c5d4ee3e98afc458b5"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0027.yml",
+      "sha256": "12b2d2e89bb034b104d0a0c27fee4a30ac7be77ce0e93a0d17ad27b5005b759d"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0028.yml",
+      "sha256": "c0316d26efaad002da08c23533332dac7621e7599b8526ccef386b1cb434ab32"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0029.yml",
+      "sha256": "c2455180afb31e6ef308b8c6a5430a55ad06381d5f08b0677238e5478d057b67"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0030.yml",
+      "sha256": "6564fc8de064e0fe764034a73de281cc8708a0093a6459551e08ffdd33c4d776"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0031.yml",
+      "sha256": "a930f435f39045ca02757ff120db40ebecd332a3da1a7dfe5f13339821659d12"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0032.yml",
+      "sha256": "5ba51fa8091c0a197e6820327be9d740c918739ee23609c9740b9f70234aa4e8"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0033.yml",
+      "sha256": "016b876713bb5f8c24aa7128b7d2e0182cd9ee851921584ceea1e9d66dc04e46"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0034.yml",
+      "sha256": "a51acf9741fb46c8470385eba4e7d8492b7b4df4098a7173e1684bb90b08e6da"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0035.yml",
+      "sha256": "43be58cb2686368c2aa7a12eb86cdfc6f8c71df485f94e5dc709f8e10db996f4"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0036.yml",
+      "sha256": "0307ffc12b46a08afc8063b55c2abfb545c04350c83171fc9850530d1b0ed069"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0037.yml",
+      "sha256": "20af4278c1cc04fbee6eee6452e0c9c1d4dbc7e7004e5634658fc5ac783f26c0"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0038.yml",
+      "sha256": "349688fbb9e2607f0cea4d663824629ebfae16c25d4ecba1db3ae7682e8c1d9d"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0039.yml",
+      "sha256": "bf9a819e1f131e962ee8a33af859c0e40ade91041904c58bf8fde5b315ded0ce"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0040.yml",
+      "sha256": "4ef4cf0145c58e5020e1cc249bf1d43dc6ba1684f3d364377d1b349e112f2c41"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0041.yml",
+      "sha256": "150ef35f0ac63276c2b5ac635032a2d5e57082f352f28112358c61a73a771956"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0042.yml",
+      "sha256": "34aaddd9ec04801b549eec51f2ed91a12353d29ad966b1e823948c82af1da1cc"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0043.yml",
+      "sha256": "e37c739c97c06155e247d320e90c5bf8902a646700b99ee1dd3369f1eead5eff"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0044.yml",
+      "sha256": "44e7751888c7b738c829b0476b5313c6d28fbefa7fddcc9b52e41154fd28d3e2"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0045.yml",
+      "sha256": "14de72c110636fc0a52015f356736b2a15a6c0fb0919357d4dd7639918fadfc1"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0046.yml",
+      "sha256": "59e73c0d2b9af02af9ba6a29204fd677adcebae946c6a76d31bb9b4c53277528"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0047.yml",
+      "sha256": "4341a1225a53713815428ba1ded76051ad7d4b3f5f1de43036b70358182d8b80"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0048.yml",
+      "sha256": "b1987b0b6fb61d9147138b5a4b2429e238ae92ffcb27a85faee775e11dbbeff5"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0049.yml",
+      "sha256": "3bf8bfa71cdee3c1420fbb0043041946021bd562f02c69afbc963b824d4db99c"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0050.yml",
+      "sha256": "f23fe24415be62147da96e1e943b2ff3cc1b6a53e684096832f9c77f5ff229bd"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0051.yml",
+      "sha256": "963f61a92a461c413620c85ab74f42cc555c67a29526407e6b22ddedbff348fd"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0052.yml",
+      "sha256": "f380505c8f0e3285b8c4cdc9ac46c88d06216047bf01cd061a54cdedf82966c9"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0053.yml",
+      "sha256": "20882cabc97cbaa5fda72be3e6a09ecea0daa86d7f2075f865e8a5b4d1980078"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0054.yml",
+      "sha256": "4bdb9567103f23eab63b81515607ed80df4e750d70c51ba61ac1330d0a1108ac"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0055.yml",
+      "sha256": "fff21ab2a6d65897b66bc2b5355d008f75bcfc84edd375707f6de7c63b8cecad"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0056.yml",
+      "sha256": "7bfa60ffe8c44f589e1df4297efbbbce36608e323f7e9c60c974d187175d5851"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0057.yml",
+      "sha256": "c6abaadd7d58b5e97774cf50d7d5bb468593c770c3622dccb84e209daa5422bf"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0058.yml",
+      "sha256": "784698cc9c3cd8236eba7235aedf3b06dc9005bbc3c3673df7336dc66ae4392d"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0059.yml",
+      "sha256": "3ed1e0f1e9ac11b9cd8d360bdf83de24407fe351078ea395cfa083f1d33297e9"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0060.yml",
+      "sha256": "fccf9d20a47ab7ec03a50062625084062a9ed82dae1c9a5d746908e5d6dcf008"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0061.yml",
+      "sha256": "6c0a09b0b29f8319c18c29a178a32819557ea87c5c82432db20f1f5ed70fb7df"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0062.yml",
+      "sha256": "8c1d512a1c5df60509feff29dec8082eca8ff8ccaacd978cce0216aa5104ce58"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0063.yml",
+      "sha256": "11fafd38605ba96cbfbbaecc88591e535051621059153553abda6f3dd57d29fa"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0064.yml",
+      "sha256": "dcd9d4a7a8afd709c72e53cf11451dd4b95c97387a9e4a506c74b3f5c4311691"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0065.yml",
+      "sha256": "e35f3df61a4cace5b76ccc072d1a31426cc03064d66cf2d6b611a181db9a21fa"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0066.yml",
+      "sha256": "5c29820a6e00847cb24b67ef0b3c1324c9c01bdb8ec70bb92aac567810bddfd7"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0067.yml",
+      "sha256": "addc62aac1d6721f33f8e26dd92bc733c783e56a49d333655e8643cb43b8a2c3"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0068.yml",
+      "sha256": "0cff8f5e92f271e57204182555f81efb8770612d691cdf0a716b13e5c52a26f1"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0069.yml",
+      "sha256": "d65209b39cb2df5acd61912ff44b5b460d18e77f836f06f778b5028d819b0a05"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0070.yml",
+      "sha256": "264b9e119a985250f261866bef45030e88b9e4fb50c0238a748e5e4b68ae5dc3"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0071.yml",
+      "sha256": "cdf95eebbb8cf23316a2996a6dd5603dc56800b9f0963516c797b6fdd1208feb"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0072.yml",
+      "sha256": "075c21a5d0f5faa523447e1c4af96259a42247bc91736e0d9b7c51d273696a4a"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0073.yml",
+      "sha256": "11fe5565ab86e70f4ddb85f65229b82538c7e4d9d43a7cb171a4d784aa22a1f0"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0074.yml",
+      "sha256": "48bf3a6d89aff4a96a139ff7abafbcaffdc344dfe3d60dc4aa10afad2ad3c5c7"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0075.yml",
+      "sha256": "0b568ac15065cf8d8a7c5c3db66cf66fdffbe8fffcddc003444c07b17f2f1bc4"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0076.yml",
+      "sha256": "019cd6a80c1830af5d1f603b28c2df7017de30abc8dc1c3a928713c030e1daa1"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0077.yml",
+      "sha256": "4a183baa87236688ecfb79a9be8db34e8d08fb1f545b3b007bd78a99b1c1124b"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0078.yml",
+      "sha256": "e4c66b035995342732655aad928aa2c28a2da2f0d7c2409e70d096fe62860c78"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0079.yml",
+      "sha256": "954ae2b4b8ef112308c540861f55cbac663e529f077b6c75e7eabfc195820b34"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0080.yml",
+      "sha256": "b3147396554cbe6f9ae057e850bc682d596ca3db357f827508b0af6d9d8451ab"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0081.yml",
+      "sha256": "199a3005c2515b230666524b3032a2b8972e4c3e1c6ad555b4a39683879b5f46"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0082.yml",
+      "sha256": "9c6bf1f01516c93bb4fc1366a3ed32718ad36e1afbfcac3064d644098410752c"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0083.yml",
+      "sha256": "8a9641ec672b8c15abd5672672a243427d8558fbe2c39a8783ea18b72b416af5"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0084.yml",
+      "sha256": "0d8a435fe2c679bec0e3c00714ad993f79287693154adc0669958e5ebd721799"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0085.yml",
+      "sha256": "dde100e75589aa6f88376416e58e1267a7be09ef57912a6e26b7057e308eefe4"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0086.yml",
+      "sha256": "1a7da1079db6da2acda1864a41a2b2899ad362e29757d666d480998a5b3d55c0"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0087.yml",
+      "sha256": "5d4a8a7a0658ab1a7d6b9265713cc16997c4a2ddaff6b272b568f3e3cadd47f0"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0088.yml",
+      "sha256": "da0f2ed7e338890146e55f7e6055e167b74fb37f8f578369a5c8bee029801aaa"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0089.yml",
+      "sha256": "23a9be5e62ef6cee5d3f0ba5c6e534349198418f7fd9b71678388ba50c6f5734"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0090.yml",
+      "sha256": "4ff3c4057909607b4c14fbb716f5f6b20c5949eb6e3e87b457d7236f28d633b7"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0091.yml",
+      "sha256": "130aada30c0cc55fd3c3cc4cc5a52924b4d0427fa88aa566ddbf1dffb639bbf8"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0092.yml",
+      "sha256": "874a513aea378d27c9ab5f2fe4a8781deb2f37ceab69eba46b48249728f36c0f"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0093.yml",
+      "sha256": "4d377bc4833ea06eb8dc953ec36d977d6621a1983d7d15a60a93a1267cdabb5b"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0094.yml",
+      "sha256": "1fc634450ebfd8c3476f44595163edea0180124361c5d30eb8a5c7a2c0f40142"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0095.yml",
+      "sha256": "a80d47c17b9415728cca851c478215bdb49259b31037b8d8cc8452f7801defb3"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0096.yml",
+      "sha256": "4d1929eb4f57a0ac86d3d71f7c9b7e0f5861e2fa2a54c4685714dd39c1a12803"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0097.yml",
+      "sha256": "6d2f86d637b1b9dd166e76fdb970ec87348508fdb906fb6571929b7e31e3779d"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0098.yml",
+      "sha256": "2aab5388207401bd84cba3b29935de0010bdf7776aeb6f0cd1f94810e544784b"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0099.yml",
+      "sha256": "e15c8d6ae6c93c3e7174b4ffd7e264509d2e3ebae0945fac8cbe82a5b0cf99dc"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0100.yml",
+      "sha256": "e3063dab42c1136cc3b56f51537997258f9126d1ba30ffeb4821ba1abc93b808"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0101.yml",
+      "sha256": "3cef442979750892f96036e59d221a642d8bb646e4f98eca0da88049f724fca7"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0102.yml",
+      "sha256": "f2e0657b5db7b24c0347ece2cbeb3f9d11d695748b9ce616ef4f428c83a75cb1"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0103.yml",
+      "sha256": "efa97cda578da2d3a9423ebbe24d668e70b595cd8b49c6cac79f6a72b0fd68ae"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0104.yml",
+      "sha256": "e51df85c7e62b75327d602aa26c6d12db4107ba002cfac9c651534142a154fe2"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0105.yml",
+      "sha256": "5fb56794f806d3f123816e4d69dc6ec062930f8f3a8d59ae451bee585535fae3"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0106.yml",
+      "sha256": "0936cecf4e858890dbefb2e3ce70c16750c0822234c87759303d8a3be0b95aef"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0107.yml",
+      "sha256": "f96e1a7482410a09f650f49c3aea66221b901f8a38ab299ce5fb9da4591b4b72"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0108.yml",
+      "sha256": "ccdb727bfd7c7dedd34ca286e4571f94ae9b2bf02cedbafa7ad0d1f03154207f"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0109.yml",
+      "sha256": "31cbe77e2e2c95700b3905472276b4ea150136177baf71bbc1666284768262e9"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0110.yml",
+      "sha256": "19af8aeea4f551a1ae0220901429b5560012813d86f60d4ad033f3ae6a14f9a3"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0111.yml",
+      "sha256": "26808d3686071e9a043a93a2cb21546818e89862fea4ae95fddd6e72ee1ecef0"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0112.yml",
+      "sha256": "c658f5602a1eb5b9d9bcd712b148a8ed22e034bb195b5c284b1a829e876f8220"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0113.yml",
+      "sha256": "4e54c86df5389b35b9feb7d9022f360704cc1c60f8be318165226625e6e5fc7a"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0114.yml",
+      "sha256": "28ff9fcc25276bb888370267d7b5ae568ce454e3323314d7f302b6d414c5bc29"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0115.yml",
+      "sha256": "c5fef1379d345f64c418f6b0c6b4cf07fe4a9164678b44620329b93556fe6295"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0116.yml",
+      "sha256": "22d8af1c118172dec48bfc7f21c9f5702f87b2cf6d9f014abc06746d428786bc"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0117.yml",
+      "sha256": "c91efb49ebf43828e8b965df2e0473acd46705acae27610588316fa0e79e1ed6"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0118.yml",
+      "sha256": "1329225c7cfe13df9eaa8923bcad8b2bd3369ba6b34100cb236bdfa3b10b96b1"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0119.yml",
+      "sha256": "8ef20686780fba898c65ac2015bab620cb7868c99c262528d25037664b08a436"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0120.yml",
+      "sha256": "cbda4e93a8d61257cddc7657635d609c7d39483949ed8159ad7c682e2a646071"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0121.yml",
+      "sha256": "e97c2a65a42ca7b4de0be1928dfd99d53aa4078728bf0f369a0d6672cd20ad80"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0122.yml",
+      "sha256": "dd227c3971e9f38982da4511805b8c936228b44394f9dc21d5b8a448c461ce0b"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0123.yml",
+      "sha256": "b5bcab01e30540bc632c48aea9d417452d7bbb88d09700fd66b2aa0c5e5540b2"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0124.yml",
+      "sha256": "317943e368a2c5b9e26abaf459224cba8a44551abb7b38f3f63314c952de87cf"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0125.yml",
+      "sha256": "ea84f12f3a59a81eb2448bb46a5686cecb266591ae767d340c0667d1cea88f88"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0126.yml",
+      "sha256": "cc7c89e406d580fecfd7197b421788ec09e59a756c977c677ad4c74ebca9d6e1"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0127.yml",
+      "sha256": "3ad5f3e31115c3d0771236ad430682ef79eecd1b9777e8c91ce29e111c6a1675"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0128.yml",
+      "sha256": "64f109dfca210ec841e3dbb1dbbed44834d9dcb664c91006a8e0da8e93819994"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0129.yml",
+      "sha256": "be6d4fbf0d390bb851808f9fe002142749f9846eb80dc7efc612200d1e21cd69"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0130.yml",
+      "sha256": "467f533d60735904cf44d6813765f84257e0d825edc83da2b58fdf77d09965d7"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0131.yml",
+      "sha256": "05a78a1dc596b61d65a08c2af2c239239542a38a62a9fe575f371d01fb36769e"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0132.yml",
+      "sha256": "8da31e3052c99675d50a0e41abe29e6c6f9c309404e850cbefe7fbf0301b1ef2"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0133.yml",
+      "sha256": "9dc66c3330cd3ef84dabf9e03897eb03f7fc0e298c13d41cbe81679cc8e4e3df"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0134.yml",
+      "sha256": "3b1e0a455524310b197cf50e104690455e719312a0cf77fb133c30d153286085"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0135.yml",
+      "sha256": "7023562e5d0ea21552603b669cbb9c6cfbd5291f9853287ee831c1a0d5f17cb3"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0136.yml",
+      "sha256": "279cc8e3df213d04ae29e72802a6ffd0fa6117456fac3e2d04906597ab6d3961"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0137.yml",
+      "sha256": "8d6a7d120dab16c6195721f80eee93ce636bd690461464fda4902f784e192147"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0138.yml",
+      "sha256": "fd85fc2b3b39f69cbd1396f1e07c0eb2f0f161771137b3e7ba84d342af5aac2c"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0139.yml",
+      "sha256": "8d653853da561290fd2b1ccc9a4c736ee5d36e8a1f0fea4736fb272027791840"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0140.yml",
+      "sha256": "05a85c4e68a42961e5b9f24a91b6520d6eaf1d945d2da7608e2c93a4bd219ce3"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0141.yml",
+      "sha256": "1601cd1e10bbf0f2665387441407b8b0df85e86effc018f499fc6d9e5746c22f"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0142.yml",
+      "sha256": "6514e58be35dd40ddc0b3b0f362c659c38f4fec53e4b31e2c339b76a92ee910f"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0143.yml",
+      "sha256": "3e3be401cf3a8237716b1b40e6a7faeffc9410dc3e77d3bd41161fd4a5363cac"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0144.yml",
+      "sha256": "96a35dcd3d3b488b1fd3d2f0c782f7f60043ed5dc2820e88241b44b56ef9e48c"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0145.yml",
+      "sha256": "8413e17e20498b47fca52a2b11f26b819e530d353adc277402f9ca5fce8632e9"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0146.yml",
+      "sha256": "da6567e4a886f080df475be5f6fbb128d9f4486ff5f9bd54f6e1c6b1bfd7b26f"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0147.yml",
+      "sha256": "536a2222c2442e4aabfc6dffda4240e8393fc0fa6b53e98cbb012c45e6776e37"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0148.yml",
+      "sha256": "b2faee6f21db125f0a419fc378918605d4a3d9d999ddc64176a502bffbe99835"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0149.yml",
+      "sha256": "efb0af77b52b92a61b00f55af4878e5d64c8729a203d61819344ebff860fa610"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0150.yml",
+      "sha256": "37b8c3596e1cf805b3b01d752990cb6e66a2bfcf66358deed426dcd2d194bf87"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0151.yml",
+      "sha256": "55dc02ba88114cedb3958c5988d46bd5d018c22a6bbdc2f4236411010d8cf6e9"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0152.yml",
+      "sha256": "8e81eed9cb84f4f235837d17cbcdd0893450232d664a6f1140c59a132d259a56"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0153.yml",
+      "sha256": "c9635f0bfd41374975bd7f2aa0809f199df2ab853da02858600584b80991e148"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0154.yml",
+      "sha256": "6096e8c95df3ce4d10bc1a4c1df29929fa3e5bfcb11708085466970d6e6a2467"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/observations/0155.yml",
+      "sha256": "a8f75036c20952d71533b473c4222d54ce49971ee3292e16657ee5b50ba8e8ab"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/identities-direct.yml",
+      "sha256": "bf5104d403dec49f174c7ac2e4ab091dac457ecb240d8614ceeeeb4b18e2e886"
+    },
+    {
+      "path": "plugins/HelsteraConditionActionProbe/identities-imported.yml",
+      "sha256": "401130a71484afc6c5cb9be70de39d9bbb443fc40ea309d366d4a6bd87daef15"
+    }
+  ],
+  "logArchive": "paper-1.21.1-condition-action-20261122-r1-logs.zip",
+  "logArchiveSha256": "6e7112839457b1c868b37d8a31dd5ed0b71e76f6343da82e13e0553800435925"
+}

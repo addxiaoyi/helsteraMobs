@@ -32,7 +32,7 @@ class VariableDurationImportTest {
         assertTrue(actions.contains("set-variable var=skill.one type=INTEGER value=\"7\" duration=40"), content);
         assertTrue(actions.contains("set-variable var=caster.two type=STRING value=\"text\" duration=-1"), content);
         assertTrue(actions.contains("variable-add var=skill.one value=2 duration=80"), content);
-        assertTrue(actions.contains("variable-location-set var=skill.location duration=20"), content);
+        assertTrue(actions.contains("variable-location-set var=skill.location value=@self duration=20"), content);
         assertTrue(plans.toString().contains("duration=NaN"));
         assertTrue(plans.toString().contains("d=1;expire=2"));
     }
@@ -55,7 +55,7 @@ class VariableDurationImportTest {
         assertEquals(3, actions.size(), content);
         assertTrue(actions.stream().anyMatch(a -> a.startsWith("set-variable ") && a.endsWith("save=true")), content);
         assertTrue(actions.contains("variable-add var=caster.saved value=2 save=false"), content);
-        assertTrue(actions.contains("variable-location-set var=global.point duration=-1 save=true"), content);
+        assertTrue(actions.contains("variable-location-set var=global.point value=@self duration=-1 save=true"), content);
         assertTrue(plans.toString().contains("save=maybe"));
         assertTrue(plans.toString().contains("save=true;SAVE=false"));
     }

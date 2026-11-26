@@ -4193,8 +4193,8 @@ class SkillServiceTest {
     }
 
     @Test
-    @DisplayName("repeat re-evaluates chance and inline conditions for every execution")
-    void repeatReevaluatesGuards() {
+    @DisplayName("repeat checks chance and caster conditions once before its execution batch")
+    void repeatEvaluatesCasterGuardsOnce() {
         var fired = new AtomicInteger();
         var checks = new AtomicInteger();
         registry.registerAction("probe", ctx -> fired.incrementAndGet());
@@ -4207,8 +4207,12 @@ class SkillServiceTest {
         try {
             String key = svc.bindAction("probe{repeat=3;repeatinterval=1} ?gate");
             assertTrue(registry.runAction(key, ctx(1, 0)));
-            assertEquals(4, checks.get());
-            assertEquals(2, fired.get());
+            assertEquals(1, checks.get());
+            assertEquals(4, fired.get());
+            String skipped = svc.bindAction("probe{repeat=3;repeatinterval=1} ?gate 0%");
+            assertTrue(registry.runAction(skipped, ctx(1, 0)));
+            assertEquals(1, checks.get());
+            assertEquals(4, fired.get());
         } finally {
             dev.helstera.ai.skill.SkillCatalog.taskScheduler(null);
         }

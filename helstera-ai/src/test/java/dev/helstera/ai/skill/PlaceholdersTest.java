@@ -125,6 +125,36 @@ class PlaceholdersTest {
     }
 
     @Test
+    void nativeLocationAxesDistinguishExactCasterCoordinatesFromBlockTargetCoordinates() {
+        var world = mock(org.bukkit.World.class);
+        var point = new org.bukkit.Location(world, -1.25, 70.9, 2.125);
+        for (Class<? extends org.bukkit.entity.Entity> type : java.util.List.of(
+                org.bukkit.entity.LivingEntity.class, org.bukkit.entity.Interaction.class)) {
+            var entity = mock(type);
+            when(entity.getLocation()).thenReturn(point);
+            var instance = mock(dev.helstera.api.instance.ModelInstance.class);
+            when(instance.isValid()).thenReturn(true);
+            when(instance.baseEntity()).thenReturn(java.util.Optional.of(entity));
+            when(instance.location()).thenReturn(point);
+            var context = BehaviorContext.execution(instance, null, 1, -1, 0, "test", null,
+                    entity, java.util.List.of(), point).withEntityRecipient(entity);
+            assertEquals("-1.25 70.9 2.125", Placeholders.resolve(
+                    "<caster.l.x> <caster.location.y> <c.l.z>", context));
+            assertEquals("-2.0 70.0 2.0", Placeholders.resolve(
+                    "<target.l.x> <target.location.y> <target.l.z>", context));
+            assertEquals("-2.0 70.0 2.0", Placeholders.resolve(
+                    "<trigger.l.x> <trigger.location.y> <trigger.l.z>", context));
+            assertEquals("-1.25 70.9 2.125", Placeholders.resolve(
+                    "<target.l.x.double> <target.location.y.double> <target.l.z.double>", context));
+            assertEquals("-1.25 70.9 2.125", Placeholders.resolve(
+                    "<target.loc.x> <target.loc.y> <target.loc.z>", context));
+            assertEquals("-2", Placeholders.resolve("<target.l.x{r=0}>", context));
+            assertEquals("70.9", Placeholders.resolve("<caster.l.y{r=1}>", context));
+            assertEquals("71", Placeholders.resolve("<c.l.y{r=0}>", context));
+        }
+    }
+
+    @Test
     void triggerNamesTypesAndRemovedEntitiesKeepTheirOwnIdentity() {
         var trigger = mock(org.bukkit.entity.Cow.class);
         when(trigger.getType()).thenReturn(org.bukkit.entity.EntityType.COW);

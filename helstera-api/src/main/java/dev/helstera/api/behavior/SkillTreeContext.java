@@ -296,6 +296,27 @@ public final class SkillTreeContext {
         return names.stream().allMatch(this::branchUnlocked);
     }
 
+    /**
+     * Copies a live skill scope for one Aura tracker. Its variable/branch maps and parent
+     * chain are isolated from the caller; callbacks of that tracker reuse this copy.
+     * Runtime values are copied by reference, matching the native registry-map clone,
+     * while Bukkit locations and absolute expiration deadlines retain their usual semantics.
+     */
+    public SkillTreeContext copyForAuraTracker(Entity trigger, List<? extends LivingEntity> targets) {
+        SkillTreeContext copiedParent = parent == null ? null : parent.copyForAuraTracker(trigger, targets);
+        SkillTreeContext copied = new SkillTreeContext(trigger, targets, null, copiedParent);
+        var variableState = variables.snapshotWithRetention();
+        variableState.values().forEach((name, value) -> copied.variables.put(name, value,
+                variableState.expirations().getOrDefault(name, 0L)));
+        var locationState = locations.snapshotWithRetention();
+        locationState.values().forEach((name, value) -> copied.locations.put(name, value.clone(),
+                locationState.expirations().getOrDefault(name, 0L)));
+        copied.branchRequirements.putAll(branchRequirements);
+        copied.unlockedBranches.addAll(unlockedBranches);
+        copied.damageTags = damageTags;
+        return copied;
+    }
+
     /** Captures local state and its parent chain without serializing live entities. */
     public Snapshot snapshot() {
         var variableState = variables.snapshot();

@@ -1,15 +1,71 @@
-Terminal variable-registry boundary, work in progress (2026-11-20): Paper
-observation now covers immediate removal, death, CHUNK unload, cancellation and
+Terminal variable-registry boundary, work in progress (2026-11-21): Paper
+observations cover immediate removal, death, CHUNK unload, cancellation and
 living controls, including the exact native five-tick death and six-tick
 unload-offset windows. Runtime callbacks stop the same nested action chain when
 the target registry expires while sibling delayed/repeated skills continue.
-Detached role placeholders stay distinct from the caster snapshot; the native
-initial evaluation-order difference remains visible. The current build passes
-2,484 Maven tests and 11 clean SpotBugs reports. See
+Condition and location reads now have a separate observation-only comparison:
+16 COW direct/imported cases, 32 entities, 96 lifecycle rows and 544 callbacks.
+Expired target-role reads through all three condition gates fail closed in the
+runtime, and location targeters return no destination; native missing-registry
+condition and location errors are recorded separately. Audit and 33 evidence mutations pass. The current build
+passes 2,639 Maven tests and 11 clean SpotBugs reports. See
 [boundary observations and remaining differences](docs/TERMINAL_READ_OBSERVATIONS.md).
 
-Condition/location reads, broader variable semantics and the full exact-artifact
-strict refresh remain open.
+Variable action imports and raw native-syntax direct binding now share `scope`/`s`,
+name-alias precedence, explicit scope overrides and last-wins duplicate handling.
+Invalid references retain their source with import warnings or fail direct binding
+with diagnostics; canonical actions preserve literal dotted keys. A pinned
+Paper/MM 5.7.2 fixture passes 428 observations across imported, native-direct and
+canonical-direct paths and seven candidate registries; 36 altered-evidence controls
+are rejected. This is a focused observation-only comparison. See the
+[scope contract and remaining work](docs/DETACHED_VARIABLE_READ_PLAN.md#variable-action-scope-import-2026-11-21).
+
+Native `variablemath` brace syntax now evaluates `equation`/`eq`/`e` with `x`
+bound to the current INTEGER/FLOAT value, preserving its type and native duration
+selection. Canonical `var-math` retains the op/value extension; raw native
+op/value options now follow the native default equation `x`. Paper/MM 5.7.2
+records 300 direct/imported observations: 270 equal value results and 30 explicit
+NaN/Infinity differences, since the runtime leaves non-finite results unwritten.
+The independent audit and 36 altered-evidence controls pass. See the
+[equation contract and migration note](docs/DETACHED_VARIABLE_READ_PLAN.md#variable-math-equations-2026-11-21).
+
+Native location variables now honor static `value` selectors: caster by default,
+or the skill origin or trigger, independently of the outer recipient. The importer
+retains the selected value and recognizes `variablesetlocation` and `setvarloc`.
+Canonical actions without `value` retain their target-location behavior. Paper
+records 300 entity/location observations with distinct coordinates and orientation;
+the independent audit and 49 altered-evidence controls pass. Missing registries,
+missing-trigger exceptions and raw expired writes remain explicit. See the
+[location-value contract and migration note](docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-values-2026-11-21).
+
+Location values now also support `@target` / `@T` and `@targetlocation` /
+`@targetLoc` / `@TL` for Creature casters without threat tables. Values follow the
+caster's current AI target independently of the receiving variable registry;
+missing `@targetlocation` falls back to origin. Paper records 240 observations,
+including target changes after binding; 56 altered-evidence controls are rejected.
+That initial fixture excludes player, non-Creature, threat-backed and
+retained terminal contexts. See the
+[AI target contract and evidence](docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-ai-targets-2026-11-21).
+
+These location values now also support saved threat targets on live non-player
+casters. AI decisions and explicit focus update the saved selection; reading it
+does not rank entries or advance decay. A separate Paper comparison passes 240
+observations with selected targets distinct from vanilla AI and the highest
+score; 73 altered-evidence controls are rejected. Native threat selection policy remains different and is not claimed as
+compatible. See the
+[threat-target contract and evidence](docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-threat-targets-2026-11-21).
+
+Ordinary player casters now support both target values: `@target` selects an
+entity within 32 blocks and falls back to the skill origin; `@targetlocation`
+finds a block intersection or the 64-block endpoint. The default native material
+rules preserve differences such as glass blocking entity selection while block
+aiming passes through it. Two real players pass 300 Paper observations across
+direct/imported paths and all five scopes; 67 altered-evidence controls are
+rejected. See the
+[player aiming contract and evidence](docs/DETACHED_VARIABLE_READ_PLAN.md#variable-location-player-targets-2026-11-21).
+
+Broader variable semantics and the full exact-artifact strict refresh remain
+open.
 The release gate correctly rejects this new JAR against the previous artifact's
 evidence. No matrix status is promoted; the latest fully release-gated artifact
 remains the model-bridge build documented below.

@@ -1,0 +1,1265 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-variable-location-player-20261121-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-21T15:49:43.115438+00:00",
+  "pluginSha256": "59e9a1cc8012712bb2a8352e38ccf454376cae0cb1040f8bb167ce4d83ec8b3f",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "f29f200eb99cc4ae297b46dc85bfb3d146e1ac4db1c8f43ae08b1aecff202524",
+  "sourceHashes": {
+    "tools/paper-integration/run-variable-location-player-fixture.py": "08ae2b7fd45b6e7ed71382c024f0b4f5a292cc1d5f4b8efceaea7570e85d746e",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/audit-variable-location-player.py": "1f27f11cb7e2833628b907ed279281a928717deda2328be46f16a5bcf53c6bce",
+    "tools/paper-integration/test-variable-location-player-audit.py": "28ac9df5344294e372c5fd49c00c51e1823a061193f349a373f9317e3e81bbc3",
+    "tools/paper-integration/variable-location-player-client.js": "aed05920818dcd0a53b8b072a2e6ccd8d82189e362b088028773bc4d6b6593e7",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariableLocationPlayerProbe.java": "7e07909d41d88e44b7d6bd9613061cc224032d7477534fffd0f5bf4ca7a680e6",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "f7cf5bdac1fa7eaabad7c230a20782055cad0e98d66b69f02c746a1589c4fd16",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "539a24c6a4b05269a26a3b469f745ea29fd688c041781de4a0843c9533d9e4ac",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "10f940fcc6eb90acc138c60f4569a698abe10ded582301067f622fb2bda1659a",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicVariableReference.java": "d1da16b91b5c6a302fab44a13156cfe7320ebfc33e1246ce25c7aed45f9a09ae",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicVariableLocation.java": "b4882e2a16781a19fec77ef50342a39f07c23a8acd6fb5265a9266b2072d0ba5",
+    "helstera-api/src/main/java/dev/helstera/api/util/VariableLifetime.java": "16ef516a7b1c7f66dced463ae2f9760623482cdd1b0641f950e132b183e65a56",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/VariableLocations.java": "ebd502b7686c7fe33351c5723a2eb911baddf64ddf29902d7234eae0985180bd",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "81a42fd1eb1b0df9c61c136752b9d666603378dbfcce851d2f55c77d6c042cf4",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicPlayerTargeting.java": "07e9b4ef6f739d46059e899dd85f027b5704e1203e3ae142b839ce6dc2b57461"
+  },
+  "limitations": [
+    "Covers ordinary player profiles using default MM 5.7.2 aiming, not ActiveMob-wrapped players or threat-backed player models.",
+    "Native constructors and castAtEntity/castAtLocation are invoked directly; full native skill parsing/scheduling is not exercised.",
+    "Both paths share two real players but use separate native mob identities; all observations execute in one main-thread task.",
+    "Transparent materials follow the pinned native default set; external plugin mutations of that set are not covered.",
+    "Snapshots cover case keys in nine candidate registries, not all server state; no parity or release promotion."
+  ],
+  "exitCode": 0,
+  "clientExitCode": 0,
+  "observationCount": 300,
+  "validationResult": "passed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "4651f399cda7e90670b87a6d0de63365281bd447767afa748c38b2950be164e7"
+    },
+    {
+      "path": "client.log",
+      "sha256": "b2925b2e3fa9de2ff02d21acdfc3d1894a498b850d2dcb56990e514f2735363f"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/location.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0000.yml",
+      "sha256": "434f4fdeec7d925666c7dbc219fd2a8c056ac9ed06db5efac28ff5fe7e0c51e5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0001.yml",
+      "sha256": "018cc8bb33fe7c78b445291190f0e5fbef73730edf811a9acf9546920f237aba"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0002.yml",
+      "sha256": "70de8594efaa8e2eb26906223416bb9f3b0af0461cf2d9da88a2b73b6cdbc871"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0003.yml",
+      "sha256": "4a69bd46780b8c2c399b6e44cf33f4032d21143e34185b96dbf6b05f6c9f96f4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0004.yml",
+      "sha256": "ca6ded4850a2546352be24840908b195e0dbde9f7641386b14c6cf6bf29f3627"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0005.yml",
+      "sha256": "a8480896f015542466c1c6e228475ef99210d67d74d3eca6cde7ec445749cc93"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0006.yml",
+      "sha256": "27ff3867a01bf58dc782e3b4edd2f78572782ce37264f795e5b8d83ba04547c7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0007.yml",
+      "sha256": "a0995d0880589bfbbf8df74ed12423565551e88e3520fe12a2c9ae28c9ff82a8"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0008.yml",
+      "sha256": "a8a2f741b84f5c164d1f93ee8ff74ff0af228b6d0336cb1d712151d9b08e5119"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0009.yml",
+      "sha256": "79d24162619c5a09c35e2404ea256f50bb06aeb5f060e0f2f7255c66be5c98fe"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0010.yml",
+      "sha256": "140b09bc1d9088696ca26031e63f3c281939c96d84509f9a7b593dfa2bda4674"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0011.yml",
+      "sha256": "657590c4c24279010fd1c5d8ae769a74ba8fcf3e20eeb6eaf1ad03fb2ffa2a99"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0012.yml",
+      "sha256": "6ce839ba1ac8e2a770595b24e5fcff7dfa660b47ffd39664b409727449de684d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0013.yml",
+      "sha256": "64ef46a737ece56ebc5fc82e5340f00e0cec892d3c0f80cd2e665e9ecbc3d553"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0014.yml",
+      "sha256": "bf2fc27a25e2f1459df2551ea8832d3e3e38a84050434b928518f6dcc36053a3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0015.yml",
+      "sha256": "1bf159229fe874149a43c033b7c03215710beb2feb14b71eeee609b08a4b3b65"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0016.yml",
+      "sha256": "b7d11ae65b6df5c178146a41edfaa0a26c7afd79586344cec806e70e6af07dee"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0017.yml",
+      "sha256": "0f1c54fd9cb3523985ef33eec9747f5ebe237abb7769b212bafcf12fa9cea5ce"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0018.yml",
+      "sha256": "cf5bf44dfbebd9bf0f1d8802229e0da74219d20cbce776bfcf2bc165b4caeac2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0019.yml",
+      "sha256": "da296f27a9b31a891a834e2e8f12f93be17d2c7407fb36db3b534677c904755a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0020.yml",
+      "sha256": "9168f2758fde6517af4f3b96d3ccc78fa4aa9ddfb9a394ff216e7e01adc2db08"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0021.yml",
+      "sha256": "21a8887e0fbe67a72b5d7f1a317653234cc4ca88b3afb22cfb3b74d10a114912"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0022.yml",
+      "sha256": "3ae7165281fecb61c288b060ad5b41f0f5ee52d9f139ec0f0f30c3658c9c165a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0023.yml",
+      "sha256": "7fd99144aa1c557a98e003ec822561f71b235e99d1c0dab4aa729acb1c6b543e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0024.yml",
+      "sha256": "48e544efe274ffb1cd44213e7b85e5030abea202dfe562c55aa16c2627dbddaf"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0025.yml",
+      "sha256": "80305ad40848c6f4fdfeb7e4142dd5092cba8d8a07407ffd5e7ef1b5cb3ca516"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0026.yml",
+      "sha256": "b754997cece6c16d65a3a1570f8878e72703467e95923db6d0d74ef64e6cbd6a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0027.yml",
+      "sha256": "7368120628fdd445e220bb4a0d40cbdc55218e88fe212cfdd65dbc84f09187b0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0028.yml",
+      "sha256": "902b0921a8e08d2c1b78e98e93b341d443ab0aff1eddd4d0d96d9fcdac56bd35"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0029.yml",
+      "sha256": "50b2a59986513627a170a868e09fc2a2860e369d0d90d70047a3afcd67dd125f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0030.yml",
+      "sha256": "455c6af4adc0e9b36cc0e017e68d65b958735c1deadae47c91a44415d5d5aae7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0031.yml",
+      "sha256": "d6b079d7b670714061240e7cab929a57933df6ea2623759d2e0d89466267ed67"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0032.yml",
+      "sha256": "3e4e74fa6cdc71b531c79f5e6471646574c8fd2bccbc96eacec816b85c093c87"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0033.yml",
+      "sha256": "a86c5c530a1d348b297972b28c07e70af9866d9e6618a03d5e4ec2390ed6f35f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0034.yml",
+      "sha256": "6888be760ef14ae155823677aff6138a230ff1af3ee9b426f9531e7245b62d5c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0035.yml",
+      "sha256": "09f9088484e5193ed963135728f8995a8918808fb6dc88596ff8866c73a6ddbd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0036.yml",
+      "sha256": "29897efc462ecc9ba0168272a68cb384970ad8fee00faea9043dd893ed0dc595"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0037.yml",
+      "sha256": "f8cd81429daef1a364c71ed7eceb1f8580554126ac273ea66ba8d8d92f23e5e0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0038.yml",
+      "sha256": "b2dbf3ae474436a190b16c2989e4ccc624fafdfd261efa29b062b9ef6cf25c27"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0039.yml",
+      "sha256": "fe55a2e49dd73c7dd24800c29a8a3156b0171e1ae5356faeea63b21880d3f5e5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0040.yml",
+      "sha256": "bdeece4eeba333c93ccce5b0ed0a7f7f0ee505a29ff5997019166e18752fa364"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0041.yml",
+      "sha256": "de5c624008d03af71f5229517f1a3ee9403993f218eb64def4bf006178beb65d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0042.yml",
+      "sha256": "c752d4b388a17aa6508037fe35e0ce68793248017a48c253f7d2616d06904a20"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0043.yml",
+      "sha256": "afde4bc1ced1e37055e52c0195f69de627cb88c26330c166bfec431a6618c14d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0044.yml",
+      "sha256": "4a521d893b71b01fdb39b965299a413cf7c081381b1f1f9cc351d276e377432b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0045.yml",
+      "sha256": "c2ec316edb27314e80ce53c26e86924fcb615dc49f2a5f1b6fe58aba6f12a47d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0046.yml",
+      "sha256": "d58f1fdf76104de817756f6edbd7ca583aed655e95bf6489144319ba0e9ec59b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0047.yml",
+      "sha256": "8e737818944d11e15525cc7a628e2985dfae2393b8123c78f8c2bf191c46ae6d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0048.yml",
+      "sha256": "3bd77d346abba9f10c94d6162ef31d2964baa6005b040dc15a956b2cad141cc7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0049.yml",
+      "sha256": "61b29ffec05b1d624f1013f48bbffee0e24f84ce9ab607f5adb4fe4104f69945"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0050.yml",
+      "sha256": "009c060fa760ff7b88c6857685837d3fe0a760e664699f53ef74e10d76f752b1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0051.yml",
+      "sha256": "4c64a3f7829fce83bc36c72e44a28e248e317b5e2e598921e8afcf149f86a0ec"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0052.yml",
+      "sha256": "a998681684179ddc93a79c7d3b052cdb4adf987dcf216bc6d0eae2995e9d60d9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0053.yml",
+      "sha256": "32c4f80164ffcbee4c735689bcc36698d6110a8efa4358d322f68900d0658ca5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0054.yml",
+      "sha256": "7f073090ad720ddac9ee59550d076b93348e5214875c34c14456930c17779f02"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0055.yml",
+      "sha256": "01bf885c5aecf585c2caa62e1dcc79c44927d9217521875c9e404af14df23d75"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0056.yml",
+      "sha256": "5a7d311e177d521458f0275add6f3a24ad244c7d4410cd35c14edce910d8e1d0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0057.yml",
+      "sha256": "3b2f7052ae4dca23d5a1050eb2b985f45060d763c923dc12907b90df967064ca"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0058.yml",
+      "sha256": "4e88d069ccbb7731ed0f83fb2fde9cfb7eece4f6b74eff989ba38f0cadd4edcd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0059.yml",
+      "sha256": "6f3b6fe8558271f4ec11d0804be1800e323e07c1bb1c7425653049b52ce3bbf1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0060.yml",
+      "sha256": "786eccb00a21823540668b1573d486bbbc32568a4761bfe5f27e5aa0aca9b21a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0061.yml",
+      "sha256": "c67377d53ab8c626cfed6cd7cc90de1bd931f0c52fc5f49f0c48cabfe740f067"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0062.yml",
+      "sha256": "5195f574e5c19186df919f57e4ae4cf52576c5e22f72ea32529b30a9ada38578"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0063.yml",
+      "sha256": "58dbd6b175a4fdc9f0c5d089aeb2eb73b822bdcb810df99f85f213b2ededbad4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0064.yml",
+      "sha256": "63e231991c562b710a473b75df5d6a93773b83899bb7aede7861e842d4715596"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0065.yml",
+      "sha256": "6150801bd4494c10bceda793aee2c50777fd1f29db2f6e6c76f1f64eabe8f0af"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0066.yml",
+      "sha256": "7c3ed91a33ec0dae08cf092c39d1ef76022ef7044cc48391ba25d0d4c0b5bda2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0067.yml",
+      "sha256": "7615d1df971d2b1b452c1f79321f06761855addcafcc518c12316611af718dc6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0068.yml",
+      "sha256": "e47e05eff97e56964df4b47fb7ef82a16d6d72d0953c2bc4313d48b080173c82"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0069.yml",
+      "sha256": "315398039bfa40d8422da83897aed84d6415efd610b5f2eddb94440da2612437"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0070.yml",
+      "sha256": "82b29ae155ade4bba723da59834330db0c0c7a8cd2767a5d76b28799cb6cc193"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0071.yml",
+      "sha256": "896539cc9915442921e3430e8d06adc4874e2e077442f662f492e250f5afb6b6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0072.yml",
+      "sha256": "4187961c8ddfbac65cc044a34a345fdd58b3f74ae26435607cbf2fbf78bc989a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0073.yml",
+      "sha256": "d08e42931a27e2ceb4bd1ae1141e907ca0a413ff8582d157ec4653ea604479eb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0074.yml",
+      "sha256": "54e9cd4e3cff4c413377a435588ba56b3b3ae794214147f596c73d3729816fab"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0075.yml",
+      "sha256": "c5430ef9081e6c5ae051bb08128b78a13c70369cd7f2a7085971f3aa3f20ae6e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0076.yml",
+      "sha256": "ed01a9c0cceb3f9a360587977a5f50c549dd7ed3d12f4c69cb1063e15c85db28"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0077.yml",
+      "sha256": "1f8f9198d1937645f9a374c9e68cd35ba8ac3be6ccb681a33c78c431aec5f10c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0078.yml",
+      "sha256": "93477f55365c1bd0565de11e6c4428a4985c94545fee5eb9b8c117eeb57ab6e3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0079.yml",
+      "sha256": "dc2483306432e6adcc644b485ff4e13d3b491ccc96fb037f443ba824f9bdbd1e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0080.yml",
+      "sha256": "43d219fb8073db955852de2e53f608d66da266ca452a1f5b77f2bdd853acf747"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0081.yml",
+      "sha256": "89f908a6c5afeb378da6ea2843f48383bc9a9e6d241ec4a0531393f23c500f24"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0082.yml",
+      "sha256": "d2460134bc9e01a2c84c908258fc5bb3d86953a2e5250417cdd45275adfc2c86"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0083.yml",
+      "sha256": "071ad817944907c4095b65baed49bebf52abe4957155650023d5a88403e0563f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0084.yml",
+      "sha256": "c72748641bc113359cc7477bc265667a192a785ce36cde858e81f4db1aecdb05"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0085.yml",
+      "sha256": "1f04dabe970c36a9a9334654a398f373a7eb5ca672053a4a9c1a1c1bd905655e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0086.yml",
+      "sha256": "bfcdf160db9dfd95c39e6eff203527e283c296d9af874652c0200c37859fb1b9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0087.yml",
+      "sha256": "c09146b657616c9ff069707fa39e7bb933c9d9096e8c0cbbd579d3ec93e92238"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0088.yml",
+      "sha256": "5ad468543b04e6e17f83bafeca92c33a9a6ef752b3541e27bfffabf0d66801e9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0089.yml",
+      "sha256": "39bd3dbe1651b410b423d008a931146df40be8525bb8474ffe2a583b4a4d82e0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0090.yml",
+      "sha256": "6354d9adbe7a3003d4bf7960ee7f8071b644d34882fb00574ffcd3a2f097eb38"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0091.yml",
+      "sha256": "60359e6386b846626d8290130f627c844224e55e1407856bfe8ccc5d1940e7b9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0092.yml",
+      "sha256": "f68b8d2679fb4d28abd3bab5a2bc08d318197a3fb4de62f966ab122629f7c32c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0093.yml",
+      "sha256": "7718e6155ad59a3b2ba814c2ff6209bcb8fe665606c5900683516f91a21eda77"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0094.yml",
+      "sha256": "d13301e8f0cfede288a7a33d96dcb5b245a9a0f15e64fef8b50abdfee5ebadd0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0095.yml",
+      "sha256": "fc333654cbcb95d89dd51b4f7f95d2848778177c8b260054ce0da85d37531f0d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0096.yml",
+      "sha256": "0700e0bad5d66835958476aa45fa7d45092b24eafb7d0d42d7a0b627ea681c85"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0097.yml",
+      "sha256": "07b2e9f8b0362d35fa592a1f2f09c1e98a22aa9491cb142e25e7e1d493c48d23"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0098.yml",
+      "sha256": "e67ad80782f3fdadb0b299f01fe351b87b12f7f8a939c5c21b0eec8b76874bc4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0099.yml",
+      "sha256": "6889948696190c5f6488ae9d65aa3962b81ae7ac60302783d5d213b5f1e5c1f0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0100.yml",
+      "sha256": "b31571b9f0b082a6f20ca21ee022947c22f2104e32015de2b57ec1b8b16fe55c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0101.yml",
+      "sha256": "34803ef77751676d7206bbceb66bc28e83210e2a3f29c9c3d11b1c8cc11179c6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0102.yml",
+      "sha256": "2b10a9ec19ac2ea6ea0c840acbb39f5bcfc98e6cd6f08ecfb1bef04c32896d7f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0103.yml",
+      "sha256": "95c5bf038f67b99f9820f0ee5576772c003e6bd8ec764694e09056a86b494e92"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0104.yml",
+      "sha256": "a92502e80c5c775977d1200dfff8c10f804b952b6a51b8b3c7929cd7411cf170"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0105.yml",
+      "sha256": "0b1d2cd1555258554ec1cdd00907e6c727c90dde9b2fa76821e3330a6ad8bf2a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0106.yml",
+      "sha256": "b0e95308ba224676a8a9428163c02ddfd4e5bd17298f675384d23f4663647ecb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0107.yml",
+      "sha256": "392ddce7e5fc4216298ae674f93bdd56b3beea254b9df089bf01e32f95a9dc1a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0108.yml",
+      "sha256": "af4760c147e7e5838a2de0db2cbd7a60f0a0ea7e240ad6a152329533fd8e0aa6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0109.yml",
+      "sha256": "be7f0fdaf277fd73fbaed6c6c096d5de13230c927cd636d2aba14977b72af5ba"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0110.yml",
+      "sha256": "472319f9781cc5c9a30b313f2852683ff9f4fb34d27f62046427ebf2ec7d73de"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0111.yml",
+      "sha256": "93ccc6961c9183194e295b965599b41f842eaecf69a3349fc2138119da758cb7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0112.yml",
+      "sha256": "384cc9806a03d461899718a95fffebf89d3faa02e36d7658cd08787498f1f04d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0113.yml",
+      "sha256": "6b28d6f34b452f5e007a7d06d80395f05bd1bc260b106d656e7cfbe7ab7a0ae1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0114.yml",
+      "sha256": "15204985878fa55cf4e3c8d689997774adc21429ca51164762ee797422c11c70"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0115.yml",
+      "sha256": "e0bde33c15bc8f5708ad9b942dc0142cd77652f258afb217e924efc076807047"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0116.yml",
+      "sha256": "6ec85afd32459ff1eb893319a2f698e1d0066dcd721102c0860be74e30371e35"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0117.yml",
+      "sha256": "ccd5c6a13440fc01a1aafca2c5f1b947887c428f0ef0fe54cf6af02b3b03c6d9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0118.yml",
+      "sha256": "7f60b7462a0b577dc2b945474c984e83bee5d44e090cf7bc36417a662556642b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0119.yml",
+      "sha256": "df9888fcfa950ed6d9bd8b689a89e23a9aa29a349bf34194877f20baa5cedcef"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0120.yml",
+      "sha256": "1062924737054dda18a944921a6d17bc374d7627d824b307f08f1c0ec3d2343b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0121.yml",
+      "sha256": "04a7b251c3387802d26070238f905384fda4848a52f8d9cffb208763d7f510f2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0122.yml",
+      "sha256": "98392d1b0c1c8473a73498c94fc3b11a07afdc50bd78501b8b940227c4468f0c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0123.yml",
+      "sha256": "96561da52352f0e44ced9ae07a18d8643f5a514f0d4f2a3f88ab8e174aadb04d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0124.yml",
+      "sha256": "506bcd8a942bf5ee0f3df80f44d9d73c8895e4449f0b49fb456a7c7d5cf7a75d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0125.yml",
+      "sha256": "db96a73de327b3abfe8fa9971cc22d8682d31d8a2a1af37caafffa4e5b5b63fd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0126.yml",
+      "sha256": "31a85a407db29d12baae85179cd01787a67f13d6e680c1990093e7b32e94757a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0127.yml",
+      "sha256": "cd34cc3214e11fd239432fab6737351c57b226a1ca3c4ce9cf4a3de642eb8fe6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0128.yml",
+      "sha256": "5abb146804bc4f0c1ef2fa86619b1ef97ac4f6b8680296274f8b3d0b3de335b7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0129.yml",
+      "sha256": "1b8ec61add22774fddbabd0724a82130c328ee677c837b1526d58ea9ddb48b71"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0130.yml",
+      "sha256": "11dfd64b29c6d48cf420b2ebac71506804a0af1c13ae5d17d12372c4983d35b5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0131.yml",
+      "sha256": "787004af9324129310e0218e7717908dccc764c93e897180c86aa782716d398c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0132.yml",
+      "sha256": "ef26c8a22210a3e9372764d05ae6e89ad83863d995c4754ed280dce93d36c731"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0133.yml",
+      "sha256": "7d949667b930c495b3dbe19236f27833459d830d1a843b2d2f549030d7f57595"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0134.yml",
+      "sha256": "557bb5ba2935fc5a8b747dc9cb8064dc0cc81d7329d96ff87885c41c37dd6ef9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0135.yml",
+      "sha256": "285b2e390ca71abdd75342361a773d3c111d4add632d6c712dc40776e2d0a252"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0136.yml",
+      "sha256": "710c321e5e9841f08bc2930e6c31bdae4655329eb767ac772ea18f4ab2b8a40d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0137.yml",
+      "sha256": "d1ffcaad746cfec8097c1f773200661419a5983cbbf58865a54d3459f4175d7a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0138.yml",
+      "sha256": "0d4de2055694b56eeca97160b01855b0a6ed0279397e086971cf2422a6fcb930"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0139.yml",
+      "sha256": "4196f0fee2a8388217dc610585bcd960c1eb2ed9cd8b4be26b83e93c934a78fd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0140.yml",
+      "sha256": "d33fbbb5f55c479c15d34e9ca3551abccf64fadc1de0f342654fe4b0f70ee468"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0141.yml",
+      "sha256": "35161439af453a5264d6fd23ffb99456f81e8e2def06f3667124d18324c25803"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0142.yml",
+      "sha256": "eb6ce852e8b7fbf6b43ff2d55bfb12a71709cde23dc9fd22fad2f91a1b944156"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0143.yml",
+      "sha256": "d059edd9675a41b08694f88c4094d4af6f83522ee562e2c2b74eed4976daf217"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0144.yml",
+      "sha256": "4b8394eddef917c4501f7763eb18c5f0b358ee17d93b7ae8fe0a3be3a39844af"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0145.yml",
+      "sha256": "079df334d8d2d38a80bd49caf3e7ff86480c811f6ca139da1c6c90edbbd49a19"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0146.yml",
+      "sha256": "9e5b891d87a5f38178ba531fe1207ab25a58fcaa5ed772d8f4a1daf8b20b8b4f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0147.yml",
+      "sha256": "1c522e58b5a94b5f246c0491005ae83f266e378354e0182b4f02a68d1ea71c76"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0148.yml",
+      "sha256": "4c74fc8f0b65246cd258ad1a3314c481bb31a31a4fb470d13d4f706c92118658"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0149.yml",
+      "sha256": "20c9cd8cdae0f4005d9ac6aa7f79fb00ea1d47b76080e5eaaae75530441a836f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0150.yml",
+      "sha256": "1ae910678673d916f3a36826b786f823292e8b79de5a0e9e4890eb0372f60385"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0151.yml",
+      "sha256": "ef02608e791484654aadd2ee19aa49f7f9a32fcee2baeaba37290aa23fa912f4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0152.yml",
+      "sha256": "01f71b340780f219cfdb6781f9af64154f5df80aa9cbf61df5bf920bc728d018"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0153.yml",
+      "sha256": "1088e8e067e0da491bbd5871921f434245d8ae390d9528b51ccc90f325fbbb2a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0154.yml",
+      "sha256": "e299aa13ebc488f3fddf5dfcf694ad125f8f24e86ccd22566163d4f24068849a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0155.yml",
+      "sha256": "0a7ca9df7b4f5849db0f6c5912fe0015dc858f9c985ce753066ea503cbb6fab2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0156.yml",
+      "sha256": "29546129ddb88253ef0f7df361e4dbb350b92fb0cf14f2473e864189f7a8a37e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0157.yml",
+      "sha256": "bb691711fe50143c35fc7f1e715f9e8e4a9b9fd95c0c8e0873a22867c4920608"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0158.yml",
+      "sha256": "7025a1f97ff5da8ff9a8491479e74833d5bf8824ddcc28c69f6011193eb0dae3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0159.yml",
+      "sha256": "07cf198afa57b0ced22e13be82445ed76b36d917ddf639231d3614ea6a1e8791"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0160.yml",
+      "sha256": "a5ab0c29f2f1dc9026717e7ffa92ae21dffaedb8d0846c5db6e2257af8cdbc96"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0161.yml",
+      "sha256": "3004f1a773985a14dffc73b5845b5378a5d151f0f8ad6af01cb4eadc6f7e25aa"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0162.yml",
+      "sha256": "10970e440ead06a7f883ec2d25fa693b2f176da67f9ccb69af321e9e8f1effc2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0163.yml",
+      "sha256": "571f2e24ff2066c0c8d65f3b259125f2916fbfae573effc2d8f6619061bc19f3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0164.yml",
+      "sha256": "e549645be4192c9faadc838af42725f53a0a0bfa485231589d027a59ec0c00d7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0165.yml",
+      "sha256": "fb0d7f57ba7704f0620493bd2fca1701a149af9617c2c84c7aeec4d85a7bb9be"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0166.yml",
+      "sha256": "bd15e64fda04755cddbc789262148ea0cd12743a97bf41204a0a7364324a4fc0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0167.yml",
+      "sha256": "9f42c694f3b7fda9159ea01157f923fe7745eb7154755a0624c7bfda4528bfd5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0168.yml",
+      "sha256": "424c80ee5d64d6023e420f513ae3c5fc7d0f1d1d9d04bf482a048c7c8c52243a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0169.yml",
+      "sha256": "c78e6d82ef6bd670bee802509beeab1777e3340e9ced57ec31feb3a20cbe10a5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0170.yml",
+      "sha256": "f29c1ddcd11895845cb1b9b938e3799eea094bac6239854026878f26c0503409"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0171.yml",
+      "sha256": "9f951e55a98e47053ab41f0ab8389a9d2799cd822994210fef266c57cc22bbc1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0172.yml",
+      "sha256": "50b50470bb85e88c72a13754de5d04fa4836314d2a70019bffd9aea29e084de1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0173.yml",
+      "sha256": "e3811fb8da6e0b1c8593fe6b1c28d3de6158bdec6087203904798fa6f180d206"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0174.yml",
+      "sha256": "c4137e482ef5b01527ca97f03e6ddd9f71c8021545ae4cd4155cb383773f7455"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0175.yml",
+      "sha256": "d1ee8e56680fa75e47e5947ceb1855788482b484bdc3bd6e584fce767e0029c3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0176.yml",
+      "sha256": "a953d8824ae11492cc0b8711b345d612df7e035bcecad97b1d8de2dcf144d899"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0177.yml",
+      "sha256": "a420e16b4adbc113b583bd602d1f463bdbdbcd821237d8717d665c0611a85bae"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0178.yml",
+      "sha256": "f64beca2d6592e376d10a3237171b4cfa4591ff9a133992e5b5987b85a510e62"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0179.yml",
+      "sha256": "a618833dfe9c446e5f542918c848728e0c811494a84552dcbb74a00c6cc04ce3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0180.yml",
+      "sha256": "b4e26ca1d0b5adeb073a8473a7d6bddaf7576ae10c9fdaba0c8cbc05858f5fea"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0181.yml",
+      "sha256": "6ce9262115dd3f60e060098768c0dc1953cf24f0e9c4e72dae2662185bfe2552"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0182.yml",
+      "sha256": "3dd9c1306b5164b5d9f719d0f3220c5ee32fd501d46f8d0a3e2ffaebe61f8707"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0183.yml",
+      "sha256": "318801e5e66657057be1b63e59705ef1c848b40bde965d13632b66e8e9780da8"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0184.yml",
+      "sha256": "174d23611462167574bec8629c4344e27df5fb35c620d9139f47dabb7fc9833e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0185.yml",
+      "sha256": "3117fac7a9c9a480fef4984bea1574979d5887ddf8e9c73a283c4d04210e57c2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0186.yml",
+      "sha256": "287e6d484c5b1c7fb33a88d42b2165093e8c8692c950d9b58c273145fd86cd1e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0187.yml",
+      "sha256": "6edb7ff34542692f3897c993f4208192689184d5b7075bcab2460c9e965fb83a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0188.yml",
+      "sha256": "492d174a044cbc531febc469c6f590838dab515a47c71b704c7a87c9e2c61315"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0189.yml",
+      "sha256": "e09d3603f4f5e627f4bed3952866c0e6a4853938162c37ebdba9004e91e168e5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0190.yml",
+      "sha256": "2f27375ac5e77f9c106e6bbdadf2681315383b33be8b9be0aeb36ec6470e4be9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0191.yml",
+      "sha256": "bc3e5353000ca058441a54aaad3c498a17ec4772b23afad925d2965e18a6f2cf"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0192.yml",
+      "sha256": "31f15641d50010b287a3349f075d1e9bc8ffc6d912da2a1b1de3336ab16e188d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0193.yml",
+      "sha256": "072dd6c7131e3bc30e335ba15930fe3c94b6bb1e5d1b9921209d163ab3a40c08"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0194.yml",
+      "sha256": "88b04a415e86b1fd5a7f7c8ae5db03888dc3ea512e2502e7fbf41c9f81725443"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0195.yml",
+      "sha256": "95ebc29985a7b76a46400f396ce3a6bcb62fae9b16766047126285599c888177"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0196.yml",
+      "sha256": "1c8c4841886c1153f6defb06367ade908470fb8cf92f44aea713d1cf24dbf26a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0197.yml",
+      "sha256": "1a4c904bc72a340bbd07d4c0a2438a0c4b4176224f4f68d13ef4f62bfc60cec4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0198.yml",
+      "sha256": "3548058c2a5dba89c2f82ade27682c1f1e7bbbf739d33d8f1721d02cd7a1cf70"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0199.yml",
+      "sha256": "4d123fc2c6aea531959f2c9c4b860cafe23b089fd659da3de9c00b4f65dc278f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0200.yml",
+      "sha256": "eb8ee26c3ac8e1f0b10be26da835a8a5abd26b2c75b34f6ba535c55ecc120687"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0201.yml",
+      "sha256": "6d4852447ecc2bc15ee5b2921cb5e7cd5ce6ac597eefbf0543803b6c2245c41b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0202.yml",
+      "sha256": "27a78380f09666cb96f8b253d85bf9945ceb06962c48d302053dbf853a28c227"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0203.yml",
+      "sha256": "39e30f995e56611d23e3cffa1f85eeb0056b86c6e242e60e850bfdc3cd8b232f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0204.yml",
+      "sha256": "f45851ade92aeea8491e8e44d1a721b7676916be9d8b43d2d14d95f4679f5645"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0205.yml",
+      "sha256": "97316f56fccc97005007126307200271a2c2417eda64444c7652f1dc0e9bcb34"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0206.yml",
+      "sha256": "0c99df6ce3712fc1d1639004139118dc61838f5ecf36d26d72ca127a2a1976a3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0207.yml",
+      "sha256": "eb52b8bc5d47001aab6ef1d2fcb77c64f284ec9c1d9dbcfa1e8b90aa31603ff5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0208.yml",
+      "sha256": "6cf7296093168a3359dc8b941f0d59a7bf89416a9701ebdffbd1a6b2f13433d4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0209.yml",
+      "sha256": "a1a15763d7f1738969ac5e4a498fe4c35d507cc2baf476f8f62767906ef11dbf"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0210.yml",
+      "sha256": "fb961066fffea44d70629057890d75a60a9308854a761d7c9c8a20da3b85b4d1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0211.yml",
+      "sha256": "632c8e1286402d065dcb9919afda5560b67ab770cc8aae5c8cd24391f45e53d1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0212.yml",
+      "sha256": "3f7b8ea18211735bf6b49159a97628c332aed02f4648d7679cc326cceaefe947"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0213.yml",
+      "sha256": "a2b47468128f5593157b346337ae3f90cd5cc9b3e09bc73a1e85649520a51fd1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0214.yml",
+      "sha256": "a9d22c817a2d7a13e62cfd0148eb40ade23c689031667afb60068a3403f1b581"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0215.yml",
+      "sha256": "0e3599fe8d64d1b8a4c371d8f8e57f487bd6e09e531052e1bdfbae5cab3f9b20"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0216.yml",
+      "sha256": "e8750e056477ededeccf04f679db8a782ea8c2f98e596726d3ff59d1e98dcfa1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0217.yml",
+      "sha256": "1e52ba9c8610084ad11e329555a3186d2b87fc9a5928463c96f168bf33998072"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0218.yml",
+      "sha256": "8458ab2d9d6b20231251d04c14833f81dc27d5293a5449315dbae53b6c68b415"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0219.yml",
+      "sha256": "7a6d490428e52757c86f482d84aa3865daed2bee7010b099a1aa3fdaac527197"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0220.yml",
+      "sha256": "1af49d0861b0377e6b6b80efb7c5ee04d163fc17dd23ffa39eb541c14093377e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0221.yml",
+      "sha256": "b4790a4bd9123a9081db75dd0fc43268ec4f7c75dc75d977f4bf8a354991b9db"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0222.yml",
+      "sha256": "1a27ea8b318b962f142d9fd24c3dd19708103fc8b602d2ece433003833c737d6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0223.yml",
+      "sha256": "7d5aa2fb27edbce27a0daf72bd19202c89cf3a59b2eab5104e61545b9e77314e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0224.yml",
+      "sha256": "2bbcbbca40ee849120d4d4029d1ec30c64060970f28a1e583d8020aff2fd0670"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0225.yml",
+      "sha256": "c1bacfc67c55b2b003a7079a50397452feb9f3ec48ad7212df094dad95830715"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0226.yml",
+      "sha256": "ccc8a05e0d868848d4e9ed7e9345b2b6bda6383a3b0c4fd6f959f4ddca284314"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0227.yml",
+      "sha256": "48a5427f7678af9d37fc5113d95d09c072491ec36f390041e7f5d5ce3517badf"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0228.yml",
+      "sha256": "6694ce59a08e32af7969750c40417a393a16a61504cae96e7ded446c8642b905"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0229.yml",
+      "sha256": "098f6147159ade18fa0921d8ee994aac2b36934bd0bac00e020aaff0aa5a9080"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0230.yml",
+      "sha256": "34f50cb07231471e6e3c2c7f5282d706f18f8f59fb1c8dead99fa74a11ac7752"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0231.yml",
+      "sha256": "0742573d0a31e718fb14028bb577dcdf357901151e6fdd97c0361fbb0b98530c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0232.yml",
+      "sha256": "e83bea5a80071136a14ae17026d524402f56cf6d7ba8f511fb16474404c3034b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0233.yml",
+      "sha256": "a19b8fd9104f5e60680a7f49115be57acc68fe183b9cc0f06bd6bc4cd02effc9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0234.yml",
+      "sha256": "21926efbc7fa007f66bb220f6754dc6a39716d3a3e7107054b3e608f5b97de50"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0235.yml",
+      "sha256": "bbe87d4c5e825710e7462004ecac3437bb7d93bc08cd0da122697c68e3e04b5d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0236.yml",
+      "sha256": "b78a755c61bdee742a6004ffe11e796f1810446d7a6eccf2447c609f14836149"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0237.yml",
+      "sha256": "58a429442fc5f053ae6795ca8e5344d1514ce0964c70a221416376c11b8d59e8"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0238.yml",
+      "sha256": "a29a4da76ba99b076752d10f90e423a31b29f48f1aac0927a1a16fcbd5227fcb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0239.yml",
+      "sha256": "8c8c989413c69f9a3d728d145f20a67a0518134281155cd27629ff99a0712b33"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0240.yml",
+      "sha256": "87e152e5e877f02b519803b2582264457b1e875d7a9b8e19284444868c967fb7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0241.yml",
+      "sha256": "1db745c0e2a6580658269d83f8acb2b698817ad3e9d3b493bd3ea2ee253c4378"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0242.yml",
+      "sha256": "36cb3ca7da9fdc0db40c0135f970ef207e31d77c8dfab2d1bb9d9012e7bbe905"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0243.yml",
+      "sha256": "b3ff233fd29bca899d215da15ffb74e7111faab94673a4940c35e8469b686916"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0244.yml",
+      "sha256": "6da9a664c033e3db18d827e0380c3bb8e696c6cc818d90ed3c45a484d2e714b7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0245.yml",
+      "sha256": "bbd3cb9135f9d1b34a170f47f0e4939dda3e26f72f040e7ee454747a68a9fb03"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0246.yml",
+      "sha256": "af6a8b9d66d1c82dc3383fe87a3602aa274a3bed58cd41ad193c98b38256adc0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0247.yml",
+      "sha256": "bb21bfe53e76c792077806649d38cbb1583ef2e30b6b0e74601110f6f8ae9dcb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0248.yml",
+      "sha256": "efc4b4e038d9f5c2767cc05236f631e0608463826dc9f2f8435a0ba8293e3433"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0249.yml",
+      "sha256": "b275272d1e1b57a2a55e91161a7996ce7d41664b81059573c3d068eccf09614b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0250.yml",
+      "sha256": "03f20ba1c8c7b15224141a596e0a600871ebd16c4fb61dadfe519244301b9474"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0251.yml",
+      "sha256": "4d9bbf7e76c65504989a23183b92aedfcdf9b2bdd2fcd1196411b565807438dd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0252.yml",
+      "sha256": "e8b455328f59d280096d55695bc61551170b0dfa6732c9ba5afb098b40cb81a0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0253.yml",
+      "sha256": "cb2f36ecc01417349a4ca71e3efe00b04e8f4171348fad7ef58959a99bb66037"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0254.yml",
+      "sha256": "02f6240fe68e61b92d768fe93eab15718fc20fbdbe5081e3f6ca71c22f03e71a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0255.yml",
+      "sha256": "973caf713c3aa47eb1b0ad0bdae7a5274c83a97f9025fb58ab4702cf701c8db0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0256.yml",
+      "sha256": "0f8d77577233a8b1ab0ab001db85e7b263106ebdeacf6e42d9349a9d72e1c8bb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0257.yml",
+      "sha256": "0c022e2db1fc4ef34720606e9bc4da19ad0f5356959824ad1987dbd95a7cb4e3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0258.yml",
+      "sha256": "9ceb1e908686d950eb10fb798179aa88de05a74f9ee37608521adb9bd165e3c5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0259.yml",
+      "sha256": "f28b504593e9f074c1fe9508b41f0ad2c0524a19aef32f2f52820c1e3e95ffb4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0260.yml",
+      "sha256": "6139437c7a5213a3e30d19a7dc26a9456fe21076c995c3c69c169d3e89849d10"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0261.yml",
+      "sha256": "1e5890222beae1ac6287dccad72cde61c401f6a4f977d21cfc8b60ae78dbeb6c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0262.yml",
+      "sha256": "b9c6153cc1b4428f700d487c391d89bcaad263144d03b1a9ece2d58186eeb04e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0263.yml",
+      "sha256": "030eddce3204876301b5c69045761de18f45c5156942d674afa1e21298124a72"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0264.yml",
+      "sha256": "4715d7930a2a9caad134dd3d66d7851e7513ec565b331386ecb61df1faaacc82"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0265.yml",
+      "sha256": "7d65f04c3ff71d88c5d9f8671059a1cc1939aa57a2c0301fd6a329bb4676466c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0266.yml",
+      "sha256": "dc0f015e43143810c1ed94c3c966feeb082f4bb26ae67ce55e0711276bd11e3d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0267.yml",
+      "sha256": "2a1d636cc723f3c4eb6fcc28e8494c74ac990f7afe53d03b7d32429c393b540e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0268.yml",
+      "sha256": "e3cf76f7b66b56ddea81f4dc1a9a713f40761beb49bc2f4b4ef65a1652a99c45"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0269.yml",
+      "sha256": "cc3df7f02caeed7f93932f717c624fec7a67b15ef146ab224ff5592362bc3d7e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0270.yml",
+      "sha256": "c25f367129305cf23c57a176bf7ac5eb236f1fd1fcd5452e26f9e8fc9e57252f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0271.yml",
+      "sha256": "0b7362d58520ec21f632aed52691fc1962ce0fda4ad49a845f460bbe12b009eb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0272.yml",
+      "sha256": "55216718ac22ec7bdb45cfdd97f5f13eccffb66535122db3931e8837c8cd5db7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0273.yml",
+      "sha256": "d9ba4bc177bfc61aa1e460359e1de03d348031ce7cd869e7ff9fac7610aa1abd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0274.yml",
+      "sha256": "120fd18ab00d23580754cb1db2e5d611b18d4f8bfc6cf709b2479add2bc578ff"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0275.yml",
+      "sha256": "8e940c05055acf998d6c657e57223d3ae68f709bc15f8f2c8e7e6d8218c6c190"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0276.yml",
+      "sha256": "cafb5fee100ef97cefe6e65cb2fd9fae7e544f759e2b13bc4a7e7429656b82a7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0277.yml",
+      "sha256": "b3aa9551365df1424661ca844a0da9e7b71d901b393bdad907b8527d2a96dc34"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0278.yml",
+      "sha256": "c4beacd667c8adcc3338640aff59e6cf39b3b681739b403f9882ec696e2355fd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0279.yml",
+      "sha256": "4861a80be5ede035a82a7aec199a650de18b2cccf9491b6a65da7a8286d64958"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0280.yml",
+      "sha256": "4a77141463b9cc272d05186b88142a8c6d098f64c39e98cd5417ef4f73a9a195"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0281.yml",
+      "sha256": "40b9082d1a259719ea02e06343c8e0a4866ea0a96c36c9f96698417bf3ecbdf6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0282.yml",
+      "sha256": "21e10c49ede2a11cb99ed21e26716e0c0e7cd24c21cbe3a2be4c8a6555bc3e27"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0283.yml",
+      "sha256": "b7f281d085899d3078195a2cf0c92a0e073f7606edcae491476aed11813ada0f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0284.yml",
+      "sha256": "bb9680b25f50181854abe6ac77564184a3be5756d7874f56f868db1853ed8395"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0285.yml",
+      "sha256": "6578cdcc2809a308d80ba05ccb2324fbd7f7b45228c7b5ff228417a93ae3d548"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0286.yml",
+      "sha256": "96024658928b0a2ecfde0a249d1e32d9743917ba2653fd8e200071833056e284"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0287.yml",
+      "sha256": "8a898350b53ee6cde6b9bffa06705afa59cfee95e94de67f09ff209d67bc7c13"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0288.yml",
+      "sha256": "17db841af79109c45aae7f02ab2c74a62ef22f5ec9500156911ee6bde406c4fa"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0289.yml",
+      "sha256": "587a4261f963ddec8d28a2609c1467eee031c62d6c0a2022127c4d318fc78259"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0290.yml",
+      "sha256": "dccec061d14800119ec21c65ce60129b1a881ea743e739c5f9f7ecc6068ce0b9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0291.yml",
+      "sha256": "3d268bf21f6c608851eabac927ea98436f937680c3749f5f547515c0ebe890d4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0292.yml",
+      "sha256": "849f8d23a6f9bd6678863cee89d0498caa351e4ca8a6384c85e4333118bd9e7d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0293.yml",
+      "sha256": "a0efb40fe54b348f72083304fed10899d01c3c8f0c49463ae389bca58a980662"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0294.yml",
+      "sha256": "7a851846dfb7b67b09277c29478535696843aeaedddaeacde585531cd49d19b6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0295.yml",
+      "sha256": "63cdf6d1bb96ebca1755a45d42665b99bda88c5007e42110e3ba66bf8560f8db"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0296.yml",
+      "sha256": "a92a400d2b6c0f9269bde5eea1690214f99b99c5a2c57e93106de66c5daad6e7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0297.yml",
+      "sha256": "5c1b62a13319851b0923370f50d29d26e25b9226281b0e7104fd7f1599dc6990"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0298.yml",
+      "sha256": "b182e303dbdca8c18177e536a1f9fb6cbc74491b90bcd2d4276ec560c8237cee"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/observations/0299.yml",
+      "sha256": "1adc54e73fc983e72f4b2109bf31b82e019196d10dd275f525cccde4dd5ee2d0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/identities-imported.yml",
+      "sha256": "2be15d7ed4ad39186bae90a5b58abf5f0406fd289e15e6d3e2a672ce90bd5a80"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationPlayerProbe/identities-native-direct.yml",
+      "sha256": "b23af9e2c5ef98f34c6d0789103ca8ef5c004daae744485a1bb07915fbd64728"
+    }
+  ],
+  "logArchive": "paper-1.21.1-variable-location-player-20261121-r1-logs.zip",
+  "logArchiveSha256": "d7b355d18b47fee6e016ae26473674c1cf1051ab065489895fdc1da83d9393f0"
+}

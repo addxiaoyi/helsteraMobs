@@ -81,4 +81,58 @@ class NumericExpressionTest {
             assertTrue(value >= -2 && value < 3);
         }
     }
+
+    @Test
+    void variableEquationsAlwaysUseExp4jAndBindXWithoutChangingFunctionNames() {
+        var cases = Map.ofEntries(Map.entry("x", 4.0), Map.entry("2x", 8.0), Map.entry("x^2", 16.0),
+                Map.entry("pi", Math.PI), Map.entry("e", Math.E), Map.entry("7%4", 3.0),
+                Map.entry("x==4", 1.0), Map.entry("max(x,2)+exp(0)", 5.0),
+                Map.entry("max(x<e>0,2)", 2.0), Map.entry("atan2(0,-1)", Math.PI));
+        cases.forEach((source, expected) -> {
+            NumericExpression.validateEquation(source);
+            assertEquals(expected, NumericExpression.resolveEquation(source, 4, token -> fail(token)),
+                    1e-12, source);
+        });
+        // The ordinary PlaceholderDouble-style entry point still uses its original math detection.
+        for (String source : List.of("x", "pi", "e", "7%4", "1==1")) {
+            assertThrows(IllegalArgumentException.class, () -> NumericExpression.validate(source), source);
+        }
+    }
+
+    @Test
+    void variableEquationsResolvePlaceholdersInsideFunctionsAndComparisonsOnce() {
+        String source = "max(x,<target.hp{r=2}>)+(<target.hp{r=2}> >= x)";
+        NumericExpression.validateEquation(source);
+        var calls = new AtomicInteger();
+        assertEquals(5.5, NumericExpression.resolveEquation(source, 3, token -> {
+            assertEquals("<target.hp{r=2}>", token);
+            calls.incrementAndGet();
+            return "4.5";
+        }));
+        assertEquals(1, calls.get());
+        assertEquals(3, NumericExpression.resolveEquation("max(x<e>0,<skill.var.Cap>)", 4, token -> {
+            assertEquals("<skill.var.Cap>", token);
+            return "3";
+        }));
+        assertEquals(-1, NumericExpression.resolveEquation("<skill.var.Value>^2+x", 3, token -> "-2"));
+    }
+
+    @Test
+    void variableEquationsRejectSyntaxAndNonFiniteResultsBeforeTheyCanBeWritten() {
+        for (String source : List.of("", " ", "'x+1'", "\"x+1\"", "y+1", "x+", "max(x)",
+                "x;2", "=x+1", "eval(x+1)", "<broken", "NaN", "Infinity")) {
+            assertThrows(IllegalArgumentException.class, () -> NumericExpression.validateEquation(source), source);
+        }
+        for (String source : List.of("x/0", "sqrt(-1)", "exp(10000)", "1e999")) {
+            NumericExpression.validateEquation(source);
+            assertThrows(RuntimeException.class,
+                    () -> NumericExpression.resolveEquation(source, 2, token -> fail(token)), source);
+        }
+        for (String resolved : List.of("<missing>", "NaN", "Infinity", "", "1/0")) {
+            assertThrows(RuntimeException.class,
+                    () -> NumericExpression.resolveEquation("x+<skill.var.Value>", 2, token -> resolved));
+        }
+        assertThrows(IllegalArgumentException.class,
+                () -> NumericExpression.resolveEquation("x+<skill.var.Value>", 2, token -> null));
+    }
 }

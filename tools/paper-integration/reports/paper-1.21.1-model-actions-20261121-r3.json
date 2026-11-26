@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "extensionContract": "helstera-defined",
+  "nativeParity": false,
+  "fixtureDirectory": "srv-paper-model-actions-20261121-r3",
+  "evidenceMode": "observation",
+  "generatedAtUtc": "2026-11-21T20:00:30.129246+00:00",
+  "pluginSha256": "2cb5e917102ad840c591dcdeb02d17a4e490f688a0ec0869da34bc2853f44974",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "431ee26b0c11a244743c5f8366967213accb65c6a31ebd57a1dd411f16ab381b",
+  "sourceHashes": {
+    "tools/paper-integration/run-model-actions-fixture.py": "d55cdab604db81691dbfc6e106749eb75adcb08548084808c48a0d31b4ebba2a",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/model-actions-cases.py": "ddcb90154137b5696f71228774fb8367eb28bc7bf3bbb376122299c16d87e4a8",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ModelActionsProbe.java": "b912441c727597ecb88b9a48d4a7adb816d8d2e23e33529cca2cee4daeec057e",
+    "tools/paper-integration/validate-model-actions.py": "c67576d4be078aa9b890858004e75dc79902fd78fbc69b3a41fd23862d143622",
+    "tools/paper-integration/validate-player-variables.py": "59f014f63b13a327490260de2915a6380eb397201bf4c47be73240b6bb4b8064",
+    "tools/paper-integration/test-model-actions-evidence.py": "72675cbb2169dc0ef7c53d572138f0f33d4459c68e8982b9d4a226289cff903b"
+  },
+  "observations": [
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=initial|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=0|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=unbound_mount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=0|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=unbound_heal|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=0|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=spawn|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=seed_other|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=b06d70d1-d2be-453a-b7e8-8938617353b6|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=mount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=aed8686c-9a75-49b1-921f-4131d37b742c,b06d70d1-d2be-453a-b7e8-8938617353b6|casterPassengers=none|vehicle=f2ee556f-94a6-4ecd-b812-d59823b04751|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=repeat_mount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=aed8686c-9a75-49b1-921f-4131d37b742c,b06d70d1-d2be-453a-b7e8-8938617353b6|casterPassengers=none|vehicle=f2ee556f-94a6-4ecd-b812-d59823b04751|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=unmount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=b06d70d1-d2be-453a-b7e8-8938617353b6|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=repeat_unmount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=b06d70d1-d2be-453a-b7e8-8938617353b6|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=unmount_elsewhere|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=b06d70d1-d2be-453a-b7e8-8938617353b6|casterPassengers=none|vehicle=bd339a0b-7e6e-4c6e-b556-a9c9022835e8|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=mount_elsewhere|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=b06d70d1-d2be-453a-b7e8-8938617353b6|casterPassengers=none|vehicle=bd339a0b-7e6e-4c6e-b556-a9c9022835e8|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=self_mount|target=aed8686c-9a75-49b1-921f-4131d37b742c|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=1|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=cycle_mount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=bd339a0b-7e6e-4c6e-b556-a9c9022835e8|vehicle=none|targetVehicle=bd339a0b-7e6e-4c6e-b556-a9c9022835e8|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=bad_mount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=bad_unmount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=bad_negative|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=bad_nan|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=bad_infinity|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=bad_alias|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=bad_unknown|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=cancel_mount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=mount_after_cancel|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=aed8686c-9a75-49b1-921f-4131d37b742c|casterPassengers=none|vehicle=f2ee556f-94a6-4ecd-b812-d59823b04751|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=cancel_unmount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=aed8686c-9a75-49b1-921f-4131d37b742c|casterPassengers=none|vehicle=f2ee556f-94a6-4ecd-b812-d59823b04751|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=unmount_after_cancel|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=heal_default|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=11.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=heal_zero|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=11.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=heal|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=13.5|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=heal_cap|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=20.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:47] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=reset_before_async|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=10.0|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=99",
+    "[20:00:48] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=async_heal|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=12.5|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=105",
+    "[20:00:48] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=non_damageable|target=b4dd2553-7d2b-4c46-b28f-12041752ef32|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=0|casterBindings=0|health=n/a|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=105",
+    "[20:00:48] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=disabled_after_cast|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=12.5|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=105",
+    "[20:00:48] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=reenabled_after_cast|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=12.5|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=105",
+    "[20:00:51] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=reload_heal|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=16.5|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=165",
+    "[20:00:54] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=live_reload_heal|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=19.5|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=225",
+    "[20:00:54] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=reload_mount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=19.5|casterHealth=10.0|passengers=aed8686c-9a75-49b1-921f-4131d37b742c|casterPassengers=none|vehicle=f2ee556f-94a6-4ecd-b812-d59823b04751|targetVehicle=none|primary=true|tick=225",
+    "[20:00:54] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=reload_unmount|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=1|casterBindings=0|health=19.5|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=225",
+    "[20:00:54] [Server thread/INFO]: [HelsteraModelActionsProbe] ACTIONS_ROW|key=remove|target=f2ee556f-94a6-4ecd-b812-d59823b04751|caster=aed8686c-9a75-49b1-921f-4131d37b742c|bindings=0|casterBindings=0|health=19.5|casterHealth=10.0|passengers=none|casterPassengers=none|vehicle=none|targetVehicle=none|primary=true|tick=225"
+  ],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "612720f4c54962994806cb4f53bb4a02b9d20a6262c4f5ffb6988f5fa6912545"
+    },
+    {
+      "path": "source-mobs.yml",
+      "sha256": "4615871e28dc96dc6ac4ded00e631789e8bf91320107198233a531d2f28445d3"
+    },
+    {
+      "path": "source-skills.yml",
+      "sha256": "5ffefcdc1e7e13024cb3bf671d4a55774d414a1a1db33e75239be4ef46f1648c"
+    },
+    {
+      "path": "source-integrations.yml",
+      "sha256": "207d586ec7f65a5da7fa9d891ab623d64df260bdd4386c2561d77786acdaae74"
+    },
+    {
+      "path": "reloaded-skills.yml",
+      "sha256": "271e414ccf51cfab9cb9328deeffa9afca73475e784eeebd0abeefe372a914a5"
+    }
+  ],
+  "boot": {
+    "startedAtUtc": "2026-11-21T20:00:30.136937+00:00",
+    "stoppedAtUtc": "2026-11-21T20:00:55.672131+00:00",
+    "exitCode": 0
+  },
+  "validationResult": "rejected: non_damageable: wrong bindings: 0 != 1",
+  "logArchive": "paper-1.21.1-model-actions-20261121-r3-logs.zip",
+  "logArchiveSha256": "acac2d75ec4ada171fb63c0d7780d088b32185186cd6b61a4856efd55fedf555"
+}

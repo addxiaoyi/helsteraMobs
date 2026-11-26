@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-selector-repairs-20261122-r1",
+  "evidenceMode": "scoped-runtime",
+  "contract": "helstera-selector-repairs",
+  "nativeGoalParity": false,
+  "generatedAtUtc": "2026-11-22T05:41:36.912524+00:00",
+  "pluginSha256": "5b7cb5b06527541c22df4d8140e5ce4857177873f853799ee6829cdcb902e711",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "d92257183172a47f5a28f59b42b869404f45bd8b8f670fdb06b1b086619e0c60",
+  "sourceHashes": {
+    "tools/paper-integration/run-selector-repairs-fixture.py": "5e90818beac3e703c33911765fb3e521ca8ce1f15d0cf545425739c9d2b662ff",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/selector-repairs-cases.py": "ab08ee5794a4cc1a9b87d8a4924af6928a3f23b0809495fe0c9a9945496c99f7",
+    "tools/paper-integration/validate-selector-repairs.py": "83651234a0ddca417df175409694bbd60e9997af398e3e3854b3ce5b332cfae4",
+    "tools/paper-integration/validate-player-variables.py": "59f014f63b13a327490260de2915a6380eb397201bf4c47be73240b6bb4b8064",
+    "tools/paper-integration/test-selector-repairs-evidence.py": "4293fcf8d7acf1254f3e5b19f2638de0cd2094aa96d55cd5bbf922160bbe27dc",
+    "tools/paper-integration/selector-repairs-client.js": "517362db1b98511fd14da418154a8da4696740bf185cde67bc638187d1bd8606",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/SelectorRepairsProbe.java": "3e0bf8d1510658190613fcc42856423e812cd586894b70d6fc9bd2436ed1bd25"
+  },
+  "exitCode": 0,
+  "clientExitCode": 0,
+  "observations": [
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_IDENTITIES|player=43290353-c411-3c8c-aed5-66b8316a0f6d|zombie=2f298cbc-3dcf-4832-b8fc-108b461acbf8|mob=69298325-4d1e-43ed-bdec-e6a0f136745f|wolf=0bae560a-fc75-47f9-bdf2-40f4a3eabfba|look=7cfe8803-61fd-40e9-ad28-a6e74e3d908c",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_POSITIONS|mobX=0.0|playerX=4.0|wolfX=-4.0|mobZ=0.0|playerZ=0.0|wolfZ=0.0",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=baseline_false|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=false|controller=false|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=apply_false|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=true|controller=true|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=reload_clear|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=false|controller=true|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=reload_on|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=true|controller=true|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=repeated_attach|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=true|controller=true|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=detach_false|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=false|controller=false|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=baseline_true|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=true|controller=false|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=apply_true|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=true|controller=true|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=reload_reset|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=true|controller=true|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=detach_true|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=true|controller=false|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=all_then_clear|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=false|controller=true|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLAGS|key=all_then_clear|float=false|open=false|pass=false",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DOOR|key=all_then_reset|mob=2f298cbc-3dcf-4832-b8fc-108b461acbf8|supported=true|enabled=false|controller=true|alive=true|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLAGS|key=all_then_reset|float=false|open=false|pass=false",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLEE|key=players|mob=69298325-4d1e-43ed-bdec-e6a0f136745f|target=43290353-c411-3c8c-aed5-66b8316a0f6d|state=FLEE|vx=-0.336|vz=0.0|mode=SURVIVAL|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLEE|key=wolves|mob=69298325-4d1e-43ed-bdec-e6a0f136745f|target=0bae560a-fc75-47f9-bdf2-40f4a3eabfba|state=FLEE|vx=0.336|vz=0.0|mode=SURVIVAL|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLEE|key=clear|mob=69298325-4d1e-43ed-bdec-e6a0f136745f|target=none|state=IDLE|vx=0.0|vz=0.0|mode=SURVIVAL|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLEE|key=reset|mob=69298325-4d1e-43ed-bdec-e6a0f136745f|target=none|state=IDLE|vx=0.0|vz=0.0|mode=SURVIVAL|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLEE|key=invalid_faction|mob=69298325-4d1e-43ed-bdec-e6a0f136745f|target=none|state=IDLE|vx=0.0|vz=0.0|mode=SURVIVAL|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLEE|key=creative|mob=69298325-4d1e-43ed-bdec-e6a0f136745f|target=none|state=IDLE|vx=0.0|vz=0.0|mode=CREATIVE|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_FLEE|key=spectator|mob=69298325-4d1e-43ed-bdec-e6a0f136745f|target=none|state=IDLE|vx=0.0|vz=0.0|mode=SPECTATOR|tick=99",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_LOOK|key=random|mob=7cfe8803-61fd-40e9-ad28-a6e74e3d908c|yaw=142.76958|alignment=0.4415767267246152|moved=false",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_LOOK|key=clear|mob=7cfe8803-61fd-40e9-ad28-a6e74e3d908c|yaw=0.0|alignment=-0.8944271909999159|moved=false",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_DIAGNOSTIC|climb=true|closeDoor=true",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_UNSUPPORTED_DOOR|reported=true",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_CLEANUP|bindings=0|controllers=0|visuals=0",
+    "[05:41:54] [Server thread/INFO]: [HelsteraSelectorRepairsProbe] SELECTOR_SUMMARY|doors=12|flee=7|look=2|completed=true"
+  ],
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "6aac7a1a16f37b1948105aa551edecc4369fda0a4dd2e8c6ce3523bc1d9bc8cd"
+    },
+    {
+      "path": "client.log",
+      "sha256": "895d8e6bc21f60f21b69428e6d43992ea6b27a0160e651d7bbfd0e43979b0dc3"
+    },
+    {
+      "path": "source-profiles.yml",
+      "sha256": "dc4585059f2dd8454f9da70fb27389115217200a7ad0e102c7917dc1c0a03d12"
+    }
+  ],
+  "logArchive": "paper-1.21.1-selector-repairs-20261122-r1-logs.zip",
+  "logArchiveSha256": "52213389bece0899a9c9249bdcb5aec0ceb18a872a8f08092bda2db4d4ce236a"
+}

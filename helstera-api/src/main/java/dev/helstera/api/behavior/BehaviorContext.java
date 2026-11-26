@@ -32,6 +32,13 @@ public final class BehaviorContext {
     public enum ConditionScope { EXECUTION, CASTER, TARGET, TRIGGER }
     private final ConditionScope conditionScope;
 
+    /** Scalar metadata copied at a mechanic boundary, shared by condition outcome casts. */
+    private static final class SkillPower {
+        private float value;
+        private SkillPower(float value) { this.value = value; }
+    }
+    private final SkillPower skillPower;
+
     private static final class ExecutionAudienceScope {
         private volatile Set<UUID> players;
 
@@ -51,6 +58,7 @@ public final class BehaviorContext {
     private final ModelInstance instance;
     private final Player target;
     private final LivingEntity targetEntity;
+    private final Entity entityRecipient;
     private final double healthRatio;
     private final double distanceToTarget;
     private final long decisionCount;
@@ -64,6 +72,8 @@ public final class BehaviorContext {
     private final String payload;
     private final Entity trigger;
     private final List<LivingEntity> targets;
+    /** Native metadata distinguishes an absent entity collection from an explicitly empty one. */
+    private final boolean entityTargetsPresent;
     private final Location origin;
     private final Location targetLocation;
     private final SkillTreeContext skillTree;
@@ -128,7 +138,20 @@ public final class BehaviorContext {
                             List<? extends LivingEntity> targets, Location origin,
                             SkillTreeContext skillTree, Cancellable cancellableEvent,
                             EntityDamageEvent.DamageCause damageCause, Location targetLocation) {
+        this(instance, target, targetEntity, healthRatio, distanceToTarget, decisionCount, state,
+                payload, trigger, targets, origin, skillTree, cancellableEvent, damageCause, targetLocation, null);
+    }
+
+    private BehaviorContext(ModelInstance instance, Player target, LivingEntity targetEntity,
+                            double healthRatio, double distanceToTarget, long decisionCount,
+                            String state, String payload, Entity trigger,
+                            List<? extends LivingEntity> targets, Location origin,
+                            SkillTreeContext skillTree, Cancellable cancellableEvent,
+                            EntityDamageEvent.DamageCause damageCause, Location targetLocation,
+                            Entity entityRecipient) {
+        this.entityRecipient = entityRecipient == null ? targetEntity : entityRecipient;
         this.conditionScope = ConditionScope.EXECUTION;
+        this.skillPower = new SkillPower(1.0f);
         this.instance = instance;
         this.target = target;
         this.targetEntity = targetEntity;
@@ -138,6 +161,7 @@ public final class BehaviorContext {
         this.state = state;
         this.payload = payload;
         this.trigger = trigger;
+        this.entityTargetsPresent = targets != null || entityRecipient != null;
         this.targets = List.copyOf(targets == null ? List.of() : new ArrayList<>(targets));
         this.origin = origin == null ? null : origin.clone();
         this.targetLocation = targetLocation == null ? null : targetLocation.clone();
@@ -156,10 +180,17 @@ public final class BehaviorContext {
 
     private BehaviorContext(BehaviorContext source, ExecutionAudienceScope executionAudience,
                             ConditionScope conditionScope) {
+        this(source, executionAudience, conditionScope, source.skillPower);
+    }
+
+    private BehaviorContext(BehaviorContext source, ExecutionAudienceScope executionAudience,
+                            ConditionScope conditionScope, SkillPower skillPower) {
         this.conditionScope = java.util.Objects.requireNonNull(conditionScope);
+        this.skillPower = skillPower;
         this.instance = source.instance;
         this.target = source.target;
         this.targetEntity = source.targetEntity;
+        this.entityRecipient = source.entityRecipient;
         this.healthRatio = source.healthRatio;
         this.distanceToTarget = source.distanceToTarget;
         this.decisionCount = source.decisionCount;
@@ -167,6 +198,7 @@ public final class BehaviorContext {
         this.payload = source.payload;
         this.trigger = source.trigger;
         this.targets = source.targets;
+        this.entityTargetsPresent = source.entityTargetsPresent;
         this.origin = source.origin == null ? null : source.origin.clone();
         this.targetLocation = source.targetLocation == null ? null : source.targetLocation.clone();
         this.skillTree = source.skillTree;
@@ -177,9 +209,11 @@ public final class BehaviorContext {
 
     private BehaviorContext(BehaviorContext source, boolean clearCancellableEvent) {
         this.conditionScope = source.conditionScope;
+        this.skillPower = source.skillPower;
         this.instance = source.instance;
         this.target = source.target;
         this.targetEntity = source.targetEntity;
+        this.entityRecipient = source.entityRecipient;
         this.healthRatio = source.healthRatio;
         this.distanceToTarget = source.distanceToTarget;
         this.decisionCount = source.decisionCount;
@@ -187,6 +221,7 @@ public final class BehaviorContext {
         this.payload = source.payload;
         this.trigger = source.trigger;
         this.targets = source.targets;
+        this.entityTargetsPresent = source.entityTargetsPresent;
         this.origin = source.origin == null ? null : source.origin.clone();
         this.targetLocation = source.targetLocation == null ? null : source.targetLocation.clone();
         this.skillTree = source.skillTree;
@@ -319,6 +354,22 @@ public final class BehaviorContext {
         return new BehaviorContext(this, executionAudience, scope);
     }
 
+    public float skillPower() { return skillPower.value; }
+
+    /** Native POWER actions use float multiplication; reject non-finite mutation. */
+    public void multiplySkillPower(float multiplier) {
+        float next = skillPower.value * multiplier;
+        if (!Float.isFinite(multiplier) || !Float.isFinite(next)) {
+            throw new IllegalArgumentException("Skill power must remain finite");
+        }
+        skillPower.value = next;
+    }
+
+    /** Copies scalar skill metadata for a mechanic while retaining the shared skill variables. */
+    public BehaviorContext copyForSkillMechanic() {
+        return new BehaviorContext(this, executionAudience, conditionScope, new SkillPower(skillPower.value));
+    }
+
     public ModelInstance instance() {
         return instance;
     }
@@ -336,6 +387,34 @@ public final class BehaviorContext {
     /** Current entity target when it is not necessarily a Player. */
     public Optional<LivingEntity> targetEntity() {
         return Optional.ofNullable(targetEntity);
+    }
+
+    /** Active entity recipient, including display and interaction entities. */
+    public Optional<Entity> entityRecipient() {
+        return Optional.ofNullable(entityRecipient);
+    }
+
+    public boolean entityTargetsPresent() { return entityTargetsPresent; }
+
+    /** Replaces tree-local state without selecting targets or losing native collection presence. */
+    public BehaviorContext withSkillTree(SkillTreeContext tree) {
+        return new BehaviorContext(instance, target, targetEntity, healthRatio, distanceToTarget,
+                decisionCount, state, payload, trigger, entityTargetsPresent ? targets : null,
+                origin, tree, cancellableEvent, damageCause, targetLocation, entityRecipient)
+                .withExecutionAudienceFrom(this).withConditionScope(conditionScope);
+    }
+
+    /** Selects one generic entity without presenting a nonliving entity as a living target. */
+    public BehaviorContext withEntityRecipient(Entity entity) {
+        if (entity == null) throw new IllegalArgumentException("entity recipient is required");
+        if (entity instanceof LivingEntity living) return withTargetEntity(living);
+        double distance = -1;
+        Location location = entity.getLocation();
+        if (origin != null && origin.getWorld() != null && location != null
+                && origin.getWorld().equals(location.getWorld())) distance = origin.distance(location);
+        return new BehaviorContext(instance, null, null, 0, distance, decisionCount, state, payload,
+                trigger, List.of(), origin, skillTree, cancellableEvent, damageCause, null, entity)
+                .withExecutionAudienceFrom(this);
     }
 
     /**
@@ -398,10 +477,11 @@ public final class BehaviorContext {
         executionAudience.set(players);
     }
 
-    /** Copies an explicitly attached audience from another context when one exists. */
+    /** Carries execution metadata across a scoped continuation, including any explicit audience. */
     public BehaviorContext withExecutionAudienceFrom(BehaviorContext source) {
-        return source == null || source.executionAudience.get() == null
-                ? this : new BehaviorContext(this, source.executionAudience);
+        if (source == null) return this;
+        return new BehaviorContext(this, source.executionAudience.get() == null
+                ? executionAudience : source.executionAudience, conditionScope, source.skillPower);
     }
 
     /** Origin used by location targeters and mechanics. */
@@ -420,7 +500,8 @@ public final class BehaviorContext {
             throw new IllegalArgumentException("location target must have a world");
         }
         return new BehaviorContext(instance, null, null, 0, -1, decisionCount, state, payload,
-                trigger, List.of(), origin, skillTree, cancellableEvent, damageCause, location)
+                trigger, entityTargetsPresent ? List.of() : null, origin, skillTree,
+                cancellableEvent, damageCause, location)
                 .withExecutionAudienceFrom(this);
     }
 
@@ -451,17 +532,30 @@ public final class BehaviorContext {
         return cancellableEvent == null ? this : new BehaviorContext(this, true);
     }
 
-    /** Creates an isolated periodic-skill context for an affected entity, without prior trigger data. */
+    /** Snapshots the calling skill tree and scalar metadata for one independent Aura tracker. */
+    public BehaviorContext copyForAuraTracker(LivingEntity entity) {
+        if (entity == null) throw new IllegalArgumentException("Aura target is required");
+        SkillTreeContext trackerTree = skillTree == null
+                ? new SkillTreeContext(entity, List.of(entity), origin)
+                : skillTree.copyForAuraTracker(entity, List.of(entity));
+        BehaviorContext scoped = withTargetEntity(entity);
+        return new BehaviorContext(instance, scoped.target, entity, scoped.healthRatio, scoped.distanceToTarget,
+                decisionCount, state, payload, trigger, List.of(entity), origin, trackerTree,
+                null, null, null).withExecutionAudienceFrom(this).copyForSkillMechanic();
+    }
+
+    /** Creates a tick callback sharing its tracker's variables and following the affected entity. */
     public BehaviorContext periodicTarget(LivingEntity entity) {
-        return auraCallbackTarget(entity, "aura-tick");
+        if (entity == null) throw new IllegalArgumentException("Aura callback target is required");
+        return auraCallbackTarget(entity, "aura-tick", entity.getLocation());
     }
 
-    /** Creates an isolated end-skill context for an affected entity. */
+    /** Creates an end callback using the tracker's most recent origin and shared variables. */
     public BehaviorContext auraEndTarget(LivingEntity entity) {
-        return auraCallbackTarget(entity, "aura-end");
+        return auraCallbackTarget(entity, "aura-end", origin);
     }
 
-    private BehaviorContext auraCallbackTarget(LivingEntity entity, String callbackState) {
+    private BehaviorContext auraCallbackTarget(LivingEntity entity, String callbackState, Location callbackOrigin) {
         if (entity == null) throw new IllegalArgumentException("Aura callback target is required");
         double scopedHealthRatio = healthRatio;
         double maximum = entity.getMaxHealth();
@@ -469,7 +563,7 @@ public final class BehaviorContext {
             double health = entity.getHealth();
             if (Double.isFinite(health)) scopedHealthRatio = health / maximum;
         }
-        Location scopedOrigin = origin == null ? null : origin.clone();
+        Location scopedOrigin = callbackOrigin == null ? null : callbackOrigin.clone();
         Location entityLocation = entity.getLocation();
         double scopedDistance = -1;
         if (scopedOrigin != null && scopedOrigin.getWorld() != null && entityLocation != null
@@ -477,10 +571,13 @@ public final class BehaviorContext {
             scopedDistance = scopedOrigin.distance(entityLocation);
         }
         Player player = entity instanceof Player p ? p : null;
-        SkillTreeContext periodicTree = new SkillTreeContext(entity, List.of(entity), scopedOrigin);
+        SkillTreeContext trackerTree = skillTree == null
+                ? new SkillTreeContext(entity, List.of(entity), scopedOrigin) : skillTree;
+        trackerTree.targets(List.of(entity));
+        if (scopedOrigin != null) trackerTree.setLocation("origin", scopedOrigin);
         return new BehaviorContext(instance, player, entity, scopedHealthRatio, scopedDistance,
                 decisionCount, callbackState, null, null, List.of(entity), scopedOrigin,
-                periodicTree, null, null, null).withExecutionAudienceFrom(this);
+                trackerTree, null, null, null).withExecutionAudienceFrom(this).copyForSkillMechanic();
     }
 
     /** State shared by nested skills triggered from this context. */

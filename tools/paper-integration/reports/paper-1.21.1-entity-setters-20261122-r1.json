@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-entity-setters-20261122-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-22T03:03:05.559959+00:00",
+  "pluginSha256": "7b029146bfdfa7669b025aca17e0993923d4511f8a275d0c471743baf3eae6c5",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "0a25a40bbcc5537b7ff3dbe6e9113d218eb74e8d1ce6de696b9b41df42a08a37",
+  "sourceHashes": {
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/EntitySetterActions.java": "9c62ad2bc35805a3120a4ca9ffb3a620af75726ab8e78f81804b76d8029b1dcc",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "d36ada3808a71a66f87d6862de9217d846247d44954a73ea0f420093ccfedb79",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/Placeholders.java": "0e1dfd4a846e28e0dfda52d302fdfb788353621591643be99dc15013438472c8",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "866aa8f38291426c7ea7f8fcd19da0d3e5a7fb30cb2671717a7b76d5914e1425",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "0dccee23c3fe0e1676168d821971aca2cf26d525e4b4188f68485594a51fd124",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "0b17e12fecc7d098fbab439946c945fae5184056f925701de77168b6bd71da41",
+    "helstera-api/src/main/java/dev/helstera/api/util/EntitySetterSpec.java": "b23f6b846c5c7a3a8310c89360c2e9123f000e3db65c7aa32b749751d5d6b2ca",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicPathfindingMalus.java": "e2dbca081c349c0cc794a832000e9e05a3dfc1a5396a9fe16ffc574d09ca9bc7",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "c7f6b3abb6e19ec31a0862862d3369962aff92fbf380f63ea331060859500e81",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7",
+    "helstera-runtime/src/main/java/dev/helstera/runtime/instance/PaperPathfindingMalus.java": "aa9c029b1c063da707e66f206713a8407c7d88598459554bea45acd420e91292",
+    "tools/paper-integration/audit-entity-setters.py": "48d9507e6fef0a92ab5cd15c427fa61a692e8a7a97a5b61b06158f1fae2e2875",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/EntitySettersProbe.java": "60f9b7b88b49959f2c68ece2ea8b4222ff6f68c85e555a6546c22b2be6a88790",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "tools/paper-integration/run-entity-setters-fixture.py": "5a523d4af575fef1a7280f9f1fec3230c3ae5b1ac7b1481b015ff974d4587f9b",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1"
+  },
+  "limitations": [
+    "Covers 9 public entity setter groups through direct binding and production import.",
+    "Native mechanics are cast directly with real entities; second-pass item initialization is run.",
+    "Invalid-input rows explicitly skip native invocation and verify runtime/source-preservation rejection.",
+    "Nonliving radius chains/conditions, client rendering, raid AI behavior and exact-artifact release parity are outside this slice."
+  ],
+  "exitCode": 0,
+  "observationCount": 0,
+  "validationResult": "rejected: Entity setter probe failed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "9b8368f93a447c85667e1145354ba86c4b3c5e17085c404fd9a3e54ed39d43fd"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/location.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    }
+  ],
+  "logArchive": "paper-1.21.1-entity-setters-20261122-r1-logs.zip",
+  "logArchiveSha256": "521c8889b0e872701b8147a15bc7a51eb1cf0d34f680586f00658f43b8834ed0"
+}

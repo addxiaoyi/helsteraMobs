@@ -3,7 +3,7 @@ package dev.helstera.integrations.mythicmobs;
 import java.util.*;
 
 /** Immutable, literal bridge arguments. Native timing/targeting arguments remain native-owned. */
-record MythicModelArguments(String model, String animation, double scale, boolean loop, int priority) {
+record MythicModelArguments(String model, String animation, double scale, boolean loop, int priority, double amount) {
     private static final Set<String> FRAMEWORK = Set.of("cooldown", "cd", "delay", "targetinterval", "targeti",
             "repeat", "repeatinterval", "repeati", "power", "powersplitbetweentargets", "powersplit", "splitpower",
             "forcesync", "sync", "targetisorigin", "sourceisorigin", "castfromorigin", "fromorigin", "fo",
@@ -33,6 +33,7 @@ record MythicModelArguments(String model, String animation, double scale, boolea
                         case "modelscale" -> "scale";
                         default -> "m";
                     };
+                    case "a" -> name.equals("modelheal") ? "amount" : key;
                     default -> key;
                 };
                 String value = pair.substring(equal + 1).trim();
@@ -50,7 +51,8 @@ record MythicModelArguments(String model, String animation, double scale, boolea
             case "modelplay" -> Set.of("animation", "loop", "priority");
             case "modelstop", "modelplaying" -> Set.of("animation");
             case "modelscale" -> Set.of("scale");
-            case "modelremove", "modelspawned", "modelremoved" -> Set.of();
+            case "modelheal" -> Set.of("amount");
+            case "modelremove", "modelmount", "modelunmount", "modelspawned", "modelremoved" -> Set.of();
             default -> throw new IllegalArgumentException("Unsupported model operation");
         };
         for (String key : values.keySet()) {
@@ -64,7 +66,10 @@ record MythicModelArguments(String model, String animation, double scale, boolea
         if (!loopText.equalsIgnoreCase("true") && !loopText.equalsIgnoreCase("false"))
             throw new IllegalArgumentException("loop must be true or false");
         int priority = Integer.parseInt(values.getOrDefault("priority", "7"));
-        return new MythicModelArguments(model, animation, scale, Boolean.parseBoolean(loopText), priority);
+        double amount = Double.parseDouble(values.getOrDefault("amount", "1"));
+        if (!Double.isFinite(amount) || amount < 0)
+            throw new IllegalArgumentException("amount must be finite and nonnegative");
+        return new MythicModelArguments(model, animation, scale, Boolean.parseBoolean(loopText), priority, amount);
     }
 
     static double positiveScale(String text) {

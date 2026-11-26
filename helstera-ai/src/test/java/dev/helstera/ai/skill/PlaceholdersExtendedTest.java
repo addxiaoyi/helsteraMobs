@@ -229,9 +229,9 @@ class PlaceholdersExtendedTest {
         assertEquals("skeleton", Placeholders.lookup("target.entity_type", context));
         assertEquals("0.0", Placeholders.lookup("caster.distancesquared", context));
         assertEquals("257.0", Placeholders.lookup("target.distancesquared", context));
-        assertEquals("-12.5", Placeholders.lookup("caster.l.x", context));
-        assertEquals("64.5", Placeholders.lookup("caster.l.y", context));
-        assertEquals("8.5", Placeholders.lookup("caster.l.z", context));
+        assertEquals("-12.25", Placeholders.lookup("caster.l.x", context));
+        assertEquals("64.125", Placeholders.lookup("caster.l.y", context));
+        assertEquals("8.75", Placeholders.lookup("caster.l.z", context));
         assertEquals("-12.25", Placeholders.lookup("caster.l.x.double", context));
         assertEquals("64.125", Placeholders.lookup("caster.l.y.double", context));
         assertEquals("8.75", Placeholders.lookup("caster.l.z.double", context));

@@ -1,0 +1,1254 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-variable-math-20261121-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-21T12:02:02.695604+00:00",
+  "pluginSha256": "ee4333f20c596741aae64f662ae90c7a7e4f79c97667b0bdc33ef969d02a983f",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "04becbe6b86a40679bef514d0f3d61b4733f9ce3a3d1adb8776c3d8af9defda0",
+  "sourceHashes": {
+    "tools/paper-integration/run-variable-math-fixture.py": "60555b63defad9dcab807bc67053e3be4ad0a0861c4cafdcaf8201365f0190a4",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariableMathProbe.java": "1ed0922d5f051c5131d2d17dedaefc9451aa8f9bb5298fc0f2f82d592a6010b4",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "26a6d84b5287eca590cf1a3297743d23ace5804150505f584b6b967bf4850edd",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "288ee35fdbd2176131434637c3243c8813294e6696bc20dce5af863dc948ee56",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "5f0ba4762761ceab0cf6c2a7c8f6759ecbb9004416dabe7af9a1729393124acc",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicVariableReference.java": "f422684bc5e0b3b1da68146c36b7a7a9137b751b0caee78254bd21ca94a7a35e",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicVariableMath.java": "0985845c2914f008aeb0ab993a3abf08a0da842dfe3f01bed096f86e65591e7a",
+    "helstera-api/src/main/java/dev/helstera/api/util/NumericExpression.java": "38185514f6d5e74048dedef43539a2fb4b92f7f331ba71b424af6c2b2520a4f7",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "3f442478b3462dac5a54b28f58fb0f5db222fc42e2b05f22534099e4107b95f3"
+  },
+  "limitations": [
+    "Covers finite equations, typed mutation, reference scopes, and deadline preservation/replacement.",
+    "Native NaN/infinite writes differ from runtime fail-closed behavior and remain explicit.",
+    "Snapshots contain each case key across seven registries; this is not full variable parity.",
+    "No real-time expiry crossing or full exact-artifact release gate is claimed."
+  ],
+  "exitCode": 0,
+  "observationCount": 300,
+  "validationResult": "passed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "9fdf5fa023ed2cfc3377f6a74ebd68d43816d7e2229ae241b9516b93db5f64a5"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/math.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0000.yml",
+      "sha256": "95870cdf82d2cee5d20eb827efcad926c47e1d1a98f11fe1a409a753e3d6a691"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0001.yml",
+      "sha256": "16c4ac6814d31caed6c67378ed51ce3475fb42d21b3023b8c6d8f2593a1e1ec9"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0002.yml",
+      "sha256": "ff860b8a3b13f32069ef9096e5d188d5b90b3edbeb9771adf131e33b90255642"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0003.yml",
+      "sha256": "738c310c2e8371e0ca660db4385d1ddddda3325c0c131a6a60b8e94efc898f7a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0004.yml",
+      "sha256": "3ccd49e571034504d5c09bdc1ab4dfcb57424adff309833e48505fc10365e57c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0005.yml",
+      "sha256": "260ae991cb4e0818cceb05459f0f2d3685c6e1a1d1165d2d6683260fad72ff8b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0006.yml",
+      "sha256": "692426886a79acc3d6f4bc70cb7a0ce9eacff4c9fef5a3182ce496da5b763477"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0007.yml",
+      "sha256": "65a5b285e5e6594e0c34f2b0d7372254d46220706d32c4ea2ec141d13f14ebf0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0008.yml",
+      "sha256": "2cef09352b620dd98a614f125b01192578ac0b43304198d2d650a95a5d68b577"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0009.yml",
+      "sha256": "bf7dc8294920a1b4b5b38c5299f5c63b2754a77f981c695343c1de53e68799ed"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0010.yml",
+      "sha256": "0b81b3c34d88e7109363520835d0f76585f9b87d4e816cf882bf1d2b18e2efe7"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0011.yml",
+      "sha256": "9d64bf913d9bdb79ef08376152b98208162950ea35fe2e06ef683f7e32a27fac"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0012.yml",
+      "sha256": "c4bfabd613ee18a8867c8acceaa50c811385d6b3a3b2a79382c5e530f0b58885"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0013.yml",
+      "sha256": "710a77d7115a5ef1b828b34f9755170675d68b5ead6a454cf58c4eab21585908"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0014.yml",
+      "sha256": "c2b70b8155994b019bc7b52c73e53b14c4c411fa5849b972d14e0fdb982737ba"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0015.yml",
+      "sha256": "7db6de7f7f19d5d5b01347db9d46aee669f9c65433896cb3f1bff5608a51db37"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0016.yml",
+      "sha256": "8bcefd5f15e589dc7de429c0ca1f91ecfd2be941eb21dfdb57e1c581f0a349b6"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0017.yml",
+      "sha256": "a2373a16679817d7b714405c698376b4fecac027d1514dd88ca4e917bd463b2f"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0018.yml",
+      "sha256": "214dcbd823e94bcc50afdc822f3b4e4524db4bbdb2be3f99bfb712c3172dac8f"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0019.yml",
+      "sha256": "51a6f162e821685bd4a56263a07165eea5b73e82b1abebe5b8c8ff2553db79f0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0020.yml",
+      "sha256": "1aeaa0571e28e1010c0572fc97d361cef863278fc15f23a53926406e4c81cd12"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0021.yml",
+      "sha256": "fd51ed79abf134c0797d940cd4b0bdd245590be4eba762feebf2cf1dc99ab435"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0022.yml",
+      "sha256": "6e2b820278ed0ee577b3c8090c6420ef88efb2c12f5f7297afcf5c7787af9ba5"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0023.yml",
+      "sha256": "6a1743d2dbed4be34e22ef7355bf292bc6a79fd3131c0a7c4f07c7eb7f12a82c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0024.yml",
+      "sha256": "224245f30a81b230756a9f29e7674e8635a9d977a8f4e6b04637349f1192c79a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0025.yml",
+      "sha256": "0b4ddfb6f935e333208ddf12747505bb7329a4bf61f8b390ce84ed4022f28c96"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0026.yml",
+      "sha256": "09870d1466c88933cda668939a57a9d0cf6d3ad76057be4983e20896af198714"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0027.yml",
+      "sha256": "2b1abbb4c4f07ae6f022931d08b0a722f91af8ae298faabc965272e3fed73b9a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0028.yml",
+      "sha256": "8446f426967e1e1f389d13dc14ef9da9dee915395f6023f6a98ee4498a32ac43"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0029.yml",
+      "sha256": "fb10d121f09e9d2c535cd457512dc86c46bca59c46333b5b9f2b891f1a6d6ae2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0030.yml",
+      "sha256": "713e97a088a23e848d080c2c1b5d42b9517fa11940cf22f9e9b96d44a7471a2f"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0031.yml",
+      "sha256": "f50ecd5b43384f2f0a0d43ba21f73d8659d5766bc62c56b49fdceea3a39ca3af"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0032.yml",
+      "sha256": "7ae3a5127fd25973894eaf7705f2a744afd2f3f4a0526c36d2d1a13c6670f0ec"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0033.yml",
+      "sha256": "5c5152326c330b34f8beaead158e86cb263cd33dd841d401f983233d8ec217c5"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0034.yml",
+      "sha256": "61890ebb53df5a08d8bab3d39e6ec683bc12299d38e35d11fc0948888e6051bc"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0035.yml",
+      "sha256": "18951ab00d21cfe14335a2f5fa77ec5795fec4c861425577e64dd54b934e2e3f"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0036.yml",
+      "sha256": "0d52075405aeaa703acef83eb8c31cf19ceedbebd7ae629212fdc48c8b2c1e9b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0037.yml",
+      "sha256": "8044c74fb5a334a0791c7c0824e259c4ea082fbdf91d3d286e0b584d22504f9d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0038.yml",
+      "sha256": "52ac4ebdd9a961f0dcfc515434084d636a3aca8edb2d03ecd4a8aa1ac0d31359"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0039.yml",
+      "sha256": "e62aced91ba7d5e858c2854d6a25e9942ba9bf99339e3030c1634486c841d632"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0040.yml",
+      "sha256": "9478c643423c2fc1252088fefa3d72517a46116b7bacf06cb0bd2f8ce45710c3"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0041.yml",
+      "sha256": "2fc329d9f4a562f113896e52143c6199bc12f250a7772b9967797c0af27f9206"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0042.yml",
+      "sha256": "4b09162b5cd584dc9642a78b9bf4d51b150e938439c8a067d56690aa51a83f33"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0043.yml",
+      "sha256": "ce3c7083a75dd69d005e9265e9ab819591ae13e5f97b9168d94772b3fe15bc25"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0044.yml",
+      "sha256": "bddce59458be2a42a0c4b4e5fc07fb3b219dca705731e325b577662d0e49dc66"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0045.yml",
+      "sha256": "11f4c87558f8e870aaf531346fce60f2ece9201aafb88a6196eb8853bd7622e1"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0046.yml",
+      "sha256": "924bb7fbbb7e3127919dfec9e3c1adad88de74dedb17efbafb587e40edb97292"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0047.yml",
+      "sha256": "b36f5f55f63b284b6ecef1d8d3c5ffd9758e77237d30fc7dcccbdbea431ec1ee"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0048.yml",
+      "sha256": "d05e3f0f880fc95fe013ab391932ab6e708a6c3cdfd9f0cca0325cef08ec05e0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0049.yml",
+      "sha256": "808546f919aeaefc7be20e56e9e6f2bed2f2dde10d3146c8c7fa0282711af3e1"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0050.yml",
+      "sha256": "83531813bb5492ee0322f6e4cc445f18a59452049d8c42b4a52299fbcea785cf"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0051.yml",
+      "sha256": "9acc89c314e6785423f620c45bcbfbafcb9310c5792029a6b759d23b988c5336"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0052.yml",
+      "sha256": "4b694da9a77b7e6d1cabff96bbaa6e5637ee6b69a908a193a724a1aaacc40208"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0053.yml",
+      "sha256": "de20c520dfc46bdfb5dcfefc88b66e40f939172ec1c122e5f930c92fdcdb9045"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0054.yml",
+      "sha256": "0c1fc6674b661260e82738afa9d84298cefea5e445423a11817e1d3e2b9ebced"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0055.yml",
+      "sha256": "8c7f04925cae7df6b6ac31b1910f972afc15951a0f7163a1df3ff788184249bb"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0056.yml",
+      "sha256": "a390a229ad9e4f52f9bd9d239a4048644531830d5e5caefe371735136b49834c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0057.yml",
+      "sha256": "07dfc5457d9564df4f5a1fe862a35aa63527740ccc662b3d1fd1e3a94d5ac88a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0058.yml",
+      "sha256": "0d19f07335b4e74e30f7a8b63054c4094b75b1ca97f7078a2e31f60c6c60507d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0059.yml",
+      "sha256": "d5269aaaf77279fd4b3030fb8f7b8fa3fceac42d8c0f4aed5e1a503b8bf8dcbb"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0060.yml",
+      "sha256": "73b807b55dfc28536a811650fa21112087a5b09a82ac6d4336ebb202b060b42f"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0061.yml",
+      "sha256": "fe7ad32eebfecf5a7ed9b6a20f0b24a5dd6b634122816756805851ca27f703c8"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0062.yml",
+      "sha256": "1477ca948c13d28fb84338130fdec1c8c4db64066e5cf0ca85f6ba2b54522a78"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0063.yml",
+      "sha256": "cea8ce7049f779c5e30f790f1b742c4f2eb935a1e777fef6a0c6ae12971651b1"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0064.yml",
+      "sha256": "2ced44593c461f4033cf09374e7357cd93eb584ab6ba2f10f12abf783b26507d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0065.yml",
+      "sha256": "4819c0475d6e494538e1cfedc5e32e07a79d026c7bf2ed98271179ca1d05e57b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0066.yml",
+      "sha256": "a436460d747ac75391c61d32d8ee729b4c1d093ce08fe3575de9028e65ed3718"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0067.yml",
+      "sha256": "3edadc9d08ea8f519d063e271c6fd268b97a241f0afa6b8e11551c81aa0b89cb"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0068.yml",
+      "sha256": "3b8624f5888c1c7bc9a63463db5de9aee803fc7c1ca0130e403a866cc595b362"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0069.yml",
+      "sha256": "56b822abcc8437ce496cb6605a1874c3252d3f8613c58cab45a4aca68201e018"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0070.yml",
+      "sha256": "2f4a6df6233083f0ee2f86aff0a1bddf87017466cac42d92fee28404cda2c6ac"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0071.yml",
+      "sha256": "5826be6531bcbec0c08214178da094eb6a883b8c212d308ad50e234ee64c31ff"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0072.yml",
+      "sha256": "847187e634c4d38bb10b03fb12c9d6e43b80842a0d1dc2fdf0d2144fec8c6309"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0073.yml",
+      "sha256": "f5a69f63d671a567dae4b8a1ed8db5a189d2614a16de630ca166e060e9d3470c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0074.yml",
+      "sha256": "3fe45ee12f0fbf7a367d5de7ac2790cc12fd2a48605c55164a74c0c59be998e0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0075.yml",
+      "sha256": "3e2f96303b48789b49398028ba78839d5efe3f0a1e139128e6a4e7d9d32df3e8"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0076.yml",
+      "sha256": "57d1de461e3201fcb3c79eb4ffe49ca92bdd6b9c0eb0fb54e7b2f9bdc14b4a06"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0077.yml",
+      "sha256": "72ca94aef99912310e128e0fb4ca0a904510ddeac468b161158699d4a7be43ed"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0078.yml",
+      "sha256": "bb05534ec6455aa61648a3a29dfb93dea66366170170d56cde7ab944a054dddf"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0079.yml",
+      "sha256": "b97fca599d1e5e39d3f4721f0498b3a04f1e20ecea076d6e54c0a6718098543a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0080.yml",
+      "sha256": "2f9ebda904174f23cbf8f6eabfd2e979caafbfeceb3547ae273811ec522487dd"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0081.yml",
+      "sha256": "493ce6329ece57e6ae980f2a832f5fb0c7ae1861a9046bbfbb891c2f89f4fd26"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0082.yml",
+      "sha256": "d7291e418bcfc38c1e71b0143b148aa0ee97d78b91d591bef1193255c0f1a21c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0083.yml",
+      "sha256": "fccb881a8c964af9b8e3b48b3f61be493a1fda71944defc473345412110705f2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0084.yml",
+      "sha256": "e09876722a0924f3bc17cf1790ca8d9d383834d1b48e8bf22beaa5163493c3fc"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0085.yml",
+      "sha256": "2032745c7c420edd53b12ea7c047ec9f92de2adb12ef753797a02401b9edbb58"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0086.yml",
+      "sha256": "4128993ed65c3401b4f37bea9bf02e6734cf12cf1456dd9227123678fdce22a9"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0087.yml",
+      "sha256": "e1a0b782ae1111f637c59219d90401730d07a9ed7389b2f69bff158f0a33ca43"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0088.yml",
+      "sha256": "02481bca6a4f20ca5d9dec7399ff82ed7a92d9f308c63d6f0c1f5d32559ab2c9"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0089.yml",
+      "sha256": "a09ee09f0b422c0c844058d824a9f25648896487deb909a706447b810dde36d6"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0090.yml",
+      "sha256": "0744bacf986b3bb5104ea03e3d74fb6092fd26e0a851390beec9f6fe3e930787"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0091.yml",
+      "sha256": "07f5fc707c371de83bc663e9cc7a1009874204b2903509cfe6ee9c4542c4f4be"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0092.yml",
+      "sha256": "54ff50759f43ab67d5e4c264f910941224e734eee4fb2bfe0f2b92659ea8d92c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0093.yml",
+      "sha256": "be7e123fcdc739eecf1e3a508d121af11a0acce2feee05595b2c16475c0047e7"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0094.yml",
+      "sha256": "af52b3f5203d5f7f1471b2100874f5d78991e79e5c3e1f45268b26efb692e8ea"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0095.yml",
+      "sha256": "7de000b7070e8b69062225f11be3ca5a3f88f69397ea1161886b643348871ec7"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0096.yml",
+      "sha256": "1e324dc040a9684980d2a8b16999198f765df642983ba0a58c9021cd0aafcb80"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0097.yml",
+      "sha256": "ea650cafc57bd20b8d771d111b1ccc600e44ff1586be36b7b10139eccdb8d997"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0098.yml",
+      "sha256": "eb46b100770cf1b9f7750c217293dc27c4d86c19e766ba89c9906cef5f80f1a8"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0099.yml",
+      "sha256": "720f3376a10a12b7e667033c0b4da61a8df8d119c540f71f505a7d733ae151ce"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0100.yml",
+      "sha256": "2605d6333cb087d750246dbad8c9ba18c8a3dfd1f090eabde2907c4896a991e5"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0101.yml",
+      "sha256": "a117368b56987c97975159258d53b116c2b6e4ab60835aba1e86133a44f4cb2d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0102.yml",
+      "sha256": "e3481f9b445b46bd4371314d3d35fad80ae4f96959175a8aa57d135dfc187863"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0103.yml",
+      "sha256": "69e1344b780411b484cc9d04465bd64e5d85dca8fe8d34916a624c1c0da59959"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0104.yml",
+      "sha256": "360abc71cde19d247deb0bebf48196c97a4d596a46c3c178c40201305ed3f0e4"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0105.yml",
+      "sha256": "d98e8a398b5fe42b6b20bd5a5a3eb76778bbd10ce104cf11934ef12573ddb9bb"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0106.yml",
+      "sha256": "e4dd8902def7b81941ab5cedbea8d9e92866b80f945f884ce3b52fcbd1bb3cba"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0107.yml",
+      "sha256": "6db5b07fca9f004b872425615848ecc9b26d08cac91a90a53464c70f89da964a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0108.yml",
+      "sha256": "043b4e1b595dbce6a77eaa817b078bb0de3875a284a1951fc6079eff8b40f17e"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0109.yml",
+      "sha256": "bcb577af54c4b56797df9c21ff438deb532b08422364f029c32f9fd0532e88f2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0110.yml",
+      "sha256": "0601640802b79103816975cd0ec0fcd26228f0d9691fee9c03238c9a001fe96b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0111.yml",
+      "sha256": "5510e0e6e442f34f874c8dcccc4f6ec50ce61f1840f8fbabbdb6e4c70771e4a5"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0112.yml",
+      "sha256": "7fdfb8990f00e8c57b2274da1114b767970e50686e1ee07f74ee2665ed22198e"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0113.yml",
+      "sha256": "9e2334ac071ae63989bb85a672c7b7f11bf4ef64fa3cfde1dd860a546eef91e2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0114.yml",
+      "sha256": "a4979a804f95cab62044ccc38c25ca78a7cafbd73aee690b8bf5fa34065b4a4a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0115.yml",
+      "sha256": "cdf289dd4235974c66792996f32ff226d87e0b94df87979e44707eb0974439e3"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0116.yml",
+      "sha256": "c960e478a2e50f8f32cfbf3f2fd26c680653e6165487cce34d4c6fe369ce54c8"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0117.yml",
+      "sha256": "ceb01ed1911617109ee9c581fc2578ca24cb6a8ce11b640a500151ed18f4df2d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0118.yml",
+      "sha256": "4bec58075a8b43fc3b1de2b126ace06aa999124bc849ba8814b7f589e797972c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0119.yml",
+      "sha256": "df95c04074ed4cdc96f6dbdb6738628f69197abab6f0d8f54fca33f9a0892b71"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0120.yml",
+      "sha256": "c958aa13a664bf2afb76cb7a1bfa8c8bbfaf1d960688fccdb0d0eaf3b5f2b421"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0121.yml",
+      "sha256": "388f19ab409984acf5b18e217922912876ad158ba2b7c3665b23a2435b26bdd3"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0122.yml",
+      "sha256": "321830246fb154960e36f997c328152e02c256dfc2c2c02d3a98a2c2737ba036"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0123.yml",
+      "sha256": "42e46814f0348abb4e1aaa04c3c6fd5c1702de3dfbaf34eba0ff9ee225f898c0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0124.yml",
+      "sha256": "3ef51ff6885f678eee3378cf0ba039af7092db9e6015d84ece32e6fa5f5be3ce"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0125.yml",
+      "sha256": "99ac305f188945d131e1027ffabed802e33c9652b1ad9bc8793fe3cf47965d90"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0126.yml",
+      "sha256": "b7007ab23c97aeabde16dac85425d58c203a4965488ddc0dbb71c3683c723200"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0127.yml",
+      "sha256": "400a9bd1c1b758437cdc7a57ff07af7d00362272c3fae9749f81fba00c6e2926"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0128.yml",
+      "sha256": "81425d3f4873d228c3ab8f657530a9a594f39d80a7f1d2f9649cbf5bfce3d6ca"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0129.yml",
+      "sha256": "646d11b185dac7e2553461f4cc7ce10d4bc8af04e78bfaceef77fc8f9593fb75"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0130.yml",
+      "sha256": "ba8ba3e8078dc7b7b06792e9aa55caf3bf28614400e0e3ab05ead42b59e51a2d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0131.yml",
+      "sha256": "f0673562191be7d0378b9558ef15aad25f3e40a3b15bd1c1f5b12015f0584788"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0132.yml",
+      "sha256": "1f63787b2e0743e3a8c1768403d92bd1b7966429bc2495aca01cd792df10815c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0133.yml",
+      "sha256": "3b3f2e56682a83befbb8eddeb155dfe737115cb68fc52f3b8436a06e18b58c2c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0134.yml",
+      "sha256": "5dec028690d1bda8dc84e16b9b76571e7a5656e6be3c47d3c15cc7066dd594bb"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0135.yml",
+      "sha256": "2656c2a7f3a07307142d33b4c01a8e757739bd8f49f75dc5993d1904f12c1cc2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0136.yml",
+      "sha256": "030f7f4c943f32ef157c25e50d2a4c83401ae2255a5907b3cb19fa3eda13ff1f"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0137.yml",
+      "sha256": "60c3d742310339742d9c6b828b98f8f3dc1a6763d40a00270020673ea02640e5"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0138.yml",
+      "sha256": "204b5f99c7ce61e1e1d75755f88d16fae7bf0ce4bb876a7b4b5ed2ba7441aa06"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0139.yml",
+      "sha256": "befe4324670ae17331b17e79961d1dddd1cd110a876c17fe60d04b1b46043dd6"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0140.yml",
+      "sha256": "3a0a979be0f4f9aee137ea16d12dd0254f3536004e0b92fa359b3c8ea7a99d1c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0141.yml",
+      "sha256": "eedd631348759f1e8e289478bc1b0857323c5f9f6530e1f3e42ad4ee8b132b3b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0142.yml",
+      "sha256": "033e567ae3eb1a57374b622dff83d92a781caf98a07b1de917d437604221082d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0143.yml",
+      "sha256": "43565f2bacbfbfbae2cbed452fdbf0eaa44ff18b6dbded495dec29ddbb14c981"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0144.yml",
+      "sha256": "f331fec253287731e71bda7f3a2d7b55cf549245fe67b6e6d5eab9ea5c9ab6e2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0145.yml",
+      "sha256": "585a71be6ee0df0f4039be2a0bbf938486f5928f3b2462b3a1a7969e8f32c386"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0146.yml",
+      "sha256": "52d8961c683fa4595a057246fc5b8a87522a01af18754d71a7f41f5fec53d0fc"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0147.yml",
+      "sha256": "ae0071f037cda4ddff248535c92a7223571b06bb5958278d3f451774ee7ba335"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0148.yml",
+      "sha256": "806c77d0b5fbb2b2453d79022689430c68679780c7adcb7258e8725183241fce"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0149.yml",
+      "sha256": "14676b214122a4fd55d973af861a362537483252329642cc60dd804ba0fc12a3"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0150.yml",
+      "sha256": "c892188db12f14aebda20034fdbb833080e8e01139f577933f81f07480ec30e0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0151.yml",
+      "sha256": "734d480493d67724afb2b210587d9f67b51e7de8e4fa8c717033fc62eef448a6"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0152.yml",
+      "sha256": "63755cc1c3e9a2d5153ba55d3d32d5c11721eb903a742f38ba5303371846b179"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0153.yml",
+      "sha256": "71fa6291b9f82e9a3bd41c803197079bf680296009c467dc258f614cfef28b51"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0154.yml",
+      "sha256": "930766230b70842c92750d928e9aed585ef5f26f2784095177658f857f038bae"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0155.yml",
+      "sha256": "8d7b0398f0118151453aad200b39e3d3fb86eaeff30925ad2f1ddd733abc81be"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0156.yml",
+      "sha256": "ad28f09d87fee79653778cb4ed4149db32c2346502ebcbf2c97f2c2f7649d39d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0157.yml",
+      "sha256": "2e212c4a4fe609f1d9219fadc23d26e66a1c81ccaad4b4ee28e292f598a9aafb"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0158.yml",
+      "sha256": "ed23ca6f8ac64c0a73ad2442170b3feb6a1582e9100bb5bca6834671be023544"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0159.yml",
+      "sha256": "be64b6b0bf4263de9d8e82c2d87bf73ed22e7bb393c99d0e77e4e16f9e2ad129"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0160.yml",
+      "sha256": "51e7c47a8717fcf3637459e07b66868dbbd24287a028b245e663bfec55063d1b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0161.yml",
+      "sha256": "49e5901bd0adf11c37c728a94957c155f657ec643e8ef60a65ad795985290375"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0162.yml",
+      "sha256": "5c7be765be24e4ff1b138980b0a4a4a2de816ff071fe97b1e45cac2859931aee"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0163.yml",
+      "sha256": "a7d786db9690c87627d8f344683bc77fd7506361027f84987830b37515543c82"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0164.yml",
+      "sha256": "8b72f857eab2640c28c9d7c4579c58711b2b3b477afac2cfa09cdc2c12baeeb8"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0165.yml",
+      "sha256": "9525294bab2dba09d0bd28bdff834616ed6136c9d6c95e20d7a054165951ecf4"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0166.yml",
+      "sha256": "da8410b48c07707a1c9d2997520056ad520bb8b2e389410e249090ee2d7be8b3"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0167.yml",
+      "sha256": "bb559f2467fdc349a92ee5255d82f35d54b1b58b68f936e8c28b85344ff84ae8"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0168.yml",
+      "sha256": "9be19b7d08cc3b36363770b15665a62507b26b39eb973e459f3631bae93f1b80"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0169.yml",
+      "sha256": "f5bb9097165d5dd2c987c9950060356f93dfa566ef6b5c9509fa57268fb2940b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0170.yml",
+      "sha256": "9ddeae9bb3ce82c4ede2066e177d59f01daee1935938e74160057ef352597a67"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0171.yml",
+      "sha256": "744bec97b90a4cec1224544e1bd76f06b690038ced7b95de5226c8adc259fa2e"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0172.yml",
+      "sha256": "dc7c8147eb14d0d19f5fdbe39a6e28f7ce462cc39d361060661ac61dc16a896d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0173.yml",
+      "sha256": "3466b1b87e21756235d584ceb4cb90866d9fa235ad34c109e2e08cdd3f398ad4"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0174.yml",
+      "sha256": "497fef4cb054eaba0095525a2881cc2867067a9cf720b00fd4868ee8b624e8d6"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0175.yml",
+      "sha256": "85579cfa231c2599ee3f87b65456c75a1c668a07ea6f969d6a0c388838f6fce1"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0176.yml",
+      "sha256": "91484ff112f1b5fe4e7ee8ee15dfe94d7fd557e6a28ed5bd123a22b2fef67961"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0177.yml",
+      "sha256": "a5196802fea73b1c511ef7b08b8681e62f7b2a1fdf684c054721365f6f58406a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0178.yml",
+      "sha256": "702b852f2792e0516c9041ca9de09977679e4f1eba42bd153df19b2a7d3439d4"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0179.yml",
+      "sha256": "09dcba7cdf98239ef50d8a372438d1e61faa9a7974ad659fc47b063a14f9859a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0180.yml",
+      "sha256": "d3960c6094ab7c910952d128a1ea153deca91cadeb6525fc55b8639159b813eb"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0181.yml",
+      "sha256": "ac9bbf6d9470def2196035698dd23b70bffe582dfac57ec6c9429f36f61ca0ce"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0182.yml",
+      "sha256": "ec5e8611bba89628cc227cfbdd2c40b81482b317c59321be55369e7a58c8ec90"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0183.yml",
+      "sha256": "45b9f48d5d326231b8c63ec65db01a743283c9297d042d0e2627f68c04b33606"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0184.yml",
+      "sha256": "32efb4b67def71295effd30236c6350b471d49be62a70e91a7fd92f5ae430a91"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0185.yml",
+      "sha256": "44a113b65a360430739e3fe607f66cc74c50ab111f9f5a4f660308cd217d9574"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0186.yml",
+      "sha256": "4a56c603342f7ff12e265c8de2ec4dff963c123809864f25260fa3804477c18c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0187.yml",
+      "sha256": "79417fc18948f04dd996988e27ee5b2f9318090ade6fce95d47e20a816fb9e01"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0188.yml",
+      "sha256": "e97ab20d7e1deac5521f37280a34c27366aaaaf18a97b9d288fbebd2fdaf822e"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0189.yml",
+      "sha256": "4bd4931044733044e59f882b16fe9aba9f3af2ebc1b3bf64e15b54edf82f0d2a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0190.yml",
+      "sha256": "9d7ea209198a882106b12253c9a59b8c1f2828d8c79d844909525dd15894db3a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0191.yml",
+      "sha256": "70a1b556ce134d967154c28cf019a36ee5dfa1c3cd5256f7af08b78f96af6071"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0192.yml",
+      "sha256": "43be2d6f845de123b73188ea69edfdc516a644c57ee1fc9b1f552ea8ef568356"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0193.yml",
+      "sha256": "5e247a533a530d103cb6f0baf2dd42468a448a5a8470e06fcc4c4c1092d003b4"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0194.yml",
+      "sha256": "551b867f436d79968729362aa790508e4fc948a8fd2862e7d175ede415151f35"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0195.yml",
+      "sha256": "65e4c6546c9d6289d78f2813c44972ad430ad6ad600ba7a386ace58642f7eb36"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0196.yml",
+      "sha256": "db79de39efaec3dea42a1d178c9620d462eb75d8683cc6556261c9de07db739b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0197.yml",
+      "sha256": "3a3e7d4fa8cfe291bcad01e45beb4be06173cb20b825b84be95c26b43c039984"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0198.yml",
+      "sha256": "d22f93ad324c32351e43175e4285b136aab6f8fec3042fe46c26d6d6e878e8d2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0199.yml",
+      "sha256": "c0a37734d246c379b98773b64ac8f1414a4979a662568ffa15bbd9ce51fc095e"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0200.yml",
+      "sha256": "a62c767a21260ece638fa7d21ea28ce357b63515c58d6afab327b031bd334d8b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0201.yml",
+      "sha256": "265d6632c49ae47cd83a1f946454c2ecdcad20722f70b5314af2b92b1c641a5d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0202.yml",
+      "sha256": "7cd0024d65b9f42102d646accecc6d765a622dbbcb1b91ecc4992b47d5a67244"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0203.yml",
+      "sha256": "250ba7b43a7133267d95c694331a498c492fab1f959f3a307a64ea6845267ca6"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0204.yml",
+      "sha256": "29138cf32502fecc4a55bfb98799b2f609f297a3f0fb7149c99c523fb617a1f7"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0205.yml",
+      "sha256": "3d328807aca028e67688064c8e5a80bb006519aac7eab419653201044ab1740c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0206.yml",
+      "sha256": "baa0d004bd973c8c224864371af438791948fa1888ee6e38374ad72474e6b2c3"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0207.yml",
+      "sha256": "f12d14f20e2ba4cf7c9a8710261b1602da5d530e19bd0f9859d725eab47fae7a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0208.yml",
+      "sha256": "440234119fc1e16c428cc0868bf8e2ae0b41cb06be40621f4c32949e8c6d5093"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0209.yml",
+      "sha256": "011b28e1a73163389378e12055b602f102aeab77b12e7fc7b4c537bf425ae204"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0210.yml",
+      "sha256": "6075768caec0a582fa8e9dc5cb750ef7c31a9a9f7ad8c055535254f1fb355cf7"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0211.yml",
+      "sha256": "0dbd74cbcbc169db80000de728f01b20910eb6216b2e9e99bd3251afd85abae1"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0212.yml",
+      "sha256": "d822c1011fc98746e6167f311a9f88eca927c3af027ff293a5843334101841d2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0213.yml",
+      "sha256": "d789c1f16b56df3e7aea08ebe9289d1606cac52107918b4a10ff592e40c31561"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0214.yml",
+      "sha256": "83edded155b659c7ac06588a7f9ec49766de591f6c0977b190897b64e2a01a2c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0215.yml",
+      "sha256": "a9d6bca987d28da149c46ef69a23f07f6e245bca778128c13a6bc8e3f4523c3a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0216.yml",
+      "sha256": "f95a112935c747c953fa61b0dbb5cb236b0ca633a5b403070b32166cd6ed926a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0217.yml",
+      "sha256": "eb80e494b8a4da75239825c98cbebf40ce51add26510652673560ea02943edc8"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0218.yml",
+      "sha256": "174d559d81ab3d31016338c8ef9890f2fb22b517c1ef98dfedb21094b7867dfd"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0219.yml",
+      "sha256": "193b2667f18f3619c02f4ff932466965eb1b42c2dff18e3446b98cd5af15de42"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0220.yml",
+      "sha256": "ee54bcd794c8904e7582f07f43c69aa99c3520fb21543c09ec819280024cce6e"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0221.yml",
+      "sha256": "b3e3937fabf0c4bb995a17aad31d9ab2dac903db13b15bc5c70f73b8ead21b76"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0222.yml",
+      "sha256": "267356105f76104bbd07d4d30b2a48ed27ab053de2312071cee591d19f45c0dd"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0223.yml",
+      "sha256": "c14ba37930a9890dca176362bd81f537cad38a271a974b1fac9bbe95216877f2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0224.yml",
+      "sha256": "ed2e297ba1ed143c8f1739c195c4c88d469923e951e029097929e4b4c8fbc8b7"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0225.yml",
+      "sha256": "da8ea2aa861415e4795e287a14bff88c7c968e82aaddf859429f7a9304595723"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0226.yml",
+      "sha256": "7afc80e0a52100b99f09f205198a91475c6cb032ea07cbc95600443fa8edcfd0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0227.yml",
+      "sha256": "67a7ab2d4438190febaf127a73374161715c87b96c7843c157796a9f9a7eb07f"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0228.yml",
+      "sha256": "24e2d39b899df39cde54e9630c00c46f7e7385fb8ce8dba8cc023dc8f329969d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0229.yml",
+      "sha256": "2b86ddcd31c2ad8367aac8e3a87b003df58caa9de2f806dbb1d0c638abadea0b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0230.yml",
+      "sha256": "b5fcd39b78f5aa183b61d04e8be8526b875abf0fe6fdcd7ab2440b141d9cf05e"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0231.yml",
+      "sha256": "74139c83c06708d509d3cfe7ad62ce8ea7c074f53b1f6c749eb2fa1afb70ab3c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0232.yml",
+      "sha256": "c4831f1b177c17a60d028be92fdd92645ef7cc7c6c362cbf6a1ac7a94258d653"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0233.yml",
+      "sha256": "5639b2723ba83420d50c243bef0c7c703fbfb5379e8f501b57cbe0b1a7dbd575"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0234.yml",
+      "sha256": "b3d5e84b4a40f0d8879ec412497c1f020d01f817a975f99813a820f6b26b6eed"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0235.yml",
+      "sha256": "af1042a833bca96fc4c5d454dbadbd505d3a3f177e02aee1ca24a0bdd71366be"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0236.yml",
+      "sha256": "26691b97b621fcb19f6d260d14f6b5853ee53bdd489a855049381bde49f7e56a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0237.yml",
+      "sha256": "6d5d169fbd53b37c97a6c89bf293ae82cd6b075db630bd3282d043f4e6ad6dba"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0238.yml",
+      "sha256": "102b66b49d5cb47e277e596c07ce735b0d7d7d10e148190b124e03df1938aaef"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0239.yml",
+      "sha256": "2e69dd3986a90a1a732bdca9cb4e694eb42f6507b2954add7bd62369a9cde881"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0240.yml",
+      "sha256": "a4bdfcb2e881bac74da602435912c494f8d4b4a3660ca6173a47a97d24a4b998"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0241.yml",
+      "sha256": "508b9bbb6bbdaa7f295f7dfe26ddc61427c1444ee4b978e1fd0f18bb8bc1d4e6"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0242.yml",
+      "sha256": "083a003f33fe130e3b1576eec69148cfc59ff911e50979087eb8ea996020e8b8"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0243.yml",
+      "sha256": "20524e096862aa3365be1f9bf5873a6e35634b429eb84f7310b2ffc2fc041098"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0244.yml",
+      "sha256": "8049413027528443be308b4a40d6ff82044d60bcb33214a8bd0a3e5b51ae9aea"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0245.yml",
+      "sha256": "adf2ed0b4f95485d54cc82a5c49d676a0a35d96315bf43662770502ddabf67b0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0246.yml",
+      "sha256": "394069be9157b9041de1c4e551b6a8aa296892e9bc516221b6a4bc6a343cc404"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0247.yml",
+      "sha256": "e4d7b358eb0a17a7cd51257157da69cce7a42080d3efc36ed6d3c51034dadc18"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0248.yml",
+      "sha256": "220361fde39b041c7db2c4fdcd0708fd415090ee2faf13ff2ceedee86837120a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0249.yml",
+      "sha256": "c47d71bdb87dce1d861b5bf39f289a420afaaee1b47556d662310c70a4b9b66a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0250.yml",
+      "sha256": "a46f107307c01340f138f810a87c4f1a62b29f303a0fdf8d185ddcfe89f83a81"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0251.yml",
+      "sha256": "1c117f58e46a7996d6540647b2eb63a6132306ac6fa6266a65a8c1ffaab70fed"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0252.yml",
+      "sha256": "731fa682971f9e1d9cc196ddc4a5b5f5a461ddff3fde2a1277f7ca3323a836c4"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0253.yml",
+      "sha256": "96dca75300b257e86b6c38a4746286da538a050744a5634ab6aba2fbf87af525"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0254.yml",
+      "sha256": "36f50281dd3a2c7d8f08f67d9eaf490d20d92a4e5231f85ca7eef180c786de37"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0255.yml",
+      "sha256": "fc6c4e9a443df71e05de781f25645d05a50171aed074f8a9f4e4d450738b11fa"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0256.yml",
+      "sha256": "87be92571eb2f13fc5a036fc6292c7824952a26b849558f405e01dcce5e63370"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0257.yml",
+      "sha256": "a57e5cd5e94929a21f270f39db7a39776f9a0af28c7389a3eecf775870be15c7"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0258.yml",
+      "sha256": "40e1aec55a27b9f83ff1720a97d78931a2cf550465367eb85bdcb2852ba11092"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0259.yml",
+      "sha256": "75c6beba7ad7bef8a986c46ccab31afdea11be87abecc9deb51206103100c0fc"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0260.yml",
+      "sha256": "bd34a76b8bae326367f80ad23aa19dd675e50ff2f33368262c12dc6794febd8d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0261.yml",
+      "sha256": "5ba1e4342231cb7b0380f0d1fcfc5bf5f0323b586fc58e7786b8d596a8b0ed48"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0262.yml",
+      "sha256": "95300a1e2d4941a9ff0a1ba33a14a29b192ffa4849e0c59f5a260a602778cf65"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0263.yml",
+      "sha256": "7448edc05d77b9fac8c982a30cbf9423159191bd51fba14f6c3b8d81e190a1d2"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0264.yml",
+      "sha256": "732a88b698cb6e1219f8ba708a12464e5c56d4cc486fe9289a6539b4f3b16d7d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0265.yml",
+      "sha256": "d388b2545450f4346f93154141cce755712c04ad906bf912deb886e37e51b90b"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0266.yml",
+      "sha256": "9fe196da2229ed959e6220fab0bf7fed8aaf0a3e48d909cc9d327b0cf958f46d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0267.yml",
+      "sha256": "471ec94677d0ab658ffd156aa1370e46f7c61eef3506845b59b304cb26d2d86e"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0268.yml",
+      "sha256": "14ad3a12280a4cdbf7ccf2fbd9ebbc6b5b7789d32f4029188df41fa7bb4b237d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0269.yml",
+      "sha256": "fe4d2b66577c8cb4b4578b4ef2d305bbb055381769681da58cb042e5c914a83a"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0270.yml",
+      "sha256": "d841ef9ff65ddbc78d1bf49d5d0b1e070d97e0637faee20b3209a13e4d344b25"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0271.yml",
+      "sha256": "ac2b9f556b8ab58c56a86e9dc507f4623f7698ab35280fafcaab2850e5bd2725"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0272.yml",
+      "sha256": "6e68373c99468e65076669c8261ec154274b39533a64a06ac3bcf463d870c5dc"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0273.yml",
+      "sha256": "ce34a6d1316af9ee85346f2640257715d0d4be4f420dbc43f56265fdd545800d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0274.yml",
+      "sha256": "f171c960ee395873d75b82f056f1674ee013fb4e9a8605b1060888d356ea85f6"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0275.yml",
+      "sha256": "7d5ad220037e89e3b55e393ab9e8e274d7b7e703ffc158225276ea23b8d3be82"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0276.yml",
+      "sha256": "a1ca92e00a1dba11101390256e55b824df94f2762c56340bd5c87f9639ceafcf"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0277.yml",
+      "sha256": "55acf0b56805c15f089716eac658e4afcb6ab253448a871995783d9f8b8fbe14"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0278.yml",
+      "sha256": "67d5c9885d390cab319676fc1c1abce112e705c696b66ddf10c8020ca20aa681"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0279.yml",
+      "sha256": "55bc7d198fbf09b42a21b67356e041a68d6bd06542c33c9af7ec6f88e8210404"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0280.yml",
+      "sha256": "c7fb9f757b37f9848b7b4d891cb691b45d62919ae37423252ae80701b8838583"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0281.yml",
+      "sha256": "f6aee57d67e96d3cf43ee85137c3666da0d7ace779a858cd7d2d7e762168e938"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0282.yml",
+      "sha256": "74c5bccbdcf082d551a112c4d9bbcca6a951e5b3103adad68a2bd0d18aeda7a4"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0283.yml",
+      "sha256": "76871ae78b1a29aec9090b97384970b4c2e12a9daf7cb7a382c0c1b694a3b455"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0284.yml",
+      "sha256": "0e426bde5fce415f325ba3b5084de342566c1ad073e02dd0433b9f9a875b5e11"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0285.yml",
+      "sha256": "4949c7bafd5238213c248c8fb4354996855b5a85c0d199ef3f183fe844f552bd"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0286.yml",
+      "sha256": "9e76db88584256e802134e0b8487d4dcfafd66e8185968500ca634975e9ee669"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0287.yml",
+      "sha256": "7224131bb6dac8183aa3a4506d0668e291567ba3252df56a865ce3fb2966a5e1"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0288.yml",
+      "sha256": "c83c1d19809255feb3b4669f61f8c2d8b413019e4103d8890026e9119a21d654"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0289.yml",
+      "sha256": "d8d4eafdda008504ede6785d7aa8443fc44cb6399d6577ded990ecc145c44325"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0290.yml",
+      "sha256": "22b4481a840a95c29c05056676d791675d406f186c7b50951e5bfd010df1c908"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0291.yml",
+      "sha256": "5e26a62e155cd601a15e5fb165a4fc9051fec66ffa7b54d7081e9ed79f9b990c"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0292.yml",
+      "sha256": "8596f9cd5ea549b4bc6d10d8f039303cff67b587e7792a3f3a5b7858b57f5270"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0293.yml",
+      "sha256": "0a9a85f6abb3368f2cf21931dceae1284ec4262bfb1091ff4153eef8946060e3"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0294.yml",
+      "sha256": "044cf8245c8c5f969ee4dfcae4a49ee2e2885ca6ce40644c2ac52e0ce9efebfe"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0295.yml",
+      "sha256": "f3f854fb2fb1124989a0cf74af8639d33b5bfe9a1abe335f5a1121e3549f0087"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0296.yml",
+      "sha256": "eec0d32f8b4185574566e25c6b5a7cdeefa4125da9a4bd065bbf260d6fe23893"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0297.yml",
+      "sha256": "93abcd8d262c19138ab6afd78b842ca189a4e8983d60872b7e7b1d6d28490cc0"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0298.yml",
+      "sha256": "b0b3d660f7fb0b6647b15460d2a02dae95ba579930dd6c7d6d86269b8561f787"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/observations/0299.yml",
+      "sha256": "aa4f8cc87e3aa7373f5a7d10b7452fcdf3cd6067f2ce0ed411dba32ac46cd99d"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/identities-imported.yml",
+      "sha256": "0edbefdee8eea10a1151169f313e0943516943a2df614f6d1d2adc1244b478ce"
+    },
+    {
+      "path": "plugins/HelsteraVariableMathProbe/identities-native-direct.yml",
+      "sha256": "0a747b33dc4801e4bd75da8ec4d8c750d067de5837b36e07df44794bcc9f793a"
+    }
+  ],
+  "logArchive": "paper-1.21.1-variable-math-20261121-r1-logs.zip",
+  "logArchiveSha256": "36c7d4378bcdb0cda9522b36b8503373d90810c2f6f8a0607c99b07277f00a9f"
+}

@@ -1,6 +1,6 @@
 # Native MythicMobs model bridge contract
 
-Verified release: [srv-paper-model-bridge-20261120-r6](../tools/paper-integration/reports/paper-1.21.1-model-bridge-20261120-r6.json)
+Verified baseline release: [srv-paper-model-bridge-20261120-r6](../tools/paper-integration/reports/paper-1.21.1-model-bridge-20261120-r6.json)
 ([raw archive](../tools/paper-integration/reports/paper-1.21.1-model-bridge-20261120-r6-logs.zip)):
 93 observations and 510 rejected evidence mutations. Production SHA-256:
 `d283a6850d0d587c80e7a81ab41c71b4f5a97186cac84fe7f30356eeb23bd051`. All existing same-artifact release suites and the
@@ -20,6 +20,9 @@ rendering, or compatibility across the previously declared 5.3.x–5.7.x lookup 
 | `modelplay{animation=walk;loop=true;priority=7} @self` | Plays a known animation subject to existing animation priority. |
 | `modelstop{animation=walk} @self` / `modelstop{} @self` | Stops the named animation or all animation layers. |
 | `modelscale{scale=1.5} @self` | Sets the instance scale multiplier. |
+| `modelmount{} @target` | Makes the native skill caster ride the selected bound model entity. Repeated mounting is harmless. An existing different vehicle, self-mount, cross-world target or passenger cycle is rejected before mutation. |
+| `modelunmount{} @target` | Removes only the native caster from the selected bound model entity. Other passengers and a caster riding a different entity are preserved. Repeated unmounting is harmless. |
+| `modelheal{amount=5} @target` | Heals the selected bound Bukkit `Damageable` entity, up to its current maximum health. Defaults to 1; zero is harmless. Dead or zero-health entities are rejected. |
 | `modelspawned true` / `modelremoved true` | Tests binding presence/absence on a valid entity. |
 | `modelplaying{animation=walk} true` | Tests active playback; omit animation for any active animation. Paused playback does not pass. |
 
@@ -29,7 +32,19 @@ Scale must be finite and positive; loop is a boolean; priority is an integer.
 Model/animation IDs are literal and case-sensitive. Unknown keys and invalid
 values do not mutate model state. For a bound model, an unknown animation
 condition fails evaluation, including with a `false` suffix. An unbound entity
-has no playing animation. `modelmount`, `modelunmount` and `modelheal` are deferred.
+has no playing animation.
+
+`modelmount`, `modelunmount` and `modelheal` are Helstera-defined extensions; MM
+5.7.2 has no native mechanics with those names. They operate on the model's bound
+base entity, with no bone seats or separate model health pool. Mount and unmount
+read `SkillMetadata.getCaster().getEntity()` through the exact pinned native ABI;
+they require a valid, living caster and target in the same world. Bukkit passenger
+operations remain cancellable and a refused operation reports an error. Healing
+accepts a literal finite nonnegative `amount` (alias `a`), writes Bukkit health
+directly, and does not implement native heal events, expressions or absorption.
+All three require an existing valid binding; they do not create model instances.
+They inherit the same malformed-input, thread and lifecycle guards as the original
+bridge mechanics.
 
 Use named brace arguments and an explicit entity target. Native timing/targeting
 options remain owned by MM; empty native target selection does not fall back to
@@ -86,3 +101,22 @@ Rejected development runs remain observation-only; they cannot satisfy the
 release gate. Broader bridge/version compatibility remains mapped-unverified.
 Release evidence is promoted only after the scoped fixture and all existing
 same-artifact release checks pass.
+
+The baseline artifact above predates the three mount/heal extensions. Their
+behavior is covered by argument and mutation test cases for target/caster identity,
+passenger preservation, invalid targets, health caps, rejected arguments and stale
+or asynchronous execution. This is not native same-name mechanic parity evidence;
+the new artifact still requires its own Paper fixture before release promotion.
+
+The independent `run-model-actions-fixture.py` suite covers these custom extensions
+without changing the baseline model-bridge evidence schema. Its native YAML casts
+at distinct caster/target entities and checks passenger direction, other-passenger
+preservation, existing vehicles, self/cyclic mounts, cancellable Bukkit mount and
+dismount events, heal defaults/zero/caps, malformed arguments, dead/non-damageable
+targets, asynchronous dispatch, disable/re-enable and two reload generations.
+`validate-model-actions.py` checks 53 state/direct-call observations, exact entity
+identities, definition loads, cancellation callbacks and cleanup;
+`test-model-actions-evidence.py` rejects rehashed semantic and archive mutations.
+The report explicitly records `extensionContract: helstera-defined` and
+`nativeParity: false`. A validator self-test passed 942 rejection cases, but
+synthetic validator checks do not substitute for the pending live Paper run.

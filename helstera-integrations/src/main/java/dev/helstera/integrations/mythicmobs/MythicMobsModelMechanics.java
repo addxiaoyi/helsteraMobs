@@ -6,6 +6,7 @@ import dev.helstera.api.model.ModelRegistry;
 import dev.helstera.runtime.instance.InstanceManagerImpl;
 import dev.helstera.runtime.instance.ModelInstanceImpl;
 import org.bukkit.Bukkit;
+import org.bukkit.entity.Damageable;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.*;
 import org.bukkit.plugin.Plugin;
@@ -17,7 +18,8 @@ import java.util.*;
 
 /** Native load-event bridge. Retained proxies are invalidated on disable and native reload. */
 final class MythicMobsModelMechanics implements Listener {
-    static final Set<String> MECHANICS = Set.of("modelspawn", "modelremove", "modelplay", "modelstop", "modelscale");
+    static final Set<String> MECHANICS = Set.of("modelspawn", "modelremove", "modelplay", "modelstop", "modelscale",
+            "modelmount", "modelunmount", "modelheal");
     static final Set<String> CONDITIONS = Set.of("modelspawned", "modelremoved", "modelplaying");
     private record Context(InstanceManagerImpl instances, ModelRegistry registry, Plugin host, Plugin nativePlugin) {}
     private volatile Context context;
@@ -163,8 +165,18 @@ final class MythicMobsModelMechanics implements Listener {
                     return api.results().get("INVALID_TARGET");
                 }
                 if (condition) return check(ctx, name, arguments, target);
-                try { return api.results().get(apply(ctx, name, arguments, target)); }
-                catch (RuntimeException e) { problem(name + ": execution failed (" + e.getClass().getSimpleName() + ")"); return api.results().get("ERROR"); }
+                try {
+                    Entity caster = null;
+                    if ((name.equals("modelmount") || name.equals("modelunmount")) && args[0] != null) {
+                        Object nativeCaster = api.caster().invoke(args[0]);
+                        Object abstractCaster = nativeCaster == null ? null : api.casterEntity().invoke(nativeCaster);
+                        caster = abstractCaster == null ? null : (Entity) api.entity().invoke(abstractCaster);
+                    }
+                    return api.results().get(apply(ctx, name, arguments, target, caster));
+                } catch (ReflectiveOperationException | RuntimeException e) {
+                    problem(name + ": execution failed (" + e.getClass().getSimpleName() + ")");
+                    return api.results().get("ERROR");
+                }
             }
             if (method.isDefault()) return InvocationHandler.invokeDefault(proxy, method, args);
             throw new UnsupportedOperationException("Unknown native extension method: " + method.getName());
@@ -187,7 +199,7 @@ final class MythicMobsModelMechanics implements Listener {
         };
     }
 
-    private static String apply(Context ctx, String name, MythicModelArguments args, Entity target) {
+    private static String apply(Context ctx, String name, MythicModelArguments args, Entity target, Entity caster) {
         ModelInstanceImpl instance = find(ctx.instances(), target);
         if (name.equals("modelspawn")) {
             var model = ctx.registry().get(args.model());
@@ -211,6 +223,35 @@ final class MythicMobsModelMechanics implements Listener {
             }
             case "modelstop" -> { if (args.animation() == null) instance.animation().stopAll(); else instance.animation().stop(args.animation()); }
             case "modelscale" -> instance.setScale(args.scale());
+            case "modelmount", "modelunmount" -> {
+                if (instance.dead || target.isDead() || caster == null || !caster.isValid() || caster.isDead()
+                        || target.getUniqueId().equals(caster.getUniqueId())
+                        || !target.getWorld().equals(caster.getWorld())) return "INVALID_TARGET";
+                Entity vehicle = caster.getVehicle();
+                boolean alreadyMounted = vehicle != null && vehicle.getUniqueId().equals(target.getUniqueId());
+                if (name.equals("modelunmount")) {
+                    // A selected model never ejects another passenger or detaches the caster elsewhere.
+                    return !alreadyMounted || target.removePassenger(caster) ? "SUCCESS" : "ERROR";
+                }
+                if (alreadyMounted) return "SUCCESS";
+                if (vehicle != null) return "INVALID_TARGET";
+                // Reject cycles before Bukkit can change either passenger tree.
+                Set<UUID> ancestors = new HashSet<>();
+                for (Entity ancestor = target; ancestor != null; ancestor = ancestor.getVehicle()) {
+                    if (!ancestors.add(ancestor.getUniqueId()) || ancestor.getUniqueId().equals(caster.getUniqueId()))
+                        return "INVALID_TARGET";
+                }
+                return target.addPassenger(caster) ? "SUCCESS" : "ERROR";
+            }
+            case "modelheal" -> {
+                if (instance.dead || target.isDead() || !(target instanceof Damageable damageable)) return "INVALID_TARGET";
+                double health = damageable.getHealth(), maximum = damageable.getMaxHealth();
+                if (!Double.isFinite(health) || !Double.isFinite(maximum) || health <= 0 || maximum <= 0)
+                    return "INVALID_TARGET";
+                // Compute the available room first so a finite, huge amount cannot overflow.
+                if (args.amount() > 0 && health < maximum)
+                    damageable.setHealth(Math.min(maximum, health + Math.min(args.amount(), maximum - health)));
+            }
             default -> { return "INVALID_CONFIG"; }
         }
         return "SUCCESS";

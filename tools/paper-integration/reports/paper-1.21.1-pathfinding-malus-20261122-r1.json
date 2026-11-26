@@ -1,0 +1,74 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-pathfinding-malus-20261122-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-22T02:33:35.268677+00:00",
+  "pluginSha256": "7b029146bfdfa7669b025aca17e0993923d4511f8a275d0c471743baf3eae6c5",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "052fce9b80aaad913dedd5183db48eed87677cf2e1e7dfe4dd4239fa54229e36",
+  "sourceHashes": {
+    "tools/paper-integration/run-pathfinding-malus-fixture.py": "c77279d8d83043a55fcef1876969dd9e161531d7ec63507c3a9d438033bc40d4",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/PathfindingMalusProbe.java": "77c4d88e394b3c6adc306e67771879275ea66885be405fa3c0ee934c97ecfa7b",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "c7f6b3abb6e19ec31a0862862d3369962aff92fbf380f63ea331060859500e81",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicPathfindingMalus.java": "e2dbca081c349c0cc794a832000e9e05a3dfc1a5396a9fe16ffc574d09ca9bc7",
+    "helstera-runtime/src/main/java/dev/helstera/runtime/instance/PaperPathfindingMalus.java": "aa9c029b1c063da707e66f206713a8407c7d88598459554bea45acd420e91292",
+    "helstera-plugin/src/main/java/dev/helstera/plugin/HelsteraPlugin.java": "6a028c18a7095980ae38795b9a1e08a0d0699d28865e35a655225c199e018ca8"
+  },
+  "limitations": [
+    "Covers all 26 native cost-table entries on Paper 1.21.1 and MythicMobs 5.7.2.",
+    "Checks production importer, spawn, fail-closed rejection, and saved entity rebinding after restart.",
+    "Does not claim route-choice equivalence, other server versions, or full exact-artifact release gates."
+  ],
+  "stages": [
+    {
+      "stage": "write",
+      "exitCode": 0,
+      "observationCount": 59
+    },
+    {
+      "stage": "verify",
+      "exitCode": 0,
+      "observationCount": 27
+    }
+  ],
+  "validationResult": "passed",
+  "files": [
+    {
+      "path": "plugins/MythicMobs/Mobs/pathfinding-malus.yml",
+      "sha256": "2f73b492bd7bbc29c686df35a2f96b8cff2a0a17f540b4713e9c48de0cce536c"
+    },
+    {
+      "path": "write.server.log",
+      "sha256": "4b95263de93ec30fa3fc9e03abf5bd78d60c7d415f9930b92de2d2442b8a25d7"
+    },
+    {
+      "path": "plugins/HelsteraPathfindingMalusProbe/write-observations.yml",
+      "sha256": "86554d028fe8c9ad04f2e968486b6c0b7dbbfad72e57a5a5fc783e289eab90f5"
+    },
+    {
+      "path": "verify.server.log",
+      "sha256": "cfd0c070a907dd24c21c0192499618057c2643d34b3317c716303474044dce3a"
+    },
+    {
+      "path": "plugins/HelsteraPathfindingMalusProbe/verify-observations.yml",
+      "sha256": "5d09f215f1d7444bd454325ee86b0889af72b2d8cf31c99790ca664be4d648b1"
+    },
+    {
+      "path": "plugins/HelsteraPathfindingMalusProbe/identities.yml",
+      "sha256": "dd90ba2ef1096cccc1b468502e5d1422b1329fca1a52e91e446c43ce04ecd290"
+    },
+    {
+      "path": "plugins/helsteraMobs/mobs/mythic_malusmap.yml",
+      "sha256": "cee21239557b1fe7835b22abbfab8f08cc3c2ba6cdaa8bb2c2b75e3c6b442615"
+    },
+    {
+      "path": "plugins/helsteraMobs/mobs/mythic_malusnative.yml",
+      "sha256": "180116f6da9d6671333e47e581886941fc7e41be26e6ef4a48b470bf6f4ca913"
+    }
+  ],
+  "logArchive": "paper-1.21.1-pathfinding-malus-20261122-r1-logs.zip",
+  "logArchiveSha256": "18ff5685e7028d3b3a23a00a7d2e37073257945217579d4c1be5f555ff5e10aa"
+}

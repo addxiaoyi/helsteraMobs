@@ -182,9 +182,104 @@ class TerminalSkillContextTest {
         VariableLocations.set("target","newPoint",ctx,new Location(world,8,81,10));
         assertTrue(VariableLocations.get("caster","newPoint",ctx).isEmpty());
         VariableLocations.set("caster","point",ctx,new Location(world,8,81,10));
-        assertEquals(8,VariableLocations.get("target","point",ctx).orElseThrow().getX());
-        VariableLocations.unset("caster","point",ctx);assertTrue(VariableLocations.get("target","point",ctx).isEmpty());
+        assertEquals(8,VariableLocations.get("caster","point",ctx).orElseThrow().getX());
+        assertTrue(VariableLocations.get("target","point",ctx).isEmpty());
+        assertEquals(0,VariableLocations.expirationTime("target","point",ctx));
+        VariableLocations.unset("caster","point",ctx);assertTrue(VariableLocations.get("caster","point",ctx).isEmpty());
         assertTrue(VariableLocations.snapshots().isEmpty());skills.finishTerminalDispatch(terminal);
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 5, 6})
+    void terminalConditionsAndLocationTargetingRespectRegistryExpiryAndIndependentPeers(int grace) {
+        int start = 100;
+        var tick = new java.util.concurrent.atomic.AtomicInteger(start);
+        var point = new Location(world, 4, 80, 9);
+        var moved = new Location(world, 8, 81, 10);
+        var peer = mock(LivingEntity.class);
+        UUID peerId = UUID.randomUUID();
+        when(peer.getUniqueId()).thenReturn(peerId);
+        when(peer.getWorld()).thenReturn(world);
+        var peerPoint = new Location(world, 12, 82, 11);
+        var casterPoint = "@VariableLocation{var=caster.Point}";
+        var targetPoint = "@VariableLocation{var=target.Point}";
+        var triggerPoint = "@VariableLocation{var=trigger.Point}";
+        try (var bukkit = mockStatic(org.bukkit.Bukkit.class)) {
+            bukkit.when(org.bukkit.Bukkit::getServer).thenReturn(mock(org.bukkit.Server.class));
+            bukkit.when(org.bukkit.Bukkit::getCurrentTick).thenAnswer(call -> tick.get());
+            bukkit.when(() -> org.bukkit.Bukkit.getWorld("terminal-test")).thenReturn(world);
+            var live = context(source);
+            run("setvariable{var=caster.Marker;type=INTEGER;value=73}", live);
+            long expiration = System.currentTimeMillis() + 100_000;
+            VariableLocations.set("caster", "Point", live, point, expiration);
+            SkillExtras.restoreScopedVariables("entity:" + peerId, new ScopedVariableSnapshotStore.Registry(
+                    Map.of("Marker", 29), Map.of(), Map.of(), Map.of()));
+            VariableLocations.set("target", "Point", live.withTargetEntity(peer), peerPoint);
+            var terminal = skills.beginTerminal(source, grace);
+            var self = context(terminal);
+            run("setvariable{var=skill.Marker;type=INTEGER;value=11}", self);
+            assertNull(skills.bindAction("setvariable{var=unknown.Marker;type=INTEGER;value=91}"));
+            assertNull(skills.bindAction("setvariable{var=Marker;scope=unknown;type=INTEGER;value=92}"));
+            assertNull(skills.bindAction("setvariable{var=Marker;scope=;type=INTEGER;value=93}"));
+            assertNull(skills.bindAction("setvariable{var=trigger.Marker;type=INTEGER;value=99}"));
+            VariableLocations.set("trigger", "Point", self, moved);
+            var independent = self.withTargetEntity(peer);
+            var trigger = BehaviorContext.continueExecution(terminal, peer, 1, -1, 0, "on-death", null,
+                    peer, List.of(peer), point, null).withConditionScope(BehaviorContext.ConditionScope.TRIGGER);
+            removeSource();
+            if (grace > 0) {
+                tick.set(start + grace - 1);
+                assertTrue(variableCondition("variableisset{var=target.Point}", self));
+                assertTrue(variableCondition("variableequals{var=target.Marker;value=73}", self));
+                assertTrue(variableCondition("variableequals{var=trigger.Marker;value=73}", self));
+                assertTrue(variableCondition("variableequals{var=Marker;scope=trigger;value=73}", self));
+                assertEquals(point, Targeters.resolveLocation(targetPoint, self).orElseThrow());
+                assertEquals(point, Targeters.resolveLocation(triggerPoint, self).orElseThrow());
+                assertEquals(expiration, VariableLocations.expirationTime("target", "Point", self));
+            }
+            tick.set(start + grace);
+            assertTrue(variableCondition("variableisset{var=caster.Point}", self));
+            assertTrue(variableCondition("variableequals{var=caster.Marker;value=73}", self));
+            assertFalse(variableCondition("variableisset{var=target.Point}", self));
+            assertFalse(variableCondition("variableequals{var=target.Marker;value=73}", self));
+            assertFalse(variableCondition("variableequals{var=trigger.Marker;value=73}", self));
+            assertFalse(variableCondition("variableequals{var=trigger.Marker;value=11}", self));
+            assertFalse(variableCondition("variableequals{var=unknown.Marker;value=91}", self));
+            assertFalse(variableCondition("variableequals{var=Marker;scope=unknown;value=92}", self));
+            assertFalse(variableCondition("variableequals{var=Marker;scope=;value=93}", self));
+            assertTrue(variableCondition("variableequals{var=skill.Marker;value=11}", self));
+            assertFalse(variableCondition("variableinrange{var=target.Marker;value=70to80}", self));
+            assertFalse(variableCondition("variable-lte{var=target.Marker;value=73}", self));
+            assertFalse(variableCondition("variableequals{var=target.Marker;value=73}",
+                    self.withConditionScope(BehaviorContext.ConditionScope.TRIGGER)));
+            assertEquals(point, Targeters.resolveLocation(casterPoint, self).orElseThrow());
+            assertTrue(Targeters.resolveLocation(targetPoint, self).isEmpty());
+            assertTrue(Targeters.resolveLocation(triggerPoint, self).isEmpty());
+            assertEquals(0, VariableLocations.expirationTime("target", "Point", self));
+
+            run("setvariable{var=caster.Marker;type=INTEGER;value=91}", self);
+            VariableLocations.set("caster", "Point", self, moved);
+            assertTrue(variableCondition("variableequals{var=caster.Marker;value=91}", self));
+            assertEquals(moved, Targeters.resolveLocation(casterPoint, self).orElseThrow());
+            assertTrue(Targeters.resolveLocation(targetPoint, self).isEmpty());
+            assertTrue(variableCondition("variableequals{var=target.Marker;value=29}", independent));
+            assertTrue(variableCondition("variableequals{var=target.Marker;value=29}", trigger));
+            assertTrue(variableCondition("variableequals{var=trigger.Marker;value=29}", trigger));
+            assertEquals(peerPoint, Targeters.resolveLocation(targetPoint, independent).orElseThrow());
+            assertEquals(peerPoint, Targeters.resolveLocation(triggerPoint, trigger).orElseThrow());
+            assertNull(skills.bindAction("setvariable{var=trigger.Marker;type=INTEGER;value=99}"));
+            assertTrue(variableCondition("variableequals{var=trigger.Marker;value=29}", trigger));
+            assertTrue(SkillExtras.scopedVariableSnapshot("entity:" + uuid).variables().isEmpty());
+            assertTrue(VariableLocations.snapshotScope("entity:" + uuid).values().isEmpty());
+            assertTrue(skills.snapshotOf(25).isEmpty());
+            SkillExtras.forgetEntity(peer);
+            skills.finishTerminalDispatch(terminal);
+            assertEquals(0, skills.terminalExecutionCount());
+        }
+    }
+
+    private boolean variableCondition(String condition, BehaviorContext context) {
+        return registry.testCondition(skills.bindCondition(condition), context);
     }
 
     @ParameterizedTest
@@ -270,7 +365,8 @@ class TerminalSkillContextTest {
         removeSource();
         assertTrue(EntityVariableContext.find(selfTriggerContext, "trigger").isPresent());
         assertTrue(EntityVariableContext.isUnavailableEntityRole(selfTriggerContext, "trigger"));
-        skills.runAction(skills.bindAction("variableadd{var=trigger.Marker;amount=1}"), selfTriggerContext);
+        assertNull(skills.bindAction("variableadd{var=trigger.Marker;amount=1}"));
+        skills.runAction(skills.bindAction("variable-add{var=trigger.Marker;amount=1}"), selfTriggerContext);
         skills.runAction(skills.bindAction("variableadd{var=target.Marker;amount=1}"), self);
         assertEquals(73, EntityVariableContext.find(selfTriggerContext, "trigger").orElseThrow()
                 .variable("Marker").orElseThrow());
@@ -375,7 +471,7 @@ class TerminalSkillContextTest {
         assertEquals("73:17", Placeholders.resolve("<caster.var.Marker>:<target.var.Marker>", ctx));
         run("setvariablelocation{var=target.Marker}", ctx);
         assertFalse(SkillExtras.scopedVariableSnapshot("entity:" + targetId).variables().containsKey("Marker"));
-        assertEquals(target.getLocation(), VariableLocations.get("target", "Marker", ctx).orElseThrow());
+        assertEquals(entity.getLocation(), VariableLocations.get("target", "Marker", ctx).orElseThrow());
         run("setvariable{var=target.Marker;value=91}", ctx);
         assertTrue(VariableLocations.get("target", "Marker", ctx).isEmpty());
         assertEquals("91", Placeholders.resolve("<target.var.Marker>", ctx));

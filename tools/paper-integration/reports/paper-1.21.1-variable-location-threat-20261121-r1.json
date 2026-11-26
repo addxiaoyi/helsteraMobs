@@ -1,0 +1,1022 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-variable-location-threat-20261121-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-21T14:32:14.788435+00:00",
+  "pluginSha256": "da83199884e855b632a567a69d2e61c9a33d1f654aa319e35a0ad4fc4e2400ce",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "c0186a9dda48ea8932e9f85472528a513e070b0c90f4022edb6d02dbcd563c71",
+  "sourceHashes": {
+    "tools/paper-integration/run-variable-location-threat-fixture.py": "b2775bc764276166023100db91d916b463191a6ce8f22f83deac3caccc41d3e0",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/audit-variable-location-threat.py": "912a383c97fc26ccd7d81a31dd5d2e3124e97e848ad3a79854001141ac1eea9d",
+    "tools/paper-integration/test-variable-location-threat-audit.py": "6af5c99c9d7b279332ba2792289487553f1d001d593611a6536e6bab81624820",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariableLocationThreatProbe.java": "71759005c2a09ae20f3f9e8d9447ec633b10fb4e9d0ac30d2f395955b91bf0b0",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "f7cf5bdac1fa7eaabad7c230a20782055cad0e98d66b69f02c746a1589c4fd16",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "539a24c6a4b05269a26a3b469f745ea29fd688c041781de4a0843c9533d9e4ac",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "10f940fcc6eb90acc138c60f4569a698abe10ded582301067f622fb2bda1659a",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicVariableReference.java": "d1da16b91b5c6a302fab44a13156cfe7320ebfc33e1246ce25c7aed45f9a09ae",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicVariableLocation.java": "b4882e2a16781a19fec77ef50342a39f07c23a8acd6fb5265a9266b2072d0ba5",
+    "helstera-api/src/main/java/dev/helstera/api/util/VariableLifetime.java": "16ef516a7b1c7f66dced463ae2f9760623482cdd1b0641f950e132b183e65a56",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/VariableLocations.java": "ebd502b7686c7fe33351c5723a2eb911baddf64ddf29902d7234eae0985180bd",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "82edb0ff375df206dc2fcee6cc521f8518f934241fec7e7b53464cdd2002ff08",
+    "helstera-ai/src/main/java/dev/helstera/ai/ThreatTable.java": "b99354acb465ba42780494a71b09dcef64f52636f388d80081748c4036e2faba",
+    "helstera-ai/src/main/java/dev/helstera/ai/AiController.java": "9af506ee39c4da271fffebb202fe50f41296b3fe23b8b23a90ee23a6823ed2f4"
+  },
+  "limitations": [
+    "Covers COW casters with threat tables; stored threat targets are distinct from vanilla AI, recipients and triggers.",
+    "Native TARGET location casts and absent entity targets fail; runtime dispatch leaves values unchanged.",
+    "Absent targetlocation values fall back to origin; target changes happen after both actions are bound.",
+    "Native calls construct the mechanic and invoke castAtEntity/castAtLocation directly; full native skill parsing/scheduling is not exercised.",
+    "Target value selection does not support retained terminal contexts; those contexts are outside this fixture.",
+    "Runtime threat selection is explicitly prepared with selectTarget; native uses its 10 percent switching threshold. This does not claim threat-engine policy parity or exercise runtime AI tick wiring.",
+    "Snapshots contain case keys across ten registries; player/non-Creature casters and full skill dispatch remain outside this fixture."
+  ],
+  "exitCode": 0,
+  "observationCount": 240,
+  "validationResult": "passed",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "ba023208cd048d783df3bdddef1201af788e75ac5e72d7d273f505c97e120de1"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/location.yml",
+      "sha256": "c5b7e8b0792248e3cc851c7d78d2b0f62ea3052d8efd238ba847f1f153f26ce1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0000.yml",
+      "sha256": "1baf57906369034628255af4e62ed5ecc5ea06b8dc80ec4ccc747f7a5295e6db"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0001.yml",
+      "sha256": "beef3b9cbfac79bda3719dd56d3ba600a9a72fc868c69e642476e63d828a46c5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0002.yml",
+      "sha256": "d2290f435dcd7c2e94b3ff2667c962e01ca61d128f048fa4b33a004ba2d9a03f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0003.yml",
+      "sha256": "0f4cefb4b097b3fe98b2f998feeb144784c3c683e272a582ecfd336c3707e0a6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0004.yml",
+      "sha256": "12c8aa9b890ded11b9aa274c77851c6fafd41d76fbeb66851e72fbf0cdba0452"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0005.yml",
+      "sha256": "a286b50962a4327c10e5035685f174ea6e5381f4b1cb82ead96b6d0cc0d7d5f5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0006.yml",
+      "sha256": "4f41871142480624384001cee7660d4396d10d938dd9740ecf6e5c868acc8326"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0007.yml",
+      "sha256": "8653d00df4c7a8a9e73e98323b6d5cd1d8874841993d97bac6cea13ba6e16760"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0008.yml",
+      "sha256": "20c333876dde15fa16eeac316798591dfe7e5ccb2977a99c167bffce4f998d99"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0009.yml",
+      "sha256": "f37052b6f2f3858c926686e6120cff95dfdd760e5e8265f7369c75e08f32487d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0010.yml",
+      "sha256": "28c3891f2d86d8ad75ce780b02ba0107289fcb01c0f9e697b3dfcab3479f8ee2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0011.yml",
+      "sha256": "e5f7480f0e6ae6c43739c5e200413b8cd6f2a63196e22dc97375a0ec3edebe85"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0012.yml",
+      "sha256": "2450bb2940a7b45301f3f6a9cdac787120d98ae2a2f7c846bca8385c099253dd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0013.yml",
+      "sha256": "37a5f291af18e1eb7accbe10c936e217ef8d05e90a658c7970bac3786a94c9f5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0014.yml",
+      "sha256": "4cb7b3a971ef1ecd565283a6a211d44fed431eae76f4a834e6ee5301e8b85254"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0015.yml",
+      "sha256": "d115abbda2ef424447b066b551e84fa32e811f7f3d2cef670161f54468361d2d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0016.yml",
+      "sha256": "c15965d4e293e98c378d8f23328776eed82fdc7e7416ac148e8aff96cf6fd64b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0017.yml",
+      "sha256": "c1e084aad4370e876190aad369413df27760ba192aeb574352863d6ba8994f84"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0018.yml",
+      "sha256": "bd6d11b86ded50a9364a13ba2b385ddab8842f09e7b495c6141885544f37eeb3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0019.yml",
+      "sha256": "52cfe804a025ecf02615257073566bb2e2fd3a896a39b091fc3aa84bd5524211"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0020.yml",
+      "sha256": "93078c339f11f3dfbf8f951436c11e834d75c23e6e819fc7e86d5db6e80b658b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0021.yml",
+      "sha256": "8270a5788ca13239becdd60ca0d9bb568402d9305d59701f0e2c381bf6e7d6c7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0022.yml",
+      "sha256": "e48e40fe67adb0fd5d1c2cbeaccbbb4f1839b8688e2e194eba56bab41fdcf43d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0023.yml",
+      "sha256": "8af3d21c586afebd93a5a83ec055e7246f6a09c33d22bf2112c3e7cb81f36b12"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0024.yml",
+      "sha256": "1ed7465167d7446ac0eb47c30aaeee66a6f557fb157f5c39eb95313e3d5d17a8"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0025.yml",
+      "sha256": "33e81f18f8642f615b03f532b8ad55eda91d8661050494c92982ec76ea669a6f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0026.yml",
+      "sha256": "870329e6241bc026d7275a2b428232ab801a41a295800d1234f3f13f02e7e87c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0027.yml",
+      "sha256": "cf05b0e77bf45fab4c32c58cb56258da73db1966e9087816d84bdcea44cda154"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0028.yml",
+      "sha256": "8b0c0384a95adf23eb94ec346c21a59dc83cd4b3a0d98f5c4aac0f89129168e1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0029.yml",
+      "sha256": "e15be94eb0a64fe41cf85cafae0357194e8ff861dad484a4d2afdfbc25678c34"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0030.yml",
+      "sha256": "7d54b9ffee56dbd6aa063332fa7c9449304cad92b9a659a9b4569bda532480dc"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0031.yml",
+      "sha256": "e7109057bb5dd5584bb9fc7599b3adb4e8b2b682d3584f12aa0d7110ef518ca5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0032.yml",
+      "sha256": "878a1b0e4e51b8045ea611f95b86abb35300d3f7380f2033f5ef511447bced56"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0033.yml",
+      "sha256": "5d012de924ff08cd887776774b9b6649df99c8bd7bc55b7b82a0dcfa74125c81"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0034.yml",
+      "sha256": "fa4cd03de28938b9c50597fffa02aa9fda04d16c1c249f9aa7ac55a7b54800af"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0035.yml",
+      "sha256": "dbc831214b121f663bcaf4be88c971cb09c9d4abc19a4761e34f5cb091f3cb7d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0036.yml",
+      "sha256": "4dd601440a551c372aa3425f17efd3e4c87c018fe7e6e42226f199bf71bf5062"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0037.yml",
+      "sha256": "8f6d5b942b7d5d7429f3e6c72f20e7e2e757b2a56548def1469f8bdd1aae7550"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0038.yml",
+      "sha256": "10e0ea71924800c67aed9e93bd0a69fc9d7a27f111f19319493489d73707805a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0039.yml",
+      "sha256": "8becb94dc20d65d10194eecea53ae8e469d14b685f42690093135b58b5d1632c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0040.yml",
+      "sha256": "57c195489ee1db985d66df6ebeb5358e6ca49468802dfc0b1280bbc4601aefdd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0041.yml",
+      "sha256": "662d1084de6e8855cd212e3c6a1d67f0c0d60f997657e24e4e6580889b14e79c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0042.yml",
+      "sha256": "c8af9e3c0b6a3b4d614acdc6f971a1b2c705a6086584ff525362d209407f1c9a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0043.yml",
+      "sha256": "78dcf9e61a3ec4db74a276d66b6ac32afdda77208679c15deecd0099ce6479a3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0044.yml",
+      "sha256": "cb123cfea32e56fad1335c4665dcf85a4d55aab5e5a1c48e56fa3a5ab4961eb9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0045.yml",
+      "sha256": "2ce69666245ad677255fb0b2d3324b06211ddf5315203cbc6740f315b70ab0b3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0046.yml",
+      "sha256": "e406ef429b68f2f02fd433acfbbe7bf3ebf1568cb2bf2adbe735f68b55aba624"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0047.yml",
+      "sha256": "2d912552aed45d24a2c591feeb24773497b28d1212dbfab7ff972625b2e324d7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0048.yml",
+      "sha256": "26811c9849ab7b511da4b3575f6ed40fc9a94ef30b285a6d46ecbc42d484bc58"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0049.yml",
+      "sha256": "55a395d80756a043bc1c3f539b72419210f6ed288e94e4e8a8a46eae11035141"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0050.yml",
+      "sha256": "ead6c42307f9023d0c3ec1fa3e0c2157feec918a89b54ae21729803a243a30ae"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0051.yml",
+      "sha256": "f92b9aae0896628a90c501b4504d291292728db4d6c9b0f40eed40f163ad9cb2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0052.yml",
+      "sha256": "99ca4e7c0fb57d890f466f5c9b1277a363b1860afc1c289c8db55d638207154c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0053.yml",
+      "sha256": "e4d303045ecaba36ccb7ceb20a01c01a95d4bfd376a96136b1b4d5dd80476d4a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0054.yml",
+      "sha256": "b2f33503880f19e1d74a480a0338ea14debc4044b8899171e2d42cdc26fc0df9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0055.yml",
+      "sha256": "ede4760b79adc40bd0bcaf19084f9ea50aea9e931f7c269d82a23ebb3ab79b9f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0056.yml",
+      "sha256": "a9e900cf604517b3806dc5877e16319a177e8c93a21d5b0025279bac7e644f57"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0057.yml",
+      "sha256": "0a5ed147ad9c9b6770207219dbbdce04e2e96a088b303bbb7eb42c646f488b00"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0058.yml",
+      "sha256": "3ca335cc01d5d58796e60bfd2542b51b6624ffe4d564c2e902afeb0429d91abc"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0059.yml",
+      "sha256": "b8fd0e3aa12194cbd06aad3b92ba35d84e7ba9b0c6707e0870097f91170183b1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0060.yml",
+      "sha256": "1e519ee293267dd1cc8daf31b05ef74a3487b264a0a236575423affe73f25de4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0061.yml",
+      "sha256": "caf73763e7d278e8d006b0c3c62178af61eaa18a2743229c9590832e03226306"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0062.yml",
+      "sha256": "6cf0b544f72adc7cb31fe47f9c9e28df0abe1f6e361ee4799c067baedee34abb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0063.yml",
+      "sha256": "e0e78f5e3505791509c508c2f91c28cc7f50cbb99023b001816d4ccf179a6ede"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0064.yml",
+      "sha256": "ee4d9a1b4f4844a9b8c42d82c9901a65763dfbaae0a0d7873e91a33cddce8ac4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0065.yml",
+      "sha256": "05c1551b3fb7e192760480ccdb18e0dc0857ba26c477a48ebd66da0db828b0af"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0066.yml",
+      "sha256": "f914063abbbb39cce2f055aca64f91453ea06dbdd605e6295bf433a9dcf566b9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0067.yml",
+      "sha256": "eecfea58fdc7cdeecf4adbc839774a44a8c1be07be328186251d14d6583a7484"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0068.yml",
+      "sha256": "042770d02609a9c0113ce0a2f4b138e926094ec29d387e09f8ca49188e2ecc65"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0069.yml",
+      "sha256": "a813ee33d86e34adc8f208508b5e69877b19a5768d98e68f2edd208162bdff02"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0070.yml",
+      "sha256": "a6c469a96c8e272a1cea65d4052e357c5b9e94dae4c44e03fd5500938ac756d6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0071.yml",
+      "sha256": "87aa588ff9e6a6b5a23cae24f7b93a56888d610b1ea2f7f9b571d86dc3a4c087"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0072.yml",
+      "sha256": "f8527789a907c68d84057c92d350f569c9f0e979686ee0ba42f303367e8cef4b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0073.yml",
+      "sha256": "bb0033120bedc3443105cca8e065353a873ec0a550e60c7566d583e329d3dd2f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0074.yml",
+      "sha256": "e896fe2c5f928fe275a0a6ee675f9224a017c61c1614ab67f6a8705c0e7fa434"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0075.yml",
+      "sha256": "0fc9cc89c3862742d977523fe4169a1a208ed5c12b9493a01eb77d6af60559cf"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0076.yml",
+      "sha256": "e15933af6a3b07179f46459cdf0b9f5af27ffd9b1ba89fba0be0ae343e5bdea6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0077.yml",
+      "sha256": "678ee8b35f57f594bc69fbddd80cafac23866e2c69e947b30d381bd9510f2d82"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0078.yml",
+      "sha256": "55bebbcd41b5ab11cca6d5d94794610f8b3a4ab9798713fa8d72671cce6116ad"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0079.yml",
+      "sha256": "102e863f2558033b72e486feb1c6e9bf4aaddc87ef42605629efb50aaff5f4d4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0080.yml",
+      "sha256": "1e343a93be2067a1e588b16fda1bf59644b493d540632c65165a1dff43e3c5bd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0081.yml",
+      "sha256": "6576645836d0f5ad0c0ffd58ce29f8f179f926411f2d37d2dd7b41f3d95b19b6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0082.yml",
+      "sha256": "13e0b801225598aa2f5aae9adc1cddff623074de61343c7cff93e9ba72c2cd73"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0083.yml",
+      "sha256": "34a33e6b8d4261738bc9741bcf1804688b7babca73ac95e273fb23ad46c50658"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0084.yml",
+      "sha256": "27a1c9a4e98954e7301d76a749a988a362013aa05eb70ad9f7b1bd41164dc7e8"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0085.yml",
+      "sha256": "796794a0a1927901b631ada6795b6d1492a59f5857bc8b4a879d052c59022eaa"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0086.yml",
+      "sha256": "0e7ad151ddcb0856df83563804446de584feb0926e7f58e49b143e6c18c920c3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0087.yml",
+      "sha256": "3dba7adfaa391af01653d5e43e3937f20ab9428c220f4245a33c69ba2524f4b9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0088.yml",
+      "sha256": "bc63f6907e7fc1ea4a67a4efb1fbbf94b53306c76b23c7455f907fb271b26e77"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0089.yml",
+      "sha256": "46a8cedd6518f94d4162e895184465acd0551dcf2838d2a7060181b4445bfbc2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0090.yml",
+      "sha256": "46874e29b9e624907c248ba8eb163850b21ed93c38b8bd434edfc4952c57e403"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0091.yml",
+      "sha256": "d67ee30fc43610f552885a4b3e4f16b2c43e602e04121954f913eec85dac3372"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0092.yml",
+      "sha256": "e5bdc296ae04a45fe912bde2cd81b40a150e0d08aa5e8d848b04c76ba072b2c7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0093.yml",
+      "sha256": "c01dfcf09f12b849e921265d7383d5de8dcb3ceaf07b303ddf450c5332fe9a60"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0094.yml",
+      "sha256": "f33e26a7c068ac88ec99718a2f02ec7ccc4ae9ac415d0ad36f1b29439601a510"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0095.yml",
+      "sha256": "94feb0bf9e903fe71df71420a63999851bd46b0fe178b7803dbc92413042fbd9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0096.yml",
+      "sha256": "d10bf194094ec6fb2210964721fbbd44d3dfcaacdc88885c06308bc72c25bb70"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0097.yml",
+      "sha256": "50a9fb13bc994d208b52a2b9c19e369f3f86d170037f309dc4248e1538034f31"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0098.yml",
+      "sha256": "2d78b8e6cea5fa15c7354df6eba23428752fb2964e9d6c2055390d2643dbd333"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0099.yml",
+      "sha256": "0d35f575ee1d03274905cd66a6939deebf58010fb9ae3d1dd5b9abcb0c433d8d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0100.yml",
+      "sha256": "58fe8e51d833ab57ba978ea28fa9f482161a59d0e395ea340d28849309bcabb5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0101.yml",
+      "sha256": "e917e46ef4935d2d2b671bfa91dcab03c31dc5f4ebf645c0969b08a8bd96508e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0102.yml",
+      "sha256": "a774d07d2e74c8b63514b171b0fdf3e3eba053e701f162608f996c3d9ca1e6cd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0103.yml",
+      "sha256": "b0ae14bffabb000e87c3755aace69655438628b9ed4e6e68c84dc32ad26ceb1d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0104.yml",
+      "sha256": "556aac73424796b4a96478cd4fd85c403bc148acdc08224f75d68c7b70c25a09"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0105.yml",
+      "sha256": "34cbc027ba3a4a3f004a8059ab211cf5088c908676ad467d970c4c56d541f5c9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0106.yml",
+      "sha256": "1f441d50d342cb567ee97160cacfe5b1ad2572ac349ae7f42059d7b535c7b161"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0107.yml",
+      "sha256": "6ff1a571946d4603ed71a6b45f738f7de48f6d614ac0ac16b660d924164f97fb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0108.yml",
+      "sha256": "56881a3bf93aac319d846c16e4863672b5221bf4140a3840698d3a77ca7b3fe1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0109.yml",
+      "sha256": "9aa2a49e4b2ae21375f1553fd2d6c3fa3cb45da9f8c58c1cd2de72f58c1e508d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0110.yml",
+      "sha256": "6a920843b2065dedcbf11ef4913fa92aeb0c24f576aa074344e6155550202b86"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0111.yml",
+      "sha256": "a39ec1e2b819dacfbe770b0833e10473c87e1edde8b2c1aa5e09d2ab799be6cb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0112.yml",
+      "sha256": "c90fb26bf40532f5050b4a0f1c19af6090b059823abe1d744225416b5a4e8a7a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0113.yml",
+      "sha256": "605edfea2de2ea0a141d3de257c0c4c7cbe700dceb2e543fdde7d562fbd15271"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0114.yml",
+      "sha256": "29c0b3bd056c0b4be78a30035e362068d53b23440db98f8a65b3ea66eebae8a0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0115.yml",
+      "sha256": "54169e63bcf2cfbf0c21210deb034e7fd9950730f12ba3387bffff64fd3aa846"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0116.yml",
+      "sha256": "a9c3f60f9a3423879e71db4598aebc7421fad767cd0403f805a005bde944ee04"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0117.yml",
+      "sha256": "e1d16b48a1df2673ba3f955e15f2ee6b0b7590896531c4529179828aa310eb70"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0118.yml",
+      "sha256": "2a9f7dd365b47e01b09863b2ff18e54fa3ec76f1190c2f2555a6ca0dd728a60a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0119.yml",
+      "sha256": "574ff483927ba7e69858b405b3d61b32b73908de84ac76ffdefb20abf878441b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0120.yml",
+      "sha256": "5fdb812c5b407f6ba6c375c2447b01317f7945617102ab0ac06e245e795ab9dc"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0121.yml",
+      "sha256": "011c5b529a1f8fe53d9548f6e3aba2f950bf3a6fcda42f8c2f80206aae945aea"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0122.yml",
+      "sha256": "697d5e3c5eb38899ee9cacf6d48b73fe4a35cf61686e999b387167e9a9b197c7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0123.yml",
+      "sha256": "4ee4d097ca881f68c4582604976089eee0e8126e48b9bddb32c80fd4bd751f91"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0124.yml",
+      "sha256": "d357d4284419ad8ff53ad5a72545048ef67faac5320c3822e6fb9f53bfb9ebd8"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0125.yml",
+      "sha256": "52ca3d99d5f7f6f34a01634312b458da554f2803274320086c72609182c3570c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0126.yml",
+      "sha256": "20a2a2652169b3ea7272be86ad37d043878bf477d77dd5db67e7aa41b1fae234"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0127.yml",
+      "sha256": "511b8da3dac67ed975e4bf540816d2a5d87e6d6be2b922ec9e8f033f8f2edb45"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0128.yml",
+      "sha256": "23497a279e2cd077a967ab0826fd019f83b3170f50ee4ce413e5d99b3ab74fb6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0129.yml",
+      "sha256": "f0ad26f2167aa7ac6df768fc6f275636d6c379b6fd70fb5458df679a38c5c0f1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0130.yml",
+      "sha256": "7bf549678535437a7e0b7c98f70d370a5d9531cc15c1a159596b48f9dff1429c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0131.yml",
+      "sha256": "645117ee8ef22d9a4f71d7326f55742b3437ff469e9ad5000d973e0d80e1ea0f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0132.yml",
+      "sha256": "8739aaeaf180336a64d16d2eef896384c59a2c5670a84300d84ef2d4458b2cb0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0133.yml",
+      "sha256": "6eac97a1b934d26b76d82bfbd44983ea94c09eae12720ac6366f9218d4479232"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0134.yml",
+      "sha256": "2f73290aca693877fb2b2eb4e3152f24cd0b9b11a6be9693043fdf045e1ff246"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0135.yml",
+      "sha256": "87e12b6a4ae6be8ad8acf7df695fd7ae067764a1c6a3b259c30f8e053cd5d15a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0136.yml",
+      "sha256": "a2fdbb9b3f0a61d12da1c291af99e96dfda7dd8ca67fc02583f036d095062b04"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0137.yml",
+      "sha256": "1cae2e813d46b87af482459d6563b9beb803b5b3e361ad2f1c361138970571bb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0138.yml",
+      "sha256": "f4ebcd141f08171e37ae1d16c06a4cf48c50b493ffa39cd3b83684651f6b36f6"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0139.yml",
+      "sha256": "4c402e14dae3f83809c1f4ff824c42732facbf82a178fd042c2a86c9919a866f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0140.yml",
+      "sha256": "5ac6f1652d493191c7b5c23cc76f6d5f898ca5279eecf8238ef1709bef69be0d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0141.yml",
+      "sha256": "55f302e250405c23ff892eceba274f11b484e2095744c2f3351c8b39a14b3e0d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0142.yml",
+      "sha256": "da76a51de1815c1d16f8bdfd3637d7b8b3280e2373c22559d5493b5a826d4492"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0143.yml",
+      "sha256": "ce91475db140038d19cde9bb33efdacc8a1042fdabd327aabe9926460e7ca6d2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0144.yml",
+      "sha256": "df1d4dcf29e8bbef57cd02b274aceca5980150a0c66e25b4bfbfee765614c851"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0145.yml",
+      "sha256": "993544fe9a8015dbf78738c61bd1c1d7aab4cef483458c90003395793beaf732"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0146.yml",
+      "sha256": "1c2e00a0df9f2e99664268ef25dbf7ae9223966bf8c5191bafcbd731b98d8e7d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0147.yml",
+      "sha256": "53a499f554f7d30f836396030d10abfc333349b39ed87023bb5ca4249aa5f0f3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0148.yml",
+      "sha256": "8062f1ad9eee5a1f0ace0280d855fb04c3e37e589f52bf7c324aadf4e02a103a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0149.yml",
+      "sha256": "e59abd86f81d702f7be613745dc2b4a3f9cf1e3ae70c5d5cc57c50769643f244"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0150.yml",
+      "sha256": "6a8fb23249916fc5a604b7975cb0a00d6d43ec5363f68f87acb39d8b8631ee3c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0151.yml",
+      "sha256": "0af869750b9c5af142d93ce6558af55af12aaa909512e51ddad754b7c9f24dad"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0152.yml",
+      "sha256": "bd21d2984062d9d9e1b4d7547ee5fdf73ab9dcf1e20cac654f9b76c8db121fe9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0153.yml",
+      "sha256": "9f450b322bbc9c8d0ab415e8e2f99e92e7e220fcb578b53b884a5b79cef0ff74"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0154.yml",
+      "sha256": "88694695b55b70ef32f262677154265f0e76c3b28bf18ef1ba48474dddea49f2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0155.yml",
+      "sha256": "99fd96afe0a218c833785ab789a32980fdc5a93fd6eb60c146573815b6e0feba"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0156.yml",
+      "sha256": "2f3d2b5f8ed989a4d96af60ae0296ac306aae8409d71e973edfeb76363bd46c7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0157.yml",
+      "sha256": "779b0b5d2c142dcc8fc2e8c3fea7f2279bcf70f53eee92b2e51e159f7b30ca45"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0158.yml",
+      "sha256": "0ceeee68145d819fe3faee3f786f01f4dc7c15aee696f82a70333859b9301dc7"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0159.yml",
+      "sha256": "163ea0957e8ccaed761ba2c787094d2cf83a729546dc4b47d550470065e1e22b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0160.yml",
+      "sha256": "ec97fd19fd26b70e1f1438bc08ce070608962cc2c8998cbd3fe79bc4dcf48968"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0161.yml",
+      "sha256": "d6171d615a74583a84e073ec6bf01ee83bf5da550c723c26667b5e79db3a8900"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0162.yml",
+      "sha256": "60bf074283f4efe48aaf705d798184469e531d8a508e0fc0e642e172807d200e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0163.yml",
+      "sha256": "b027510840cc5c62b37e3d485d557cfe3e5180d8596987ab4731645df3d6e80a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0164.yml",
+      "sha256": "cc51448733cf48f63954c9149854ad270f1ee1db43570c39e1aeb3431130a432"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0165.yml",
+      "sha256": "a5059368460fff504efb60663529a602f45775ad745d0fb3217cd7267067f058"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0166.yml",
+      "sha256": "a670a8ce0d7d9ee2bd20193ed621953167969ad4aa44b606c6d2d20d91ac4c2d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0167.yml",
+      "sha256": "0082208b72596dc8aa0414bf346e22310f69f817496214fd21c13e698094b25f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0168.yml",
+      "sha256": "953943bd886c0d16d7b0f88c47c247282c8a11bed35a5e42b8ac77e9f71f380c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0169.yml",
+      "sha256": "0f84e1d66d40dc494991bcb0d7745066aacf7570156e1b9a2ddeb44220df1fbd"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0170.yml",
+      "sha256": "ebc922dff32d25c83140bf61473ef7f32e8cd39bc840d6d278d6da000120a5be"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0171.yml",
+      "sha256": "911d1438105f738da85f9f55d4f8a8d527d3f7dfc94e741576c700610472f7be"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0172.yml",
+      "sha256": "87e0c4ce56a6fe28a7968066bb9c8bf971eb0fa4a29e61042d5702d055c65c5c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0173.yml",
+      "sha256": "f987d31af164eae9c17c3019c5767b03a4e13d909ed89475cb54ea76e96efd1a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0174.yml",
+      "sha256": "178d814cd07e3ee2b5ad6bbd1a4f36373496adc2ef0a3a9f5a85c2eb646d208e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0175.yml",
+      "sha256": "2a1d735c6cca9deea97cc59251fcf7546c8c4a8e91e80e328894997d8b3941f8"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0176.yml",
+      "sha256": "2c725e055c37e61dd5c0b387b017c4f87e4f84407f157467f65c14a9844c750b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0177.yml",
+      "sha256": "5f032e97a88777a186823c9b21bfaede7d2d2eae8df0b24df0b8204435c16286"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0178.yml",
+      "sha256": "5b108a47da93230a7d86d36f195ea9ad2c852500ee3493a0221c2a52db22b050"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0179.yml",
+      "sha256": "c902462c8ba7f509ccc59a4212934b978ac00af9c1810190909210eaf90f443b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0180.yml",
+      "sha256": "8d3055654ec2d9594d1b11ba6e1bbc467f57da3fb526099d0ee4b8ab942b1a32"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0181.yml",
+      "sha256": "6254b234922fd5bb9f12ff0a1c2477a71c9003b25515f9ee3221ea5f121c03e9"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0182.yml",
+      "sha256": "3f2113641a916199ce7ae4c2d558556b3abd39e70c6664b52daf14967244f6ed"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0183.yml",
+      "sha256": "2923611634e903afb145ca2b34ea16203ac254267c1f49390641e5512ff24792"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0184.yml",
+      "sha256": "abe658bfbb649384bd52070860baf2fd660aceb6a5cf2b0df663c69369ca4a79"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0185.yml",
+      "sha256": "bcd436981cf7b11916c537036c3d8b51cf44e8d5529d0ad318f284c9a64538c0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0186.yml",
+      "sha256": "a752f502323006104a6eac5402f18000d285b78be49cee53ad9f3446caf48d4c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0187.yml",
+      "sha256": "47fa6e94524d365465cdfe3081530efcc326a417570693d98cf7dac71644fd5d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0188.yml",
+      "sha256": "f1e899a41729ce454ef642aa4a36bd25b49285f59428e960447473d92b71e968"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0189.yml",
+      "sha256": "967ebe40b4f7dcbdbe5621fbab397edcbfcb50c404a7bb78ddbef6f79c6f659f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0190.yml",
+      "sha256": "417fceba89735fc7f503abc08a9fc8d4fb737bc3cddf480a69a153f51b487a82"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0191.yml",
+      "sha256": "03cd8d4b2a096155a76ed1075ab24a3fe6ba9c5750ef17929625d87b8a35d6a5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0192.yml",
+      "sha256": "6c548bb2dc00aaa12637000cf96321cb1c9f878bb3471010714a580052be7616"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0193.yml",
+      "sha256": "1301a8c882eb1adb7fdde563fed2199b3ac39ac4a60a282c75bf4d5eb7e7ba45"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0194.yml",
+      "sha256": "194db00685c5e54575ec9e89c478395b52cea20c80af5fb941992f1136f1c1d1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0195.yml",
+      "sha256": "b03bfb34882d68b7ddb401fd5e1cccffac46358e6f7908150ff667f2b9fdcf52"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0196.yml",
+      "sha256": "7134207060bb5c8469fa66c51042122cbc664848368b85042e34fd258b10cddb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0197.yml",
+      "sha256": "66cf1e9e2b5f2be27a745010970f567301d57b38282fb249cd4b098bc917f3b1"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0198.yml",
+      "sha256": "7aedfc005643814b07cb4485be8c50eb79f9b422ac4c5d43a6500e145ccb659d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0199.yml",
+      "sha256": "d1756e1d2923b31be4a049662fd44cef19ffc1a1cfc6bc4f28477a2d12a96312"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0200.yml",
+      "sha256": "d80fb3069fa315d71f9e9473a633bc64cbdf43dbc4051c2df2d51e0be332ad3d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0201.yml",
+      "sha256": "f7c4f614a3ae684c10ad11d5b6218234ece71551f03a27ab5570616cb77ea6f2"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0202.yml",
+      "sha256": "e8760d35603159bdb2dca2c3ab7c16c99071a49582be8496048482a13e98b435"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0203.yml",
+      "sha256": "6d4de91b46092bb715a74b1a2e63cdfbb57f1814240e5c1019bc46a40e334af5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0204.yml",
+      "sha256": "e3751e355e6f65a9115c0b09c70303ce558b33fec9cad02b109b9f1a3c07eed5"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0205.yml",
+      "sha256": "0dc73bb51757921ffead6af144608253bbba12e1fd0eabdca9b1408649d695cc"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0206.yml",
+      "sha256": "8c030ee6ec28ba02cbf75ef89449dda50bd61c9319a5fd3018e3a783dca6581c"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0207.yml",
+      "sha256": "9bce7eb217c6bfaec82b878a07d7c009ec7afc1812957e1195f0b9a6dfbdb08b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0208.yml",
+      "sha256": "750963b7dce01281e3cf6d70b1327da8048f1981231c6f4f593d8ae70c94053b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0209.yml",
+      "sha256": "6094a8f64e69f86b055ec5dfa2c9e525923e74af74e795cf76c0ef7d1b9f47b3"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0210.yml",
+      "sha256": "a3596cadb35241216147b8693a77a08d70f16bf803aa693c5d5ba3483c96343a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0211.yml",
+      "sha256": "e1d4984ba804df3393a2a2e9bcef14e788026aa8d926408948ce7517e97a0093"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0212.yml",
+      "sha256": "a28dcdfadf71671667b9307cd4b8de8f660fc5194fd206f7523b29a4b0df1b24"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0213.yml",
+      "sha256": "8e9892201ea4ad9cabddd418048ac4ae5b8c4362d941ab48159abf542b490caf"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0214.yml",
+      "sha256": "785d6998fe76ab8918340a894aff7aa5806d269e197a56711606766370d6c78f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0215.yml",
+      "sha256": "de58c4ef26ec25d9ab6e82e1bd46fe34ba43d12377486c4f8e3c0944818e5172"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0216.yml",
+      "sha256": "a189c2c465a8019099c2de867ea45090a07d6d8edd662514c3eed11a31b1836e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0217.yml",
+      "sha256": "f0e4387f1b846de6f7d529c7b258253291d0fe67bd12078adecb7d777929ed8d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0218.yml",
+      "sha256": "fabc87b60939a8270fd4462c40d4adcbd724d582c5f8ac93af285bf50d3986f4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0219.yml",
+      "sha256": "2e16a7394abce43e1560648566ba2dc57d4f9f96271b80136a42fceaa59669cb"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0220.yml",
+      "sha256": "cb2196fa8c96f59cd5366d0a448643de4ed6139268c3ec7c78830814b50a41f4"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0221.yml",
+      "sha256": "e68eec24ed1e44a52ec76360c96b5f3afe1d6ac07f9059e4f4f4a76a2cdf1e9e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0222.yml",
+      "sha256": "504e72fc8a55833f3d01ba651091739b587df30919728bbaf943f778e647681a"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0223.yml",
+      "sha256": "a84536c58484c2cc2752962bc3db13c94c35660436821df0537d493f7c3f2d9f"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0224.yml",
+      "sha256": "349fc034025a252185fa8e22715658a5f6a7b3056b52e522fd5b9455fbd74a31"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0225.yml",
+      "sha256": "75acf42bcabffd1c0966df2bfd98215413dc1fc471dc6126249383357e6b852b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0226.yml",
+      "sha256": "f8519133c74661ecddfc79b9916c0c05e0ed512c6ebddc1c7973fefee7c29c5d"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0227.yml",
+      "sha256": "4595f303a81ca494d2670e3596ae44c30fc1c8e5b617ddbed42144690c1a303b"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0228.yml",
+      "sha256": "b5ffd6dce7fe4a3260cb884bf1d7a195bb1b3aa6d0bcba02525156069877d58e"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0229.yml",
+      "sha256": "29a3bb4366d8ac6712492f323ac3c62345651f96b823ce30796e8c10b5df34ea"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0230.yml",
+      "sha256": "d364bf6cb352fdb19fa171fd327a458a4471c4ef576a3d2166d35d6d694e0e11"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0231.yml",
+      "sha256": "26e80b50b4bb702fde850681ff6d9474d8049e7c7336fa9af90e4702fa0804ee"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0232.yml",
+      "sha256": "9efdfbf424ee49d72d2730dbbdc5b63948ea8c7a4453d6fa225c1cb6b3307567"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0233.yml",
+      "sha256": "85e7faeb48ee315e0903a65663a9c3bb8ab5c6be5bd4188f62b8145bcea9bdab"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0234.yml",
+      "sha256": "f9b5023e06963d314995d6e97007cfa48a2fa50b99d897921688e6327ba02297"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0235.yml",
+      "sha256": "748e2ead340ccea7ee4333970fd043bf053c20d106b3f409a8df65c538b5e500"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0236.yml",
+      "sha256": "fbe430b95a6f9db36f2a9b33a2e02c8070adc1544c8bfd20ae9de7f534964974"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0237.yml",
+      "sha256": "d8203755e0419d48f6f7156aa33daf6ef3af45c3eb3c8b38cc7c2da24514c6ea"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0238.yml",
+      "sha256": "1640d08f855bfbc6d6f4cfb8242c5fb550c3da0cb038b842ee6dfac24a44e8dc"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/observations/0239.yml",
+      "sha256": "f253b7e81c4c4c38e34a8dec78e12bc64209fd8f6c4cf7e183803b63ebfb6be0"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/identities-imported.yml",
+      "sha256": "4c6e22aeb10127bbd581f35542e05f3a3ab8ddce0756c86b1d3065e408c5b963"
+    },
+    {
+      "path": "plugins/HelsteraVariableLocationThreatProbe/identities-native-direct.yml",
+      "sha256": "367313970230c68e33f34d4dcb1c92817d031334bf060d31bf668e8645361a19"
+    }
+  ],
+  "logArchive": "paper-1.21.1-variable-location-threat-20261121-r1-logs.zip",
+  "logArchiveSha256": "bf48a368683514fb1d99c837109b70e0d816fabd92cc88f1b224048ce48b3925"
+}

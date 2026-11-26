@@ -276,6 +276,8 @@ public final class AiManager implements Listener {
         var anim = inst.stateMachine;
         if (anim == null) return;
         AiProfile p = profile == null ? profile("default") : profile;
+        AiController previous = controllers.remove(inst.instanceId());
+        if (previous != null) previous.close();
         AiController c = new AiController(inst, p, anim, bus, behaviors, conditionBinder);
         var navSvc = nav;
         if (navSvc != null) c.navService(navSvc);
@@ -470,7 +472,8 @@ public final class AiManager implements Listener {
         // 召唤物死亡后必须清理关系，否则计数只增不减，最终把所有召唤都挡住
         var ms = minions;
         if (ms != null) ms.forget(instanceId);
-        controllers.remove(instanceId);
+        AiController controller = controllers.remove(instanceId);
+        if (controller != null) controller.close();
         if (skills != null) skills.forget(instanceId);
         dev.helstera.ai.skill.SkillExtras.forget(instanceId);
         boundProfiles.remove(instanceId);

@@ -1,6 +1,7 @@
 package dev.helstera.migration.importer;
 
 import dev.helstera.api.util.ConditionListParser;
+import dev.helstera.api.util.MythicVariableReference;
 import dev.helstera.api.migration.MigrationImporter;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.configuration.ConfigurationSection;
@@ -2246,6 +2247,49 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "unsupported", "Invalid mechanic execution options; original line preserved.", "WARN");
             return;
         }
+        if (Set.of("setvariable", "variableunset", "unsetvariable", "variableadd", "variablemath", "varmath",
+                "variablesubtract", "variablesub", "subtractvariable", "subvar", "reducevariable",
+                "setvariablelocation", "variablesetlocation", "setvarloc", "variablelocationset", "locationunset", "unsetlocation").contains(mechanic)
+                && variableActionReference(raw) == null) {
+            scan.unsupported.add(raw);
+            note(entries, srcFile, mobKey + ".Skills[]",
+                    standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                    "unsupported", "Invalid or unsupported variable name or mutation scope; original line preserved.", "WARN");
+            return;
+        }
+        if (dev.helstera.api.util.MythicVariableLocation.supports(mechanic)) {
+            try { dev.helstera.api.util.MythicVariableLocation.parse(MythicSpec.rawKeyedArguments(raw)); }
+            catch (IllegalArgumentException invalid) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid or unsupported variable location selector; original line preserved: "
+                                + invalid.getMessage(), "WARN");
+                return;
+            }
+        }
+        if (Set.of("variablemath", "varmath").contains(mechanic) && MythicSpec.mechanicOpen(raw) >= 0) {
+            try { dev.helstera.api.util.MythicVariableMath.parse(MythicSpec.rawKeyedArguments(raw)); }
+            catch (IllegalArgumentException invalid) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid or unsupported variable equation; original line preserved: "
+                                + invalid.getMessage(), "WARN");
+                return;
+            }
+        }
+        if (dev.helstera.api.util.EntitySetterSpec.supports(mechanic)) {
+            try { entitySetterMechanic(raw, mechanic); }
+            catch (IllegalArgumentException invalid) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid or unsupported entity setter; original line preserved: "
+                                + invalid.getMessage(), "WARN");
+                return;
+            }
+        }
         if (dev.helstera.api.util.NumericMechanicSpec.supports(mechanic)
                 || dev.helstera.api.util.PercentHealthSpec.supports(mechanic)
                 || dev.helstera.api.util.SetSpeedSpec.supports(mechanic)) {
@@ -2833,6 +2877,9 @@ public final class MythicMobsImporter implements MigrationImporter {
         String name = normalized.trim().split("\\s+", 2)[0].toLowerCase(Locale.ROOT);
         int brace = name.indexOf('{');
         if (brace >= 0) name = name.substring(0, brace);
+        if (dev.helstera.api.util.EntitySetterSpec.supports(name)) return true;
+        if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
+        if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
         return switch (name) {
             case "damage-target", "heal-targets", "message-target", "ignite-targets",
                     "knockback-targets", "effect-targets", "teleport-targets", "teleport-self", "teleport-caster", "explode",
@@ -2855,7 +2902,7 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "set-invulnerable", "start-cast", "cancel-cast", "start-dialogue", "dismount",
                     "determine-condition",
                     "suicide", "kill-targets", "set-nameplate", "broadcast",
-                    "set-variable", "var-set", "var-add", "variable-add", "var-math", "variable-unset",
+                    "set-variable", "var-set", "var-add", "variable-add", "variable-subtract", "var-math", "variable-math", "variable-unset",
                     "variable-location-set", "location-unset", "remove-self", "equip", "set-item", "drop-item", "drop-items",
                     "give-item", "take-item", "close-inventory", "clear-inventory", "clear-experience",
                     "clear-experience-levels", "give-experience-levels", "give-experience", "set-absorption", "oxygen", "consume-slot",
@@ -2895,6 +2942,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         }
         head = head.toLowerCase(Locale.ROOT);
         if (head.contains(":")) head = head.substring(0, head.indexOf(':'));
+        if (dev.helstera.api.util.EntitySetterSpec.supports(head)) return entitySetterMechanic(trimmed, head);
         if (dev.helstera.api.util.NumericMechanicSpec.supports(head)
                 || dev.helstera.api.util.PercentHealthSpec.supports(head)
                 || dev.helstera.api.util.SetSpeedSpec.supports(head)) {
@@ -2903,6 +2951,13 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "equipcopy", "equip-copy", "giveitemfromslot", "givefromslot", "give-item-from-slot" ->
+                    preserveNamedMechanic(dev.helstera.api.util.MythicItemCopySpec.canonical(head), trimmed, brace);
+            case "setglobalscore", "sgs", "set-global-score", "setmobscore", "sms", "set-mob-score",
+                    "settargetscore", "sts", "set-target-score", "modifyglobalscore", "mgs", "modify-global-score",
+                    "modifymobscore", "mms", "modify-mob-score", "modifytargetscore", "mts", "modify-target-score",
+                    "modifyscore", "modify-score" -> preserveNamedMechanic(
+                    dev.helstera.api.util.MythicScoreboardSpec.canonical(head), trimmed, brace);
             case "aura", "buff", "debuff", "mythicaura" -> auraMechanic(trimmed);
             case "determinecondition", "detcond" -> preserveNamedMechanic("determine-condition", trimmed, brace);
             case "auraremove", "aura-remove", "mythicauraremove", "removeaura", "remove-aura",
@@ -3004,8 +3059,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "setvariable" -> variableSetAction(trimmed);
             case "variableunset", "unsetvariable" -> variableSimpleAction("variable-unset", trimmed);
             case "variableadd" -> variableNumericAction("variable-add", trimmed, "amount", "value", "val");
-            case "variablemath" -> variableMathAction(trimmed);
-            case "setvariablelocation", "variablelocationset" ->
+            case "variablesubtract", "variablesub", "subtractvariable", "subvar", "reducevariable" -> variableSubtractAction(trimmed);
+            case "variablemath", "varmath" -> variableMathAction(trimmed);
+            case "setvariablelocation", "variablesetlocation", "variablelocationset", "setvarloc" ->
                     variableSimpleAction("variable-location-set", trimmed);
             case "locationunset", "unsetlocation" -> variableSimpleAction("location-unset", trimmed);
             case "tracklocation", "track-location", "settrackedlocation", "stl" ->
@@ -3230,7 +3286,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             default -> null;
         };
         if (mapped == null) return null;
-        if (Set.of("determinecondition", "detcond").contains(head)) {
+        if (Set.of("determinecondition", "detcond").contains(head)
+                || dev.helstera.api.util.MythicScoreboardSpec.supports(head)
+                || dev.helstera.api.util.MythicItemCopySpec.supports(head)) {
             return mapped + executionSuffix(trimmed);
         }
         return withExecutionOptions(mapped + executionSuffix(trimmed), trimmed);
@@ -3461,6 +3519,48 @@ public final class MythicMobsImporter implements MigrationImporter {
             case 3, 4 -> "preserve";
             default -> "";
         };
+    }
+
+    /** Validates public setter arguments before preserving named fields and execution metadata. */
+    private static String entitySetterMechanic(String raw, String name) {
+        List<String> args = new ArrayList<>();
+        List<String> execution = new ArrayList<>();
+        Set<String> executionKeys = new LinkedHashSet<>();
+        int open = MythicSpec.mechanicOpen(raw);
+        if (open >= 0) {
+            int close = mechanicClose(raw, open);
+            if (close < 0 || close + 1 < raw.length() && !Character.isWhitespace(raw.charAt(close + 1)))
+                throw new IllegalArgumentException("malformed mechanic body");
+            String body = raw.substring(open + 1, close);
+            for (String argument : dev.helstera.api.util.EntitySetterSpec.bodyArguments(body)) {
+                int equals = dev.helstera.api.util.PlaceholderSyntax.argumentEquals(argument);
+                String key = equals < 0 ? "" : argument.substring(0, equals).trim().toLowerCase(Locale.ROOT);
+                if (Set.of("delay", "repeat", "repeatinterval", "repeat-interval").contains(key)) {
+                    String canonical = key.equals("repeat-interval") ? "repeatinterval" : key;
+                    if (!executionKeys.add(canonical)) throw new IllegalArgumentException("duplicate execution option");
+                    execution.add(canonical + "=" + argument.substring(equals + 1));
+                } else args.add(argument);
+            }
+        }
+        var suffix = new ArrayList<String>();
+        List<String> tokens = MythicSpec.executionTokens(raw);
+        for (String token : tokens.subList(1, tokens.size())) {
+            if (potionSuffixStart(token) || !suffix.isEmpty() && token.equals(">")) suffix.add(token);
+            else {
+                if (!suffix.isEmpty()) throw new IllegalArgumentException("argument after execution suffix");
+                args.add(token);
+            }
+        }
+        for (String token : suffix) {
+            if (token.startsWith("@")) dev.helstera.api.util.EntitySetterSpec
+                    .requireKnownTargeter(normalizeTargeterSuffix(token).trim());
+        }
+        var spec = dev.helstera.api.util.EntitySetterSpec.parse(name, args);
+        List<String> normalized = new ArrayList<>();
+        spec.values().forEach((key, value) -> normalized.add(key + "=\"" + escape(value) + "\""));
+        normalized.addAll(execution);
+        return spec.mechanic() + (normalized.isEmpty() ? "" : "{" + String.join(";", normalized) + "}")
+                + (suffix.isEmpty() ? "" : normalizeTargeterSuffix(String.join(" ", suffix)));
     }
 
     /** Preserves field identity, optional defaults and execution suffixes for numeric mechanics. */
@@ -3805,6 +3905,18 @@ public final class MythicMobsImporter implements MigrationImporter {
                 case "mergeall", "ma" -> "mergeAll";
                 case "overwritesamecaster", "osc", "oc" -> "overwriteSameCaster";
                 case "overwriteall", "overwrite", "ow" -> "overwriteAll";
+                case "cancelongivedamage", "cogd" -> "cancelOnGiveDamage";
+                case "cancelontakedamage", "cotd" -> "cancelOnTakeDamage";
+                case "cancelondeath", "cod" -> "cancelOnDeath";
+                case "canceloncasterdeath", "cocd" -> "cancelOnCasterDeath";
+                case "cancelonteleport", "cot" -> "cancelOnTeleport";
+                case "cancelonchangeworld", "cocw" -> "cancelOnChangeWorld";
+                case "cancelonquit", "coq" -> "cancelOnQuit";
+                case "charges", "c" -> "charges";
+                case "showbartimer", "bartimer", "bt" -> "showBarTimer";
+                case "bartimerdisplay", "bartimertext" -> "barTimerDisplay";
+                case "bartimercolor" -> "barTimerColor";
+                case "bartimerstyle" -> "barTimerStyle";
                 case "delay", "repeat", "repeatinterval", "repeat-interval" -> null;
                 default -> "unsupported";
             };
@@ -3817,8 +3929,12 @@ public final class MythicMobsImporter implements MigrationImporter {
                     && (value.contains("[") || value.contains("]"))) return null;
             if (attribute.equals("interval") && !positiveInteger(value)) return null;
             if (attribute.equals("maxStacks") && !positiveInteger(value)) return null;
+            if (attribute.equals("charges") && !value.matches("[-+]?\\d+")
+                    && !(value.startsWith("<") && value.endsWith(">"))) return null;
             if (Set.of("refreshDuration", "mergeSameCaster", "mergeAll", "doEndSkillOnTerminate",
-                    "overwriteSameCaster", "overwriteAll").contains(attribute)
+                    "overwriteSameCaster", "overwriteAll", "cancelOnGiveDamage", "cancelOnTakeDamage",
+                    "cancelOnDeath", "cancelOnCasterDeath", "cancelOnTeleport", "cancelOnChangeWorld",
+                    "cancelOnQuit", "showBarTimer").contains(attribute)
                     && !value.equalsIgnoreCase("true") && !value.equalsIgnoreCase("false")) return null;
         }
 
@@ -3912,50 +4028,82 @@ public final class MythicMobsImporter implements MigrationImporter {
         String duration;
         try { duration = variableDurationArgument(raw); }
         catch (IllegalArgumentException error) { return null; }
-        String variable = variableName(raw);
+        MythicVariableReference variable = variableActionReference(raw);
         String type = firstArg(raw, "type");
         String value = firstArg(raw, "value", "val");
         if (value == null) value = positionalArg(raw, 1);
         if (variable == null || value == null) return null;
-        return "set-variable var=" + escape(variable)
+        return "set-variable " + variableActionArguments(variable)
                 + " type=" + escape(type == null ? "INTEGER" : type)
                 + " value=\"" + escape(value) + "\"" + duration;
     }
 
     private static String variableSimpleAction(String action, String raw) {
-        String variable = variableName(raw);
+        MythicVariableReference variable = variableActionReference(raw);
         try {
-            return variable == null ? null : action + " var=" + escape(variable)
-                    + (action.equals("variable-location-set") ? variableDurationArgument(raw) : "");
+            return variable == null ? null : action + " " + variableActionArguments(variable)
+                    + (action.equals("variable-location-set")
+                    ? (MythicSpec.mechanicOpen(raw) >= 0 ? " value="
+                    + dev.helstera.api.util.MythicVariableLocation.parse(MythicSpec.rawKeyedArguments(raw)).selector() : "")
+                    + variableDurationArgument(raw) : "");
         } catch (IllegalArgumentException error) { return null; }
     }
 
     private static String variableNumericAction(String action, String raw, String... keys) {
-        String variable = variableName(raw);
+        MythicVariableReference variable = variableActionReference(raw);
         String value = firstArg(raw, keys);
         if (value == null) value = positionalArg(raw, 1);
         try {
             return variable == null || value == null ? null
-                    : action + " var=" + escape(variable) + " value=" + escape(value) + variableDurationArgument(raw);
+                    : action + " " + variableActionArguments(variable) + " value=" + escape(value)
+                    + variableDurationArgument(raw);
         } catch (IllegalArgumentException error) { return null; }
     }
 
     private static String variableMathAction(String raw) {
-        String variable = variableName(raw);
+        MythicVariableReference variable = variableActionReference(raw);
+        if (MythicSpec.mechanicOpen(raw) >= 0) {
+            try {
+                var math = dev.helstera.api.util.MythicVariableMath.parse(MythicSpec.rawKeyedArguments(raw));
+                return variable == null ? null : "variable-math " + variableActionArguments(variable)
+                        + " equation=\"" + escape(math.equation()) + "\"" + math.duration().argument();
+            } catch (IllegalArgumentException invalid) { return null; }
+        }
         String operation = firstArg(raw, "operation", "op");
         String value = firstArg(raw, "value", "val", "amount");
         if (operation == null) operation = positionalArg(raw, 1);
         if (value == null) value = positionalArg(raw, 2);
         try {
             return variable == null || value == null ? null
-                    : "var-math var=" + escape(variable) + " op="
+                    : "var-math " + variableActionArguments(variable) + " op="
                     + escape(operation == null ? "+" : operation) + " value=" + escape(value) + variableDurationArgument(raw);
         } catch (IllegalArgumentException error) { return null; }
     }
 
-    private static String variableName(String raw) {
-        String variable = firstArg(raw, "var", "variable", "name");
-        return variable == null ? positionalArg(raw, 0) : variable;
+    private static String variableSubtractAction(String raw) {
+        MythicVariableReference variable = variableActionReference(raw);
+        if (variable == null) return null;
+        try {
+            var arithmetic = dev.helstera.api.util.MythicVariableArithmetic.parse(MythicSpec.rawKeyedArguments(raw));
+            return "variable-subtract " + variableActionArguments(variable)
+                    + " value=\"" + escape(arithmetic.amount()) + "\"" + arithmetic.duration().argument();
+        } catch (IllegalArgumentException invalid) {
+            return null;
+        }
+    }
+
+    private static MythicVariableReference variableActionReference(String raw) {
+        try {
+            return MythicVariableReference.parse(MythicSpec.rawKeyedArguments(raw),
+                    MythicSpec.mechanicOpen(raw) < 0 ? positionalArg(raw, 0) : null);
+        } catch (IllegalArgumentException invalid) {
+            return null;
+        }
+    }
+
+    private static String variableActionArguments(MythicVariableReference reference) {
+        return "var=" + escape(reference.explicitScope() ? reference.name() : reference.sourceName())
+                + (reference.explicitScope() ? " scope=" + escape(reference.scope()) : "");
     }
 
     private static String dotAction(String raw) {
@@ -4109,6 +4257,10 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "nearestconditional", "nearestif" -> "nearestconditionaltarget";
             case "targetoftarget" -> "targetoftarget";
             case "lastdamager" -> "lastdamager";
+            case "playerbyname", "specificplayer" -> "playerbyname";
+            case "interactionlastattacker", "lastattacker" -> "interactionlastattacker";
+            case "interactionlastinteract", "lastinteract" -> "interactionlastinteract";
+            case "locationsoftargets", "locationoftarget", "lot" -> "locationsoftargets";
             case "playersinworld" -> "playersinworld";
             case "playersonserver", "server", "everyone" -> "playersonserver";
             case "mobsinworld" -> "mobsinworld";
@@ -4299,7 +4451,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (!casterConditions.isEmpty()) {
                 List<String> translated = new ArrayList<>();
                 List<String> unmapped = new ArrayList<>();
-                MmConditions.translateAll(casterConditions, translated, unmapped);
+                MmConditions.translateSkillConditions(casterConditions, translated, unmapped);
                 String targetPath = "skills." + skillId + ".require";
                 target.set(targetPath, translated);
                 note(entries, file.toString(), key + ".Conditions", targetPath, translated, "mapped",
@@ -4311,7 +4463,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (!targetConditions.isEmpty()) {
                 List<String> translated = new ArrayList<>();
                 List<String> unmapped = new ArrayList<>();
-                MmConditions.translateAll(targetConditions, translated, unmapped);
+                MmConditions.translateSkillConditions(targetConditions, translated, unmapped);
                 String targetPath = "skills." + skillId + ".target-conditions";
                 target.set(targetPath, translated);
                 note(entries, file.toString(), key + ".TargetConditions",
@@ -4323,7 +4475,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (!triggerConditions.isEmpty()) {
                 List<String> translated = new ArrayList<>();
                 List<String> unmapped = new ArrayList<>();
-                MmConditions.translateAll(triggerConditions, translated, unmapped);
+                MmConditions.translateSkillConditions(triggerConditions, translated, unmapped);
                 String targetPath = "skills." + skillId + ".trigger-conditions";
                 target.set(targetPath, translated);
                 note(entries, file.toString(), key + ".TriggerConditions",
@@ -5508,22 +5660,25 @@ public final class MythicMobsImporter implements MigrationImporter {
                 "mapped", "Preserved AI selector definitions for the Helstera AI adapter.");
     }
 
-    /**
-     * Paper's public Pathfinder API does not expose the native PathType malus
-     * table.  Keep the source value visible instead of silently dropping it;
-     * a later version-specific adapter can consume the preserved value.
-     */
+    /** Maps the native list form to the pinned Paper adapter and preserves rejected input. */
     private void mapAiPathfindingMalus(ConfigurationSection mob, String srcFile,
                                        List<Map<String, Object>> entries,
                                        YamlConfiguration target, String mobKey) {
         Object raw = ciGet(mob, "AIPathfindingMalus");
         if (raw == null) return;
         if (raw instanceof ConfigurationSection section) raw = section.getValues(true);
-        target.set("mob.unsupported.AIPathfindingMalus", raw);
-        note(entries, srcFile, mobKey + ".AIPathfindingMalus",
-                "mob.unsupported.AIPathfindingMalus", raw, "unsupported",
-                "Paper's public API does not expose native PathType malus mutation; value preserved.",
-                "WARN");
+        var parsed = dev.helstera.api.util.MythicPathfindingMalus.parseMythic(raw);
+        if (!parsed.values().isEmpty() || parsed.warnings().isEmpty()) {
+            target.set("ai.pathfinding-malus", parsed.values());
+            note(entries, srcFile, mobKey + ".AIPathfindingMalus", "ai.pathfinding-malus",
+                    parsed.values(), "mapped", "PathType costs mapped to the Paper 1.21.1 native adapter.");
+        }
+        if (!parsed.warnings().isEmpty()) {
+            target.set("mob.unsupported.AIPathfindingMalus", raw);
+            note(entries, srcFile, mobKey + ".AIPathfindingMalus",
+                    "mob.unsupported.AIPathfindingMalus", raw, "unsupported",
+                    String.join("; ", parsed.warnings()), "WARN");
+        }
     }
 
     private void mapModules(ConfigurationSection mob, String srcFile,

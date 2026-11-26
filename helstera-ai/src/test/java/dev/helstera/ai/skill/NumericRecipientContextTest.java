@@ -26,7 +26,9 @@ class NumericRecipientContextTest {
     private final LivingEntity first = mock(LivingEntity.class);
     private final LivingEntity second = mock(LivingEntity.class);
     private final ModelInstance instance = mock(ModelInstance.class);
-    private final Location origin = new Location(mock(World.class), 0, 64, 0);
+    // Bukkit Location retains its world weakly; keep the mock alive for the test.
+    private final World world = mock(World.class);
+    private final Location origin = new Location(world, 0, 64, 0);
     private final SkillTreeContext tree = new SkillTreeContext(first, List.of(first, second), origin);
     private final EntityDamageEvent event = mock(EntityDamageEvent.class);
     private final BehaviorContext context = BehaviorContext.continueExecution(instance, first, 0.99, -1, 7,
@@ -40,7 +42,7 @@ class NumericRecipientContextTest {
         when(instance.location()).thenReturn(origin);
         for (var entity : List.of(caster, first, second)) {
             when(entity.isValid()).thenReturn(true);
-            when(entity.getWorld()).thenReturn(origin.getWorld());
+            when(entity.getWorld()).thenReturn(world);
             when(entity.getLocation()).thenReturn(origin.clone().add(entity == second ? 4 : 2, 0, 0));
             when(entity.getMaxHealth()).thenReturn(entity == second ? 30.0 : 20.0);
         }

@@ -44,10 +44,28 @@ The first zero-delay native command can evaluate placeholders after the sibling
 write within the same tick; that ordering difference is recorded separately
 from the registry boundary and is not suppressed. Native missing-value
 `UNDEFINED` versus Helstera's preserved placeholder token also remains an
-explicit difference. Condition and location-variable lookup, other variable
-mechanics, reload/cast interactions and additional Paper versions remain open.
+explicit difference.
 
-Full `./mvnw -B -ntp verify` passes 2,484 tests and 11 clean SpotBugs reports.
+The [condition/location r5 report](../tools/paper-integration/reports/paper-1.21.1-terminal-condition-location-20261121-r5.json)
+and [redacted archive](../tools/paper-integration/reports/paper-1.21.1-terminal-condition-location-20261121-r5-logs.zip)
+extend this observation on the same Paper/MM versions. It covers 16 COW cases
+across direct/imported paths, 32 entity identities, 96 lifecycle rows, 576
+location observations and 544 callbacks. Native missing-registry
+`variable-is-set`/range conditions across `Conditions`, `TargetConditions` and
+`TriggerConditions`, plus location targeters, produce errors after the target
+role expires. Runtime conditions fail closed and variable-location targeters
+return no location. The native differences are recorded, not treated as parity.
+The report remains `observation` / `unassessed`; its auditor rejects
+33 evidence mutations and pins the observer, audit and test sources. The
+production plugin hash is `7064312b63b71745c4072c37c799f9f26183f382f8f3f2d6bc7935bd2399f88f`.
+
+Direct tests additionally cover read-only `trigger.*` scopes, explicit unknown
+prefixes, targeter lookup and scalar/location expiry. Those are runtime tests;
+this fixture does not establish native parity for explicit `trigger` scope.
+Other variable mechanics, reload/cast interactions and additional Paper
+versions remain open.
+
+Full `./mvnw -B -ntp verify` passes 2,487 tests and 11 clean SpotBugs reports.
 The release gate still requires evidence for the exact release artifact and
 all other catalog probes; this focused observation cannot satisfy it.
 
