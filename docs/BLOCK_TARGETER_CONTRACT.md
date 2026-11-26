@@ -115,5 +115,6 @@ python3 tools/paper-integration/audit-block-targeter.py REPORT --check-current
 
 Random sampling distributions and long branching veins, live unload/reload
 transitions, full event/dispatcher scheduling, external block providers and
-the final strict release gate remain separate acceptance. T08–T11 and S01/S03–S10
-remain implementation work; this contract does not claim them complete.
+the final strict release gate remain separate acceptance. T08 has subsequently
+been implemented under [its own contract](STRUCTURE_TARGETER_CONTRACT.md).
+T09–T11 and S01/S03–S10 remain implementation work.

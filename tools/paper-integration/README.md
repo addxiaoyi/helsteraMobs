@@ -1,3 +1,13 @@
+Nearest structure selector (2026-11-26): T08 implements `@nearestStructure`
+through the public Paper lookup, retaining caster-centered queries, 18 legacy
+types, static alias parsing and query events. The r2 fixture passes 100 scoped
+observations, including 6 real seeded-world searches and 2 explicit guard
+differences. The build passes 3,047 tests and 11 clean SpotBugs reports.
+See [the contract](../../docs/STRUCTURE_TARGETER_CONTRACT.md) and
+[evidence](STARTUP_EVIDENCE.md#2026-11-26-nearest-structure-selector-t08).
+Remaining implementation: T09–T11 and S01/S03–S10, 12 groups. The strict release
+gate and broader acceptance remain separate.
+
 Block and vein selectors (2026-11-26): T06/T07 now implement `@highestblock`,
 `@obstructingBlock`, chunk/radius/origin queries and connected veins with all
 public aliases. The r3 fixture passes 180 native/direct/imported observations
@@ -5,7 +15,7 @@ of selected coordinates and actual block changes; 2 observations retain the
 explicit native inline-guard difference. The build passes 3,028 Maven tests
 and 11 clean SpotBugs reports. See [the contract](../../docs/BLOCK_TARGETER_CONTRACT.md)
 and [evidence](STARTUP_EVIDENCE.md#2026-11-26-block-and-vein-selectors-t06t07).
-The remaining implementation inventory is T08–T11 and S01/S03–S10, 13 groups;
+At that milestone the implementation inventory was T08–T11 and S01/S03–S10, 13 groups;
 broader acceptance and the strict release gate remain separate.
 
 Aiming and inherited target selectors (2026-11-26): T05 now implements

@@ -4359,6 +4359,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "blocksinradius", "bir" -> "blocksinradius";
             case "blocksnearorigin", "bno" -> "blocksnearorigin";
             case "blockvein", "vein", "bv" -> "blockvein";
+            case "neareststructure" -> "neareststructure";
             case "eir", "entitiesinradius", "livingentitiesinradius" -> "livingentitiesinradius";
             case "mir", "mobsinradius" -> "mobsinradius";
             case "monstersinradius" -> "monstersinradius";

@@ -6,7 +6,7 @@ This is a finite, source-checked development backlog, not a claim that the 33
 broad `mapped-unverified` matrix rows constitute 33 missing implementations.
 An item is complete only after its native contract, migration, direct runtime,
 negative controls and appropriate Paper evidence agree.
-Remaining implementation: T08–T11 and S01/S03–S10, 13 groups. The verification
+Remaining implementation: T09–T11 and S01/S03–S10, 12 groups. The verification
 and external integration work below is tracked separately.
 
 ## Already implemented in the current development batch
@@ -110,6 +110,12 @@ These need validation and release evidence, not another implementation:
   including 2 explicit inline-guard differences. Offline tests cover caps,
   unloaded chunks, inherited collection dispatch and duplicate query centers.
   See [BLOCK_TARGETER_CONTRACT.md](BLOCK_TARGETER_CONTRACT.md).
+- `@nearestStructure` (T08) now has native legacy type/argument semantics,
+  direct/imported runtime dispatch and Paper query-event behavior. The
+  2026-11-26 r2 fixture passes 100 observations, including 6 natural world
+  observations and 2 explicit inline-guard differences. All 18 legacy types,
+  event cancellation/result changes, actual block effects and seeded stronghold
+  coordinates are checked. See [STRUCTURE_TARGETER_CONTRACT.md](STRUCTURE_TARGETER_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
@@ -160,7 +166,7 @@ Names come from native `@MythicTargeter` declarations and were checked against
 | T05 | `@targetBlock`, `@targetedLocation/@targetedLocations/@targetedLoc`, `@targetedTarget/@targeted` | Implemented; 2026-11-26 r2 passes 134 scoped native/direct/imported observations, including 6 explicit inline-guard differences. Plural context/condition/delay and managed-provider ownership tests pass. Full dispatcher, lifecycle, special variable contexts and threat policy remain separate; see [the contract](AIMING_INHERITED_TARGETER_CONTRACT.md). |
 | T06 | `@highestblock`, `@obstructingBlock` | Implemented; the combined T06/T07 2026-11-26 r3 fixture passes 180 scoped observations. Heightmap, rounded orientation, obstruction order, mutation/filter priority and actual block effects are covered. Full dispatcher and lifecycle acceptance remain; see [the contract](BLOCK_TARGETER_CONTRACT.md). |
 | T07 | `@blocksinchunk/@BIC`, `@blocksinradius/@BIR`, `@blocksnearorigin/@BNO`, `@blockVein/@vein/@bv` | Implemented; combined r3 passes 180 scoped observations. Inherited inputs, native geometry/air masks, negative chunks, inclusive maxHeight, connected veins and real effects are covered. Work/output caps and loaded-only queries are explicit extensions. Random distributions, larger vein topology, full dispatcher/lifecycle and release acceptance remain. |
-| T08 | `@nearestStructure` | Use public structure lookup with bounded radius and unloaded-generation policy; native defaults require inspection. |
+| T08 | `@nearestStructure` | Implemented; 2026-11-26 r2 passes 100 scoped observations, including 6 natural seeded-world queries. Native caster-centered lookup, static arguments, 18 legacy types, Paper query events and real block effects are covered. Searches may generate chunks; the explicit radius cap is 5000. Natural unexplored-reference lifecycle, broader scheduling and release acceptance remain; see [the contract](STRUCTURE_TARGETER_CONTRACT.md). |
 | T09 | `@randomLocationsNearOrigin/@RLO/@randomLocationsOrigin/@RLNO`, `@randomLocationsNearTargets/@RLNT`, `@randomLocationsNearCaster/@RLNC/@randomLocations` | Deterministic testable sampling, native radius/count/height rules and distinct caster/origin/recipient scope. |
 | T10 | `@randomRingPoint`, `@ringAroundOrigin/@ringOrigin/@RAO` | Location-valued ring sampling, which differs from filtering existing living entities with `ring`. |
 | T11 | `@randomThreatTargetLocation/@RTTL` | Select from a live threat table and project to a location, including empty/stale-table and terminal behavior. |
@@ -226,7 +232,7 @@ Names come from native `@MythicTargeter` declarations and were checked against
    strict release gate only against the final artifact.
 2. Finish M06/M07/M21 acceptance and M22's broader dispatcher/lifecycle checks;
    preserve the boundary between target scheduling and native movement Goals.
-3. Implement T08–T11 with bounded location queries and
+3. Implement T09–T11 with bounded location queries and
    separate entity-valued versus location-valued dispatch.
 4. Complete S01/S03–S10 as distinct runtime/state-machine and conversion slices;
    retain the existing base Aura charge implementation while extending its

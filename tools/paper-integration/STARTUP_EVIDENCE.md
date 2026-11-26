@@ -8412,3 +8412,50 @@ query and work/output-cap extensions. Full native dispatcher/event scheduling,
 random distributions and long branching veins, unload/reload lifecycle, client
 rendering, external blocks and the strict final release gate remain separate.
 Remaining internal implementation: T08–T11 and S01/S03–S10, 13 groups.
+
+## 2026-11-26 nearest structure selector (T08)
+
+[Structure targeter r2](reports/paper-1.21.1-structure-targeter-20261126-r2.json)
+passes 100 observations: 50 cases through direct and imported runtime paths,
+with native selection and real SetBlock effects. Two observations preserve
+the public native inline-guard difference. Plugin SHA-256:
+`3aac05b2fab4b273a1f432a0baf68e84d14039b7ecd67e300f08cd96e3fe09fb`.
+Paper 1.21.1 and MythicMobs 5.7.2 retain their pinned dependency hashes.
+
+The fixture records native parsed type/radius/unexplored fields and all three
+actual Paper query events per case. It covers all 18 legacy type mappings,
+raw alias priority, unknown/quoted/namespaced/dynamic fallback, static radius
+parsing, zero/negative radius, unexplored flag forwarding, caster movement,
+changed provider results, event cancellation, native mutation no-ops, block
+filters, final limits and positional guards. Parameter cases supply results
+or cancellation through StructuresLocateEvent and make no natural-generation
+claim. The remaining 6 natural observations leave events unchanged, locate a
+stronghold at `(-224, 0, 1376)` in seed 281474976710655, verify its generated
+structure identity, observe real native/runtime block effects, and verify that
+a fortress query in the normal world has no result.
+
+The independent auditor fixes this seed's actual coordinates rather than only
+checking agreement between the two implementations. It verifies native fields,
+Paper API arguments and structure lists, caster-versus-origin scope, query count,
+effects, the joined observer, exits and all hashes. Eleven negative-control tests
+reject wrong arguments/centers, consistently fabricated coordinates/effects,
+cancelled-query output, missing natural evidence, and missing/tampered archive
+inputs. `--check-current` passes with 30 pinned source files. Full
+`./mvnw -q verify` passes 3,047 tests with zero failures/errors/skips and 11 clean
+SpotBugs reports. Eighteen focused selector tests and the importer test pass.
+
+[Redacted archive](reports/paper-1.21.1-structure-targeter-20261126-r2-logs.zip)
+SHA-256: `02163c9a3b2df11ac3d00dce3be4150640b9442ad86060f943c70c1be42987f1`.
+The server and observer exit successfully; the fixture port is released.
+Both [r1](reports/paper-1.21.1-structure-targeter-20261126-r1.json) and r2
+archives have zero matches in the independent redaction scan. r1 retains its
+passing historical scope; r2 additionally pins the exact seeded coordinates.
+Earlier feature reports retain their own JAR hashes and do not certify this JAR.
+
+The numeric search cap preserves the native default of 5000 and rejects larger
+explicit radii. Paper may read/generate structure chunks. Natural unexplored
+reference consumption, broader seeds/types, full native dispatcher scheduling,
+external generator/listener combinations, reload/removal lifecycle, rendering
+and the final strict release gate remain separate acceptance. See
+[the contract](../../docs/STRUCTURE_TARGETER_CONTRACT.md).
+Remaining internal implementation: T09–T11 and S01/S03–S10, 12 groups.

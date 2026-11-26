@@ -15,6 +15,20 @@ class ContextTargeterExtensionsImportTest {
     @TempDir Path root;
 
     @Test
+    void importsNearestStructureWithStaticArgumentsAndPreservedUnknownType() throws Exception {
+        var input = new YamlConfiguration();
+        input.set("structures.Skills", List.of("setblock{type=DIAMOND_BLOCK} @nearestStructure{type=bad;t=VILLAGE;radius=\"2\";r=4;unexplored=false;u=true}"));
+        Path file = root.resolve("Skills/structures.yml");
+        Files.createDirectories(file.getParent()); Files.writeString(file, input.saveToString());
+        var plans = new MythicMobsImporter().convert(file);
+        var plan = plans.stream().filter(item -> "skills.yml".equals(item.get("target-file"))).findFirst().orElseThrow();
+        var result = YamlConfiguration.loadConfiguration(new StringReader(plan.get("content").toString()));
+        assertEquals(List.of("set-block DIAMOND_BLOCK @neareststructure{type=bad;t=VILLAGE;radius=\"2\";r=4;unexplored=false;u=true}"),
+                result.getStringList("skills.structures.on-decision"));
+        assertTrue(plans.stream().noneMatch(item -> "WARN".equals(item.get("severity"))));
+    }
+
+    @Test
     void importsBlockQueriesWithNativeRawArgumentsAndAllAliases() throws Exception {
         List<String> selectors = List.of("highestblock", "obstructingBlock", "blocksInChunk", "BIC",
                 "blocksInRadius", "BIR", "blocksNearOrigin", "BNO", "blockVein", "vein", "bv");

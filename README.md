@@ -1,9 +1,18 @@
+Nearest structure selection (2026-11-26): `@nearestStructure` now uses the native
+caster-centered Paper query, static arguments, all 18 legacy types and query
+events. Paper r2 passes 100 observations, including 6 real seeded-world queries
+and their block effects. The build passes 3,047 Maven tests and 11 clean SpotBugs
+checks. There are 12 remaining internal implementation groups (T09–T11 and
+S01/S03–S10); broader acceptance and the full strict release gate remain.
+See [the structure contract](docs/STRUCTURE_TARGETER_CONTRACT.md) and
+[remaining development](docs/INTERNAL_FEATURE_COMPLETION.md).
+
 Block and vein selectors (2026-11-26): highest-block, obstruction, chunk/radius,
 origin and connected-vein queries now have direct/imported bindings and all
 public aliases. Paper r3 passes 180 selection/effect observations, and the same
 JAR passes all 134 aiming/inherited regression observations. The build passes
-3,028 Maven tests and 11 clean SpotBugs checks. There are 13 remaining internal
-implementation groups (T08–T11 and S01/S03–S10); broader acceptance and the full
+3,028 Maven tests and 11 clean SpotBugs checks. At that milestone there were 13
+remaining internal implementation groups (T08–T11 and S01/S03–S10); broader acceptance and the full
 strict release gate remain. See [the block contract](docs/BLOCK_TARGETER_CONTRACT.md)
 and [remaining development](docs/INTERNAL_FEATURE_COMPLETION.md).
 
