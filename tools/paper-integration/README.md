@@ -1,3 +1,12 @@
+Dropped Item target selectors (2026-11-26): `@itemsInRadius/@IIR` and
+`@itemsNearOrigin/@INO` now query loaded chunks and dispatch generic Item
+recipients through direct/imported skills. The r4 fixture passes 132 native
+comparisons of selection and real tag mutations, including 14 explicit
+public-build condition differences. The build passes 2,992 Maven tests and
+11 clean SpotBugs checks. See [the contract](../../docs/DROPPED_ITEM_TARGETER_CONTRACT.md)
+and [evidence](STARTUP_EVIDENCE.md#2026-11-26-dropped-item-target-selectors-t02).
+This focused evidence does not complete the strict release gate.
+
 Variable location, equation and scope observations (2026-11-21): the current build
 passes 2,639 Maven tests and 11 clean SpotBugs reports. The latest player fixture
 records 300 observations with two real players: entity/block aiming, stone,

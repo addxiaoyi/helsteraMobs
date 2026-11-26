@@ -15,6 +15,29 @@ class ContextTargeterExtensionsImportTest {
     @TempDir Path root;
 
     @Test
+    void preservesItemRadiusAliasPriorityRawValuesAndInlineConditions() throws Exception {
+        var input = new YamlConfiguration();
+        input.set("items.Skills", List.of(
+                "addtag{t=chosen} @IIR{r=2;radius=5}",
+                "addtag{t=chosen} @INO{radius=5;r=2}",
+                "addtag{t=chosen} @itemsInRadius{r=\"2\";limit=1;sort=NEAREST}",
+                "addtag{t=chosen} @itemsNearOrigin{conditions=[ - hastag{t=eligible} true ]}"));
+        Path file = root.resolve("Skills/items.yml");
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, input.saveToString());
+        var plans = new MythicMobsImporter().convert(file);
+        var plan = plans.stream().filter(item -> item.containsKey("content")).findFirst().orElseThrow();
+        var result = YamlConfiguration.loadConfiguration(new StringReader(plan.get("content").toString()));
+        List<String> actions = result.getStringList("skills.items.on-decision");
+        assertEquals(4, actions.size());
+        assertTrue(actions.get(0).endsWith("@itemsinradius{r=2;radius=5}"));
+        assertTrue(actions.get(1).endsWith("@itemsnearorigin{radius=5;r=2}"));
+        assertTrue(actions.get(2).endsWith("@itemsinradius{r=\"2\";limit=1;sort=NEAREST}"));
+        assertTrue(actions.get(3).endsWith("@itemsnearorigin{conditions=[ - hastag{t=eligible} true ]}"));
+        assertTrue(plans.stream().noneMatch(item -> "WARN".equals(item.get("severity"))));
+    }
+
+    @Test
     void canonicalizesNewAliasesWhileRetainingNamePlaceholdersLocationOptionsAndGuards() throws Exception {
         var input = new YamlConfiguration();
         input.set("context_targeters.Skills", List.of(

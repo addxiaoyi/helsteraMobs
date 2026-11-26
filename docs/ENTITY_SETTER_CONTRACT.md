@@ -61,17 +61,18 @@ entity locations. Explicit entity/location retargeting replaces the previous
 collection. Velocity, teleport, target tags and target names also consume the
 generic collection; name placeholders resolve separately for each recipient.
 Living-only item actions do not fall back to the caster when the selection
-contains only nonliving entities. These paths have offline regression coverage;
-they do not have new Paper/native evidence yet.
+contains only nonliving entities. These paths have offline regression coverage.
+T02 now adds real Paper Item query/tag-mutation evidence through direct/imported
+skills; the whole generic action catalog still needs its own acceptance.
 
 The general radius/chain selector engine still primarily enumerates LivingEntity;
 this batch does not claim generic Display/Interaction selection through those
 selectors or through parameterized `@targets`. The dropped-item selectors T02
-remain unregistered pending their own query/filter contract. Target conditions
-on a nonliving recipient are conservatively skipped
-because existing condition factories require LivingEntity. Nonliving entity
-variable registries are also outside this slice. These boundaries require a
-separate generic target/condition contract, rather than silently broadening filters.
+have a separate [query/filter contract](DROPPED_ITEM_TARGETER_CONTRACT.md).
+Nonliving target conditions now support the audited `hastag`, `entitytype`,
+`uuid` and `distance` predicates and their boolean composition; other built-in
+predicates fail closed before inversion. Nonliving entity variable registries
+and the broader condition catalog remain outside this slice.
 
 The Raider patrol setter accepts the already-validated location selector subset,
 including `@origin` and `@selflocation`; nested entity, Pin/multi-location and

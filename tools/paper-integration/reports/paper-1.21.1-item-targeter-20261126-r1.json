@@ -1,0 +1,63 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-item-targeter-20261126-r1",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-26T07:39:57.593349+00:00",
+  "pluginSha256": "4b99347099f4df5c470f5b19d435d97a9b3da2058b97f3e72a630c5de01a076a",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "6a129e32a19224ecbadd09b16135eccc66e971e73bc45d637c7db5f81aa7a0b0",
+  "sourceHashes": {
+    "helstera-ai/src/main/java/dev/helstera/ai/AiManager.java": "e7c004b30ef4245bbb22099399b38f66b2b61479b8f013f5b4bd4d3245574d58",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/Placeholders.java": "f33ce6fbc655aff02c4821bbd5664b2fb2a6c72cc85585839ee0bcf5d64137ed",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "326fcaefbcbc16ccbac032359fb864e02a37df8a17d1b18dc9aa40075e58ca29",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "2fbc3393e222ac6b856435ffaf204336bbadcbfff31cfe642a4f4772d0de22b1",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "d599b7db4d52662c95593e78029a0e6e7cb825173b17628df438e57277506041",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/DroppedItemTargeter.java": "f0f7041a7149fdb613f13f0fe601476880f753afa0af95e5828df33887681d16",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/FactionTable.java": "c99a931ad3d6783704df6ea39afeff5a311734adc1985ba8156a20793eaf92b9",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/Factions.java": "d2a10c30cf00954a686e6514a8283938ca76ba22b988a8d103215c34d5db8b83",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/InheritedTargetLocations.java": "9441107194da52784f588c21b0dbdd6742c4313759d0c8d33bb364a3526140bd",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/ManagedMobIdentity.java": "3440ec66b0b0bd262b01baa39993ba9ec18d3c051f7cd384a3b66c740fafdb6d",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/MobRelations.java": "7aa0ba9f33f392b7a04f139ecb4b3f675e49577261bd783604573751f2c892c7",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/NamedPlayerTargeter.java": "03fb1ba6cca7bf799607f5c25cc285e23ff7dbe2b50fe97456eccd814ccb4287",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/SkillTreeContext.java": "efcad5ee9a5aa97098e61060ff9058903d70f6afdc994a066f5ea4d58e1ec286",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/Targeter.java": "033a9df314c66ce7fc74375844a86736baaf382ec8667f8fa279ddb840be0e93",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/Targeters.java": "37bcb07cb6bf106672acc1d3e56f99c592bbf144260a425cf9ca1ffe242f4a5b",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "cecdc8b1a0ca1e7f07f231ab21ccf740bbb11f4f223032782c5bd12a38a4c094",
+    "tools/paper-integration/audit-item-targeter.py": "59af430ad222821ab7f24acd8b4fcb03478e6fc35e39a96c7a1b56bec2c394fb",
+    "tools/paper-integration/item-targeter-client.js": "2a28a11a9227434d8f7e655df9ba407bbc0d31574f1b5e10708ec55d3814a8f7",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/ItemTargeterProbe.java": "8970a0997c25133628b0e6052336d698f338bf41ba09853efb46e4f8700146dc",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "tools/paper-integration/run-item-targeter-fixture.py": "1d9ee85897874e995fb1bacb3234b5421f3eebe915d45703a6df7fac3f079253",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/test-item-targeter-audit.py": "bbf9fcf54fbf3ca2e4697f52de285768e0bfac218350690bf074fa348f735221"
+  },
+  "limitations": [
+    "Covers Item radius/origin queries, filters and actual TagAdd mutations on the pinned server.",
+    "Native targeter constructors are invoked directly; full native metaskill scheduling is outside this slice.",
+    "One online client supplies join evidence; item rendering, pickup and full dispatcher scheduling are outside this slice.",
+    "Inline targeter guards are a Helstera extension: the public native build ignores them.",
+    "Results are scoped observations and do not establish whole-catalog parity or release readiness."
+  ],
+  "exitCode": 0,
+  "clientExitCode": 1,
+  "observationCount": 0,
+  "validationResult": "rejected: Player client exited before completion",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "ba518ef694bc160131cc5e87fc59143d2f08c55157f09a97fe89eecb7c4f7884"
+    },
+    {
+      "path": "client.log",
+      "sha256": "94c70ff61c68664b1628dfc20d58a62d355a36228f24bc770251579365d59a30"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/location.yml",
+      "sha256": "c5b7e8b0792248e3cc851c7d78d2b0f62ea3052d8efd238ba847f1f153f26ce1"
+    }
+  ],
+  "logArchive": "paper-1.21.1-item-targeter-20261126-r1-logs.zip",
+  "logArchiveSha256": "e5de7397c3a4aaa86bf8c5cedb3934c6cd3bb02523070d4ecf46608ce81ebb50"
+}

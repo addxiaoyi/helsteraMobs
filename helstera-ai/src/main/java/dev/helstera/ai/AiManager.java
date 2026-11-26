@@ -108,6 +108,11 @@ public final class AiManager implements Listener {
         var table = c.threatTable();
         return table == null ? 0 : table.threatOf(cand.getUniqueId());
     };
+    private final dev.helstera.api.behavior.Targeters.EntityThreatProvider entityThreatTargeterProvider = source -> {
+        var controller = source == null ? null : controllers.get(source.instanceId());
+        var table = controller == null ? null : controller.threatTable();
+        return table == null ? null : table.snapshot();
+    };
     private BukkitTask task;
     private java.util.function.Consumer<AnimationMarkerEvent> animationMarkerListener;
     private java.util.function.Consumer<ModelRemoveEvent> modelRemoveListener;
@@ -120,6 +125,7 @@ public final class AiManager implements Listener {
         // 否则「threat」在首个控制器建好前一直返回空候选——而空候选会被
         // 动作侧当成「没有目标」，技能静默不执行
         dev.helstera.api.behavior.Targeters.threatProvider(threatTargeterProvider);
+        dev.helstera.api.behavior.Targeters.entityThreatProvider(entityThreatTargeterProvider);
     }
 
     /** 注入自定义条件/动作注册表，使 profile 的 require / on-decision 生效。 */
@@ -483,6 +489,7 @@ public final class AiManager implements Listener {
     public void start(int decisionTicks) {
         stop();
         dev.helstera.api.behavior.Targeters.threatProvider(threatTargeterProvider);
+        dev.helstera.api.behavior.Targeters.entityThreatProvider(entityThreatTargeterProvider);
         installConditionalTargeterProvider();
         task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (skills != null) skills.tickCasts();
@@ -619,6 +626,7 @@ public final class AiManager implements Listener {
         profileOverlays.clear();
         controlled.clear();
         dev.helstera.api.behavior.Targeters.clearThreatProvider(threatTargeterProvider);
+        dev.helstera.api.behavior.Targeters.clearEntityThreatProvider(entityThreatTargeterProvider);
         dev.helstera.api.behavior.Targeters.clearConditionProvider(conditionalTargeterProvider);
     }
 

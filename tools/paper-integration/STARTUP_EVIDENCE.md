@@ -8267,3 +8267,43 @@ disable/removal event paths, external faction providers, broader worlds and
 additional Paper versions require separate acceptance. The strict release gate
 must run on the final artifact; old fixture reports retain their own JAR hashes.
 See [the AI target selector contract](../../docs/AI_TARGET_SELECTOR_CONTRACT.md).
+
+## 2026-11-26 dropped Item target selectors (T02)
+
+[Item targeter r4](reports/paper-1.21.1-item-targeter-20261126-r4.json) passes
+132 observations: 66 cases on direct and imported runtime paths, each compared
+with native Item selection/filtering and actual TagAdd effects. The independent
+auditor passes with `--check-current` for plugin SHA-256
+`4b99347099f4df5c470f5b19d435d97a9b3da2058b97f3e72a630c5de01a076a`.
+Full `./mvnw -B -o clean verify` passes 2,992 tests, zero failures/errors/skips
+and 11 clean SpotBugs checks. Nine auditor control tests pass. Server and the
+observer client exit cleanly.
+
+Coverage includes both names/aliases, default/static/malformed radius parsing,
+unequal alias precedence, strict distance, bounding boxes and chunk edges,
+negative/zero radii, caster/origin separation, vanilla/owner/faction/category
+filters, limit/sort precedence, native health ties, random membership, UUID
+threat scores, imported strings and unchanged loaded-chunk sets. Each row
+retains actual entity UUIDs, types, positions and cross-world/living controls.
+
+The public native build ignores inline targeter conditions. Fourteen explicit
+differences show Helstera's generic Item guards, guard-before-limit behavior,
+false outcomes and closed unsupported predicates. Those differences are not
+native parity claims. Threat observations retain a living leader at 100 with
+Item scores 5/10; they establish score sorting, not Item combat targeting or
+complete threat production/switching. The runtime uses a prepared provider for
+this comparison. Client join evidence does not certify rendering or pickup.
+
+[Redacted archive](reports/paper-1.21.1-item-targeter-20261126-r4-logs.zip)
+SHA-256: `f24c88b3cbec1085f66ce264495411205fdab10da9992bf0c6382cb3102329bd`.
+The report pins 23 implementation/probe/runner/auditor files. Earlier reports
+are retained: r1 rejected an overlong client username; r2 exposed native Item
+combat-target conversion during threat preparation; r3 captured all 132
+selection/effect observations but failed the geometry audit on Paper's
+coordinate quantization. r4 uses exactly representable fixture positions.
+
+T02's implementation is complete within [its contract](../../docs/DROPPED_ITEM_TARGETER_CONTRACT.md).
+General nonliving selectors/conditions, full native dispatcher paths, rendering,
+removal/reload/reconnect scenarios, global native default overrides, external
+faction/ModelEngine providers and the strict final release gate remain separate.
+Historical reports certify only their recorded artifacts.

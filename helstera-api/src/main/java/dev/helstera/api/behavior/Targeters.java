@@ -230,6 +230,22 @@ public final class Targeters {
      */
     private static volatile ThreatProvider threatProvider;
 
+    /** UUID scores also cover nonliving recipients; null means no live threat table. */
+    @FunctionalInterface
+    public interface EntityThreatProvider {
+        Map<java.util.UUID, Double> snapshot(ModelInstance source);
+    }
+
+    private static volatile EntityThreatProvider entityThreatProvider;
+
+    public static synchronized void entityThreatProvider(EntityThreatProvider provider) {
+        entityThreatProvider = provider;
+    }
+
+    public static synchronized void clearEntityThreatProvider(EntityThreatProvider expected) {
+        if (expected != null && entityThreatProvider == expected) entityThreatProvider = null;
+    }
+
     public static synchronized void threatProvider(ThreatProvider p) {
         threatProvider = p;
     }
@@ -276,7 +292,17 @@ public final class Targeters {
     public static List<org.bukkit.entity.Entity> selectEntities(String spec, BehaviorContext context,
             Collection<? extends org.bukkit.entity.Entity> candidates, List<String> fallbackArgs,
             java.util.function.UnaryOperator<String> argumentResolver) {
+        return selectEntities(spec, context, candidates, fallbackArgs, argumentResolver, conditionProvider);
+    }
+
+    /** Allows a standalone skill service to evaluate item guards with its own condition registry. */
+    public static List<org.bukkit.entity.Entity> selectEntities(String spec, BehaviorContext context,
+            Collection<? extends org.bukkit.entity.Entity> candidates, List<String> fallbackArgs,
+            java.util.function.UnaryOperator<String> argumentResolver, ConditionProvider conditions) {
         if (context == null) return List.of();
+        if (DroppedItemTargeter.recognizes(spec)) {
+            return DroppedItemTargeter.select(spec, context, conditions, entityThreatProvider);
+        }
         String name = spec == null ? "" : spec.trim().replaceFirst("^@", "");
         List<LivingEntity> living = candidates == null ? List.of() : candidates.stream()
                 .filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast).toList();
@@ -736,7 +762,7 @@ public final class Targeters {
     }
 
     /** Parses legacy delimited values and Mythic's inline target-condition list syntax. */
-    private static List<ConditionalCondition> parseConditionalConditions(String raw) {
+    static List<ConditionalCondition> parseConditionalConditions(String raw) {
         if (raw == null || raw.isBlank()) return List.of();
         List<String> entries = new ArrayList<>();
         StringBuilder current = new StringBuilder();
@@ -2107,6 +2133,7 @@ public final class Targeters {
     public static Collection<String> names() {
         var names = new java.util.LinkedHashSet<String>(BUILTIN.keySet());
         names.addAll(CONTEXT_TARGETERS);
+        names.addAll(DroppedItemTargeter.NAMES);
         names.addAll(List.of("playerbyname", "specificplayer", "interactionlastattacker", "lastattacker",
                 "interactionlastinteract", "lastinteract", "locationsoftargets", "locationoftarget", "lot"));
         return Collections.unmodifiableSet(names);

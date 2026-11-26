@@ -4349,6 +4349,8 @@ public final class MythicMobsImporter implements MigrationImporter {
     private static String canonicalTargeterName(String rawName) {
         return switch (rawName.toLowerCase(Locale.ROOT).replace("_", "").replace("-", "")) {
             case "pir", "playersinradius" -> "playersinradius";
+            case "iir", "itemsinradius" -> "itemsinradius";
+            case "ino", "itemsnearorigin" -> "itemsnearorigin";
             case "eir", "entitiesinradius", "livingentitiesinradius" -> "livingentitiesinradius";
             case "mir", "mobsinradius" -> "mobsinradius";
             case "monstersinradius" -> "monstersinradius";

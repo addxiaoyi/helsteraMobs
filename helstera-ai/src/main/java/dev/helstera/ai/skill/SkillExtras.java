@@ -1292,6 +1292,8 @@ public final class SkillExtras {
         if (ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER) {
             return ctx.trigger().orElse(null);
         }
+        if (ctx.conditionScope() == BehaviorContext.ConditionScope.TARGET && ctx.entityRecipient().isPresent())
+            return ctx.entityRecipient().orElseThrow();
         LivingEntity target = ctx.targetEntity().orElse(null);
         if (target != null) return target;
         return casterEntity(ctx);
@@ -1317,7 +1319,7 @@ public final class SkillExtras {
     }
 
     private static boolean uuidMatches(BehaviorContext ctx, String rawExpected) {
-        LivingEntity entity = conditionEntity(ctx);
+        Entity entity = conditionSubject(ctx);
         if (entity == null || rawExpected == null) return false;
         String resolved = Placeholders.resolve(rawExpected, ctx);
         try {
@@ -2122,7 +2124,7 @@ public final class SkillExtras {
 
     private static Entity comparisonTarget(BehaviorContext ctx) {
         return ctx == null ? null : ctx.conditionScope() == BehaviorContext.ConditionScope.TRIGGER
-                ? ctx.trigger().orElse(null) : ctx.targetEntity().orElse(null);
+                ? ctx.trigger().orElse(null) : ctx.entityRecipient().orElse(null);
     }
 
     private static Location comparisonTargetLocation(BehaviorContext ctx) {
@@ -3663,8 +3665,8 @@ public final class SkillExtras {
                     if (tag.startsWith("tag=")) tag = tag.substring(4);
                     else if (tag.startsWith("t=")) tag = tag.substring(2);
                     String expected = tag.trim();
-                    return ctx -> !expected.isBlank() && conditionEntity(ctx) != null
-                            && conditionEntity(ctx).getScoreboardTags().contains(expected);
+                    return ctx -> !expected.isBlank() && conditionSubject(ctx) != null
+                            && conditionSubject(ctx).getScoreboardTags().contains(expected);
                 }),
                 Map.entry("target-has-tag", (SkillCatalog.ConditionFactory) a -> {
                     String expected = scoreboardTag(a);
