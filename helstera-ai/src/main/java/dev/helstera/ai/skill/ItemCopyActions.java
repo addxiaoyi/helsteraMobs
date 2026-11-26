@@ -35,11 +35,13 @@ final class ItemCopyActions {
     }
 
     static Map<String, SkillCatalog.ActionFactory> wrap(Map<String, SkillCatalog.ActionFactory> factories) {
-        return wrap(factories, (recipient, item, origin) -> {
-            var adapter = fakeLoot;
-            if (adapter == null) throw new IllegalStateException("Fake item looting requires an installed plugin host");
-            adapter.show(recipient, item, origin);
-        });
+        return wrap(factories, ItemCopyActions::showLoot);
+    }
+
+    static void showLoot(Player recipient, ItemStack item, Location origin) {
+        var adapter = fakeLoot;
+        if (adapter == null) throw new IllegalStateException("Fake item looting requires an installed plugin host");
+        adapter.show(recipient, item, origin);
     }
 
     static Map<String, SkillCatalog.ActionFactory> wrap(Map<String, SkillCatalog.ActionFactory> factories,

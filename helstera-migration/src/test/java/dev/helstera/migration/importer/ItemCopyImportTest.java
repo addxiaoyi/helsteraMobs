@@ -34,12 +34,13 @@ class ItemCopyImportTest {
                 output.getStringList("skills.copy.on-decision"));
     }
 
-    @Test void generatedLootFamilyRemainsExplicitlyUnsupported(@TempDir Path root) throws Exception {
-        List<String> unfinished = List.of("giveitemfromtarget{items=DIAMOND}", "givefromtarget{items=DIAMOND}",
+    @Test void generatedLootFamilyUsesSeparateCasterRewardAction(@TempDir Path root) throws Exception {
+        List<String> lines = List.of("giveitemfromtarget{items=DIAMOND}", "givefromtarget{items=DIAMOND}",
                 "giveitemsfromtarget{items=DIAMOND}", "itemgivefromtarget{items=DIAMOND}");
-        var output = convert(root, unfinished);
-        assertTrue(output.getStringList("skills.copy.on-decision").isEmpty());
-        assertEquals(unfinished, output.getStringList("skills.copy.unsupported"));
+        var output = convert(root, lines);
+        assertEquals(java.util.Collections.nCopies(4, "give-item-from-target{items=DIAMOND}"),
+                output.getStringList("skills.copy.on-decision"));
+        assertFalse(output.contains("skills.copy.unsupported"));
     }
 
     @Test void invalidSchedulingPreservesOriginalInsteadOfLosingExecutionSemantics(@TempDir Path root) throws Exception {

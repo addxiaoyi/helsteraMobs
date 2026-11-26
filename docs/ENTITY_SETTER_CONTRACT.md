@@ -85,7 +85,10 @@ entities: native direct calls could mutate an invalid entity's handle while
 runtime selection correctly skipped it. Plugin chunk tickets and explicit
 validity assertions fixed the fixture. The next run passed malus, leash and
 chunk operations and exposed the coordinate/serialization issues above;
-neither rejected report certifies the full setter slice.
+neither rejected report certifies the full setter slice. The subsequent
+[2026-11-22 r3 report](../tools/paper-integration/reports/paper-1.21.1-entity-setters-20261122-r3.json)
+passes the 42 scoped observations on its recorded artifact. It does not close
+the broader selector/nonliving-condition boundaries or certify later builds.
 
 A subsequent review closed three recipient-selection issues: living `@target`
 uses the caster Mob's live combat target, unknown outer selector names reject

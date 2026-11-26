@@ -35,6 +35,8 @@ public record MythicDropSpec(
     /** Returns the safe runtime projection, or an empty map for unsupported entries. */
     public Map<String, Object> runtimeEntry() {
         if (external || (item == null && !isTable())) return Map.of();
+        // Command rewards have a dedicated generated-loot consumer. They are not Bukkit item IDs.
+        if (item != null && item.regionMatches(true, 0, "command{", 0, 8)) return Map.of();
         if (isTable() && (amountMin != 1 || amountMax != 1)) return Map.of();
         if (isTable()) {
             int dot = table.indexOf('.');

@@ -533,6 +533,10 @@ public final class SkillExtras {
         return t.streakOfInstance(id(ctx), System.nanoTime());
     }
 
+    public static void lootService(dev.helstera.ai.loot.LootService service) {
+        GeneratedLootActions.loot(service);
+    }
+
     public static void host(Plugin plugin) {
         host = plugin;
         ItemCopyActions.host(plugin);
@@ -551,6 +555,7 @@ public final class SkillExtras {
      */
     public static void resetRuntimeHooks() {
         ItemCopyActions.host(null);
+        GeneratedLootActions.loot(null);
         host = null;
         despawner = null;
         threatLookup = null;
@@ -6047,7 +6052,7 @@ public final class SkillExtras {
     }
 
     public static Map<String, SkillCatalog.ActionFactory> actions() {
-        return JsonMessageActions.wrap(ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
+        return GeneratedLootActions.wrap(JsonMessageActions.wrap(ItemCopyActions.wrap(ScoreboardActions.wrap(EntitySetterActions.wrap(NumericMechanicActions.wrap(Map.ofEntries(
                 Map.entry("set-speed", (SkillCatalog.ActionFactory) a -> {
                     var spec = dev.helstera.api.util.SetSpeedSpec.parse(a);
                     return ctx -> SetSpeedAction.apply(spec, ctx, itemTargets(ctx));
@@ -7795,7 +7800,7 @@ public final class SkillExtras {
                         }
                     };
                 })
-        )), raw -> resolveItem(raw, 1)))));
+        )), raw -> resolveItem(raw, 1))))));
     }
 
     /**

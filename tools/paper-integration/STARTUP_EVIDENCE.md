@@ -8010,3 +8010,45 @@ Negative controls on r8 rejected 20,567 focused row/metadata/overflow mutations
 and 74 rehashed client/archive mutations. The client-only rerun scopes private
 visibility assertions to fake item IDs: normal overflow entities may be seen
 by both clients. The final r9 run records the corrected test source hash.
+
+## Generated rewards: 2026-11-26
+
+[Generated loot r3](reports/paper-1.21.1-generated-loot-20261126-r3.json)
+passes 90 observations (30 cases × native/direct/imported) with two real
+clients on pinned Paper 1.21.1 / MythicMobs 5.7.2. The independent archive audit
+passes with current source and JAR checks. The observed artifact SHA-256 is
+`7a4a6ac58a8ebe4673763001042dc5f6c62e08dd3b38aad68fee21a9ebf5d241`;
+the same build passes 2,896 Maven tests and all 11 SpotBugs checks through
+`./mvnw -o -B -pl helstera-plugin -am verify`.
+
+The independent auditor rejects all 765 rehashed semantic mutations, covering
+reward amounts/metadata, experience/commands, actor/origin direction, overflow
+ownership, client inventory/packets and missing completion/tick markers.
+
+Coverage includes inline/named/nested rewards, item/experience/command delivery,
+alias precedence, nonplayer generation, entity/nonliving/location animation
+origins, caster-based conditions and command placeholders, fractional values,
+outer selection limits, inventory overflow ownership, private packet delivery,
+five-tick collection and custom item model data. Ordinary diamond rewards stay
+plain when a separate custom diamond is configured. Actual client inventories
+are checked against server snapshots; the archive retains serialized items.
+[Redacted archive](reports/paper-1.21.1-generated-loot-20261126-r3-logs.zip)
+SHA-256: `b86944af1e22e2ca896bcf08b8d7079f561a17f4e51724cd10ad74e4e37db6a4`.
+
+Native mechanics use real second-pass table initialization and then direct
+casts; this does not establish full native dispatcher scheduling. Randomized
+range/weight behavior, repeated weighted drop identity, all command flags,
+randomized metadata, multiple origins and reload/disconnect still need their
+own acceptance. External providers remain separate integrations. See
+[the generated-loot contract](../../docs/GENERATED_LOOT_CONTRACT.md).
+
+The rejected [r1](reports/paper-1.21.1-generated-loot-20261126-r1.json) and
+[r2](reports/paper-1.21.1-generated-loot-20261126-r2.json) remain archived. r1
+exposed a fixture table-section merge error. r2 exposed a production resolver
+bug where a custom item's base material acted as its identifier. The resolver
+now matches configured keys and original source names, and both custom-item
+and plain-item cases pass in r3. Unsupported-only string reward tables also
+remain declared, preventing accidental fallback to a same-named vanilla item.
+
+These are scoped implementation observations. Earlier reports retain their
+own artifacts; this batch does not complete the full strict release gate.

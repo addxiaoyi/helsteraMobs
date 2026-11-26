@@ -1,0 +1,454 @@
+{
+  "schemaVersion": 1,
+  "fixtureDirectory": "srv-paper-generated-loot-20261126-r2",
+  "evidenceMode": "observation",
+  "parityStatus": "unassessed",
+  "generatedAtUtc": "2026-11-26T01:59:18.550395+00:00",
+  "pluginSha256": "f2063b3e2d122ef882010b87f9be4e156bc0d515ea6fbd1f65b97b83f1ae8050",
+  "paperJarSha256": "39bd8c00b9e18de91dcabd3cc3dcfa5328685a53b7187a2f63280c22e2d287b9",
+  "mythicMobsSha256": "9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f",
+  "probeJarSha256": "5bbb9de8356cb97e9c62c681732215e048e66cbd96df62a6ebcb8eff128adc41",
+  "sourceHashes": {
+    "tools/paper-integration/run-generated-loot-fixture.py": "ddf71a34b6fc3a6cca6e376fec134a3cf2a582d4784bdac14c9405a19e946264",
+    "tools/paper-integration/run-player-variable-fixture.py": "d7b84b3b9415c237f543e6c2f179db6e6feac28509860a929a83906325bbf3d1",
+    "tools/paper-integration/generated-loot-cases.py": "477bfb58e00a6de92b308250454ef6f57492dd139c706ad5f4442675b4c717ba",
+    "tools/paper-integration/item-copy-client.js": "74c838d299c0f6fac6a0b1b65839de3e7d0f2ef8bc3b219992cef58cb66e16ce",
+    "tools/paper-integration/paper-1.21.1-client-protocol.js": "835e9031ccd7b85cca0d9f678e6c7a746899d33f93c6f913ea1873ab004d5c21",
+    "tools/paper-integration/test-paper-1.21.1-client-protocol.js": "756ee120e573323fcf6120d0ea2b0b1c3958f9a98b21920b730404db89f0074b",
+    "tools/paper-integration/audit-generated-loot.py": "1009edcb72c53d04ee65064d3735cca6b7207d173073888bd08444d752d8ffee",
+    "tools/paper-integration/test-generated-loot-audit.py": "c819cfc4e1ab21892d19cb3f4cdbe1f5b975df6172ae606a945e30d877abfb5a",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/GeneratedLootProbe.java": "28e8492d702b04ed253581f3eb0aeb820e0c1f5f49b6632ec92f79303328ccfd",
+    "tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java": "dda677c13d990a53419d545cfbdfd40698cf7ea0ea25382db7822bcdc0133752",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/GeneratedLootActions.java": "40c4c79438f8e7ce3c061838a159002776b07f5713530ace81bd8d343fb23f5c",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/ItemCopyActions.java": "f2f1bdb0033d5bd9a98dcba61e4c81d860cb00b7a6ecb14341b885d1270172f6",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/FakeItemLoot.java": "067dfe940aa59a8297c490792ade422497e0eb8363b1fd3c83e7d4eed6027e48",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/PaperFakeItemLoot.java": "c7b1e7dff7ec9bf1fc7270a52ebea99b9ba0784e29455cd9b5300560754576d0",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java": "dcfc908d7a2e5fd866610608f249869cf0e1145dc7b59642be062f08a290b81f",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/SkillExtras.java": "053532152369067229db7af2358c8276c8d839bd283c13d7b266ba8d10f1797c",
+    "helstera-ai/src/main/java/dev/helstera/ai/skill/MythicSkillSpec.java": "9852a113a0f3a475b455c4da7dd13f9db53f03cb9d45c5737eeb90e444f1a0ce",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicGeneratedLootSpec.java": "265da4262ff8e71668765fe400497b8b7dce9f97531d2d3e2a64027c87b01db6",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicRewardEntry.java": "14c5cd7792bf393bd9a28d9eb7300155601e0fb9763a69d070f25777fa213b42",
+    "helstera-api/src/main/java/dev/helstera/api/util/MythicMessageText.java": "39ece7ac8cda8084c5af9a945b5bb24516b6e37b0d80948e66829bd967282016",
+    "helstera-ai/src/main/java/dev/helstera/ai/loot/GeneratedLoot.java": "9b40a5ef3fbc37536facc301b28db6518e5883fee59bc646af58a62a0f5d4920",
+    "helstera-ai/src/main/java/dev/helstera/ai/loot/GeneratedLootTable.java": "01599eacae096a0491c63b509e2762f1aa81da9fb5a17f153ca9b91059b68b0d",
+    "helstera-ai/src/main/java/dev/helstera/ai/loot/LootService.java": "f4d4ab83c8355d4a1ead4d994387ae5dd79277c3ab1de527436b9f621064fbb7",
+    "helstera-ai/src/main/java/dev/helstera/ai/loot/DropTable.java": "59e675fd5feec86ef32a36f55dd70b617dfe0eac94a72c2658c7d4003600fdb6",
+    "helstera-plugin/src/main/java/dev/helstera/plugin/HelsteraPlugin.java": "bbbb5184519104105994a7079056bc22f5d314f7f2ccf904efb780f85d991790",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicDropSpec.java": "6b4c582e3b48f503c0b3c7b4506228fc05a9bcc09bd2ad3cc866b268e8c373f3",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicDropTableProjection.java": "ab94d6091b4ac709cb23414702d51ecc4755d5b70f792bfb15594caf16c49510",
+    "helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java": "bb41a8c3c0a1309fbba719831256de23411069e51a48f2b0b28dbe69f148f7fc",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicMobsImporter.java": "07f04d2c1633ef82cd60b5dc30f92387f0b9e61c6fdeace46c5e89c54df0f5dd",
+    "helstera-migration/src/main/java/dev/helstera/migration/importer/MythicSpec.java": "51f688b6d6357512a1ed554171885566e904a0babbc6c235e67f431baab0d8e7"
+  },
+  "limitations": [
+    "Native constructors use real DropExecutor second-pass initialization; casts bypass native dispatcher scheduling.",
+    "Two real clients record private item packets, server tick markers and actual inventories.",
+    "Packet tick offsets are bracketed by delivered tick messages; asynchronous native sends can cross a boundary.",
+    "Explicit post-collection removal and shutdown/world-transition cleanup are Helstera lifecycle extensions.",
+    "Scoped M04b evidence; randomized custom metadata, reload/disconnect and release gates remain separate."
+  ],
+  "exitCode": 0,
+  "clientExitCode": 0,
+  "observationCount": 90,
+  "validationResult": "rejected: inventory metadata",
+  "files": [
+    {
+      "path": "server.log",
+      "sha256": "6ab82e512a5da44889ed304648cf7dbed6b3e888eeeeb82ad7a84a389cbfb57e"
+    },
+    {
+      "path": "client.log",
+      "sha256": "71b68b1afa1df5f65fce051c02e7b5be598222f70f6e6cf83ebb4cf786a37d40"
+    },
+    {
+      "path": "plugins/MythicMobs/Mobs/generated-loot.yml",
+      "sha256": "74f230812bb576171ecbcb2c183cb6978219f4d91a5dbfa2496c71854b459894"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/cases.yml",
+      "sha256": "7abb80031623f1b6ed2460679c128420aeadce2c83378ef1599e643f00583fa5"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0000.yml",
+      "sha256": "98895c48edc42085e53c5ca269fd6e633f5c1ca63c4a4f123e1ac41d790642a6"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0001.yml",
+      "sha256": "9a3e409954dbbc8d60f03d57ee6ca660902c20be252f747d57e98638e93ecbf5"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0002.yml",
+      "sha256": "903553ff0f8fbdd4b2d71720a988b72b75a546a7949fdba30bfaa2af67e4ed91"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0003.yml",
+      "sha256": "bef1bcddff07875dbab705cbf737db19d0b197035d4f0883b4e5eb15b5d44f0c"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0004.yml",
+      "sha256": "ed13b93b2e36b12eb5416473fa27880aadcc11f0f8d1f8b0a28019c713f3ac0a"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0005.yml",
+      "sha256": "369374afd1ed64f6679e06b7235bc2e159f39272860031cb83b1addcb0837d7b"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0006.yml",
+      "sha256": "27f9fe65795e4e28a0a4b8a6ef5beeee08b1b532124b8e37d0e9b4dc47607ecd"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0007.yml",
+      "sha256": "4cbbe19d12b981c938ee6f5a549d5c24948533e3c6c0163885f309ea28ce6441"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0008.yml",
+      "sha256": "0df8052efdc300d6857a71e1f32dba3d46837f03863c6ce85087e66849fe8efa"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0009.yml",
+      "sha256": "6356acf483e5412b1434f129f3c23298a686035872ae7843acb3f49b45cef31f"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0010.yml",
+      "sha256": "5ca93b938e048855ad40ce45f72da0f195e5d89b59f3093b080b2f346d877951"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0011.yml",
+      "sha256": "3b50476e360cf3bd7d6f8f8783e30fd606008c91a6b35045538352d5d17482a1"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0012.yml",
+      "sha256": "4a208559d44dd79c17d994402c9e48c719c35c137bc0d64a4d6f5ab6eba2ecb2"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0013.yml",
+      "sha256": "eb617d9204fa6694ad49be7409de0a00c0baf9f3b96701831be24f41c5f75e0e"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0014.yml",
+      "sha256": "f79cb74281e081f69855dc0afcf73a367220f09f418e977820cd00e26aef418a"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0015.yml",
+      "sha256": "717d22fa21928363def8180556ea130e32e7b560648fb59832e3ed3155b9d555"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0016.yml",
+      "sha256": "1826539d97523bfab194f9c8d41649aecde78fe7768b74276117cddfe02501e6"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0017.yml",
+      "sha256": "2d33c7c163175b1c7dcbb048daa53252b055581487e3a7cd49e8c1ecee44c15a"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0018.yml",
+      "sha256": "6a9e2624f02148df74715637df149d2f3a637cc2c54e5b04cfdd40f9a5a59ff1"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0019.yml",
+      "sha256": "42db95897221802c3dae795bc6393986520cd3f79f45c6ee8f2ae366f6973a25"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0020.yml",
+      "sha256": "727d59253efc4da80a8d520f1ed371619d6cb3a5d988939cb3d2f350b3c5dde9"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0021.yml",
+      "sha256": "dcb1ef3a175c7f3b0f3b6b9438cc002be38e35493839a215a70eca9eee496375"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0022.yml",
+      "sha256": "5f14d06a13ac0a627633633b53605b72d90bca295ffe1365f8bac49bbac30b68"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0023.yml",
+      "sha256": "a47d5b90c92c11d4d122c5f159454fab9ca204e7cb3cf2c1d8249bbb6475eaea"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0024.yml",
+      "sha256": "e7bdb55593617d1497373edb6e540274d078588c24b31ba779c1644143432ba8"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0025.yml",
+      "sha256": "2e9b3e288af98e22430321a27650f65b6d72ea70f26962d7c182217a81ac4649"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0026.yml",
+      "sha256": "0126699aabaa5dc26d5d4be6e8b82c1e76a7bb86202b90d01205dd68ca1152ce"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0027.yml",
+      "sha256": "68ac8cc55e667c153767033eab8a84d715b27cc2aaf8bf3f7678983a7d2ae91a"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0028.yml",
+      "sha256": "01cc312afc8fa25466ef01fd74e4c936bf835d0a02e580c6e02e7791787a5e01"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0029.yml",
+      "sha256": "138bb006d644dcabe62669fba3e6c14a7a0197468f347337f4853c888108b79c"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0030.yml",
+      "sha256": "c80b5d09b716384f332ca00c88ba55d69d5c8f54e3ecee4a21af6ce28b01189a"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0031.yml",
+      "sha256": "624974e7a274ad6df5758a22a7654e6084ef46bd79293c61e8f0835450d2648b"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0032.yml",
+      "sha256": "6da1dee9e28d74266949d2054ffe414feba86432c8d44f2c736f1b53feb4afa0"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0033.yml",
+      "sha256": "759d4f6895ee929b394acb95df67a31568048a20e8645b48745888a5d4a94930"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0034.yml",
+      "sha256": "24f112dfe4daace0ca016d53e8101fe446658d71e8cffe08cb58778b02b2dd3a"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0035.yml",
+      "sha256": "165c0ac06b34849ee53e197be6267c1e87a8f19bd7564a5e534a3679e889691d"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0036.yml",
+      "sha256": "c97a0c2304ac2b8644d452d308f9636a947d0fe07fff4619c04445da46e2254d"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0037.yml",
+      "sha256": "9af593bbe3eb2d44d3bcbbf3b9c18afdce42a28519ed98ce87dda70b2e34439f"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0038.yml",
+      "sha256": "56ff8e82116ef8b681dd3bde32255995e13b3b1f045a42a1aa89fa3a243bddb9"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0039.yml",
+      "sha256": "3c40680d0a18ddcc7f9cee40d990f5c1f595517ea6d292fa2506763459a47099"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0040.yml",
+      "sha256": "053a5733f5164823f023c1d6863575932f5eb4bed296872969141351b6f61f30"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0041.yml",
+      "sha256": "a4be451c1b4abd57fafc95b57c7facdb5098bc67b987a2a4bd5c337bf461a38a"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0042.yml",
+      "sha256": "a74e2e95dee545c762e877a51da827a024cac996ed00c1bb10e1645c3d9cfb75"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0043.yml",
+      "sha256": "dcf30984893c58d1af52c787de50058279286129e3d9eb10958256958f0c6ce2"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0044.yml",
+      "sha256": "5de4313d44fec7e41ddc6ed880d013afeb372024b315428b0d6fd6372a10c6ab"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0045.yml",
+      "sha256": "49bb57350326940dd9093d9eda296e8b09cdd85a3e1d7fe78ba47da302b12519"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0046.yml",
+      "sha256": "307c1f966f3afd4ec5ac0a05756114a87dc7aaeebd9adc3f589b73b236d5f674"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0047.yml",
+      "sha256": "7882f97b465b7f10078098ba021b935138b680a8bf7864c50ee651f895448bba"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0048.yml",
+      "sha256": "20df97835afd3f0b9ede68a22808cf0bda9d6d323784359a058bdf4b63e9779e"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0049.yml",
+      "sha256": "c26c46b53a433c9391c79a784625420f7346dc5f4b4afa6a0171f31d467c4b0e"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0050.yml",
+      "sha256": "5aec6b97dc7b1489d673338c93526ba1b70944bebeee6b2127b20c4d92af6261"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0051.yml",
+      "sha256": "3f02349db6da529f54ee2264c14e4449911a9d6f5b8aff8a45cc93dd6eebd985"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0052.yml",
+      "sha256": "ca0f4c3315c179c12e2f03666a978944c510cbd0e8c86bab37507d140db04443"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0053.yml",
+      "sha256": "9634e774981c3ce6d55ca0e4b10fcbb1f6cdbd3c8801fe203c7a8f8a244513bc"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0054.yml",
+      "sha256": "6860653cd76df058fac75f384a1d75ff322a0c6930e1f8dab4728dd47eebc4de"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0055.yml",
+      "sha256": "06f3a770a10113341eeaca76739b7f28bf70c454add0d57d3fe4d5ca6819ee19"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0056.yml",
+      "sha256": "faf86b8dea9a0cab81438e31a5ef69139013101f2958f3e7a8719657604e7946"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0057.yml",
+      "sha256": "0bbdec977aba419a577ab06846bb2c99960453cbde4d7d58072266ba187157d6"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0058.yml",
+      "sha256": "dbb5217b7d99956d99c590354ac6be65c5a1ea0a7735cf4df11d60d8c0e0c790"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0059.yml",
+      "sha256": "bd323f95f86cda73a5914a12a90643974d7f21cc86318dd52c7c215e3acc1005"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0060.yml",
+      "sha256": "2543b34e9a979b0265e3856bffc1a1f6cf8ec13c4ac59642d8e1f8f1be98ab08"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0061.yml",
+      "sha256": "9ee2d9b3d4329fd2fcf53aed918accb28b11736909b1e52bce5e37223b14c0d8"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0062.yml",
+      "sha256": "93ae150c9f3105109d8ec9719af2b69f7bd06ca50c5c197b0674fea97d36cd08"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0063.yml",
+      "sha256": "a0e29c2ce169fbf41ea0d9af978d98ed4caf1b33d4997429953d4ec32356b016"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0064.yml",
+      "sha256": "dbb8ea5d56e73f979bb0404445a83b6ef5ef04ff91988e2a6241bda92f220ab1"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0065.yml",
+      "sha256": "126cba7239230934c84da5054c772b56404955f9bc69c278c8667c276d596070"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0066.yml",
+      "sha256": "ea013e32245b61185aecb94ff006cbd93715f3fa2f6bfaa38c877a05cc3384a4"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0067.yml",
+      "sha256": "39fe282908d96607d3eb3bd2f2814151070dc5f9e85bbfe68b9a7d83833f8587"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0068.yml",
+      "sha256": "c1ba0b5ce3d2e291dfb1f9d19e118b61083e0535d447501c6732ec3b07a6f247"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0069.yml",
+      "sha256": "1671733928665ca4c0eda0e067d58a17b99c3516ec676c79047e93a23d80e87c"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0070.yml",
+      "sha256": "461e588e02329d6df2c3677363afb9e4a1a514345fd105d15b1dea772c2b4072"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0071.yml",
+      "sha256": "76d0d1bda937c462b47504852251b984ee8e6bbc7d02432c48161e936aaa6033"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0072.yml",
+      "sha256": "8e2b740378702630cf2becae0983a24af35fcc3093f8dc4566cd3cfcbd548aea"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0073.yml",
+      "sha256": "8c09a72023f05398e787b8f230322591987a9b5c3fcc91b4c3370ea657bf17d4"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0074.yml",
+      "sha256": "38e9158920104c6d47cbd7c758c860c5dfcacf946732e47aea9bc852a8faab94"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0075.yml",
+      "sha256": "a0043a00975df68c37dfe2b04cf1cd65bf6a68e83585166638b2e411aad6432c"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0076.yml",
+      "sha256": "b2be521d43c53951e688cf285a915d26fb85a87e9c039cb22a1597ff65008307"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0077.yml",
+      "sha256": "3f13585891c8b141ad399e319378524ebd99b1cd403a95bb5b2d41f0aaba9c14"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0078.yml",
+      "sha256": "34770f5c2ee3f994d8a0b737bfd89f102f0dadc043fe6d69f04f1c272dfd233c"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0079.yml",
+      "sha256": "8b29fa98e2d1416a7f5b79759c3b5b66f6cd064de299e14ac91dc3af427680af"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0080.yml",
+      "sha256": "44ebe91d79a2280a24658d0042fe89cf283404a64d0192cd6ad00dbab43bda6a"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0081.yml",
+      "sha256": "548a936483b46181697da55fee502fab1c88a7823b1acc7a0818aa07a4a5a799"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0082.yml",
+      "sha256": "76ae27d265c486b95fa9df538738840e2cd2598670bb025da0c55458f1a2ff2e"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0083.yml",
+      "sha256": "e841a6ba2be436a956bb4f9d45ec062a665cd156cdfc4f234554446050f3d6d1"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0084.yml",
+      "sha256": "56d3b4b1a43978b11967fb312875717aa3833bbfbefc51244d5e303423b853e6"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0085.yml",
+      "sha256": "9c37c0008e8ceed7b327f071642bd3e32f31b761a7a87657890808cd69ac2ba2"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0086.yml",
+      "sha256": "92259ed0525a58b64acda6c7c213a7fc6f31fd5786e963d4f0817ae0f0da116c"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0087.yml",
+      "sha256": "f3e9378b4cbad4da83fed639bdaf285693486f06776cbba80aa6be7c1039e561"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0088.yml",
+      "sha256": "83ca122bf40b7b331fa8b7adac416a432c21fe6b13a9a657aeecf5b818703481"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/observations/0089.yml",
+      "sha256": "9cd1d25f340a78de9c7f4c13123b89592dfddfc42f9658f9101641a0d2085db5"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/identities.yml",
+      "sha256": "ce5d98ee9b9700af7c60878d36cba89a19be4a1f2aeb54b33b3cb7e5f365f478"
+    },
+    {
+      "path": "plugins/HelsteraGeneratedLootProbe/imported-loot.yml",
+      "sha256": "0539baded5ad3ac03650ccbb21be11c2eb5715986870e916835d5ee8104f2c2f"
+    },
+    {
+      "path": "plugins/MythicMobs/DropTables/generated-loot.yml",
+      "sha256": "e053947d5b7566eed88a19cded08e569c07b7bf299596418d68c918bd21b1516"
+    },
+    {
+      "path": "plugins/MythicMobs/Items/generated-loot.yml",
+      "sha256": "c005f55f98e1eaaaa31dee1a1d409c5b1e595ba2b01f1169061447cb88128870"
+    },
+    {
+      "path": "plugins/helsteraMobs/items.yml",
+      "sha256": "93eb5ab529d10bf2b05f19a0acec8ce3baaf52ea9b574731f07e6ac27b540e44"
+    }
+  ],
+  "logArchive": "paper-1.21.1-generated-loot-20261126-r2-logs.zip",
+  "logArchiveSha256": "32593ce918e36e12e5eeaf4bc5b9d8dd86a07209286b053d2d02c2bacbda3b31"
+}

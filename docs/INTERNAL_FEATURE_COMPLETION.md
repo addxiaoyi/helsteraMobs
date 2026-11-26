@@ -32,11 +32,15 @@ These need validation and release evidence, not another implementation:
 - Public setter slice M01/M08–M12/M14–M16 is implemented with shared argument
   validation, importer mapping and generic direct entity recipients. See
   [ENTITY_SETTER_CONTRACT.md](ENTITY_SETTER_CONTRACT.md) for the deliberately
-  bounded selector/condition scope and pending Paper evidence.
+  bounded selector/condition scope. The 2026-11-22 r3 report passes 42 scoped
+  observations; broader selectors, nonliving conditions and release evidence remain.
 - `equipCopy` and `giveitemfromslot/givefromslot` (M04a) are implemented;
   2026-11-26 r9 passes 165 two-client inventory/packet observations. Multiple
   recipients, actual reload and disconnect cleanup still need acceptance.
-  Generated item grants (`giveitemfromtarget`, M04b) remain unimplemented.
+  Generated item grants (`giveitemfromtarget`, M04b) now have runtime/importer
+  implementations and 90 passing two-client observations in 2026-11-26 r3;
+  the detailed live evidence and remaining
+  acceptance are in [GENERATED_LOOT_CONTRACT.md](GENERATED_LOOT_CONTRACT.md).
 - `stopusingitem/releaseitem`, `matchrotation/matchrot` and `GoatRam` have
   implementation and offline tests. Their complete Paper/client acceptance
   remains pending; see [ENTITY_INTERACTION_CONTRACT.md](ENTITY_INTERACTION_CONTRACT.md).
@@ -62,22 +66,22 @@ contract extensions, not duplicate implementations.
 
 | ID | Exact mechanic names / aliases | Remaining work and completion boundary |
 | --- | --- | --- |
-| M01 | `setpathfindingmalus`, `setmalus`, `malus` | Connect a skill action to the new pinned adapter. Native aliases are `malus/type/malustype`, default `OPEN`; `value/amount`, default `0`. Compare selected recipients and invalid types. |
+| M01 | `setpathfindingmalus`, `setmalus`, `malus` | Implemented and covered by the 42-observation setter r3 slice. Broader selector and final release acceptance remains. |
 | M02 | `variableSubtract`, `variableSub`, `subtractVariable`, `subVar`, `reduceVariable` | Implemented; 2026-11-26 r1 passes 300 scoped observations, with 20 public-parser and 10 non-finite overflow differences. Real-time expiry crossing and full release validation remain. |
 | M03 | `setGlobalScore/sgs`, `setMobScore/sms`, `setTargetScore/sts`, `modifyGlobalScore/mgs`, `modifyMobScore/mms`, `modifyTargetScore/mts`, `modifyScore` | Implemented; 2026-11-26 r2 passes 212 scoped observations. Full native dispatcher scheduling and release validation remain. |
-| M04 | `equipCopy`, `giveitemfromslot/givefromslot`, `giveitemfromtarget/givefromtarget/giveitemsfromtarget/itemgivefromtarget` | Equipment copy and slot grants pass 165 scoped two-client observations; multi-recipient/reload/disconnect acceptance remains. Generated item grants (M04b) remain unimplemented. |
+| M04 | `equipCopy`, `giveitemfromslot/givefromslot`, `giveitemfromtarget/givefromtarget/giveitemsfromtarget/itemgivefromtarget` | Equipment copy and slot grants pass 165 scoped two-client observations. Generated rewards pass 90 in 2026-11-26 r3; see the generated-loot contract. Randomized/native edge cases, multi-recipient/reload/disconnect acceptance and the final release gate remain. |
 | M05 | `messagejson/jsonmessage/jmsg/jm` | Runtime/importer and offline tests implemented. Real Paper/client component, placeholder and audience acceptance remains. |
 | M06 | `addTrade/setTrade/removeTrade/replaceTrade` | Villager recipe mutation with native mode/index/material/metadata handling and wrong-entity rejection. |
 | M07 | `opentrades/opentrade/trade` | Open the selected villager's trade UI for the appropriate player; verify actor/recipient direction and UI closure. |
-| M08 | `setleashholder/setleasher` | Use `LivingEntity.setLeashHolder`; establish caster/target direction, unbinding, world constraints and rejected leash results. |
-| M09 | `setchunkforceloaded` | Use `World.setChunkForceLoaded`; establish location selection and boolean defaults. Test both set and clear and restore fixture chunk state. |
-| M10 | `setTextDisplay/setText` | Update a real TextDisplay using native text defaults/aliases; nonliving-target dispatch must reach it. |
-| M11 | `setDisplayEntityItem` | Update ItemDisplay with production item resolution, cloned metadata and unavailable-item rejection. |
-| M12 | `setInteractionSize/interactionSize` | Apply finite width/height to Interaction; preserve native defaults and wrong-entity boundaries. |
+| M08 | `setleashholder/setleasher` | Implemented; the caster's holder becomes the selected entity. Setter r3 covers the scoped direction/unbinding cases; broader world/rejection cases and release validation remain. |
+| M09 | `setchunkforceloaded` | Implemented; setter r3 covers selected-location force-load changes and cleanup. Full release validation remains. |
+| M10 | `setTextDisplay/setText` | Implemented with generic entity dispatch and scoped setter r3 evidence. Broader selectors, nonliving conditions and client rendering acceptance remain. |
+| M11 | `setDisplayEntityItem` | Implemented through production item resolution with scoped setter r3 evidence. Broader selectors, nonliving conditions and client rendering acceptance remain. |
+| M12 | `setInteractionSize/interactionSize` | Implemented with scoped setter r3 evidence and an explicit public dynamic-float parser difference. Broader selectors/nonliving conditions and release validation remain. |
 | M13 | `displaytransformation/settransformation/transformation` | Apply Display transformation, including translation, rotation and scale; compare interpolation and client rendering. |
-| M14 | `setRaiderCanJoinRaid/setCanJoinRaid` | Apply and read back `Raider.setCanJoinRaid`. |
-| M15 | `setRaiderPatrolBlock/setRaiderBlock` | Apply the selected block through `Raider.setPatrolTarget`; establish location/caster direction and nullable target rules. |
-| M16 | `setRaiderPatrolLeader/setRaiderLeader` | Apply and read back `Raider.setPatrolLeader`; compare equipment side effects separately. |
+| M14 | `setRaiderCanJoinRaid/setCanJoinRaid` | Implemented with scoped setter r3 evidence; full release validation remains. |
+| M15 | `setRaiderPatrolBlock/setRaiderBlock` | Implemented with bounded nested-location selection and scoped setter r3 evidence. Plural/conditional nested selectors and release validation remain. |
+| M16 | `setRaiderPatrolLeader/setRaiderLeader` | Implemented with scoped setter r3 evidence; broader equipment side effects and release validation remain. |
 | M17 | `stopusingitem/releaseitem` | Release behavior is implemented through the pinned native adapter; complete bow/item-use/event acceptance remains. Paper `clearActiveItem` alone is not equivalent. |
 | M18 | `shieldbreak/disableshield` | Compare active shield cancellation, cooldown duration and player item-hand semantics. Existing generic material cooldown does not prove shield equivalence. |
 | M19 | `setpitch`, `matchrotation/matchrot` | Pinned native SetPitch is a no-op. MatchRotation is implemented with nested selection, non-player recipients and body/head yaw plus pitch; Paper/client acceptance remains. |
@@ -160,10 +164,10 @@ Names come from native `@MythicTargeter` declarations and were checked against
 
 ## Recommended next implementation batches
 
-1. Complete the remaining M04a/M05/M17/M19/M20 Paper/client acceptance and the
+1. Complete the remaining M04/M05/M17/M19/M20 Paper/client acceptance and the
    setter contract's selector/nonliving-condition boundaries. Refresh the full
    strict release gate only against the final artifact.
-2. Implement M04b/M06/M07/M13/M18/M21/M22 with independent native contracts and
+2. Implement M06/M07/M13/M18/M21/M22 with independent native contracts and
    recipient/ownership/UI checks.
 3. Implement T02 and T05–T11 with bounded location/block enumeration and
    separate entity-valued versus location-valued dispatch.

@@ -78,6 +78,7 @@ tools/**/*.zip
 !tools/paper-integration/reports/paper-1.21.1-targeter-context-*-logs.zip
 !tools/paper-integration/reports/paper-1.21.1-variable-subtract-*-logs.zip
 !tools/paper-integration/reports/paper-1.21.1-item-copy-*-logs.zip
+!tools/paper-integration/reports/paper-1.21.1-generated-loot-*-logs.zip
 tools/**/*.jar
 tools/paper-integration/node_modules/
 tools/paper-integration/.external-cache/

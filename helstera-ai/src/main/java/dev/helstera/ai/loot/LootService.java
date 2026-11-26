@@ -76,6 +76,8 @@ public final class LootService {
     }
 
     private final Map<String, DropTable> tables = new ConcurrentHashMap<>();
+    private final Map<String, GeneratedLootTable> rewardTables = new ConcurrentHashMap<>();
+    private final Set<String> declaredRewardTables = ConcurrentHashMap.newKeySet();
     private final Logger log;
     private final Random random = new Random();
     private final List<String> problems = new ArrayList<>();
@@ -250,6 +252,8 @@ public final class LootService {
 
     /** 装载 {@code loot.yml} 的 {@code tables} 节。 */
     public void load(ConfigurationSection tablesSec) {        tables.clear();
+        rewardTables.clear();
+        declaredRewardTables.clear();
         // problems 必须清，否则每次 reload 都把上一轮的告警叠加上去。
         //
         // 真服验证：把 loot.yml 换成完全合法的内容再 reload，/helstera check 仍报
@@ -265,6 +269,21 @@ public final class LootService {
             if (sec == null) continue;
             DropTable t = DropTable.parse(key.toLowerCase(Locale.ROOT), sec, problems);
             tables.put(t.name(), t);
+            GeneratedLootTable rewards = null;
+            try {
+                rewards = GeneratedLootTable.parse(t, sec);
+            } catch (IllegalArgumentException failure) {
+                problems.add("Generated reward table " + key + " rejected: " + failure.getMessage());
+            }
+            Set<String> names = new java.util.LinkedHashSet<>(List.of(key));
+            String sourceId = sec.getString("reward-source-id");
+            if (sourceId != null && !sourceId.isBlank()) names.add(sourceId);
+            for (String name : names) {
+                if (!declaredRewardTables.add(name)) {
+                    rewardTables.remove(name);
+                    problems.add("Ambiguous generated reward table identifier: " + name);
+                } else if (rewards != null) rewardTables.put(name, rewards);
+            }
         }
         for (DropTable parent : tables.values()) {
             for (DropTable.Entry entry : parent.entries()) {
@@ -319,6 +338,43 @@ public final class LootService {
     public DropTable table(String name) {
         return name == null ? null : tables.get(name.toLowerCase(Locale.ROOT));
     }
+
+    /** Native names are case-sensitive; imported tables retain their original source identifier. */
+    public GeneratedLootTable rewardTable(String name) {
+        if (name == null) return null;
+        GeneratedLootTable result = rewardTables.get(name);
+        if (result == null && declaredRewardTables.contains(name))
+            throw new IllegalArgumentException("Invalid or ambiguous generated reward table: " + name);
+        return result;
+    }
+
+    boolean rewardConditionsPass(DropTable table, org.bukkit.entity.Entity caster) {
+        if (caster == null) return false;
+        var location = caster.getLocation();
+        // Generated loot makes the caster both dropper and cause, including non-player casters.
+        return dropperConditionsPass(table.conditions(), location, caster)
+                && dropperConditionsPass(table.triggerConditions(), location, caster);
+    }
+
+    boolean rewardEntryPass(DropTable.Entry entry, org.bukkit.entity.Entity caster) {
+        int tier = caster instanceof Player player ? tierOf(player) : -1;
+        return (entry.minTierLevel() == null || tier < 0 || tier >= entry.minTierLevel())
+                && dropperConditionsPass(entry.conditions(), caster.getLocation(), caster);
+    }
+
+    double rewardChance(DropTable.Entry entry, DropTable table, org.bukkit.entity.Entity caster, double luck) {
+        double chance = entry.chance();
+        if (entry.chanceExpression() != null) {
+            if (dynamicChanceEvaluator == null) return 0;
+            chance = dynamicChanceEvaluator.evaluate(entry.chanceExpression(), caster.getLocation(),
+                    caster instanceof Player player ? player : null, luck);
+        }
+        if (!Double.isFinite(chance)) return 0;
+        return entry.luckScaling() ? clampChance(chance + Math.max(0, luck) * table.luckFactor(), 0, 1)
+                : Math.max(0, chance);
+    }
+
+    int rewardAmount(DropTable.Entry entry, Random random) { return pickAmount(entry, random); }
 
     public int size() {
         return tables.size();

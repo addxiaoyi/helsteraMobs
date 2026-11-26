@@ -612,9 +612,22 @@ public final class MythicMobsImporter implements MigrationImporter {
             }
             List<MythicDropSpec> resolvedDrops = rawEntries.stream().map(dropCatalog::parse).toList();
             YamlConfiguration projected = MythicDropTableProjection.project(targetName, table, resolvedDrops);
+            boolean retainedRewards = MythicDropTableProjection.validConditions(table)
+                    && rawEntries.stream().allMatch(String.class::isInstance);
+            boolean generatedRewards = retainedRewards;
+            for (Object raw : rawEntries) {
+                try {
+                    if (!(raw instanceof String text)) { generatedRewards = false; break; }
+                    dev.helstera.api.util.MythicRewardEntry.parse(text);
+                } catch (IllegalArgumentException failure) { generatedRewards = false; break; }
+            }
+            if (retainedRewards) {
+                projected.set("tables." + targetName + ".reward-source-id", sourceName);
+                projected.set("tables." + targetName + ".reward-drops", rawEntries);
+            }
             ConfigurationSection projectedEntries = projected.getConfigurationSection(
                     "tables." + targetName + ".entries");
-            if (projectedEntries == null || projectedEntries.getKeys(false).isEmpty()) {
+            if (!retainedRewards && (projectedEntries == null || projectedEntries.getKeys(false).isEmpty())) {
                 note(entries, file.toString(), sourceName, "loot.yml", table.getValues(true),
                         "unsupported", "No DropTable entries could be safely mapped; original table preserved.", "WARN");
                 continue;
@@ -623,6 +636,12 @@ public final class MythicMobsImporter implements MigrationImporter {
                     "status", "mapped", "note", "Safe standalone Mythic DropTable projected."));
             note(entries, file.toString(), sourceName, "loot.yml.tables." + targetName,
                     targetName, "mapped", "Standalone Mythic DropTable projected to loot.yml.");
+            if (generatedRewards) note(entries, file.toString(), sourceName + ".Drops",
+                    "loot.yml.tables." + targetName + ".reward-drops", rawEntries, "mapped",
+                    "Native reward lines retained for giveitemfromtarget; natural-death projection is reported separately.");
+            else if (retainedRewards) note(entries, file.toString(), sourceName + ".Drops",
+                    "loot.yml.tables." + targetName + ".reward-drops", rawEntries, "unsupported",
+                    "Unsupported reward lines remain declared so generated-loot execution rejects the table instead of falling back to an item.", "WARN");
             boolean hasBiasStat = table.getKeys(false).stream()
                     .anyMatch(key -> key.equalsIgnoreCase("BiasStat"));
             Object biasStat = firstIgnoreCase(table, "BiasStat");
@@ -679,6 +698,7 @@ public final class MythicMobsImporter implements MigrationImporter {
             if (item == null) continue;
             if (duplicateDefinition(seenItems, key, "item", file, entries)) continue;
             String path = "items." + normalizeId(key);
+            target.set(path + ".mythic-source-id", key);
             Object template = ciGet(item, "Template", "template", "Parent", "parent");
             if (template instanceof String value && !value.isBlank()) {
                 String normalizedTemplate = normalizeId(value);
@@ -2268,6 +2288,17 @@ public final class MythicMobsImporter implements MigrationImporter {
                 return;
             }
         }
+        if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(mechanic)) {
+            try { dev.helstera.api.util.MythicGeneratedLootSpec.parse(MythicSpec.rawKeyedArguments(raw)); }
+            catch (IllegalArgumentException invalid) {
+                scan.unsupported.add(raw);
+                note(entries, srcFile, mobKey + ".Skills[]",
+                        standaloneSkill ? "skills.unsupported" : "mob.unsupported.Skills", raw,
+                        "unsupported", "Invalid generated-loot arguments; original line preserved: "
+                                + invalid.getMessage(), "WARN");
+                return;
+            }
+        }
         if (Set.of("variablemath", "varmath").contains(mechanic) && MythicSpec.mechanicOpen(raw) >= 0) {
             try { dev.helstera.api.util.MythicVariableMath.parse(MythicSpec.rawKeyedArguments(raw)); }
             catch (IllegalArgumentException invalid) {
@@ -2880,6 +2911,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (dev.helstera.api.util.EntitySetterSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicScoreboardSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicItemCopySpec.supports(name)) return true;
+        if (dev.helstera.api.util.MythicGeneratedLootSpec.supports(name)) return true;
         if (dev.helstera.api.util.MythicJsonMessageSpec.supports(name)) return true;
         return switch (name) {
             case "damage-target", "heal-targets", "message-target", "ignite-targets",
@@ -2952,6 +2984,8 @@ public final class MythicMobsImporter implements MigrationImporter {
         String amount = firstArg(trimmed, "amount", "a", "damage", "value");
         if (amount == null) amount = positionalArg(trimmed, 0);
         String mapped = switch (head) {
+            case "giveitemfromtarget", "givefromtarget", "giveitemsfromtarget", "itemgivefromtarget",
+                    "give-item-from-target" -> preserveNamedMechanic("give-item-from-target", trimmed, brace);
             case "messagejson", "jsonmessage", "jmsg", "jm", "message-json" ->
                     preserveNamedMechanic("message-json", trimmed, brace);
             case "equipcopy", "equip-copy", "giveitemfromslot", "givefromslot", "give-item-from-slot" ->
@@ -3292,6 +3326,7 @@ public final class MythicMobsImporter implements MigrationImporter {
         if (Set.of("determinecondition", "detcond").contains(head)
                 || dev.helstera.api.util.MythicScoreboardSpec.supports(head)
                 || dev.helstera.api.util.MythicItemCopySpec.supports(head)
+                || dev.helstera.api.util.MythicGeneratedLootSpec.supports(head)
                 || dev.helstera.api.util.MythicJsonMessageSpec.supports(head)) {
             return mapped + executionSuffix(trimmed);
         }

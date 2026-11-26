@@ -540,6 +540,7 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
                 loot.setDefaultLootBiasResolver(mythicStatsService::resolve);
             }
             this.lootService = loot;
+            dev.helstera.ai.skill.SkillExtras.lootService(loot);
         } catch (Throwable t) {
             getLogger().warning("掉落表不可用: " + t);
         }
@@ -30708,14 +30709,18 @@ public final class HelsteraPlugin extends JavaPlugin implements Listener {
     }
 
     private ConfigurationSection configuredItemSection(String id) {
-        ConfigurationSection items = customItems;
+        return configuredItemSection(customItems, id);
+    }
+
+    static ConfigurationSection configuredItemSection(ConfigurationSection items, String id) {
         if (items == null || id == null || id.isBlank()) return null;
         String trimmed = id.trim();
         ConfigurationSection section = items.getConfigurationSection(trimmed);
         if (section == null) section = items.getConfigurationSection(trimmed.replace(':', '_').replace('.', '_'));
         if (section == null) for (String key : items.getKeys(false)) {
             ConfigurationSection candidate = items.getConfigurationSection(key);
-            if (candidate != null && trimmed.equalsIgnoreCase(candidate.getString("id", key))) return candidate;
+            if (candidate != null && (trimmed.equals(candidate.getString("mythic-source-id"))
+                    || trimmed.equalsIgnoreCase(key))) return candidate;
         }
         return section;
     }

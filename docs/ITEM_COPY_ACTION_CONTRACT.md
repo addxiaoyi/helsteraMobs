@@ -4,9 +4,9 @@ M04a implements `equipCopy` and `giveitemfromslot` / `givefromslot` in independe
 action components. The source-level contract below is based on MythicMobs 5.7.2
 `MythicMobs-5.7.2-FTWvGuE5.jar`, SHA-256
 `9672457cafc56ff841606bfbb710947329c08720ffc207746b60130d43bf902f`.
-The actions and importer are wired. At the time of writing, central build and
-real-player inventory/packet verification are still pending. Unit-test source
-is not live server evidence.
+The actions and importer are wired. The 2026-11-26 r9 run passes 165 scoped
+observations with two real clients; the remaining acceptance work is listed
+below. Later builds still require their own complete release evidence.
 
 ## M04a direction and arguments
 
@@ -108,7 +108,7 @@ with two connected clients. It verifies slot aliases, invalid configurations,
 equipment direction, cloned metadata, inventory overflow, fake-item packet
 privacy, collection timing, explicit disable cleanup and dimension changes.
 Client storage inventory metadata is checked against the server snapshots.
-The independent archive audit also passes with current source and JAR hashes.
+The independent archive audit passed with that run's source and JAR hashes.
 Multiple recipients, actual plugin reload and disconnect cleanup remain outside
 this focused run; it does not complete M04b or the release gate.
 
@@ -126,20 +126,22 @@ overflow items are public, so private-recipient mutations apply only to fake
 item IDs absent from server state. These controls are offline checks of real
 evidence, not additional live observations.
 
-## M04b remains unfinished
+## M04b generated rewards
 
 `giveitemfromtarget`, `givefromtarget`, `giveitemsfromtarget`, and
-`itemgivefromtarget` are a separate mechanic family and are not implemented by
-M04a. They generate configured drops for the caster player, while the selected
+`itemgivefromtarget` are implemented separately as `give-item-from-target`.
+They generate configured drops for the caster player, while the selected
 entity or location supplies only the animation origin. Their fake-looting
 default is `true`, and inventory overflow belongs to the caster, with
 owner/thrower set and mob pickup disabled.
 
-That family still requires named-table and inline-drop generation, amount and
-probability semantics, item/experience/command delivery, and independent live
-verification. Existing `LootService` is not changed by this slice. External
-custom drop providers must be listed separately instead of silently replacing
-their drops with vanilla items.
+Named tables, inline item/experience/command rewards, nested tables, caster
+conditions and weighted selection now have runtime/importer implementations
+and offline tests. `LootService` exposes a separate generated-reward view so
+natural-death projection can retain its own supported boundary. Unsupported
+raw drop providers reject the generated table instead of silently omitting
+their entries. See [GENERATED_LOOT_CONTRACT.md](GENERATED_LOOT_CONTRACT.md) for
+the detailed contract, live evidence and remaining work.
 
 The pinned constructor resolves `items/item/i` through
 `DropExecutor.queueSecondPass`: a fixture must exercise drop-table loading
@@ -148,4 +150,5 @@ mechanic. Named-table lookup precedes inline comma splitting. Generation uses
 the caster as both the dropper and trigger in `DropMetadataImpl`, independently
 of the selected animation origin. The native mechanic generates the bag even
 for a non-player caster, then delivers only when the caster is a player. These
-are implementation requirements for M04b, not claims that it is implemented.
+are implemented generation and initialization rules; the evidence scope is
+recorded separately from full native compatibility.
