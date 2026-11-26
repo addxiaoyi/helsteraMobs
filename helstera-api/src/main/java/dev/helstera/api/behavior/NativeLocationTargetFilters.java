@@ -35,7 +35,12 @@ final class NativeLocationTargetFilters {
 
     static List<Location> apply(List<Location> inherited, Map<String, String> raw,
                                 BehaviorContext context, UnaryOperator<String> resolver, boolean mutate) {
-        var unique = new LinkedHashSet<Location>();
+        return apply(inherited, raw, context, resolver, mutate, true);
+    }
+
+    static List<Location> apply(List<Location> inherited, Map<String, String> raw,
+                                BehaviorContext context, UnaryOperator<String> resolver, boolean mutate, boolean deduplicate) {
+        java.util.Collection<Location> unique = deduplicate ? new LinkedHashSet<>() : new ArrayList<>();
         for (Location point : inherited) {
             if (point == null || point.getWorld() == null) continue;
             unique.add(mutate ? mutate(point, raw) : point.clone());

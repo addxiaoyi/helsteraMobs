@@ -6,7 +6,7 @@ This is a finite, source-checked development backlog, not a claim that the 33
 broad `mapped-unverified` matrix rows constitute 33 missing implementations.
 An item is complete only after its native contract, migration, direct runtime,
 negative controls and appropriate Paper evidence agree.
-Remaining implementation: T09–T11 and S01/S03–S10, 12 groups. The verification
+Remaining implementation: T10–T11 and S01/S03–S10, 11 groups. The verification
 and external integration work below is tracked separately.
 
 ## Already implemented in the current development batch
@@ -116,6 +116,12 @@ These need validation and release evidence, not another implementation:
   observations and 2 explicit inline-guard differences. All 18 legacy types,
   event cancellation/result changes, actual block effects and seeded stronghold
   coordinates are checked. See [STRUCTURE_TARGETER_CONTRACT.md](STRUCTURE_TARGETER_CONTRACT.md).
+- Random locations near origin, inherited entities/locations and caster (T09)
+  now have runtime/importer support and all nine aliases. The 2026-11-26 r2
+  fixture passes 136 observations with independently calculated seeded samples,
+  collision/rejection behavior, multiplicity, filters and real block effects.
+  Two native inline-guard differences remain explicit. See
+  [RANDOM_LOCATION_TARGETER_CONTRACT.md](RANDOM_LOCATION_TARGETER_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
@@ -167,7 +173,7 @@ Names come from native `@MythicTargeter` declarations and were checked against
 | T06 | `@highestblock`, `@obstructingBlock` | Implemented; the combined T06/T07 2026-11-26 r3 fixture passes 180 scoped observations. Heightmap, rounded orientation, obstruction order, mutation/filter priority and actual block effects are covered. Full dispatcher and lifecycle acceptance remain; see [the contract](BLOCK_TARGETER_CONTRACT.md). |
 | T07 | `@blocksinchunk/@BIC`, `@blocksinradius/@BIR`, `@blocksnearorigin/@BNO`, `@blockVein/@vein/@bv` | Implemented; combined r3 passes 180 scoped observations. Inherited inputs, native geometry/air masks, negative chunks, inclusive maxHeight, connected veins and real effects are covered. Work/output caps and loaded-only queries are explicit extensions. Random distributions, larger vein topology, full dispatcher/lifecycle and release acceptance remain. |
 | T08 | `@nearestStructure` | Implemented; 2026-11-26 r2 passes 100 scoped observations, including 6 natural seeded-world queries. Native caster-centered lookup, static arguments, 18 legacy types, Paper query events and real block effects are covered. Searches may generate chunks; the explicit radius cap is 5000. Natural unexplored-reference lifecycle, broader scheduling and release acceptance remain; see [the contract](STRUCTURE_TARGETER_CONTRACT.md). |
-| T09 | `@randomLocationsNearOrigin/@RLO/@randomLocationsOrigin/@RLNO`, `@randomLocationsNearTargets/@RLNT`, `@randomLocationsNearCaster/@RLNC/@randomLocations` | Deterministic testable sampling, native radius/count/height rules and distinct caster/origin/recipient scope. |
+| T09 | `@randomLocationsNearOrigin/@RLO/@randomLocationsOrigin/@RLNO`, `@randomLocationsNearTargets/@RLNT`, `@randomLocationsNearCaster/@RLNC/@randomLocations` | Implemented; 2026-11-26 r2 passes 136 scoped observations. Native square sampling, distinct centers/height rules, collision retries, minimum/spacing order, duplicate multiplicity and real effects are covered. Work caps are explicit extensions. Noncollapsed random ranges, broader lifecycle/dispatcher and release acceptance remain; see [the contract](RANDOM_LOCATION_TARGETER_CONTRACT.md). |
 | T10 | `@randomRingPoint`, `@ringAroundOrigin/@ringOrigin/@RAO` | Location-valued ring sampling, which differs from filtering existing living entities with `ring`. |
 | T11 | `@randomThreatTargetLocation/@RTTL` | Select from a live threat table and project to a location, including empty/stale-table and terminal behavior. |
 
@@ -232,7 +238,7 @@ Names come from native `@MythicTargeter` declarations and were checked against
    strict release gate only against the final artifact.
 2. Finish M06/M07/M21 acceptance and M22's broader dispatcher/lifecycle checks;
    preserve the boundary between target scheduling and native movement Goals.
-3. Implement T09–T11 with bounded location queries and
+3. Implement T10–T11 with bounded location queries and
    separate entity-valued versus location-valued dispatch.
 4. Complete S01/S03–S10 as distinct runtime/state-machine and conversion slices;
    retain the existing base Aura charge implementation while extending its

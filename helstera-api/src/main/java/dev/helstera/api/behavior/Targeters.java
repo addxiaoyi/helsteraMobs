@@ -975,6 +975,8 @@ public final class Targeters {
             return BlockLocationTargeter.select(spec, context, argumentResolver);
         if (StructureLocationTargeter.recognizes(spec))
             return StructureLocationTargeter.select(spec, context, argumentResolver);
+        if (RandomLocationTargeter.recognizes(spec))
+            return RandomLocationTargeter.select(spec, context, argumentResolver);
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!canonicalLocationName(parsed.name()).equals("locationsoftargets")) {
             return resolveLocation(spec, context).stream().toList();
@@ -1004,6 +1006,7 @@ public final class Targeters {
         if (AimingInheritedTargeter.isLocation(spec)) return resolveLocations(spec, context).stream().findFirst();
         if (BlockLocationTargeter.recognizes(spec)) return resolveLocations(spec, context).stream().findFirst();
         if (StructureLocationTargeter.recognizes(spec)) return resolveLocations(spec, context).stream().findFirst();
+        if (RandomLocationTargeter.recognizes(spec)) return resolveLocations(spec, context).stream().findFirst();
         ParsedSpec parsed = ParsedSpec.parse(spec);
         String kind = canonicalLocationName(parsed.name());
         if (kind.equals("locationsoftargets")) return resolveLocations(spec, context).stream().findFirst();
@@ -1230,6 +1233,7 @@ public final class Targeters {
         if (name == null) return false;
         if (BlockLocationTargeter.recognizes(name)) return true;
         if (StructureLocationTargeter.recognizes(name)) return true;
+        if (RandomLocationTargeter.recognizes(name)) return true;
         String kind = name.trim();
         if (kind.startsWith("@")) kind = kind.substring(1);
         int arguments = kind.indexOf('{');
@@ -1266,6 +1270,7 @@ public final class Targeters {
         if (AimingInheritedTargeter.isLocation(spec)) return AimingInheritedTargeter.valid(spec);
         if (BlockLocationTargeter.recognizes(spec)) return BlockLocationTargeter.valid(spec);
         if (StructureLocationTargeter.recognizes(spec)) return StructureLocationTargeter.valid(spec);
+        if (RandomLocationTargeter.recognizes(spec)) return RandomLocationTargeter.valid(spec);
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!parsed.valid()) return false;
         String kind = canonicalLocationName(parsed.name());
@@ -2159,6 +2164,7 @@ public final class Targeters {
         names.addAll(AimingInheritedTargeter.NAMES);
         names.addAll(BlockLocationTargeter.NAMES);
         names.add("neareststructure");
+        names.addAll(RandomLocationTargeter.NAMES);
         names.addAll(List.of("playerbyname", "specificplayer", "interactionlastattacker", "lastattacker",
                 "interactionlastinteract", "lastinteract", "locationsoftargets", "locationoftarget", "lot"));
         return Collections.unmodifiableSet(names);

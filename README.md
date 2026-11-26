@@ -1,8 +1,17 @@
+Random location selection (2026-11-26): all origin, inherited-target and caster
+forms and aliases now have runtime/importer support. Paper r2 passes 136
+observations with independently calculated seeded coordinates, collision rules,
+duplicate counts and actual block effects. The build passes 3,068 Maven tests
+and 11 clean SpotBugs checks. There are 11 remaining internal implementation
+groups (T10–T11 and S01/S03–S10); broader acceptance and the strict release gate
+remain. See [the random location contract](docs/RANDOM_LOCATION_TARGETER_CONTRACT.md)
+and [remaining development](docs/INTERNAL_FEATURE_COMPLETION.md).
+
 Nearest structure selection (2026-11-26): `@nearestStructure` now uses the native
 caster-centered Paper query, static arguments, all 18 legacy types and query
 events. Paper r2 passes 100 observations, including 6 real seeded-world queries
 and their block effects. The build passes 3,047 Maven tests and 11 clean SpotBugs
-checks. There are 12 remaining internal implementation groups (T09–T11 and
+checks. At that milestone there were 12 remaining internal implementation groups (T09–T11 and
 S01/S03–S10); broader acceptance and the full strict release gate remain.
 See [the structure contract](docs/STRUCTURE_TARGETER_CONTRACT.md) and
 [remaining development](docs/INTERNAL_FEATURE_COMPLETION.md).

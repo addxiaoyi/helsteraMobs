@@ -15,6 +15,23 @@ class ContextTargeterExtensionsImportTest {
     @TempDir Path root;
 
     @Test
+    void importsRandomLocationAliasesWithoutChangingRawNumericArguments() throws Exception {
+        List<String> aliases=List.of("randomLocationsNearOrigin","RLO","randomLocationsOrigin","RLNO",
+                "randomLocationsNearTargets","RLNT","randomLocationsNearCaster","RLNC","randomLocations");
+        List<String> expected=List.of("randomlocationsnearorigin","randomlocationsnearorigin","randomlocationsnearorigin","randomlocationsnearorigin",
+                "randomlocationsneartargets","randomlocationsneartargets","randomlocationsnearcaster","randomlocationsnearcaster","randomlocationsnearcaster");
+        var input=new YamlConfiguration();
+        String args="{a=2to2;amount=3;r=\"2\";radius=4;minr=1;s=2}";
+        input.set("random.Skills",aliases.stream().map(alias->"setblock{type=DIAMOND_BLOCK} @"+alias+args).toList());
+        Path file=root.resolve("Skills/random.yml");Files.createDirectories(file.getParent());Files.writeString(file,input.saveToString());
+        var plans=new MythicMobsImporter().convert(file);
+        var plan=plans.stream().filter(item->"skills.yml".equals(item.get("target-file"))).findFirst().orElseThrow();
+        var result=YamlConfiguration.loadConfiguration(new StringReader(plan.get("content").toString()));
+        assertEquals(expected.stream().map(name->"set-block DIAMOND_BLOCK @"+name+args).toList(),result.getStringList("skills.random.on-decision"));
+        assertTrue(plans.stream().noneMatch(item->"WARN".equals(item.get("severity"))));
+    }
+
+    @Test
     void importsNearestStructureWithStaticArgumentsAndPreservedUnknownType() throws Exception {
         var input = new YamlConfiguration();
         input.set("structures.Skills", List.of("setblock{type=DIAMOND_BLOCK} @nearestStructure{type=bad;t=VILLAGE;radius=\"2\";r=4;unexplored=false;u=true}"));

@@ -8459,3 +8459,45 @@ external generator/listener combinations, reload/removal lifecycle, rendering
 and the final strict release gate remain separate acceptance. See
 [the contract](../../docs/STRUCTURE_TARGETER_CONTRACT.md).
 Remaining internal implementation: T09–T11 and S01/S03–S10, 12 groups.
+
+## 2026-11-26 random location selectors (T09)
+
+[Random location r2](reports/paper-1.21.1-random-location-targeter-20261126-r2.json)
+passes 136 observations: 68 cases through each direct/imported runtime route,
+including two explicit public-native inline-guard differences. Plugin SHA-256:
+`7e3d49ca2d836d6178762505e549128fc9062dd409473734a459a6dd2702f1c4`.
+The audit passes `--check-current` against 31 source hashes.
+
+Coverage includes all nine aliases; origin, current caster, inherited living
+and nonliving entities and location collections; location-to-entity reselection;
+square/vertical sampling; zero/negative radii and public/static parser fallback;
+minimum and global spacing, native integer squares, mutation order, duplicate
+counts, air/solid/mixed scenes, ten-retry fallback, final filters/limits and real
+native/runtime SetBlock effects. The fixture scopes RNG seeds to the immediate
+queries and restores thread state afterwards. An independent Python JDK 21 RNG
+and geometry oracle recalculates the expected coordinates from the recorded
+seed/thread ID, so equal but incorrect native/runtime outputs are rejected.
+The entire prepared block volume is scanned for unexpected effects. Three
+seeds are covered; ranged inputs use collapsed ranges in solid scenes and do
+not establish broader distribution statistics.
+
+Full `./mvnw -q verify` passes 3,068 tests with zero failures/errors/skips and
+11 clean SpotBugs reports. Twenty focused selector cases and importer coverage
+pass. Eleven auditor tests reject changed coordinates, RNG evidence, argument
+parsing, lost duplicates, invalid minimum/spacing/mutation outputs, missing or
+extra effects and incomplete evidence. Observer join/completion and successful
+server/client exits are recorded; this is not client-rendering evidence.
+
+[Redacted r2 archive](reports/paper-1.21.1-random-location-targeter-20261126-r2-logs.zip)
+SHA-256: `8e51588887086c75448e88ac692f240284a6889f83e777ad2e3440691775e014`.
+Rejected [r1](reports/paper-1.21.1-random-location-targeter-20261126-r1.json)
+and its archive are preserved: two native entity-priority observations actually
+used the last-set location collection. r2 corrects this preparation and exercises
+real location-to-entity reselection without changing runtime code.
+
+See [the contract](../../docs/RANDOM_LOCATION_TARGETER_CONTRACT.md) for native
+numeric/multiplicity rules and explicit attempt/block-read/distance/output caps.
+Noncollapsed ranges, wider distributions, unloaded-chunk generation costs,
+full native dispatcher/lifecycle/client acceptance and the final strict release
+gate remain separate. Earlier feature reports retain their own artifacts.
+Remaining internal implementation: T10–T11 and S01/S03–S10, 11 groups.
