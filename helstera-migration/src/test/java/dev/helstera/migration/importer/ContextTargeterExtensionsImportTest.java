@@ -15,6 +15,33 @@ class ContextTargeterExtensionsImportTest {
     @TempDir Path root;
 
     @Test
+    void keepsAimingAndInheritedTargetsDistinctAndPreservesRawOptions() throws Exception {
+        var input = new YamlConfiguration();
+        input.set("inherited.Skills", List.of(
+                "addtag{t=chosen} @targeted{sort=NEAREST;limit=2}",
+                "addtag{t=chosen} @targetedTarget",
+                "setchunkforceloaded{loaded=true} @targetedLocation{x=2;xoffset=3}",
+                "setchunkforceloaded{loaded=true} @targetedLocations",
+                "setchunkforceloaded{loaded=true} @targetedLoc{y=\"2\"}",
+                "setchunkforceloaded{loaded=true} @targetBlock{d=8;maxdistance=5;it=false}"));
+        Path file = root.resolve("Skills/inherited.yml");
+        Files.createDirectories(file.getParent());
+        Files.writeString(file, input.saveToString());
+        var plans = new MythicMobsImporter().convert(file);
+        var plan = plans.stream().filter(item -> item.containsKey("content")).findFirst().orElseThrow();
+        var result = YamlConfiguration.loadConfiguration(new StringReader(plan.get("content").toString()));
+        List<String> actions = result.getStringList("skills.inherited.on-decision");
+        assertEquals(6, actions.size());
+        assertTrue(actions.get(0).endsWith("@targetedtarget{sort=NEAREST;limit=2}"));
+        assertTrue(actions.get(1).endsWith("@targetedtarget"));
+        assertTrue(actions.get(2).endsWith("@targetedlocation{x=2;xoffset=3}"));
+        assertTrue(actions.get(3).endsWith("@targetedlocation"));
+        assertTrue(actions.get(4).endsWith("@targetedlocation{y=\"2\"}"));
+        assertTrue(actions.get(5).endsWith("@targetblock{d=8;maxdistance=5;it=false}"));
+        assertTrue(plans.stream().noneMatch(item -> "WARN".equals(item.get("severity"))));
+    }
+
+    @Test
     void preservesItemRadiusAliasPriorityRawValuesAndInlineConditions() throws Exception {
         var input = new YamlConfiguration();
         input.set("items.Skills", List.of(

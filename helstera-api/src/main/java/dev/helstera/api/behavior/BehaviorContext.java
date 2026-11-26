@@ -76,6 +76,7 @@ public final class BehaviorContext {
     private final boolean entityTargetsPresent;
     private final Location origin;
     private final Location targetLocation;
+    private final List<Location> locationTargets;
     private final SkillTreeContext skillTree;
     private final Cancellable cancellableEvent;
     private final EntityDamageEvent.DamageCause damageCause;
@@ -149,6 +150,19 @@ public final class BehaviorContext {
                             SkillTreeContext skillTree, Cancellable cancellableEvent,
                             EntityDamageEvent.DamageCause damageCause, Location targetLocation,
                             Entity entityRecipient) {
+        this(instance, target, targetEntity, healthRatio, distanceToTarget, decisionCount, state,
+                payload, trigger, targets, origin, skillTree, cancellableEvent, damageCause,
+                targetLocation, entityRecipient, targetLocation == null ? List.of() : List.of(targetLocation));
+    }
+
+    private BehaviorContext(ModelInstance instance, Player target, LivingEntity targetEntity,
+                            double healthRatio, double distanceToTarget, long decisionCount,
+                            String state, String payload, Entity trigger,
+                            List<? extends Entity> targets, Location origin,
+                            SkillTreeContext skillTree, Cancellable cancellableEvent,
+                            EntityDamageEvent.DamageCause damageCause, Location targetLocation,
+                            Entity entityRecipient, List<Location> locationTargets) {
+        this.locationTargets = copyLocations(locationTargets);
         this.entityRecipient = entityRecipient == null ? targetEntity : entityRecipient;
         this.conditionScope = ConditionScope.EXECUTION;
         this.skillPower = new SkillPower(1.0f);
@@ -204,6 +218,7 @@ public final class BehaviorContext {
         this.entityTargetsPresent = source.entityTargetsPresent;
         this.origin = source.origin == null ? null : source.origin.clone();
         this.targetLocation = source.targetLocation == null ? null : source.targetLocation.clone();
+        this.locationTargets = source.locationTargets;
         this.skillTree = source.skillTree;
         this.cancellableEvent = source.cancellableEvent;
         this.damageCause = source.damageCause;
@@ -228,6 +243,7 @@ public final class BehaviorContext {
         this.entityTargetsPresent = source.entityTargetsPresent;
         this.origin = source.origin == null ? null : source.origin.clone();
         this.targetLocation = source.targetLocation == null ? null : source.targetLocation.clone();
+        this.locationTargets = source.locationTargets;
         this.skillTree = source.skillTree;
         this.cancellableEvent = clearCancellableEvent ? null : source.cancellableEvent;
         this.damageCause = source.damageCause;
@@ -422,11 +438,20 @@ public final class BehaviorContext {
 
     public boolean entityTargetsPresent() { return entityTargetsPresent; }
 
+    /** Changes the entity inspected by a caster/trigger condition, preserving inherited selections. */
+    public BehaviorContext withConditionSubject(LivingEntity subject, double ratio) {
+        return new BehaviorContext(instance, subject instanceof Player player ? player : null, subject,
+                ratio, distanceToTarget, decisionCount, state, payload, trigger,
+                entityTargetsPresent ? entityTargets : null, origin, skillTree, cancellableEvent,
+                damageCause, targetLocation, null, locationTargets)
+                .withExecutionAudienceFrom(this).withConditionScope(conditionScope);
+    }
+
     /** Replaces tree-local state without selecting targets or losing native collection presence. */
     public BehaviorContext withSkillTree(SkillTreeContext tree) {
         return new BehaviorContext(instance, target, targetEntity, healthRatio, distanceToTarget,
                 decisionCount, state, payload, trigger, entityTargetsPresent ? entityTargets : null,
-                origin, tree, cancellableEvent, damageCause, targetLocation, entityRecipient)
+                origin, tree, cancellableEvent, damageCause, targetLocation, entityRecipient, locationTargets)
                 .withExecutionAudienceFrom(this).withConditionScope(conditionScope);
     }
 
@@ -525,10 +550,40 @@ public final class BehaviorContext {
         if (location == null || location.getWorld() == null) {
             throw new IllegalArgumentException("location target must have a world");
         }
+        return withLocationTargets(List.of(location));
+    }
+
+    /** All inherited positional targets, separate from named location variables and entity targets. */
+    public List<Location> locationTargets() {
+        return copyLocations(locationTargets);
+    }
+
+    /** Replaces the selected location collection, including an explicit empty selection. */
+    public BehaviorContext withLocationTargets(List<Location> locations) {
+        List<Location> selected = copyLocations(locations);
         return new BehaviorContext(instance, null, null, 0, -1, decisionCount, state, payload,
-                trigger, entityTargetsPresent ? List.of() : null, origin, skillTree,
-                cancellableEvent, damageCause, location)
-                .withExecutionAudienceFrom(this);
+                trigger, entityTargetsPresent ? List.of() : null, origin, skillTree, cancellableEvent,
+                damageCause, selected.isEmpty() ? null : selected.getFirst(), null, selected)
+                .withExecutionAudienceFrom(this).withConditionScope(conditionScope);
+    }
+
+    /** Invokes one positional mechanic while retaining the full inherited location collection. */
+    public BehaviorContext withLocationRecipient(Location location) {
+        if (location == null || location.getWorld() == null) {
+            throw new IllegalArgumentException("location recipient must have a world");
+        }
+        return new BehaviorContext(instance, null, null, 0, -1, decisionCount, state, payload,
+                trigger, entityTargetsPresent ? List.of() : null, origin, skillTree, cancellableEvent,
+                damageCause, location, null, locationTargets)
+                .withExecutionAudienceFrom(this).withConditionScope(conditionScope);
+    }
+
+    private static List<Location> copyLocations(List<Location> locations) {
+        return locations.stream().map(location -> {
+            if (location == null || location.getWorld() == null)
+                throw new IllegalArgumentException("location target must have a world");
+            return location.clone();
+        }).toList();
     }
 
     /** Returns a continuation scoped to one entity in the current target set. */

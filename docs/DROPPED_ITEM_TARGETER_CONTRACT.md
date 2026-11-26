@@ -109,7 +109,7 @@ origin/caster separation, chunk selection, negative/static/malformed radii,
 boolean and alias priority, managed owner/faction filters, native integer limits,
 threat-provider reads, guard-before-limit behavior, unsupported inversion,
 imported raw argument preservation and nested delayed Item mutations. The full
-`./mvnw -B -o clean verify` run passed 2,992 tests with no failures, errors or
+`./mvnw -B -o clean verify` run passed 3,009 tests with no failures, errors or
 skips and 11 clean SpotBugs checks.
 
 The independent Paper auditor fixes selection and mutation expectations,
@@ -120,12 +120,14 @@ RANDOM and health ties use eligible-set/count checks. Client join evidence is
 not a rendering or pickup test. Inline-guard differences are explicit rather
 than counted as native parity.
 
-[2026-11-26 r4](../tools/paper-integration/reports/paper-1.21.1-item-targeter-20261126-r4.json)
+[2026-11-26 r5](../tools/paper-integration/reports/paper-1.21.1-item-targeter-20261126-r5.json)
 passes 132 observations (66 cases through direct and imported runtime paths,
 each compared with native selection and mutation). Fourteen observations record
 intentional guard differences. The audit also passes `--check-current` for
 plugin SHA-256
-`4b99347099f4df5c470f5b19d435d97a9b3da2058b97f3e72a630c5de01a076a`.
+`7f50522e9f6709631058b19aa9fa89c34e84f9ad3c6009e193b3e8a9ad54f874`.
+This rerun verifies shared filters after T05 aiming/inherited selectors were
+added; its manifest includes the extracted raw parser and entity filters.
 Nine audit-control tests reject altered outputs, missing evidence, fake native
 guard parity, invalid random membership and omitted threat setup.
 

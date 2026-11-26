@@ -113,6 +113,21 @@ public final class AiManager implements Listener {
         var table = controller == null ? null : controller.threatTable();
         return table == null ? null : table.snapshot();
     };
+    private final dev.helstera.api.behavior.AimingInheritedTargeter.CasterTargetProvider aimingTargetProvider = source -> {
+        var controller = source == null ? null : controllers.get(source.instanceId());
+        if (controller == null) return null;
+        var table = controller.threatTable();
+        org.bukkit.entity.Entity target;
+        if (table != null) {
+            var selected = table.currentTarget();
+            Object resolved = selected == null ? null : table.resolve(selected);
+            target = resolved instanceof org.bukkit.entity.Entity entity ? entity : null;
+        } else {
+            var caster = source.baseEntity().orElse(null);
+            target = caster instanceof org.bukkit.entity.Creature creature ? creature.getTarget() : controller.lastAggroCause();
+        }
+        return new dev.helstera.api.behavior.AimingInheritedTargeter.CasterTarget(target);
+    };
     private BukkitTask task;
     private java.util.function.Consumer<AnimationMarkerEvent> animationMarkerListener;
     private java.util.function.Consumer<ModelRemoveEvent> modelRemoveListener;
@@ -126,6 +141,7 @@ public final class AiManager implements Listener {
         // 动作侧当成「没有目标」，技能静默不执行
         dev.helstera.api.behavior.Targeters.threatProvider(threatTargeterProvider);
         dev.helstera.api.behavior.Targeters.entityThreatProvider(entityThreatTargeterProvider);
+        dev.helstera.api.behavior.AimingInheritedTargeter.casterTargetProvider(aimingTargetProvider);
     }
 
     /** 注入自定义条件/动作注册表，使 profile 的 require / on-decision 生效。 */
@@ -490,6 +506,7 @@ public final class AiManager implements Listener {
         stop();
         dev.helstera.api.behavior.Targeters.threatProvider(threatTargeterProvider);
         dev.helstera.api.behavior.Targeters.entityThreatProvider(entityThreatTargeterProvider);
+        dev.helstera.api.behavior.AimingInheritedTargeter.casterTargetProvider(aimingTargetProvider);
         installConditionalTargeterProvider();
         task = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             if (skills != null) skills.tickCasts();
@@ -627,6 +644,7 @@ public final class AiManager implements Listener {
         controlled.clear();
         dev.helstera.api.behavior.Targeters.clearThreatProvider(threatTargeterProvider);
         dev.helstera.api.behavior.Targeters.clearEntityThreatProvider(entityThreatTargeterProvider);
+        dev.helstera.api.behavior.AimingInheritedTargeter.clearCasterTargetProvider(aimingTargetProvider);
         dev.helstera.api.behavior.Targeters.clearConditionProvider(conditionalTargeterProvider);
     }
 

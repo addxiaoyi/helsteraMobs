@@ -38,7 +38,7 @@ final class InheritedTargetLocations {
                 for (var target : context.entityTargets()) inherited.add(target.getLocation());
                 if (context.targets().isEmpty() && context.targetLocation().isEmpty())
                     context.entityRecipient().ifPresent(entity -> inherited.add(entity.getLocation()));
-            } else context.targetLocation().ifPresent(inherited::add);
+            } else inherited.addAll(context.locationTargets());
             var unique = new LinkedHashSet<Location>();
             for (Location point : inherited) {
                 if (point == null || point.getWorld() == null) continue;
@@ -125,7 +125,7 @@ final class InheritedTargetLocations {
         };
     }
 
-    private static Location mutate(Location source, Map<String, String> options, Map<String, Double> values) {
+    static Location mutate(Location source, Map<String, String> options, Map<String, Double> values) {
         Location location = source.clone().add(values.get("x"), values.get("y"), values.get("z"));
         double forward = values.get("forward"), side = values.get("side");
         if (forward != 0 || side != 0) {

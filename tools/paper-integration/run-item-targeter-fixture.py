@@ -86,6 +86,7 @@ def main():
         'tools/paper-integration/random-spawn-fixture/src/main/java/dev/helstera/test/randomspawn/VariablePlaceholderAudit.java',
         'helstera-api/src/main/java/dev/helstera/api/behavior/Targeters.java',
         'helstera-api/src/main/java/dev/helstera/api/behavior/InheritedTargetLocations.java',
+        'helstera-api/src/main/java/dev/helstera/api/behavior/NativeEntityTargetFilters.java',
         'helstera-api/src/main/java/dev/helstera/api/behavior/BehaviorContext.java',
         'helstera-api/src/main/java/dev/helstera/api/behavior/SkillTreeContext.java',
         'helstera-ai/src/main/java/dev/helstera/ai/skill/SkillService.java',

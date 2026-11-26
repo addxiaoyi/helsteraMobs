@@ -42,7 +42,7 @@ public final class Targeters {
             "targetlocation", "targetloc", "tl", "targetpredictedlocation", "targetpredictedloc",
             "tpl", "predictedtargetlocation", "triggerlocation", "spawnlocation",
             "casterspawnlocation", "casterspawn", "trackedlocation", "ownerlocation", "parentlocation",
-            "forward", "projectileforward", "locationsoftargets");
+            "forward", "projectileforward", "locationsoftargets", "targetblock", "targetedlocation");
     private static final Map<String, String> TARGET_LOCATION_ARGUMENTS = Map.of(
             "maxdistance", "maxdistance", "max", "maxdistance", "distance", "maxdistance",
             "d", "maxdistance", "ignoretransparent", "ignoretransparent", "it", "ignoretransparent");
@@ -303,6 +303,9 @@ public final class Targeters {
         if (DroppedItemTargeter.recognizes(spec)) {
             return DroppedItemTargeter.select(spec, context, conditions, entityThreatProvider);
         }
+        if (AimingInheritedTargeter.isEntity(spec)) {
+            return AimingInheritedTargeter.entities(spec, context, conditions, entityThreatProvider);
+        }
         String name = spec == null ? "" : spec.trim().replaceFirst("^@", "");
         List<LivingEntity> living = candidates == null ? List.of() : candidates.stream()
                 .filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast).toList();
@@ -331,6 +334,10 @@ public final class Targeters {
                                             List<String> fallbackArgs,
                                             java.util.function.UnaryOperator<String> argumentResolver) {
         if (context == null) return List.of();
+        if (AimingInheritedTargeter.isEntity(spec)) {
+            return AimingInheritedTargeter.entities(spec, context, conditionProvider, entityThreatProvider).stream()
+                    .filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast).toList();
+        }
         List<String> chain = splitTargeterChain(spec);
         if (chain.size() > 1) {
             List<LivingEntity> current = selectContextScoped(chain.get(0), context, candidates, fallbackArgs, true, argumentResolver);
@@ -962,6 +969,8 @@ public final class Targeters {
     public static List<Location> resolveLocations(String spec, BehaviorContext context,
                                                   java.util.function.UnaryOperator<String> argumentResolver) {
         if (spec == null || context == null) return List.of();
+        if (AimingInheritedTargeter.isLocation(spec))
+            return AimingInheritedTargeter.locations(spec, context, argumentResolver);
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!canonicalLocationName(parsed.name()).equals("locationsoftargets")) {
             return resolveLocation(spec, context).stream().toList();
@@ -988,6 +997,7 @@ public final class Targeters {
     public static java.util.Optional<Location> resolveLocation(String spec, BehaviorContext context) {
         if (spec == null || context == null) return java.util.Optional.empty();
         if (!validLocationTargeterSpec(spec)) return java.util.Optional.empty();
+        if (AimingInheritedTargeter.isLocation(spec)) return resolveLocations(spec, context).stream().findFirst();
         ParsedSpec parsed = ParsedSpec.parse(spec);
         String kind = canonicalLocationName(parsed.name());
         if (kind.equals("locationsoftargets")) return resolveLocations(spec, context).stream().findFirst();
@@ -1227,6 +1237,7 @@ public final class Targeters {
             case "casterlocation", "bosslocation", "moblocation" -> "selflocation";
             case "eyedirection", "castereyelocation", "bosseyelocation", "mobeyelocation" -> "selfeyelocation";
             case "targetloc", "tl" -> "targetlocation";
+            case "targetedlocations", "targetedloc" -> "targetedlocation";
             case "targetpredictedloc", "tpl", "predictedtargetlocation" -> "targetpredictedlocation";
             case "casterspawn" -> "casterspawnlocation";
             case "summonerlocation" -> "parentlocation";
@@ -1244,6 +1255,7 @@ public final class Targeters {
     /** Validates the supported location-targeter syntax without requiring runtime context. */
     public static boolean validLocationTargeterSpec(String spec) {
         if (spec == null) return false;
+        if (AimingInheritedTargeter.isLocation(spec)) return AimingInheritedTargeter.valid(spec);
         ParsedSpec parsed = ParsedSpec.parse(spec);
         if (!parsed.valid()) return false;
         String kind = canonicalLocationName(parsed.name());
@@ -2134,6 +2146,7 @@ public final class Targeters {
         var names = new java.util.LinkedHashSet<String>(BUILTIN.keySet());
         names.addAll(CONTEXT_TARGETERS);
         names.addAll(DroppedItemTargeter.NAMES);
+        names.addAll(AimingInheritedTargeter.NAMES);
         names.addAll(List.of("playerbyname", "specificplayer", "interactionlastattacker", "lastattacker",
                 "interactionlastinteract", "lastinteract", "locationsoftargets", "locationoftarget", "lot"));
         return Collections.unmodifiableSet(names);

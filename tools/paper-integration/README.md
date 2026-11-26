@@ -1,8 +1,18 @@
+Aiming and inherited target selectors (2026-11-26): T05 now implements
+`@targetBlock`, `@targetedLocation` and `@targetedTarget`, including aliases.
+The r2 fixture passes 134 native/direct/imported observations of selection and
+real tag/block mutations, with 6 explicit public-build guard differences.
+Plural location inheritance, delayed nested skills and per-location conditions
+are covered offline. See [the contract](../../docs/AIMING_INHERITED_TARGETER_CONTRACT.md)
+and [evidence](STARTUP_EVIDENCE.md#2026-11-26-aiming-and-inherited-target-selectors-t05).
+The build passes 3,009 Maven tests and 11 clean SpotBugs checks; the strict
+release gate and broader dispatcher/lifecycle acceptance remain separate.
+
 Dropped Item target selectors (2026-11-26): `@itemsInRadius/@IIR` and
 `@itemsNearOrigin/@INO` now query loaded chunks and dispatch generic Item
-recipients through direct/imported skills. The r4 fixture passes 132 native
+recipients through direct/imported skills. The r5 fixture passes 132 native
 comparisons of selection and real tag mutations, including 14 explicit
-public-build condition differences. The build passes 2,992 Maven tests and
+public-build condition differences. The build passes 3,009 Maven tests and
 11 clean SpotBugs checks. See [the contract](../../docs/DROPPED_ITEM_TARGETER_CONTRACT.md)
 and [evidence](STARTUP_EVIDENCE.md#2026-11-26-dropped-item-target-selectors-t02).
 This focused evidence does not complete the strict release gate.

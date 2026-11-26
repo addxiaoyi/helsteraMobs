@@ -20,6 +20,47 @@ import static org.mockito.Mockito.*;
 
 class AiManagerConditionalLifecycleTest {
     @Test
+    void aimingProviderUsesSavedThreatWithoutRerankingAndKeepsNewerManagerOwnership() throws Exception {
+        var bus = mock(HelsteraEventBus.class);
+        var older = new AiManager(mock(Plugin.class), null, bus);
+        var newer = new AiManager(mock(Plugin.class), null, bus);
+        var world = mock(org.bukkit.World.class);
+        var caster = mock(org.bukkit.entity.Player.class);
+        var target = mock(org.bukkit.entity.Item.class);
+        var point = new org.bukkit.Location(world, 4, 64, 0);
+        when(target.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
+        when(target.getLocation()).thenReturn(point);
+        var source = mock(dev.helstera.api.instance.ModelInstance.class);
+        when(source.isValid()).thenReturn(true);
+        when(source.instanceId()).thenReturn(51);
+        when(source.baseEntity()).thenReturn(java.util.Optional.of(caster));
+        var controller = mock(AiController.class);
+        var table = new ThreatTable(0, 0, () -> 0L, ignored -> target);
+        table.addThreat(target.getUniqueId(), 5);
+        table.selectTarget(target.getUniqueId());
+        table.addThreat(java.util.UUID.randomUUID(), 100);
+        when(controller.threatTable()).thenReturn(table);
+        var field = AiManager.class.getDeclaredField("controllers"); field.setAccessible(true);
+        @SuppressWarnings("unchecked") var controllers = (java.util.Map<Integer, AiController>) field.get(newer);
+        controllers.put(51, controller);
+        var ctx = BehaviorContext.continueExecution(source, (LivingEntity) null, 1, -1, 0, "test", null,
+                null, List.of(), point, null);
+        try {
+            older.stop();
+            assertEquals(List.of(point), Targeters.resolveLocations("@targetBlock", ctx));
+            assertEquals(target.getUniqueId(), table.currentTarget());
+            table.clear();
+            assertEquals(List.of(), Targeters.resolveLocations("@targetBlock", ctx));
+            when(controller.threatTable()).thenReturn(null);
+            when(controller.lastAggroCause()).thenReturn(target);
+            assertEquals(List.of(point), Targeters.resolveLocations("@targetBlock", ctx));
+            verify(caster, never()).getTargetBlock(anySet(), anyInt());
+        } finally {
+            controllers.clear(); older.stop(); newer.stop();
+        }
+    }
+
+    @Test
     void threatProviderSurvivesRestartAndOlderManagerStop() {
         Plugin plugin = mock(Plugin.class);
         var bus = mock(HelsteraEventBus.class);

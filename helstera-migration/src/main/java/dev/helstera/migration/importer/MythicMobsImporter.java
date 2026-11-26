@@ -4351,6 +4351,9 @@ public final class MythicMobsImporter implements MigrationImporter {
             case "pir", "playersinradius" -> "playersinradius";
             case "iir", "itemsinradius" -> "itemsinradius";
             case "ino", "itemsnearorigin" -> "itemsnearorigin";
+            case "targetedtarget", "targeted" -> "targetedtarget";
+            case "targetedlocation", "targetedlocations", "targetedloc" -> "targetedlocation";
+            case "targetblock" -> "targetblock";
             case "eir", "entitiesinradius", "livingentitiesinradius" -> "livingentitiesinradius";
             case "mir", "mobsinradius" -> "mobsinradius";
             case "monstersinradius" -> "monstersinradius";

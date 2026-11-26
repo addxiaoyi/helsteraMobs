@@ -1729,13 +1729,17 @@ public final class SkillService {
             return null;
         }
         String targeterSpec = positionSpec.selector();
-        if (dev.helstera.api.behavior.DroppedItemTargeter.recognizes(targeterSpec)) {
+        if (dev.helstera.api.behavior.DroppedItemTargeter.recognizes(targeterSpec)
+                || dev.helstera.api.behavior.AimingInheritedTargeter.recognizes(targeterSpec)) {
             try {
-                for (var guard : dev.helstera.api.behavior.DroppedItemTargeter.conditions(targeterSpec)) {
+                var guards = dev.helstera.api.behavior.DroppedItemTargeter.recognizes(targeterSpec)
+                        ? dev.helstera.api.behavior.DroppedItemTargeter.conditions(targeterSpec)
+                        : dev.helstera.api.behavior.AimingInheritedTargeter.conditions(targeterSpec);
+                for (var guard : guards) {
                     if (bindCondition((guard.expected() ? "" : "!") + "(" + guard.expression() + ")") == null) return null;
                 }
             } catch (IllegalArgumentException invalid) {
-                warn("Invalid item targeter: " + invalid.getMessage());
+                warn("Invalid entity targeter: " + invalid.getMessage());
                 return null;
             }
         }
@@ -1912,7 +1916,7 @@ public final class SkillService {
                                         || dev.helstera.api.util.MythicGeneratedLootSpec.supports(registeredActionName)
                                         || targetedScoreboardAction(registeredActionName))
                                         || !invokeEntitySetterTargeted(action, targeterSpec, mechanic, targetConditionKeys))
-                                    invokeTargeted(action, targeterSpec, mechanic, targetConditionKeys);
+                                    invokeTargeted(action, targeterSpec, mechanic, targetConditionKeys, nestedAction != null);
                                 return null;
                             });
                         } else if (!targetConditionKeys.isEmpty()) {
@@ -1927,7 +1931,7 @@ public final class SkillService {
                                         || dev.helstera.api.util.MythicGeneratedLootSpec.supports(registeredActionName)
                                         || targetedScoreboardAction(registeredActionName))
                                         || !invokeEntitySetterTargeted(action, "targets", mechanic, targetConditionKeys))
-                                    invokeTargeted(action, "targets", mechanic, targetConditionKeys);
+                                    invokeTargeted(action, "targets", mechanic, targetConditionKeys, nestedAction != null);
                                 return null;
                             });
                         } else if (dev.helstera.api.util.DisplayTransformationSpec.supports(registeredActionName)) {
@@ -1997,7 +2001,8 @@ public final class SkillService {
             case "targets" -> selected = context.entityTargets().isEmpty()
                     ? context.entityRecipient().map(List::of).orElseGet(List::of) : context.entityTargets();
             default -> {
-                if (!dev.helstera.api.behavior.DroppedItemTargeter.recognizes(selector)) return false;
+                if (!dev.helstera.api.behavior.DroppedItemTargeter.recognizes(selector)
+                        && !dev.helstera.api.behavior.AimingInheritedTargeter.isEntity(selector)) return false;
                 selected = dev.helstera.api.behavior.Targeters.selectEntities(selector, context, List.of(),
                         List.of(), value -> Placeholders.resolve(value, context), this::testItemTargeterCondition);
             }
@@ -2019,7 +2024,7 @@ public final class SkillService {
     private void invokeTargeted(Consumer<dev.helstera.api.behavior.BehaviorContext> action,
                                 String targeterSpec,
                                 dev.helstera.api.behavior.BehaviorContext ctx,
-                                List<String> targetConditionKeys) {
+                                List<String> targetConditionKeys, boolean collectionAction) {
         if (ctx == null) return;
         String targeterName = targeterSpec.trim();
         if (targeterName.startsWith("@")) targeterName = targeterName.substring(1);
@@ -2027,19 +2032,16 @@ public final class SkillService {
         if (argumentStart >= 0) targeterName = targeterName.substring(0, argumentStart);
         if (dev.helstera.api.behavior.Targeters.isLocationName(targeterName.trim())
                 || dev.helstera.api.behavior.Targeters.isVariableLocationName(targeterName.trim())) {
-            for (var location : dev.helstera.api.behavior.Targeters.resolveLocations(
-                    targeterSpec, ctx, value -> Placeholders.resolve(value, ctx))) {
-                if (location.getWorld() != null)
-                    invokeLocationTargeted(action, ctx, location, targetConditionKeys);
-            }
+            invokeLocationsTargeted(action, ctx, dev.helstera.api.behavior.Targeters.resolveLocations(
+                    targeterSpec, ctx, value -> Placeholders.resolve(value, ctx)), targetConditionKeys, collectionAction);
             return;
         }
         if (PinTargeter.recognizes(targeterSpec)) {
-            List<org.bukkit.Location> locations = PinTargeter.select(
-                    targeterSpec, SkillExtras.pinRegistry());
-            if (locations == null) return;
-            for (org.bukkit.Location location : locations) {
-                invokeLocationTargeted(action, ctx, location, targetConditionKeys);
+            List<org.bukkit.Location> locations = PinTargeter.select(targeterSpec, SkillExtras.pinRegistry());
+            // Pin skills retain their established per-point invocation contract.
+            if (locations != null) for (var location : locations) {
+                if (location != null && location.getWorld() != null)
+                    invokeLocationsTargeted(action, ctx, List.of(location), targetConditionKeys, collectionAction);
             }
             return;
         }
@@ -2047,7 +2049,8 @@ public final class SkillService {
                 .map(dev.helstera.api.behavior.SkillTreeContext::targets)
                 .orElse(ctx.targets());
         if (candidates.isEmpty() && !targeterName.trim().equalsIgnoreCase("targets")
-                && !dev.helstera.api.behavior.DroppedItemTargeter.recognizes(targeterSpec) && ctx.instanceValid()) {
+                && !dev.helstera.api.behavior.DroppedItemTargeter.recognizes(targeterSpec)
+                && !dev.helstera.api.behavior.AimingInheritedTargeter.isEntity(targeterSpec) && ctx.instanceValid()) {
             org.bukkit.Location origin = ctx.origin().orElse(ctx.instance().location());
             if (origin != null && origin.getWorld() != null) {
                 candidates = new ArrayList<>();
@@ -2083,12 +2086,22 @@ public final class SkillService {
         action.accept(ctx.withEntityTargets(selected));
     }
 
-    private void invokeLocationTargeted(Consumer<dev.helstera.api.behavior.BehaviorContext> action,
-                                       dev.helstera.api.behavior.BehaviorContext ctx,
-                                       org.bukkit.Location location, List<String> conditions) {
-        var scoped = ctx.withLocationTarget(location);
-        if (conditionsPass(conditions, scoped.withConditionScope(
-                dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) action.accept(scoped);
+    private void invokeLocationsTargeted(Consumer<dev.helstera.api.behavior.BehaviorContext> action,
+                                        dev.helstera.api.behavior.BehaviorContext ctx,
+                                        List<org.bukkit.Location> locations, List<String> conditions,
+                                        boolean collectionAction) {
+        locations = locations.stream().filter(location -> location != null && location.getWorld() != null).toList();
+        List<org.bukkit.Location> passing = new ArrayList<>();
+        var selected = ctx.withLocationTargets(locations);
+        for (var location : locations) {
+            var scoped = selected.withLocationRecipient(location);
+            if (conditionsPass(conditions, scoped.withConditionScope(
+                    dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) passing.add(location);
+        }
+        if (passing.isEmpty()) return;
+        selected = ctx.withLocationTargets(passing);
+        if (collectionAction) action.accept(selected);
+        else for (var location : passing) action.accept(selected.withLocationRecipient(location));
     }
 
     private static boolean isExecutionAttribute(String key) {
@@ -2682,9 +2695,14 @@ public final class SkillService {
         List<org.bukkit.entity.Entity> targets = ctx.entityTargets();
         if (targets.isEmpty()) {
             var target = ctx.entityRecipient().orElse(null);
-            if (target == null) return ctx.targetLocation().isPresent()
-                    && conditionsPass(conditions, ctx.withConditionScope(
-                    dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET)) ? ctx : null;
+            if (target == null) {
+                List<org.bukkit.Location> passing = new ArrayList<>();
+                for (var location : ctx.locationTargets()) {
+                    if (conditionsPass(conditions, ctx.withLocationRecipient(location).withConditionScope(
+                            dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) passing.add(location);
+                }
+                return passing.isEmpty() ? null : ctx.withLocationTargets(passing);
+            }
             if (!validConditionTarget(target) || !conditionsPass(conditions, targetConditionContext(ctx, target, List.of(target))
                     .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.TARGET))) return null;
             if (updateTree) ctx.skillTree().ifPresent(tree -> tree.entityTargets(List.of(target)));
@@ -2718,12 +2736,7 @@ public final class SkillService {
         // A non-living trigger has no active living target or health. Never inherit the selected target.
         double ratio = living == null ? Double.NaN
                 : living.getMaxHealth() > 0 ? living.getHealth() / living.getMaxHealth() : 0;
-        List<org.bukkit.entity.Entity> inherited = ctx.entityTargets();
-        return dev.helstera.api.behavior.BehaviorContext.continueExecution(
-                ctx.instance(), living, ratio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
-                ctx.payload().orElse(null), trigger, inherited, ctx.origin().orElse(null),
-                ctx.skillTree().orElse(null), ctx.cancellableEvent().orElse(null),
-                ctx.damageCause().orElse(null)).withExecutionAudienceFrom(ctx)
+        return ctx.withConditionSubject(living, ratio)
                 .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.TRIGGER);
     }
 
@@ -2741,12 +2754,7 @@ public final class SkillService {
         if (!(caster instanceof org.bukkit.entity.LivingEntity living)) return ctx;
         double maxHealth = living.getMaxHealth();
         double healthRatio = maxHealth > 0 ? living.getHealth() / maxHealth : 0;
-        return dev.helstera.api.behavior.BehaviorContext.continueExecution(
-                ctx.instance(), living, healthRatio, ctx.distanceToTarget(), ctx.decisionCount(), ctx.state(),
-                ctx.payload().orElse(null), ctx.trigger().orElse(null), ctx.entityTargets(),
-                ctx.origin().orElse(null), ctx.skillTree().orElse(null),
-                ctx.cancellableEvent().orElse(null), ctx.damageCause().orElse(null))
-                .withExecutionAudienceFrom(ctx)
+        return ctx.withConditionSubject(living, healthRatio)
                 .withConditionScope(dev.helstera.api.behavior.BehaviorContext.ConditionScope.CASTER);
     }
 

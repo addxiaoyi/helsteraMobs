@@ -6,6 +6,8 @@ This is a finite, source-checked development backlog, not a claim that the 33
 broad `mapped-unverified` matrix rows constitute 33 missing implementations.
 An item is complete only after its native contract, migration, direct runtime,
 negative controls and appropriate Paper evidence agree.
+Remaining implementation: T06–T11 and S01/S03–S10, 15 groups. The verification
+and external integration work below is tracked separately.
 
 ## Already implemented in the current development batch
 
@@ -91,9 +93,16 @@ These need validation and release evidence, not another implementation:
   selector boundaries are recorded in the setter and dropped-item contracts.
 - Dropped-item selectors `@itemsInRadius/@IIR` and `@itemsNearOrigin/@INO` (T02)
   now have loaded-chunk queries, native static radius/alias/filter semantics,
-  generic skill dispatch and importer bindings. The 2026-11-26 r4 report passes
+  generic skill dispatch and importer bindings. The 2026-11-26 r5 report passes
   132 scoped observations, including 14 explicit public-build condition
   differences. See [DROPPED_ITEM_TARGETER_CONTRACT.md](DROPPED_ITEM_TARGETER_CONTRACT.md).
+- Aiming/inherited selectors `@targetBlock`, `@targetedLocation` and
+  `@targetedTarget`, including aliases (T05), now have runtime/importer support.
+  The 2026-11-26 r2 report passes 134 scoped observations. Plural location
+  collections survive nested skills, delay and condition filtering; Pin keeps
+  its existing per-point behavior. Dropped-item r5 also passes all 132
+  observations on the same JAR after sharing entity filters. See
+  [AIMING_INHERITED_TARGETER_CONTRACT.md](AIMING_INHERITED_TARGETER_CONTRACT.md).
 
 ## Concrete public-build mechanics inventory
 
@@ -138,10 +147,10 @@ Names come from native `@MythicTargeter` declarations and were checked against
 | ID | Exact selector names / aliases | Required behavior |
 | --- | --- | --- |
 | T01 | `@playerByName/@specificplayer` | Implemented; 2026-11-26 r1 context fixture passes its exact-name, placeholder, missing-player and cross-world cases. Full native scheduling remains outside this slice. |
-| T02 | `@itemsInRadius/@IIR`, `@itemsNearOrigin/@INO` | Implemented; 2026-11-26 r4 passes 132 scoped native/direct/imported observations of real Item queries and mutations. Public native inline conditions are ignored; Helstera's audited generic guards are an explicit extension. Broader dispatcher/client/lifecycle and release acceptance remain; see [the contract](DROPPED_ITEM_TARGETER_CONTRACT.md). |
+| T02 | `@itemsInRadius/@IIR`, `@itemsNearOrigin/@INO` | Implemented; 2026-11-26 r5 passes 132 scoped native/direct/imported observations of real Item queries and mutations on the T05 artifact. Public native inline conditions are ignored; Helstera's audited generic guards are an explicit extension. Broader dispatcher/client/lifecycle and release acceptance remain; see [the contract](DROPPED_ITEM_TARGETER_CONTRACT.md). |
 | T03 | `@interactionLastAttacker/@lastAttacker`, `@interactionLastInteract/@lastInteract` | Implemented; 2026-11-26 r1 passes prepared-history lookup cases. Actual client attack/interaction input is outside that evidence. |
 | T04 | `@locationsOfTargets/@locationOfTarget/@LOT` | Implemented; 2026-11-26 r1 passes scoped projection/deduplication and location-selection cases. Native HashSet iteration does not promise stable ordering. |
-| T05 | `@targetBlock`, `@targetedLocation/@targetedLocations/@targetedLoc`, `@targetedTarget/@targeted` | Implement their distinct native aiming/inherited-target contracts; existing VariableLocation player aiming is not automatically an implementation of these targeters. |
+| T05 | `@targetBlock`, `@targetedLocation/@targetedLocations/@targetedLoc`, `@targetedTarget/@targeted` | Implemented; 2026-11-26 r2 passes 134 scoped native/direct/imported observations, including 6 explicit inline-guard differences. Plural context/condition/delay and managed-provider ownership tests pass. Full dispatcher, lifecycle, special variable contexts and threat policy remain separate; see [the contract](AIMING_INHERITED_TARGETER_CONTRACT.md). |
 | T06 | `@highestblock`, `@obstructingBlock` | Establish world/heightmap or obstruction query semantics and unloaded-world/chunk behavior. |
 | T07 | `@blocksinchunk/@BIC`, `@blocksinradius/@BIR`, `@blocksnearorigin/@BNO`, `@blockVein/@vein/@bv` | Bounded block-location enumeration with native geometry, material filters and explicit output caps. |
 | T08 | `@nearestStructure` | Use public structure lookup with bounded radius and unloaded-generation policy; native defaults require inspection. |
@@ -210,7 +219,7 @@ Names come from native `@MythicTargeter` declarations and were checked against
    strict release gate only against the final artifact.
 2. Finish M06/M07/M21 acceptance and M22's broader dispatcher/lifecycle checks;
    preserve the boundary between target scheduling and native movement Goals.
-3. Implement T05–T11 with bounded location/block enumeration and
+3. Implement T06–T11 with bounded location/block enumeration and
    separate entity-valued versus location-valued dispatch.
 4. Complete S01/S03–S10 as distinct runtime/state-machine and conversion slices;
    retain the existing base Aura charge implementation while extending its

@@ -1,3 +1,13 @@
+Aiming and inherited selectors (2026-11-26): `@targetBlock`, `@targetedLocation`
+and `@targetedTarget` now have direct/imported bindings and distinct block,
+location-collection and generic entity semantics. Paper r2 passes 134 scoped
+native comparisons, including 6 explicit inline-condition differences. The
+same JAR passes all 132 dropped-item observations after sharing filters, plus
+3,009 Maven tests and 11 clean SpotBugs checks. The internal checklist now has
+15 remaining implementation groups; full release and broader acceptance remain.
+See [the selector contract](docs/AIMING_INHERITED_TARGETER_CONTRACT.md) and
+[remaining development](docs/INTERNAL_FEATURE_COMPLETION.md).
+
 Terminal variable-registry boundary, work in progress (2026-11-21): Paper
 observations cover immediate removal, death, CHUNK unload, cancellation and
 living controls, including the exact native five-tick death and six-tick

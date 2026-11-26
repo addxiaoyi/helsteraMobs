@@ -54,6 +54,7 @@ public final class AiController {
     private State state = State.IDLE;
     private Player target;
     private LivingEntity lastAttackerEntity;
+    private org.bukkit.entity.Entity lastAggroCause;
     private LivingEntity combatTarget;
     private Player lastAttacker;
     /**
@@ -250,6 +251,7 @@ public final class AiController {
      */
     public void onDamaged(org.bukkit.entity.Entity attacker, double damage) {
         transition(State.HURT);
+        if (attacker != null) lastAggroCause = attacker;
         if (attacker instanceof LivingEntity living) lastAttackerEntity = living;
         if (attacker instanceof Player player) lastAttacker = player;
         if (attacker instanceof LivingEntity living && profile.canChase) {
@@ -277,6 +279,9 @@ public final class AiController {
     }
 
     /** 当前仇恨表；未启用时为 null。 */
+    /** Last entity that caused aggro, retained independently of living-only AI target selection. */
+    public org.bukkit.entity.Entity lastAggroCause() { return lastAggroCause; }
+
     public ThreatTable threatTable() {
         return threat;
     }

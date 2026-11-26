@@ -8307,3 +8307,54 @@ General nonliving selectors/conditions, full native dispatcher paths, rendering,
 removal/reload/reconnect scenarios, global native default overrides, external
 faction/ModelEngine providers and the strict final release gate remain separate.
 Historical reports certify only their recorded artifacts.
+
+## 2026-11-26 aiming and inherited target selectors (T05)
+
+[Aiming targeter r2](reports/paper-1.21.1-aiming-targeter-20261126-r2.json)
+passes 134 observations: 67 cases through direct and imported runtime paths,
+each compared with native selection and actual TagAdd/SetBlockType mutations.
+Six observations explicitly record the public native build ignoring inline
+selector guards that Helstera implements. The pure entity selector comparison
+uses native `filter(metadata, true)`; mechanic-specific player gating and full
+native dispatcher scheduling are outside this fixture.
+
+Coverage includes generic mixed entities, armor stands/markers, real player
+game modes, cross-world inheritance, empty collections, raw alias priority,
+static/range/quoted values, location deduplication and mutation, material filters,
+limits/sorts, real Player block aiming through glass and stone, unobstructed
+endpoints and prepared managed threat selections. Both native and runtime input
+collections are captured before selection. A bounded block snapshot detects
+unintended writes to the caster/origin or unselected points. Native managed
+states and matching runtime provider states are prepared; natural threat policy
+and special variable contexts remain S09/S10.
+
+The independent audit passes `--check-current` for plugin SHA-256
+`7f50522e9f6709631058b19aa9fa89c34e84f9ad3c6009e193b3e8a9ad54f874`.
+Full `./mvnw -B -o clean verify` passes 3,009 tests with no failures/errors/skips
+and 11 clean SpotBugs checks. Offline tests also cover nested plural location
+skills, delay, per-location metaskill conditions, caster/trigger metadata,
+generic setters, retained Pin behavior and manager-owned target providers.
+Nine independent-auditor control tests pass. Server and observer client exit
+cleanly. The report pins 27 implementation/probe/runner/auditor files.
+
+[Redacted archive](reports/paper-1.21.1-aiming-targeter-20261126-r2-logs.zip)
+SHA-256: `a67f811b11caf88fc460f456e4367c9ebbba773d5d5608e1bb406556858d59ff`.
+Rejected r1 and its archive remain: it cleared native entity inputs by setting
+an empty location collection, then reused mutable native location objects across
+cases. r2 fixes the fixture preparation and explicitly verifies both input sets.
+Expected selections and effect checks were retained.
+
+[Item targeter r5](reports/paper-1.21.1-item-targeter-20261126-r5.json) reruns all
+132 T02 observations on the same plugin JAR, retaining 14 explicit guard
+differences. Its audit passes `--check-current`; nine auditor controls pass.
+The source manifest includes the new shared parser/filter classes and pins
+26 files. [Redacted archive](reports/paper-1.21.1-item-targeter-20261126-r5-logs.zip)
+SHA-256: `d0f7fdefae6c25c19f60003ca9e026fae97673c3a156019bc69fc04decb58742`.
+Historical reports retain their own artifacts; their earlier passing hashes do
+not certify the new JAR.
+
+T05's implementation is complete within [its contract](../../docs/AIMING_INHERITED_TARGETER_CONTRACT.md).
+Native sibling metadata mutation, full dispatcher execution, rendering,
+reload/removal lifecycle, nondefault global filters, external integrations and
+the strict release gate remain separate. The internal implementation backlog
+is now T06–T11 and S01/S03–S10 (15 groups).
